@@ -1,0 +1,26 @@
+
+== Direction B — Carta, Inchiostro, Oliva — light
+role            background      surface         
+textPrimary     15.20 AAA       16.14 AAA       
+textSecondary   5.24 AA         5.57 AA         
+border          1.21 fail       1.29 fail       
+primary         6.30 AA         6.69 AA         
+accent          6.30 AA         6.69 AA         
+success         5.49 AA         5.83 AA         
+warning         5.25 AA         5.58 AA         
+danger          5.81 AA         6.17 AA         
+info            6.00 AA         6.37 AA         
+onPrimary on primary: 6.30 AA
+
+== Direction B — Carta, Inchiostro, Oliva — dark
+role            background      surface         
+textPrimary     15.92 AAA       14.68 AAA       
+textSecondary   8.27 AAA        7.63 AAA        
+border          1.37 fail       1.26 fail       
+primary         10.15 AAA       9.36 AAA        
+accent          10.15 AAA       9.36 AAA        
+success         9.28 AAA        8.56 AAA        
+warning         9.67 AAA        8.92 AAA        
+danger          7.64 AAA        7.05 AAA        
+info            8.70 AAA        8.03 AAA        
+onPrimary on primary: 10.15 AAA

@@ -1,0 +1,3 @@
+{"name":"Direction B — Carta, Inchiostro, Oliva","font":"Geist",
+"light":{"background":"#F6F1E7","surface":"#FBF8F2","textPrimary":"#1F1B17","textSecondary":"#6B635A","border":"#E3DCCF","primary":"#4F5D3A","onPrimary":"#F6F1E7","accent":"#4F5D3A","success":"#3F6B45","warning":"#8A5A12","danger":"#A8352C","info":"#4B5C7A"},
+"dark":{"background":"#15130F","surface":"#1F1B17","textPrimary":"#F3EDE2","textSecondary":"#B5AC9E","border":"#332D27","primary":"#B7C59E","onPrimary":"#15130F","accent":"#B7C59E","success":"#8FC496","warning":"#E3B45B","danger":"#F08A80","info":"#9DB3D6"}}

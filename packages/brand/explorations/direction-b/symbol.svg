@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Lilleri — Direction B "the double l". Two stems, flat tops, one rounded terminal (the foot). Grid 1024 on 8-unit cells; stem 152; gap 224; foot: inner radius 48, run 56, thickness 144, round terminal r=72. -->
+  <path d="M160 128 H312 V704 A48 48 0 0 0 360 752 H416 A72 72 0 0 1 416 896 H352 A192 192 0 0 1 160 704 Z" fill="#4F5D3A"/>
+  <path d="M536 128 H688 V704 A48 48 0 0 0 736 752 H792 A72 72 0 0 1 792 896 H728 A192 192 0 0 1 536 704 Z" fill="#4F5D3A"/>
+</svg>

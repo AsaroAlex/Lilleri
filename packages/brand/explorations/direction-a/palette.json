@@ -1,0 +1,36 @@
+{
+  "name": "Direction A — Carta, Inchiostro, Oliva",
+  "font": "Geist",
+  "light": {
+    "background": "#F6F1E7",
+    "surface": "#FBF8F2",
+    "surfaceDeep": "#F1EADC",
+    "textPrimary": "#1F1B17",
+    "textSecondary": "#6B635A",
+    "border": "#E3DCCF",
+    "primary": "#43522D",
+    "onPrimary": "#F6F1E7",
+    "accent": "#43522D",
+    "accentSoft": "#A7B58B",
+    "success": "#1F6B5E",
+    "warning": "#8A5A12",
+    "danger": "#A8352C",
+    "info": "#2F5C8A"
+  },
+  "dark": {
+    "background": "#15130F",
+    "surface": "#1F1B17",
+    "surfaceDeep": "#2A2520",
+    "textPrimary": "#F3EDE2",
+    "textSecondary": "#B5AC9E",
+    "border": "#332D27",
+    "primary": "#9FB084",
+    "onPrimary": "#15130F",
+    "accent": "#9FB084",
+    "accentSoft": "#43522D",
+    "success": "#7FC4B4",
+    "warning": "#E3B45B",
+    "danger": "#F08A80",
+    "info": "#8FB6E0"
+  }
+}
