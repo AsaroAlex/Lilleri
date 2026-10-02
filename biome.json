@@ -9,6 +9,7 @@
       "!**/.next",
       "!**/.expo",
       "!**/.turbo",
+      "!**/next-env.d.ts",
       "!**/coverage",
       "!**/drizzle/meta",
       "!docs",

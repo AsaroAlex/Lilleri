@@ -1,0 +1,28 @@
+{
+  "name": "@lilleri/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "dev": "expo start --localhost",
+    "build": "EXPO_OFFLINE=1 EXPO_NO_TELEMETRY=1 CI=1 expo export --platform web",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist .expo .turbo"
+  },
+  "dependencies": {
+    "@lilleri/api-client": "workspace:*",
+    "@lilleri/brand": "workspace:*",
+    "@lilleri/domain": "workspace:*",
+    "@lilleri/money": "workspace:*",
+    "expo": "57.0.26",
+    "expo-font": "57.0.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-web": "0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "7.0.2"
+  }
+}

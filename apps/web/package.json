@@ -1,0 +1,26 @@
+{
+  "name": "@lilleri/web",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "predev": "node scripts/copy-brand.mjs",
+    "dev": "next dev --hostname 127.0.0.1",
+    "prebuild": "node scripts/copy-brand.mjs",
+    "build": "next build",
+    "prestart": "node scripts/copy-brand.mjs",
+    "start": "next start --hostname 127.0.0.1",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf .next .turbo public/brand"
+  },
+  "dependencies": {
+    "@lilleri/brand": "workspace:*",
+    "next": "16.3.8",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "7.0.2"
+  }
+}

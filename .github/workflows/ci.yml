@@ -30,7 +30,7 @@ jobs:
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       TZ: Europe/Rome
-      TEST_DATABASE_URL: postgres://lilleri:lilleri@localhost:5432/lilleri_test
+      PG_TEST_DATABASE_URL: postgres://lilleri:lilleri@localhost:5432/lilleri_test
       EXPO_NO_TELEMETRY: '1'
     steps:
       - uses: actions/checkout@v4

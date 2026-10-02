@@ -10,7 +10,8 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
-    "dev": "turbo run dev --parallel",
+    "predev": "turbo run build --filter=@lilleri/api --filter=@lilleri/api-client --filter=@lilleri/brand",
+    "dev": "turbo run dev",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

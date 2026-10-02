@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "Lilleri · Demo",
+    "slug": "lilleri",
+    "version": "0.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "icon": "../../packages/brand/png/app-icon-1024.png",
+    "web": {
+      "lang": "it",
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "../../packages/brand/png/symbol-32.png"
+    },
+    "ios": { "supportsTablet": true },
+    "android": { "package": "it.lilleri.demo" }
+  }
+}
