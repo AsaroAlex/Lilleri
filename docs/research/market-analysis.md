@@ -3,7 +3,7 @@
 **Project:** LILLERI (greenfield consumer PFM, Italy-first then Europe)
 **Date / verification date for every claim:** 2026-10-02
 **Author:** Product Manager (consumer fintech) + growth lead + UX researcher, founding team
-**Status of this document:** synthesis of Phase 0 research; input to Gate A (market opportunity) and to `product/` and `business/`
+**Status of this document:** synthesis of Phase 0 research; input to Gate A (market opportunity) and to `product/` and `business/`. **Revised 2026-10-02 after a red-team review** (see "Review log" at the end): Gate A is re-labelled **NOT YET ASSESSABLE** (§9), the free-tier economics are computed (§3.3) and pricing now defers to `docs/business/business-model.md`, the competitor set is widened to Italian independents and bank-native aggregators, and several FACT labels are downgraded or corrected.
 
 ## How to read this document
 
@@ -11,6 +11,8 @@
 - Evidence base: the five raw research notes in `docs/research/raw/` — `competitors-us.md` (cited as **US-**), `competitors-eu-uk.md` (**EU-**), `competitors-italy-and-ai-first.md` (**IT-**), `user-pain-points.md` (**PP-**), `brand-competitor-analysis.md` (**BR-**) — plus ten WebSearch queries run on 2026-10-02 to close the Italian market-sizing gap (cited as **NEW-**). Source IDs are resolved in the Sources table at the end; the raw notes hold the full source tables (hundreds of URLs) and their adversarial-verification logs.
 - Research-environment caveat carried over from the raw notes: WebFetch was blocked for every vendor, press and regulator domain, so almost everything rests on search-engine snippets of the cited pages, not full page reads. Every price, user count and date must be re-read on the primary page before it enters a contract, a pricing page or a business plan.
 - Estimates are never presented as facts. Where we size anything we show the arithmetic and label it HYPOTHESIS.
+- **Grading rules added in the revision pass.** (1) A GitHub-hosted capture of a third-party page or a news digest (`IT-V-02/W-02`, `IT-V-05/W-01`, `IT-V-11`, `IT-W-04`, `IT-W-08`) is graded **low** until the primary page is re-read; where the revision re-sourced an event to a primary or national-press page (NEW-11…NEW-13) the new source is cited instead. (2) Pain-point counts (N) measure *breadth of independent support*, dominated by self-hosters on Actual Budget / Firefly III; a FACT label on a failure mode means "it exists and is documented", **not** "Italian mass-market users meet it often" — Italian frequency is UNKNOWN until the 500-review coding and the 20–30 interviews (§9 checklist). (3) "Absence in sources" is never a FACT about a competitor's product; it is UNKNOWN until the product is installed and tested. (4) Pricing, free-tier shape, unit economics and CAC are owned by `docs/business/` (`business-model.md`, `pricing-analysis.md`, `unit-economics.md`, `go-to-market.md`); this document quotes them and does not restate a different policy.
+- Sources added in the revision pass: the WebSearch queries cited as **NEW-11…NEW-20** (2026-10-02, snippets) and the `WS-` sources of `user-pain-points.md` (same date), resolved in §12.
 
 ---
 
