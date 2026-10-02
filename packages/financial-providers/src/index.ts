@@ -2,6 +2,8 @@ import { createHash } from 'node:crypto'
 import { type Account, dateOnly, type Transaction, type TransactionKind } from '@lilleri/domain'
 import { type CurrencyCode, parseDecimal } from '@lilleri/money'
 
+export { parseBankCsv } from './csv.js'
+
 export interface ProviderContext {
   readonly profileId: string
   readonly connectionId: string

@@ -39,3 +39,6 @@ pnpm-debug.log*
 *.sqlite
 *.db
 pgdata/
+
+# local synthetic-development database and process state
+.lilleri/
