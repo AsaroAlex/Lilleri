@@ -1,37 +1,64 @@
 # Lilleri
 
-**Collega i tuoi conti una volta. Lilleri tiene in ordine i tuoi soldi, da solo — e ti chiede
-qualcosa solo quando ha un dubbio.**
+Lilleri is an Italy-first personal-finance project. The current repository is a **local prototype with synthetic financial data**: a mock provider, persistent API, deterministic reconciliation/classification, a Review Inbox and correction replay. The product ambition is to organise supported financial sources with less manual work; no real bank is connected by this setup.
 
-Lilleri is a consumer personal-finance product, Italy-first and built to scale across Europe. It
-aggregates accounts through a licensed open-banking provider, reconciles what actually happened
-(pending → booked, duplicates across sources, internal transfers, card settlements, refunds),
-categorises with a personal model that learns from corrections — explicit rules always win — and
-surfaces only what needs attention in a Review Inbox.
+See [delivery status and evidence](docs/STATUS.md), [project memory](PROJECT_STATE.md), [the founder’s brief](docs/BRIEF.md) and [documentation map](docs/README.md).
 
-> Status: **pre-MVP foundation**. See [`PROJECT_STATE.md`](./PROJECT_STATE.md) for the live state
-> and [`docs/STATUS.md`](./docs/STATUS.md) (when present) for the executive report.
+## Run the local demo
+
+Use Node 22.12+ and pnpm 10 (the repository pins pnpm 10.28.0). In the supplied cloud workspace, the optional installed toolchain can be activated with `. /workspace/.lilleri-toolchain/env.sh`.
+
+From the repository root:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+`predev` builds the API, typed client, brand package and their dependencies, then Turbo starts:
+
+| Service | Local address | Scope |
+| --- | --- | --- |
+| Next.js project page | http://127.0.0.1:3000 | Public-facing prototype copy, original assets and light/dark styles |
+| Expo development server | http://localhost:8081 | Mobile shell; press `w` for its browser preview |
+| Fastify demo API | http://127.0.0.1:3001 | Explicit `DEMO_MODE=1`, loopback-only synthetic data |
+
+The API defaults to embedded **PGlite**, with persistent synthetic data in ignored `.lilleri/data`. Docker, bank credentials and paid services are not needed. Database migrations run on startup. Deleting the demo profile persists its deletion state; it does not silently reseed. Use a new `PGLITE_PATH` for a fresh demo.
+
+```bash
+PGLITE_PATH=/tmp/lilleri-fresh-demo pnpm dev
+```
+
+The local API rejects production configuration and non-loopback binding. Physical-device banking/mobile behaviour is unverified; the browser export does not validate native iOS/Android. Detailed optional PostgreSQL and test commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Quality commands
+
+```bash
+pnpm lint
+pnpm format:check
+pnpm typecheck
+pnpm test
+pnpm test:integration
+pnpm build
+```
+
+`pnpm check` combines Biome lint/format, typecheck and unit suites; the API suite uses PGlite by default. `pnpm build` includes a Next production build and an **Expo web export**, not native store binaries. Local checks passed 149 distinct synthetic cases, real-PostgreSQL integration, both web builds, 16 browser-flow groups and 2 targeted rendering groups; open audit findings and full visual/accessibility, native and user-study limits are recorded in [STATUS](docs/STATUS.md).
 
 ## Repository map
 
 | Path | Content |
 | --- | --- |
-| `docs/` | Research, product, brand, design, architecture, ADRs, security, compliance, business ([map](./docs/README.md)) |
-| `apps/` | Applications (API, mobile, web) |
-| `packages/` | Shared packages (`@lilleri/*`): domain, database, providers, engines, brand tokens, … |
-| `tools/` | Brand rendering toolkit and orchestration scripts used to produce the docs |
-| `PROJECT_STATE.md` | Persistent working memory: current state, next action, decisions |
+| `apps/api` | Fastify/Zod synthetic API, sync/correction/import/export/deletion routes and integration tests |
+| `apps/mobile` | Expo/React Native local prototype and browser export |
+| `apps/web` | Next.js project page with locally bundled artwork/fonts |
+| `packages/money` | Exact bigint minor-unit arithmetic and currency formatting |
+| `packages/domain` | Financial types, calendar-date utilities and taxonomy |
+| `packages/financial-providers` | Provider port, synthetic Italian fixture provider and bounded CSV parser |
+| `packages/engines` | Pure deterministic classification, reconciliation, recurring detection and summaries |
+| `packages/database` | Shared PostgreSQL/Drizzle schema, migrations and PGlite/PostgreSQL drivers |
+| `packages/api-client` | Typed local API client |
+| `packages/brand` | Original mark, icons, local OFL fonts and light/dark tokens |
+| `docs` | Research, product/business, brand/design, architecture/ADRs, security and compliance |
+| `tools` | Research orchestration history and brand-rendering tooling; historical workflow paths are not startup commands |
 
-## Quick start
-
-```bash
-pnpm install
-pnpm check        # Biome + typecheck + unit tests
-```
-
-Further commands are documented in [`CONTRIBUTING.md`](./CONTRIBUTING.md).
-
-## Principles
-
-Trust before conversion. Correct data before automation. The complexity lives in the system, not
-in the user's experience.
+Trust, data correctness and security precede conversion. **Gratis / Plus** is the proposed launch ladder; pricing and live-source access remain hypotheses/gated. Authentication, real-bank access, production encryption/backup controls, household sharing, external AI, billing and store releases require further implementation and external review. Read [SECURITY.md](SECURITY.md) before changing the demo boundary.
