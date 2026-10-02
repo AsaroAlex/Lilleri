@@ -4,7 +4,7 @@
   "light": {
     "background": "#F7EFE7",
     "surface": "#FDF8F4",
-    "surfaceElevated": "#FFFDFC",
+    "surfaceElevated": "#FEFEFD",
     "textPrimary": "#221918",
     "textSecondary": "#5B4F4D",
     "textTertiary": "#756966",
@@ -20,13 +20,14 @@
     "info": "#345F95",
     "positive": "#1E685B",
     "negative": "#A7491F",
+    "id": "#NANNANNAN",
     "chart": [
-      "#9C3D5D",
-      "#018683",
-      "#C3963B",
-      "#3F6AA1",
-      "#69954F",
-      "#BA673F"
+      "#933153",
+      "#A07506",
+      "#03999F",
+      "#9B471B",
+      "#1C5D98",
+      "#588E44"
     ]
   },
   "dark": {
@@ -48,13 +49,14 @@
     "info": "#8FB4E4",
     "positive": "#7DC9B7",
     "negative": "#E89772",
+    "id": "#NANNANNAN",
     "chart": [
-      "#BA5F7B",
-      "#349794",
-      "#B48B39",
-      "#5682BB",
-      "#668E4F",
-      "#C37552"
+      "#AF4A6B",
+      "#B88C2E",
+      "#079298",
+      "#AF592F",
+      "#3675B2",
+      "#669D53"
     ]
   }
 }

@@ -1,3 +1,6 @@
+export * from './calendar-date.js'
+export * from './taxonomy.js'
+
 import type { Money } from '@lilleri/money'
 
 export type { CurrencyCode, Money, MoneyJson } from '@lilleri/money'

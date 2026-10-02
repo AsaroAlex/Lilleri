@@ -18,33 +18,21 @@
 //   success / warning / danger / info   status; always shipped with an icon and a label
 //   positive        inflows (income, refunds); always with "+" and a label
 //   negative        negative balances / over-budget only; ordinary outflows stay textPrimary with "−"
-//   chart[6]        categorical, fixed order; validated with the dataviz validator (see build.mjs)
+//   chart[6]        categorical, fixed order shared by both modes; searched by chart-order.mjs and validated with
+//                   the dataviz validator in build.mjs. The `chart` seeds below are only the starting hues.
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 
-// ---- minimal OKLCH → sRGB hex (with chroma reduction to stay in gamut) and WCAG contrast ----
-const lin2s = c => { c = Math.max(0, Math.min(1, c)); return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055 }
-const s2lin = c => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
-function oklab2lin([L, a, b]) {
-  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3
-  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3
-  const s = (L - 0.0894841775 * a - 1.2914855480 * b) ** 3
-  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s]
-}
-export function oklch(L, C, h) {
-  for (let c = C; c >= 0; c -= 0.001) {
-    const lin = oklab2lin([L, c * Math.cos(h * Math.PI / 180), c * Math.sin(h * Math.PI / 180)])
-    if (lin.every(v => v >= -0.0005 && v <= 1.0005)) return '#' + lin.map(v => Math.round(lin2s(v) * 255).toString(16).padStart(2, '0')).join('').toUpperCase()
-  }
-}
-const lum = hex => { const h = hex.slice(1); const [r, g, b] = [0, 2, 4].map(i => s2lin(parseInt(h.slice(i, i + 2), 16) / 255)); return 0.2126 * r + 0.7152 * g + 0.0722 * b }
-export const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) }
+import { fromOklch, contrast } from './colour-math.mjs'
+const oklch = (L, C, h) => fromOklch(L, C, h)
+const chartOrder = fs.existsSync(path.join(here, 'chart-order.json')) ? JSON.parse(fs.readFileSync(path.join(here, 'chart-order.json'), 'utf8')) : null
 
 /** Resolve a theme spec: surfaces first, then every other role, nudging L until `min` holds on all surfaces. */
 function resolve(spec, mode) {
+  spec = { ...spec[mode], id: spec.id }
   const out = {}
   const surfaces = ['background', 'surface', 'surfaceElevated']
   for (const k of surfaces) out[k] = oklch(...spec[k])
@@ -57,7 +45,8 @@ function resolve(spec, mode) {
     while (min && targets.some(t => contrast(hex, t) < min) && L > 0.05 && L < 0.99) { L += step; hex = oklch(L, C, h) }
     out[k] = hex
   }
-  out.chart = spec.chart.map(([L, C, h]) => oklch(L, C, h))
+  // chart: the optimised order from chart-order.mjs when available; otherwise the seed hues below.
+  out.chart = chartOrder?.[spec.id]?.[mode] ?? spec.chart.map(([L, C, h]) => oklch(L, C, h))
   return out
 }
 
@@ -65,6 +54,7 @@ function resolve(spec, mode) {
 const TEXT = 4.5, UI = 3
 
 const T1 = {
+  id: 't1',
   name: 'T1 — Carta & Cotto (warm paper & terracotta)',
   light: {
     background: [0.955, 0.014, 75], surface: [0.982, 0.008, 78], surfaceElevated: [0.996, 0.004, 80],
@@ -89,6 +79,7 @@ const T1 = {
 }
 
 const T2 = {
+  id: 't2',
   name: 'T2 — Carta & Oliva (olive & ink)',
   light: {
     background: [0.955, 0.014, 100], surface: [0.982, 0.008, 100], surfaceElevated: [0.996, 0.004, 100],
@@ -113,6 +104,7 @@ const T2 = {
 }
 
 const T3 = {
+  id: 't3',
   name: 'T3 — Carta & Vinaccia (warm paper & wine)',
   light: {
     background: [0.955, 0.013, 65], surface: [0.982, 0.007, 65], surfaceElevated: [0.996, 0.003, 65],
@@ -138,7 +130,7 @@ const T3 = {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   for (const [file, spec] of [['t1.json', T1], ['t2.json', T2], ['t3.json', T3]]) {
-    const pal = { name: spec.name, font: 'Geist', light: resolve(spec.light, 'light'), dark: resolve(spec.dark, 'dark') }
+    const pal = { name: spec.name, font: 'Geist', light: resolve(spec, 'light'), dark: resolve(spec, 'dark') }
     fs.writeFileSync(path.join(here, file), JSON.stringify(pal, null, 2) + '\n')
     console.log('wrote', file)
   }
