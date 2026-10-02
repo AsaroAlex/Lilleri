@@ -163,7 +163,10 @@ export function reconcile(
       id,
       type,
       transactionIds: [a.id, b.id],
-      state: options.matchOverrides?.[id] ?? (confirmed ? 'confirmed' : 'suggested'),
+      state:
+        type === 'refund' && !confirmed && options.matchOverrides?.[id] === 'confirmed'
+          ? 'suggested'
+          : (options.matchOverrides?.[id] ?? (confirmed ? 'confirmed' : 'suggested')),
       confidence: confirmed ? 1 : 0,
       algorithmVersion: ENGINE_VERSION,
       explanation,
@@ -190,6 +193,10 @@ export function reconcile(
         ).length === 2
       if (
         sameAccount &&
+        first.kind !== 'refund' &&
+        second.kind !== 'refund' &&
+        first.amount.amountMinor < 0n === second.amount.amountMinor < 0n &&
+        first.amount.amountMinor > 0n === second.amount.amountMinor > 0n &&
         first.status !== second.status &&
         [first.status, second.status].includes('pending') &&
         [first.status, second.status].includes('booked') &&
@@ -277,6 +284,8 @@ export function reconcile(
         original.profileId === first.profileId &&
         original.accountId === first.accountId &&
         original.amount.currency === first.amount.currency &&
+        original.status === 'booked' &&
+        original.kind === 'expense' &&
         original.amount.amountMinor < 0n &&
         first.amount.amountMinor > 0n
       ) {
@@ -287,6 +296,8 @@ export function reconcile(
               item.kind === 'refund' &&
               item.relatedTransactionId === original.id &&
               item.status === 'booked' &&
+              item.accountId === original.accountId &&
+              item.amount.amountMinor > 0n &&
               item.amount.currency === original.amount.currency,
           )
           .reduce((total, item) => total + item.amount.amountMinor, 0n)
@@ -303,17 +314,36 @@ export function reconcile(
       }
     }
   }
-  // A transaction must not be automatically consumed by competing matches of the same kind.
+  // Multiple facts may reference a transaction, but competing exclusions need a review.
   const originalMatches = [...matches]
+  const consumed = (match: ReconciliationMatch): readonly string[] => {
+    if (match.type === 'refund') return []
+    if (match.type === 'pending_to_booked')
+      return match.transactionIds.filter((id) => byId.get(id)?.status === 'pending')
+    if (match.type === 'duplicate') {
+      return match.transactionIds
+        .map((id) => byId.get(id))
+        .filter((row): row is Transaction => row !== undefined)
+        .sort(
+          (a, b) =>
+            (a.source === 'bank' ? -1 : 1) - (b.source === 'bank' ? -1 : 1) ||
+            a.id.localeCompare(b.id),
+        )
+        .slice(1)
+        .map((row) => row.id)
+    }
+    return match.transactionIds
+  }
   for (const match of originalMatches) {
     if (match.state !== 'confirmed' || match.type === 'refund') continue
     if (
       originalMatches.some(
         (other) =>
           other.id !== match.id &&
-          other.type === match.type &&
           other.state === 'confirmed' &&
-          other.transactionIds.some((id) => match.transactionIds.includes(id)),
+          ((other.type === match.type &&
+            other.transactionIds.some((id) => match.transactionIds.includes(id))) ||
+            consumed(other).some((id) => consumed(match).includes(id))),
       )
     ) {
       const index = matches.indexOf(match)
@@ -326,7 +356,24 @@ export function reconcile(
       }
     }
   }
-  return matches
+  const eligibleIds = new Set(
+    effectiveTransactions(transactions, matches)
+      .filter((transaction) => transaction.status === 'booked')
+      .map((transaction) => transaction.id),
+  )
+  return matches.map((match) =>
+    match.type === 'refund' &&
+    match.state === 'confirmed' &&
+    !match.transactionIds.every((id) => eligibleIds.has(id))
+      ? {
+          ...match,
+          state: 'suggested',
+          confidence: 0,
+          explanation: 'Il rimborso si riferisce a un movimento escluso: verifica il collegamento.',
+          evidence: [...match.evidence, 'original-not-counted'],
+        }
+      : match,
+  )
 }
 
 export function effectiveTransactions(
@@ -463,10 +510,10 @@ export function detectRecurring(
       transactionIds: recent.map((row) => row.id),
       kind:
         last.kind === 'income'
-          ? 'salary'
+          ? 'recurring_income'
           : GLOBAL_MERCHANTS[last.merchantKey] === 'subscriptions'
             ? 'subscription'
-            : 'bill',
+            : 'recurring_expense',
       frequency: 'monthly',
       expectedAmount: last.amount,
       nextOn: nextMonth(last.bookedOn),
@@ -496,6 +543,16 @@ export function analyse(
     throw new Error('Analyse one profile at a time')
   if (new Set(transactions.map((transaction) => transaction.id)).size !== transactions.length)
     throw new Error('Duplicate canonical transaction identity')
+  if (new Set(accounts.map((account) => account.id)).size !== accounts.length)
+    throw new Error('Duplicate canonical account identity')
+  const accountsById = new Map(accounts.map((account) => [account.id, account]))
+  for (const transaction of transactions) {
+    const account = accountsById.get(transaction.accountId)
+    if (!account || account.profileId !== transaction.profileId)
+      throw new Error('Transaction account is not owned by the profile')
+    if (account.balance.currency !== transaction.amount.currency)
+      throw new Error('Canonical transaction currency differs from its account')
+  }
   const matches = reconcile(accounts, transactions, options)
   const classifications = transactions.map((transaction) => classify(transaction, options))
   const visible = new Set(

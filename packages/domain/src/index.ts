@@ -172,7 +172,7 @@ export interface RecurringSeries extends Provenance {
   readonly id: string
   readonly merchantKey: string
   readonly transactionIds: readonly string[]
-  readonly kind: 'subscription' | 'bill' | 'salary'
+  readonly kind: 'subscription' | 'recurring_expense' | 'recurring_income'
   readonly frequency: 'monthly'
   readonly expectedAmount: Money
   readonly nextOn: string

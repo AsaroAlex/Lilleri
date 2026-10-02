@@ -210,6 +210,99 @@ describe('conservative reconciliation and accounting invariants', () => {
   })
 })
 
+describe('adversarial financial invariants', () => {
+  it('does not treat a refund as the booked version of a pending purchase', () => {
+    const rows = [
+      txn('pending', { status: 'pending' }),
+      txn('refund', {
+        kind: 'refund',
+        amount: money(1000n, 'EUR'),
+        relatedTransactionId: 'pending',
+      }),
+    ]
+    expect(reconcile([account()], rows).some((match) => match.type === 'pending_to_booked')).toBe(
+      false,
+    )
+  })
+  it.each(['pending', 'reversed'] as const)(
+    'never deducts a refund against a %s purchase',
+    (status) => {
+      const rows = [
+        txn('purchase', { status }),
+        txn('refund', {
+          kind: 'refund',
+          amount: money(1000n, 'EUR'),
+          relatedTransactionId: 'purchase',
+        }),
+      ]
+      expect(reconcile([account()], rows).filter((match) => match.type === 'refund')).toHaveLength(
+        0,
+      )
+      expect(summarize([account()], rows, reconcile([account()], rows))[0]?.spend.amountMinor).toBe(
+        0n,
+      )
+    },
+  )
+  it('does not refund an excluded transfer', () => {
+    const rows = [
+      ...transfer(),
+      txn('refund', { kind: 'refund', amount: money(1000n, 'EUR'), relatedTransactionId: 'out' }),
+    ]
+    expect(
+      reconcile([account(), account('b')], rows).filter((match) => match.type === 'refund'),
+    ).toHaveLength(0)
+  })
+  it('cannot force-confirm a refund above the purchase bound', () => {
+    const rows = [
+      txn('purchase'),
+      txn('refund', {
+        kind: 'refund',
+        amount: money(1200n, 'EUR'),
+        relatedTransactionId: 'purchase',
+      }),
+    ]
+    const initial = reconcile([account()], rows),
+      id = initial[0]?.id
+    if (!id) throw new Error('Expected refund candidate')
+    const matches = reconcile([account()], rows, { matchOverrides: { [id]: 'confirmed' } })
+    expect(matches[0]?.state).toBe('suggested')
+    expect(summarize([account()], rows, matches)[0]?.spend.amountMinor).toBe(1000n)
+  })
+  it('does not let malformed negative refund records reduce the cumulative bound', () => {
+    const rows = [
+      txn('purchase'),
+      txn('refund', {
+        kind: 'refund',
+        amount: money(1500n, 'EUR'),
+        relatedTransactionId: 'purchase',
+      }),
+      txn('malformed', {
+        kind: 'refund',
+        amount: money(-1000n, 'EUR'),
+        relatedTransactionId: 'purchase',
+      }),
+    ]
+    expect(reconcile([account()], rows).every((match) => match.state !== 'confirmed')).toBe(true)
+  })
+  it('does not deduct refunds whose original is a confirmed duplicate exclusion', () => {
+    const rows = [
+      txn('bank', { reference: 'r' }),
+      txn('csv', { source: 'csv', reference: 'r' }),
+      txn('refund', { kind: 'refund', amount: money(1000n, 'EUR'), relatedTransactionId: 'csv' }),
+    ]
+    const matches = reconcile([account()], rows)
+    expect(matches.find((match) => match.type === 'refund')?.state).toBe('suggested')
+    expect(summarize([account()], rows, matches)[0]?.spend.amountMinor).toBe(1000n)
+  })
+  it('rejects duplicate accounts, orphan rows and canonical currency mismatch', () => {
+    expect(() => analyse([account(), account()], [])).toThrow('Duplicate canonical account')
+    expect(() => analyse([account()], [txn('orphan', { accountId: 'other' })])).toThrow('not owned')
+    expect(() => analyse([account()], [txn('foreign', { amount: money(-1000n, 'GBP') })])).toThrow(
+      'currency differs',
+    )
+  })
+})
+
 describe('classification precedence and feedback', () => {
   it('sticky one-shot correction wins over rules on the same transaction', () => {
     expect(
