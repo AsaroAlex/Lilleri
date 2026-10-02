@@ -1,11 +1,15 @@
-import { Resvg } from '@resvg/resvg-js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { Resvg } from '@resvg/resvg-js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 export const FONT_DIR = path.join(here, 'fonts')
-export const fontFiles = () => fs.readdirSync(FONT_DIR).filter(f => /\.(ttf|otf)$/i.test(f)).map(f => path.join(FONT_DIR, f))
+export const fontFiles = () =>
+  fs
+    .readdirSync(FONT_DIR)
+    .filter((f) => /\.(ttf|otf)$/i.test(f))
+    .map((f) => path.join(FONT_DIR, f))
 
 /** Render an SVG string to a PNG buffer. width: output width in px (keeps aspect). */
 export function renderSvg(svg, { width, background } = {}) {
@@ -25,7 +29,10 @@ export function readSvg(file) {
 export function svgViewBox(svg) {
   const m = svg.match(/viewBox="([^"]+)"/)
   if (!m) throw new Error('SVG must declare a viewBox')
-  const [x, y, w, h] = m[1].trim().split(/[\s,]+/).map(Number)
+  const [x, y, w, h] = m[1]
+    .trim()
+    .split(/[\s,]+/)
+    .map(Number)
   return { x, y, w, h }
 }
 
@@ -45,19 +52,28 @@ export function place(svg, x, y, w, h) {
 
 export function hexToRgb(hex) {
   const h = hex.replace('#', '')
-  const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16)
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h,
+    16,
+  )
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 export function luminance(hex) {
-  const [r, g, b] = hexToRgb(hex).map(v => {
+  const [r, g, b] = hexToRgb(hex).map((v) => {
     const c = v / 255
-    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
   })
   return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 /** WCAG 2.x contrast ratio between two hex colours. */
 export function contrast(a, b) {
-  const la = luminance(a), lb = luminance(b)
+  const la = luminance(a),
+    lb = luminance(b)
   const [hi, lo] = la > lb ? [la, lb] : [lb, la]
   return (hi + 0.05) / (lo + 0.05)
 }
@@ -68,5 +84,9 @@ export function wcagLevel(ratio, { large = false } = {}) {
   return 'fail'
 }
 export function esc(s) {
-  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
 }

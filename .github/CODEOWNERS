@@ -1,0 +1,7 @@
+# Default owner until the team grows. Security-sensitive paths require an explicit owner review.
+*                                   @AsaroAlex
+/packages/database/                 @AsaroAlex
+/packages/financial-providers/      @AsaroAlex
+/docs/security/                     @AsaroAlex
+/docs/compliance/                   @AsaroAlex
+/.github/                           @AsaroAlex

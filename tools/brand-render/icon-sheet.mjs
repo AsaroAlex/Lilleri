@@ -2,11 +2,15 @@
 // Renders a square icon SVG (any viewBox) at 1024/512/256/128/64/48/32/24/16 px on light and dark
 // backgrounds, with labels, so the result can be judged at real sizes (sheet is rendered 1:1).
 import fs from 'node:fs'
-import { renderSvg, readSvg, place, esc } from './lib.mjs'
+import { esc, place, readSvg, renderSvg } from './lib.mjs'
 
-const [,, input, output, ...rest] = process.argv
-if (!input || !output) { console.error('usage: node icon-sheet.mjs <icon.svg> <out.png> [--title T]'); process.exit(1) }
-const ti = rest.indexOf('--title'); const title = ti >= 0 ? rest[ti + 1] : input
+const [, , input, output, ...rest] = process.argv
+if (!input || !output) {
+  console.error('usage: node icon-sheet.mjs <icon.svg> <out.png> [--title T]')
+  process.exit(1)
+}
+const ti = rest.indexOf('--title')
+const title = ti >= 0 ? rest[ti + 1] : input
 const icon = readSvg(input)
 const sizes = [256, 128, 64, 48, 32, 24, 16]
 const pad = 24

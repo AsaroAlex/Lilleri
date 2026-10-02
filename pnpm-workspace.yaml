@@ -1,0 +1,5 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+# tools/brand-render is intentionally NOT a workspace member: it pulls native rendering
+# dependencies (sharp, resvg) that the product does not need. Install it on demand.

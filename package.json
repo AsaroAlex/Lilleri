@@ -1,0 +1,45 @@
+{
+  "name": "lilleri",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lilleri \u2014 connect your accounts once, your finances organise themselves.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:integration": "turbo run test:integration",
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check . && turbo run typecheck test",
+    "check:fix": "biome check --write .",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "prepare": "simple-git-hooks || true"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.15",
+    "@types/node": "^22.19.0",
+    "simple-git-hooks": "2.14.0",
+    "turbo": "2.11.7",
+    "typescript": "7.0.2",
+    "vitest": "5.0.3"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm exec biome check --staged --no-errors-on-unmatched",
+    "commit-msg": "node scripts/check-commit-msg.mjs \"$1\""
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "simple-git-hooks",
+      "esbuild",
+      "@biomejs/biome"
+    ]
+  }
+}
