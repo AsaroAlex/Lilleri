@@ -48,9 +48,12 @@ export class ApiError extends Error {
 
 export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) {
   const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+    const headers = new Headers(init.headers)
+    if (init.body !== undefined && init.body !== null && !headers.has('Content-Type'))
+      headers.set('Content-Type', 'application/json')
     const response = await fetcher(`${baseUrl.replace(/\/$/, '')}${path}`, {
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init.headers },
+      headers,
     })
     if (!response.ok) {
       let detail = 'Il servizio non è disponibile. Riprova tra poco.',
@@ -104,6 +107,14 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     disconnect: (connectionId: string) =>
       request<void>(`/v1/connections/${encodeURIComponent(connectionId)}`, { method: 'DELETE' }),
     exportData: () => request<unknown>('/v1/export'),
+    importCsv: (accountId: string, csv: string) =>
+      request<{
+        inserted: number
+        updated: number
+        unchanged: number
+        rejected: number
+        importedAt: string
+      }>('/v1/imports/csv', { method: 'POST', body: JSON.stringify({ accountId, csv }) }),
     erase: () => request<void>('/v1/profile', { method: 'DELETE' }),
   }
 }

@@ -1,0 +1,19 @@
+# Optional local PostgreSQL alternative to embedded PGlite. Synthetic data only.
+services:
+  postgres:
+    image: postgres:16@sha256:1a6ab3f5345eb6dbe04a1349529caabdb0ab09293a09590fad07b2246bfa4b54
+    environment:
+      POSTGRES_DB: lilleri_demo
+      POSTGRES_USER: lilleri_demo
+      POSTGRES_PASSWORD: local_demo_only
+    ports:
+      - '127.0.0.1:5432:5432'
+    volumes:
+      - lilleri_demo_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lilleri_demo -d lilleri_demo']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  lilleri_demo_pg:

@@ -1,0 +1,942 @@
+import { createHash, randomUUID } from 'node:crypto'
+import { type Database, schema } from '@lilleri/database'
+import {
+  type Account,
+  type Analysis,
+  type CategoryId,
+  type Classification,
+  type Connection,
+  type CurrencyCode,
+  parseDecimal,
+  type Transaction,
+} from '@lilleri/domain'
+import { analyse, effectiveTransactions } from '@lilleri/engines'
+import {
+  type FinancialDataProvider,
+  normalizeAccount,
+  normalizeTransaction,
+  type ProviderAccount,
+  type ProviderTransaction,
+  parseBankCsv,
+  stableId,
+} from '@lilleri/financial-providers'
+import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
+import { z } from 'zod'
+import { conflict, notFound, Problem, providerFailure } from './problem.js'
+
+const id = z.string().min(1).max(200)
+const optionalText = z.string().max(500).optional()
+const currency = z.custom<CurrencyCode>((value) => {
+  try {
+    return typeof value === 'string' && Boolean(parseDecimal('0', value as CurrencyCode))
+  } catch {
+    return false
+  }
+})
+const accountSchema = z
+  .object({
+    id,
+    name: z.string().min(1).max(200),
+    institutionName: z.string().min(1).max(200),
+    kind: z.enum(['current', 'card', 'cash', 'savings']),
+    currency,
+    balance: z.string().min(1).max(40),
+  })
+  .strict()
+const recordSchema = z
+  .object({
+    id,
+    accountId: id,
+    amount: z.string().min(1).max(40),
+    currency,
+    description: z.string().min(1).max(2000),
+    status: z.enum(['pending', 'booked', 'reversed']),
+    merchantName: optionalText,
+    bookedOn: z.string().length(10).optional(),
+    authorizedOn: z.string().length(10).optional(),
+    kind: z
+      .enum(['expense', 'income', 'transfer', 'card_settlement', 'refund', 'cash_withdrawal'])
+      .optional(),
+    reference: optionalText,
+    relatedTransactionId: id.optional(),
+    relatedAccountId: id.optional(),
+    source: z.enum(['bank', 'csv', 'manual']).optional(),
+  })
+  .strict()
+const pageSchema = z
+  .object({
+    transactions: z.array(recordSchema).max(200),
+    nextCursor: z.string().min(1).max(1000).nullable(),
+  })
+  .strict()
+
+export type Serialized<T> = T extends bigint
+  ? string
+  : T extends readonly (infer U)[]
+    ? Serialized<U>[]
+    : T extends object
+      ? { [K in keyof T]: Serialized<T[K]> }
+      : T
+export function json<T>(value: T): Serialized<T> {
+  return JSON.parse(
+    JSON.stringify(value, (_, item: unknown) =>
+      typeof item === 'bigint' ? item.toString() : item,
+    ),
+  ) as Serialized<T>
+}
+function canonical(value: unknown): unknown {
+  if (typeof value === 'bigint') return value.toString()
+  if (Array.isArray(value)) return value.map(canonical)
+  if (value && typeof value === 'object')
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, item]) => item !== undefined)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, item]) => [key, canonical(item)]),
+    )
+  return value
+}
+const hash = (value: unknown) =>
+  createHash('sha256')
+    .update(JSON.stringify(canonical(value)))
+    .digest('hex')
+const transactionHash = ({ revision: _revision, observedAt: _observedAt, ...value }: Transaction) =>
+  hash(value)
+function accountFromRow(row: typeof schema.accounts.$inferSelect): Account {
+  const { balanceMinor, currency: code, ...rest } = row
+  return { ...rest, balance: { amountMinor: balanceMinor, currency: code } }
+}
+function transactionFromRow(row: typeof schema.transactions.$inferSelect): Transaction {
+  const { amountMinor, currency: code, contentHash: _contentHash, ...rest } = row
+  return { ...rest, amount: { amountMinor, currency: code } }
+}
+function accountRow(account: Account) {
+  const { balance, ...rest } = account
+  return { ...rest, balanceMinor: balance.amountMinor, currency: balance.currency }
+}
+function transactionRow(transaction: Transaction) {
+  const { amount, ...rest } = transaction
+  return {
+    ...rest,
+    amountMinor: amount.amountMinor,
+    currency: amount.currency,
+    contentHash: transactionHash(transaction),
+  }
+}
+
+export class DemoService {
+  constructor(
+    readonly db: Database,
+    readonly profileId: string,
+    readonly provider: FinancialDataProvider,
+    readonly now: () => string = () => new Date().toISOString(),
+  ) {
+    if (!provider.capabilities().synthetic)
+      throw new Error('The demo API accepts synthetic providers only')
+  }
+  async bootstrap(seed = false) {
+    if (
+      (
+        await this.db
+          .select()
+          .from(schema.profileTombstones)
+          .where(eq(schema.profileTombstones.profileId, this.profileId))
+      ).length
+    )
+      return
+    await this.db
+      .insert(schema.profiles)
+      .values({
+        id: this.profileId,
+        name: 'Profilo dimostrativo',
+        timezone: 'Europe/Rome',
+        createdAt: this.now(),
+      })
+      .onConflictDoNothing()
+    if (
+      seed &&
+      !(
+        await this.db
+          .select()
+          .from(schema.connections)
+          .where(eq(schema.connections.profileId, this.profileId))
+      ).length
+    )
+      await this.connect()
+  }
+  async profile(db = this.db) {
+    const [profile] = await db
+      .select()
+      .from(schema.profiles)
+      .where(eq(schema.profiles.id, this.profileId))
+    if (!profile) throw notFound()
+    return profile
+  }
+  async connection(connectionId: string, db = this.db, lock = false) {
+    const query = db
+      .select()
+      .from(schema.connections)
+      .where(
+        and(
+          eq(schema.connections.profileId, this.profileId),
+          eq(schema.connections.id, connectionId),
+        ),
+      )
+    const [connection] = await (lock ? query.for('update') : query)
+    if (!connection) throw notFound()
+    return connection
+  }
+  async assertConsent(connection: Connection, db = this.db) {
+    const [consent] = await db
+      .select()
+      .from(schema.consents)
+      .where(
+        and(
+          eq(schema.consents.profileId, this.profileId),
+          eq(schema.consents.connectionId, connection.id),
+          isNull(schema.consents.revokedAt),
+        ),
+      )
+      .orderBy(desc(schema.consents.grantedAt))
+    if (
+      connection.status !== 'active' ||
+      !consent ||
+      consent.revokedAt ||
+      Date.parse(consent.expiresAt) <= Date.parse(this.now())
+    )
+      throw new Problem(
+        409,
+        'consent_inactive',
+        'Il collegamento è stato revocato o è scaduto. Crea un nuovo collegamento dimostrativo.',
+      )
+  }
+  async connect(): Promise<Connection> {
+    const result = await this.db.transaction(async (tx) => {
+      await this.profile(tx)
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const [existing] = await tx
+        .select()
+        .from(schema.connections)
+        .where(
+          and(
+            eq(schema.connections.profileId, this.profileId),
+            eq(schema.connections.providerId, this.provider.id),
+          ),
+        )
+        .orderBy(asc(schema.connections.createdAt))
+      if (existing?.status === 'active') {
+        try {
+          await this.assertConsent(existing, tx)
+          return { connection: existing, needsSync: existing.lastSyncedAt === null }
+        } catch (error) {
+          if (!(error instanceof Problem) || error.code !== 'consent_inactive') throw error
+        }
+      }
+      // Regranting the synthetic connection keeps canonical account and transaction identities.
+      const connectionId = existing?.id ?? `connection_${randomUUID()}`,
+        createdAt = this.now()
+      let grant: Awaited<ReturnType<FinancialDataProvider['createConnection']>>
+      try {
+        grant = await this.provider.createConnection({ profileId: this.profileId, connectionId })
+      } catch {
+        throw providerFailure()
+      }
+      if (
+        !Number.isFinite(Date.parse(grant.consentExpiresAt)) ||
+        Date.parse(grant.consentExpiresAt) <= Date.parse(createdAt) ||
+        grant.redirectUrl !== null
+      )
+        throw providerFailure()
+      const value: Connection = {
+        id: connectionId,
+        profileId: this.profileId,
+        providerId: this.provider.id,
+        institutionId: 'synthetic-italian',
+        status: 'active',
+        createdAt: existing?.createdAt ?? createdAt,
+        lastSyncedAt: existing?.lastSyncedAt ?? null,
+      }
+      await tx
+        .insert(schema.connections)
+        .values(value)
+        .onConflictDoUpdate({ target: schema.connections.id, set: { status: 'active' } })
+      await tx
+        .update(schema.consents)
+        .set({ revokedAt: createdAt })
+        .where(
+          and(
+            eq(schema.consents.profileId, this.profileId),
+            eq(schema.consents.connectionId, connectionId),
+            isNull(schema.consents.revokedAt),
+          ),
+        )
+      await tx.insert(schema.consents).values({
+        id: `consent_${randomUUID()}`,
+        profileId: this.profileId,
+        connectionId,
+        purpose: 'account_information',
+        grantedAt: createdAt,
+        expiresAt: grant.consentExpiresAt,
+        revokedAt: null,
+        provider: this.provider.id,
+      })
+      return { connection: value, needsSync: true }
+    })
+    if (result.needsSync) await this.sync(result.connection.id)
+    return await this.connection(result.connection.id)
+  }
+  async collect(connectionId: string) {
+    const context = { profileId: this.profileId, connectionId },
+      observedAt = this.now()
+    try {
+      await this.provider.refreshConnection(context)
+      const rawAccounts: ProviderAccount[] = z
+        .array(accountSchema)
+        .min(1)
+        .max(50)
+        .parse(await this.provider.listAccounts(context))
+      if (new Set(rawAccounts.map((account) => account.id)).size !== rawAccounts.length)
+        throw new Error('Duplicate provider account')
+      const normalizedAccounts = rawAccounts.map((account) =>
+        normalizeAccount(this.provider.id, context, account, observedAt),
+      )
+      const records: ProviderTransaction[] = []
+      for (const account of rawAccounts) {
+        let cursor: string | null = null,
+          pages = 0
+        const seen = new Set<string>()
+        do {
+          if (++pages > 100) throw new Error('Provider page bound')
+          const page = pageSchema.parse(
+            await this.provider.getTransactions(context, account.id, cursor),
+          )
+          for (const record of page.transactions) {
+            if (record.accountId !== account.id || record.currency !== account.currency)
+              throw new Error('Wrong account or currency')
+            records.push(record as ProviderTransaction)
+            if (records.length > 1000) throw new Error('Provider record bound')
+          }
+          cursor = page.nextCursor
+          if (cursor) {
+            if (seen.has(cursor)) throw new Error('Repeated provider cursor')
+            seen.add(cursor)
+          }
+        } while (cursor)
+      }
+      const observations = records.map((record) => ({
+        record,
+        transaction: normalizeTransaction(this.provider.id, context, record, observedAt),
+      }))
+      const canonical = new Map<string, Transaction>()
+      const statuses = new Map<string, string>()
+      const priority = { pending: 0, booked: 1, reversed: 2 }
+      for (const { transaction } of observations) {
+        const observationKey = `${transaction.id}:${transaction.status}`,
+          digest = transactionHash(transaction)
+        if (statuses.has(observationKey) && statuses.get(observationKey) !== digest)
+          throw new Error('Conflicting provider identity')
+        statuses.set(observationKey, digest)
+        const previous = canonical.get(transaction.id)
+        if (!previous || priority[transaction.status] > priority[previous.status])
+          canonical.set(transaction.id, transaction)
+      }
+      return { normalizedAccounts, observations, canonical: [...canonical.values()], observedAt }
+    } catch {
+      throw providerFailure()
+    }
+  }
+  async sync(connectionId: string) {
+    try {
+      return await this.db.transaction(async (tx) => {
+        await tx
+          .select()
+          .from(schema.profiles)
+          .where(eq(schema.profiles.id, this.profileId))
+          .for('update')
+        const connection = await this.connection(connectionId, tx, true)
+        await this.assertConsent(connection, tx)
+        // Hold the profile/connection lock during collection: an older request cannot overwrite a newer response.
+        const batch = await this.collect(connectionId)
+        const report = {
+          inserted: 0,
+          updated: 0,
+          unchanged: 0,
+          rejected: 0,
+          syncedAt: batch.observedAt,
+        }
+        for (const account of batch.normalizedAccounts) {
+          const row = accountRow(account)
+          await tx
+            .insert(schema.accounts)
+            .values(row)
+            .onConflictDoUpdate({ target: schema.accounts.id, set: row })
+        }
+        for (const { record, transaction } of batch.observations) {
+          const contentHash = hash(record)
+          await tx
+            .insert(schema.observations)
+            .values({
+              id: stableId(
+                'observation',
+                this.profileId,
+                connectionId,
+                transaction.accountId,
+                this.provider.id,
+                record.id,
+                record.status,
+                contentHash,
+              ),
+              profileId: this.profileId,
+              connectionId,
+              accountId: transaction.accountId,
+              providerId: this.provider.id,
+              providerRecordId: record.id,
+              status: record.status,
+              contentHash,
+              observedAt: batch.observedAt,
+              payload: record as unknown as Record<string, unknown>,
+            })
+            .onConflictDoNothing()
+        }
+        for (const transaction of batch.canonical) {
+          const [existing] = await tx
+            .select()
+            .from(schema.transactions)
+            .where(
+              and(
+                eq(schema.transactions.profileId, this.profileId),
+                eq(schema.transactions.id, transaction.id),
+              ),
+            )
+            .for('update')
+          if (!existing) {
+            await tx.insert(schema.transactions).values(transactionRow(transaction))
+            report.inserted++
+            continue
+          }
+          if (
+            ((existing.status === 'booked' || existing.status === 'reversed') &&
+              transaction.status === 'pending') ||
+            (existing.status === 'reversed' && transaction.status === 'booked')
+          ) {
+            report.rejected++
+            continue
+          }
+          if (existing.contentHash === transactionHash(transaction)) {
+            report.unchanged++
+            continue
+          }
+          await tx
+            .update(schema.transactions)
+            .set(transactionRow({ ...transaction, revision: existing.revision + 1 }))
+            .where(
+              and(
+                eq(schema.transactions.profileId, this.profileId),
+                eq(schema.transactions.id, transaction.id),
+              ),
+            )
+          report.updated++
+        }
+        await tx
+          .update(schema.connections)
+          .set({ lastSyncedAt: batch.observedAt })
+          .where(
+            and(
+              eq(schema.connections.profileId, this.profileId),
+              eq(schema.connections.id, connectionId),
+            ),
+          )
+        await tx.insert(schema.syncRuns).values({
+          id: `sync_${randomUUID()}`,
+          profileId: this.profileId,
+          connectionId,
+          ...report,
+        })
+        return report
+      })
+    } catch (error) {
+      if (error instanceof Problem) throw error
+      throw providerFailure()
+    }
+  }
+  async importCsv(accountId: string, csv: string) {
+    if (Buffer.byteLength(csv, 'utf8') > 262_144)
+      throw new Problem(422, 'invalid_csv', 'Il file CSV supera il limite di 256 KiB.')
+    return this.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const [account] = await tx
+        .select()
+        .from(schema.accounts)
+        .where(
+          and(eq(schema.accounts.profileId, this.profileId), eq(schema.accounts.id, accountId)),
+        )
+        .for('update')
+      if (!account) throw notFound()
+      const importedAt = this.now(),
+        context = { profileId: this.profileId, connectionId: account.connectionId }
+      let records: readonly ProviderTransaction[], transactions: readonly Transaction[]
+      try {
+        records = parseBankCsv(csv, account.providerAccountId)
+        if (!records.length || records.some((record) => record.currency !== account.currency))
+          throw new Error('Empty CSV or wrong currency')
+        transactions = records.map((record) => ({
+          ...normalizeTransaction('csv-import', context, record, importedAt),
+          accountId,
+        }))
+      } catch {
+        throw new Problem(
+          422,
+          'invalid_csv',
+          'Il CSV non è valido. Controlla le colonne, gli importi, le date e la valuta del conto.',
+        )
+      }
+      const report = { inserted: 0, updated: 0, unchanged: 0, rejected: 0, importedAt }
+      for (const transaction of transactions) {
+        const [existing] = await tx
+          .select()
+          .from(schema.transactions)
+          .where(
+            and(
+              eq(schema.transactions.profileId, this.profileId),
+              eq(schema.transactions.id, transaction.id),
+            ),
+          )
+        if (existing && existing.contentHash !== transactionHash(transaction))
+          throw conflict(
+            'Una riga CSV usa un’identità già salvata con dati diversi. Correggi l’identità e riprova.',
+          )
+        if (existing) report.unchanged++
+        else {
+          await tx.insert(schema.transactions).values(transactionRow(transaction))
+          report.inserted++
+        }
+      }
+      for (const [index, record] of records.entries()) {
+        const transaction = transactions[index]
+        if (!transaction) throw conflict()
+        const contentHash = hash(record)
+        await tx
+          .insert(schema.observations)
+          .values({
+            id: stableId(
+              'observation',
+              this.profileId,
+              account.connectionId,
+              accountId,
+              'csv-import',
+              record.id,
+              record.status,
+              contentHash,
+            ),
+            profileId: this.profileId,
+            connectionId: account.connectionId,
+            accountId,
+            providerId: 'csv-import',
+            providerRecordId: record.id,
+            status: record.status,
+            contentHash,
+            observedAt: importedAt,
+            payload: record as unknown as Record<string, unknown>,
+          })
+          .onConflictDoNothing()
+      }
+      return report
+    })
+  }
+  async data(
+    db = this.db,
+    additionalMatchOverrides: Readonly<Record<string, 'confirmed' | 'rejected' | 'undone'>> = {},
+  ) {
+    const accountRows = await db
+      .select()
+      .from(schema.accounts)
+      .where(eq(schema.accounts.profileId, this.profileId))
+    const transactionRows = await db
+      .select()
+      .from(schema.transactions)
+      .where(eq(schema.transactions.profileId, this.profileId))
+      .orderBy(asc(schema.transactions.id))
+    const feedback = await db
+      .select()
+      .from(schema.feedback)
+      .where(eq(schema.feedback.profileId, this.profileId))
+    const preferences = await db
+      .select()
+      .from(schema.preferences)
+      .where(eq(schema.preferences.profileId, this.profileId))
+    const decisions = await db
+      .select()
+      .from(schema.matchDecisions)
+      .where(eq(schema.matchDecisions.profileId, this.profileId))
+    const accounts = accountRows.map(accountFromRow),
+      transactions = transactionRows.map(transactionFromRow)
+    const analysis = analyse(accounts, transactions, {
+      preferences,
+      userClassifications: Object.fromEntries(
+        feedback.map((item) => [item.transactionId, item.categoryId]),
+      ),
+      matchOverrides: {
+        ...Object.fromEntries(decisions.map((item) => [item.matchId, item.state])),
+        ...additionalMatchOverrides,
+      },
+    })
+    return { accounts, transactions, analysis }
+  }
+  async overview() {
+    return this.db.transaction((tx) => this.overviewSnapshot(tx), {
+      isolationLevel: 'repeatable read',
+      accessMode: 'read only',
+    })
+  }
+  async overviewSnapshot(db: Database) {
+    const profile = await this.profile(db),
+      data = await this.data(db)
+    const connections = await db
+      .select()
+      .from(schema.connections)
+      .where(eq(schema.connections.profileId, this.profileId))
+    return {
+      mode: 'synthetic' as const,
+      profile: { id: profile.id, name: profile.name, timezone: profile.timezone },
+      connections,
+      ...data,
+    }
+  }
+  async page(cursor: string | undefined, limit = 25) {
+    await this.profile()
+    let lastId = ''
+    if (cursor) {
+      try {
+        if (cursor.length > 1024 || !/^[A-Za-z0-9_-]+$/.test(cursor))
+          throw new Error('Invalid cursor')
+        const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as {
+          profileId?: unknown
+          lastId?: unknown
+        }
+        if (
+          decoded.profileId !== this.profileId ||
+          typeof decoded.lastId !== 'string' ||
+          decoded.lastId.length > 200
+        )
+          throw new Error('Invalid cursor')
+        lastId = decoded.lastId
+      } catch {
+        throw new Problem(400, 'invalid_cursor', 'Il cursore della pagina non è valido.')
+      }
+    }
+    const rows = await this.db
+      .select()
+      .from(schema.transactions)
+      .where(
+        and(eq(schema.transactions.profileId, this.profileId), gt(schema.transactions.id, lastId)),
+      )
+      .orderBy(asc(schema.transactions.id))
+      .limit(limit + 1)
+    const items = rows.slice(0, limit).map(transactionFromRow)
+    return {
+      items,
+      nextCursor:
+        rows.length > limit
+          ? Buffer.from(
+              JSON.stringify({ profileId: this.profileId, lastId: items.at(-1)?.id }),
+            ).toString('base64url')
+          : null,
+    }
+  }
+  async correct(
+    transactionId: string,
+    categoryId: CategoryId,
+    scope: 'once' | 'merchant',
+    revision: number,
+  ): Promise<Classification> {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const [row] = await tx
+        .select()
+        .from(schema.transactions)
+        .where(
+          and(
+            eq(schema.transactions.profileId, this.profileId),
+            eq(schema.transactions.id, transactionId),
+          ),
+        )
+        .for('update')
+      if (!row) throw notFound()
+      if (row.revision !== revision) throw conflict()
+      if (scope === 'merchant' && !row.merchantKey)
+        throw new Problem(
+          422,
+          'merchant_unavailable',
+          'Questo movimento non ha un esercente riconoscibile. Scegli la categoria solo per questo movimento.',
+        )
+      await tx
+        .insert(schema.feedback)
+        .values({
+          profileId: this.profileId,
+          transactionId,
+          categoryId,
+          scope,
+          createdAt: this.now(),
+        })
+        .onConflictDoUpdate({
+          target: [schema.feedback.profileId, schema.feedback.transactionId],
+          set: { categoryId, scope, createdAt: this.now() },
+        })
+      if (scope === 'merchant' && row.merchantKey)
+        await tx
+          .insert(schema.preferences)
+          .values({ profileId: this.profileId, merchantKey: row.merchantKey, categoryId })
+          .onConflictDoUpdate({
+            target: [schema.preferences.profileId, schema.preferences.merchantKey],
+            set: { categoryId },
+          })
+      await tx
+        .update(schema.transactions)
+        .set({ revision: row.revision + 1 })
+        .where(
+          and(
+            eq(schema.transactions.profileId, this.profileId),
+            eq(schema.transactions.id, transactionId),
+          ),
+        )
+      const classification = (await this.data(tx)).analysis.classifications.find(
+        (item) => item.transactionId === transactionId,
+      )
+      if (!classification) throw notFound()
+      return classification
+    })
+  }
+  async decide(matchId: string, state: 'confirmed' | 'rejected' | 'undone'): Promise<Analysis> {
+    return this.db.transaction(async (tx) => {
+      await this.profile(tx)
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const { transactions, analysis } = await this.data(tx)
+      const match = analysis.matches.find((item) => item.id === matchId)
+      if (!match) throw notFound()
+      if (state === 'confirmed') {
+        const consumes = (type: string) =>
+          [
+            'duplicate',
+            'pending_to_booked',
+            'internal_transfer',
+            'card_settlement',
+            'cash_transfer',
+          ].includes(type)
+        if (
+          consumes(match.type) &&
+          analysis.matches.some(
+            (other) =>
+              other.id !== match.id &&
+              other.state === 'confirmed' &&
+              consumes(other.type) &&
+              other.transactionIds.some((id) => match.transactionIds.includes(id)),
+          )
+        )
+          throw conflict(
+            'Un movimento è già collegato a un’altra riconciliazione. Annulla prima quel collegamento.',
+          )
+        if (match.type === 'refund') {
+          const eligibleIds = new Set(
+            effectiveTransactions(transactions, analysis.matches)
+              .filter((transaction) => transaction.status === 'booked')
+              .map((transaction) => transaction.id),
+          )
+          if (!match.transactionIds.every((transactionId) => eligibleIds.has(transactionId)))
+            throw conflict(
+              'Il rimborso si riferisce a un movimento escluso. Verifica il collegamento.',
+            )
+          const refunds = transactions.filter(
+            (item) => item.kind === 'refund' && match.transactionIds.includes(item.id),
+          )
+          for (const refund of refunds) {
+            const original = transactions.find((item) => item.id === refund.relatedTransactionId)
+            if (
+              original?.status !== 'booked' ||
+              original.kind !== 'expense' ||
+              original.profileId !== refund.profileId ||
+              original.amount.amountMinor >= 0n ||
+              refund.status !== 'booked' ||
+              refund.amount.amountMinor <= 0n ||
+              refund.amount.currency !== original.amount.currency ||
+              refund.accountId !== original.accountId
+            )
+              throw conflict()
+            const total = transactions
+              .filter(
+                (item) =>
+                  item.profileId === original.profileId &&
+                  item.kind === 'refund' &&
+                  item.relatedTransactionId === original.id &&
+                  item.status === 'booked' &&
+                  item.accountId === original.accountId &&
+                  item.amount.amountMinor > 0n &&
+                  item.amount.currency === original.amount.currency,
+              )
+              .reduce((amount, item) => amount + item.amount.amountMinor, 0n)
+            if (total > -original.amount.amountMinor)
+              throw conflict(
+                'I rimborsi superano l’acquisto originale. Verifica i movimenti prima di confermare.',
+              )
+          }
+        }
+      }
+      // Validate the requested state against the engine before saving any decision or legs.
+      const proposed = (await this.data(tx, { [matchId]: state })).analysis
+      if (
+        state === 'confirmed' &&
+        proposed.matches.find((item) => item.id === matchId)?.state !== 'confirmed'
+      )
+        throw conflict('Questo collegamento non può essere confermato con i movimenti attuali.')
+      await tx
+        .insert(schema.matchDecisions)
+        .values({ profileId: this.profileId, matchId, state, decidedAt: this.now() })
+        .onConflictDoUpdate({
+          target: [schema.matchDecisions.profileId, schema.matchDecisions.matchId],
+          set: { state, decidedAt: this.now() },
+        })
+      await tx
+        .delete(schema.matchDecisionLegs)
+        .where(
+          and(
+            eq(schema.matchDecisionLegs.profileId, this.profileId),
+            eq(schema.matchDecisionLegs.matchId, matchId),
+          ),
+        )
+      await tx.insert(schema.matchDecisionLegs).values(
+        match.transactionIds.map((transactionId) => ({
+          profileId: this.profileId,
+          matchId,
+          transactionId,
+        })),
+      )
+      return proposed
+    })
+  }
+  async disconnect(connectionId: string) {
+    await this.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      await this.connection(connectionId, tx, true)
+      await tx
+        .update(schema.connections)
+        .set({ status: 'revoked' })
+        .where(
+          and(
+            eq(schema.connections.profileId, this.profileId),
+            eq(schema.connections.id, connectionId),
+          ),
+        )
+      await tx
+        .update(schema.consents)
+        .set({ revokedAt: this.now() })
+        .where(
+          and(
+            eq(schema.consents.profileId, this.profileId),
+            eq(schema.consents.connectionId, connectionId),
+            isNull(schema.consents.revokedAt),
+          ),
+        )
+    })
+    // Local consent denial commits first. A failed remote acknowledgement cannot enable sync.
+    try {
+      await this.provider.disconnect({ profileId: this.profileId, connectionId })
+    } catch {
+      /* Synthetic provider acknowledgement can be retried by another disconnect. */
+    }
+  }
+  async export() {
+    return this.db.transaction((tx) => this.exportSnapshot(tx), {
+      isolationLevel: 'repeatable read',
+      accessMode: 'read only',
+    })
+  }
+  async exportSnapshot(db: Database) {
+    const overview = await this.overviewSnapshot(db)
+    const consents = await db
+      .select()
+      .from(schema.consents)
+      .where(eq(schema.consents.profileId, this.profileId))
+    const observations = await db
+      .select()
+      .from(schema.observations)
+      .where(eq(schema.observations.profileId, this.profileId))
+    const feedback = await db
+      .select()
+      .from(schema.feedback)
+      .where(eq(schema.feedback.profileId, this.profileId))
+    const preferences = await db
+      .select()
+      .from(schema.preferences)
+      .where(eq(schema.preferences.profileId, this.profileId))
+    const matchDecisions = await db
+      .select()
+      .from(schema.matchDecisions)
+      .where(eq(schema.matchDecisions.profileId, this.profileId))
+    const syncRuns = await db
+      .select()
+      .from(schema.syncRuns)
+      .where(eq(schema.syncRuns.profileId, this.profileId))
+    const matchDecisionLegs = await db
+      .select()
+      .from(schema.matchDecisionLegs)
+      .where(eq(schema.matchDecisionLegs.profileId, this.profileId))
+    return {
+      exportVersion: 1 as const,
+      exportedAt: this.now(),
+      ...overview,
+      consents,
+      sourceObservations: observations,
+      feedback,
+      preferences,
+      matchDecisions,
+      matchDecisionLegs,
+      syncRuns,
+    }
+  }
+  async erase() {
+    const connections = await this.db.transaction(async (tx) => {
+      await this.profile(tx)
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const connections = await tx
+        .select()
+        .from(schema.connections)
+        .where(eq(schema.connections.profileId, this.profileId))
+      await tx
+        .insert(schema.profileTombstones)
+        .values({ profileId: this.profileId, erasedAt: this.now() })
+        .onConflictDoNothing()
+      await tx.delete(schema.profiles).where(eq(schema.profiles.id, this.profileId))
+      return connections
+    })
+    for (const connection of connections) {
+      try {
+        await this.provider.disconnect({ profileId: this.profileId, connectionId: connection.id })
+      } catch {
+        /* Local erasure and denial remain effective. */
+      }
+    }
+  }
+}
