@@ -105,7 +105,9 @@ committare, poi lanciare `tools/workflows/phase2-judge-consolidate.js` (giuria b
 consolidamento asset finali in `packages/brand/{logo,icon,png,tokens}` → design system e docs
 design/tone-of-voice → red team → fix). Se non completati in una nuova sessione (run ID non più
 resumibili): rilanciare da `tools/workflows/` solo le parti mancanti, senza rifare ciò che esiste.
-Subito dopo (anche in parallelo alla fase 2): lanciare `tools/workflows/phase3-architecture.js`.
+Fase 3 già lanciata (run `wf_0c0240da-3d0`): al termine verificare `docs/architecture/*.md`,
+`docs/adr/0001…0018`, `docs/security/*.md`, committare e iniziare la fase 4 seguendo
+`docs/architecture/repository-structure.md` e gli ADR.
 
 ## Piano
 
@@ -134,6 +136,13 @@ Subito dopo (anche in parallelo alla fase 2): lanciare `tools/workflows/phase3-a
   `packages/brand/explorations/direction-{a,b,c}/` (SVG + PNG) + `packages/brand/explorations/colour/`
   (t1/t2/t3 JSON + render).
 - `docs/BRIEF.md`, `docs/README.md`, `docs/adr/0000-adr-template.md`, `tools/`.
+- Tooling root del monorepo: `package.json` (script dev/build/typecheck/test/test:integration/
+  lint/format/check), `pnpm-workspace.yaml` (apps/*, packages/*; `tools/brand-render` escluso),
+  `turbo.json`, `biome.json` (preset recommended), `tsconfig.base.json` (strict, NodeNext),
+  `.editorconfig`, `.nvmrc`, `.npmrc`, `.gitignore`, hook git (`simple-git-hooks`: Biome sui file
+  staged + `scripts/check-commit-msg.mjs` Conventional Commits), `.github/workflows/ci.yml`
+  (Biome ci, typecheck, test, test:integration con servizio postgres:16, build, gitleaks, audit),
+  `.github/CODEOWNERS`, PR template, `README.md`, `CONTRIBUTING.md`, `SECURITY.md`.
 
 ## In corso
 
@@ -211,11 +220,14 @@ getBalances(), getTransactions(), disconnect() }`.
 
 ## Modifiche effettuate
 
-Solo documentazione, asset di esplorazione brand e tooling di supporto (vedi Completato).
+Documentazione, asset di esplorazione brand, tooling di supporto e configurazione root del
+monorepo (vedi Completato). Nessun pacchetto in `apps/` o `packages/` con `package.json` ancora
+(esiste solo `packages/brand/explorations/`).
 
 ## Test e verifiche
 
 - Spike eseguiti e passati (vedi Ambiente). Nessun test del prodotto ancora (nessun codice).
+- `pnpm install` root OK; `pnpm exec biome check .` pulito; hook commit-msg/pre-commit attivi.
 - Da fare: quality gate completo del monorepo in fase 4/5.
 
 ## Informazioni critiche da non perdere
@@ -227,6 +239,9 @@ Solo documentazione, asset di esplorazione brand e tooling di supporto (vedi Com
 - Documenti generati da agenti: ogni claim ha etichetta e fonte; mantenerle nelle modifiche.
 
 ## Recent Changes
+
+- 2026-10-02 ~16:00 UTC — aggiunto tooling root del monorepo + CI + governance; lanciato
+  workflow fase 3 architettura (run `wf_0c0240da-3d0`, script `tools/workflows/phase3-architecture.js`).
 
 - 2026-10-02 15:50 UTC — workflow fase 1/2 rilanciati in resume dopo esaurimento crediti del
   modello precedente; creati `PROJECT_STATE.md`, `docs/BRIEF.md`, `tools/`.
