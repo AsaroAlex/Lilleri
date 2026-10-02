@@ -1,0 +1,58 @@
+{
+  "name": "T2 — Carta & Oliva (olive & ink)",
+  "font": "Geist",
+  "light": {
+    "background": "#F4F1E6",
+    "surface": "#FBF9F3",
+    "surfaceElevated": "#FFFFFF",
+    "textPrimary": "#1D1C16",
+    "textSecondary": "#5B594C",
+    "textTertiary": "#6C6958",
+    "border": "#E0DCCB",
+    "primary": "#56663B",
+    "onPrimary": "#F7F6EC",
+    "secondary": "#6E6454",
+    "accent": "#3E4A2A",
+    "success": "#226B6B",
+    "warning": "#8A5A12",
+    "danger": "#B5383F",
+    "info": "#3A5A86",
+    "positive": "#1F6A70",
+    "negative": "#B03A45",
+    "chart": [
+      "#496211",
+      "#9C629B",
+      "#AA7D30",
+      "#2A5993",
+      "#933606",
+      "#1D9B86"
+    ]
+  },
+  "dark": {
+    "background": "#14140F",
+    "surface": "#1E1D17",
+    "surfaceElevated": "#292822",
+    "textPrimary": "#F1EEE3",
+    "textSecondary": "#B5B2A3",
+    "textTertiary": "#92907F",
+    "border": "#33322A",
+    "primary": "#9DB07A",
+    "onPrimary": "#171A10",
+    "secondary": "#C4BBAA",
+    "accent": "#C9D4A8",
+    "success": "#7FC9B4",
+    "warning": "#E3B45B",
+    "danger": "#EE7E88",
+    "info": "#8FB6E0",
+    "positive": "#8CC7B6",
+    "negative": "#F5A3A8",
+    "chart": [
+      "#587519",
+      "#BD78A9",
+      "#B08D3B",
+      "#3B6AA6",
+      "#A14E2B",
+      "#20A7A1"
+    ]
+  }
+}

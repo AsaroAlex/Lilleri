@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <!-- iOS-style app icon, no corner radius (the OS masks it) -->
-  <rect width="1024" height="1024" fill="#F1EADB"/>
-  <path d="M160 128 H312 V704 A48 48 0 0 0 360 752 H416 A72 72 0 0 1 416 896 H352 A192 192 0 0 1 160 704 Z" fill="#4F5D3A"/>
-  <path d="M536 128 H688 V704 A48 48 0 0 0 736 752 H792 A72 72 0 0 1 792 896 H728 A192 192 0 0 1 536 704 Z" fill="#4F5D3A"/>
+  <!-- iOS-style app icon, no corner radius (the OS masks it). Field #EFE7D8; mark scaled 0.827 and centred. -->
+  <rect width="1024" height="1024" fill="#EFE7D8"/>
+  <g transform="translate(88.6 88.6) scale(0.827)"><path d="M280 144 A16 16 0 0 1 296 128 H408 A16 16 0 0 1 424 144 V720 A40 40 0 0 0 464 760 H488 A68 68 0 0 1 488 896 H456 A176 176 0 0 1 280 720 Z" fill="#6E1F3B"/><path d="M600 448 A16 16 0 0 1 616 432 H728 A16 16 0 0 1 744 448 V896 H600 Z" fill="#6E1F3B"/><path d="M584 216 A88 88 0 1 0 760 216 A88 88 0 1 0 584 216 Z" fill="#6E1F3B"/></g>
 </svg>

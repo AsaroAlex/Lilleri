@@ -1,0 +1,58 @@
+{
+  "name": "T1 — Carta & Cotto (warm paper & terracotta)",
+  "font": "Geist",
+  "light": {
+    "background": "#F6F1E7",
+    "surface": "#FCF9F3",
+    "surfaceElevated": "#FFFFFF",
+    "textPrimary": "#1F1B17",
+    "textSecondary": "#5E554C",
+    "textTertiary": "#70665D",
+    "border": "#E4DCCF",
+    "primary": "#9C4E2C",
+    "onPrimary": "#FCF9F3",
+    "secondary": "#6B5744",
+    "accent": "#7D3519",
+    "success": "#2E6B3C",
+    "warning": "#705A12",
+    "danger": "#9A2050",
+    "info": "#3A5A86",
+    "positive": "#35663F",
+    "negative": "#8E2A4F",
+    "chart": [
+      "#884022",
+      "#2A5993",
+      "#AA7D30",
+      "#A36090",
+      "#546E20",
+      "#1D9B86"
+    ]
+  },
+  "dark": {
+    "background": "#15130F",
+    "surface": "#1F1B17",
+    "surfaceElevated": "#2A2520",
+    "textPrimary": "#F3EDE2",
+    "textSecondary": "#B5AC9E",
+    "textTertiary": "#948B7F",
+    "border": "#332D27",
+    "primary": "#D9906E",
+    "onPrimary": "#1F1B17",
+    "secondary": "#C2B4A2",
+    "accent": "#E8A98C",
+    "success": "#7DBF8E",
+    "warning": "#E3B45B",
+    "danger": "#E494AE",
+    "info": "#8FB6E0",
+    "positive": "#8DBD98",
+    "negative": "#E6A0B4",
+    "chart": [
+      "#9C5133",
+      "#3B6AA6",
+      "#B6893D",
+      "#B074AD",
+      "#587519",
+      "#27A18C"
+    ]
+  }
+}

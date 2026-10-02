@@ -1,0 +1,219 @@
+
+################ T1 — Carta & Cotto (warm paper & terracotta)
+
+== T1 — Carta & Cotto (warm paper & terracotta) — light
+role            background      surface         surfaceElevated 
+textPrimary     15.20 AAA       16.28 AAA       17.11 AAA       
+textSecondary   6.48 AA         6.94 AA         7.29 AAA        
+textTertiary    4.98 AA         5.33 AA         5.60 AA         
+border          1.21 fail       1.29 fail       1.36 fail       
+primary         5.27 AA         5.65 AA         5.93 AA         
+secondary       6.07 AA         6.51 AA         6.84 AA         
+accent          7.79 AAA        8.34 AAA        8.77 AAA        
+success         5.68 AA         6.08 AA         6.39 AA         
+warning         5.90 AA         6.32 AA         6.65 AA         
+danger          6.92 AA         7.41 AAA        7.79 AAA        
+info            6.25 AA         6.69 AA         7.03 AAA        
+onPrimary on primary: 5.65 AA
+
+== T1 — Carta & Cotto (warm paper & terracotta) — dark
+role            background      surface         surfaceElevated 
+textPrimary     15.92 AAA       14.68 AAA       13.02 AAA       
+textSecondary   8.27 AAA        7.63 AAA        6.76 AA         
+textTertiary    5.53 AA         5.10 AA         4.52 AA         
+border          1.37 fail       1.26 fail       1.12 fail       
+primary         7.21 AAA        6.65 AA         5.90 AA         
+secondary       9.14 AAA        8.43 AAA        7.47 AAA        
+accent          9.26 AAA        8.54 AAA        7.58 AAA        
+success         8.58 AAA        7.91 AAA        7.02 AAA        
+warning         9.67 AAA        8.92 AAA        7.91 AAA        
+danger          8.08 AAA        7.45 AAA        6.61 AA         
+info            8.78 AAA        8.09 AAA        7.18 AAA        
+onPrimary on primary: 6.65 AA
+
+-- extra checks (light)
+  positive  on background      5.97  AA
+  positive  on surface         6.40  AA
+  positive  on surfaceElevated 6.72  AA
+  negative  on background      7.19  AAA
+  negative  on surface         7.70  AAA
+  negative  on surfaceElevated 8.09  AAA
+  onPrimary on primary        5.65  AA
+  chart[0] #884022 on background 6.65  ok (>=3:1 mark)
+  chart[1] #2A5993 on background 6.33  ok (>=3:1 mark)
+  chart[2] #AA7D30 on background 3.28  ok (>=3:1 mark)
+  chart[3] #A36090 on background 4.03  ok (>=3:1 mark)
+  chart[4] #546E20 on background 5.14  ok (>=3:1 mark)
+  chart[5] #1D9B86 on background 3.07  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 11.7 · protan 12.2 · deutan 8.1
+  ΔE primary↔negative: normal 11.2 · protan 12.1 · deutan 9.5
+  ΔE primary↔positive: normal 16.6 · protan 2.7 · deutan 7.2
+  ΔE positive↔negative: normal 21.3 · protan 12.5 · deutan 2.5
+  ΔE primary↔warning: normal 9.3 · protan 2.6 · deutan 3.9
+-- extra checks (dark)
+  positive  on background      8.72  AAA
+  positive  on surface         8.04  AAA
+  positive  on surfaceElevated 7.13  AAA
+  negative  on background      8.88  AAA
+  negative  on surface         8.19  AAA
+  negative  on surfaceElevated 7.26  AAA
+  onPrimary on primary        6.65  AA
+  chart[0] #9C5133 on background 3.21  ok (>=3:1 mark)
+  chart[1] #3B6AA6 on background 3.36  ok (>=3:1 mark)
+  chart[2] #B6893D on background 5.86  ok (>=3:1 mark)
+  chart[3] #B074AD on background 5.25  ok (>=3:1 mark)
+  chart[4] #587519 on background 3.51  ok (>=3:1 mark)
+  chart[5] #27A18C on background 5.80  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 8.8 · protan 9.0 · deutan 7.8
+  ΔE primary↔negative: normal 9.4 · protan 10.1 · deutan 8.8
+  ΔE primary↔positive: normal 14.4 · protan 9.6 · deutan 5.4
+  ΔE positive↔negative: normal 15.7 · protan 6.3 · deutan 3.5
+  ΔE primary↔warning: normal 10.3 · protan 10.7 · deutan 8.6
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t1.png
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t1-semantics.png
+
+################ T2 — Carta & Oliva (olive & ink)
+
+== T2 — Carta & Oliva (olive & ink) — light
+role            background      surface         surfaceElevated 
+textPrimary     15.10 AAA       16.22 AAA       17.07 AAA       
+textSecondary   6.24 AA         6.70 AA         7.05 AAA        
+textTertiary    4.89 AA         5.25 AA         5.53 AA         
+border          1.22 fail       1.31 fail       1.38 fail       
+primary         5.53 AA         5.94 AA         6.25 AA         
+secondary       5.14 AA         5.52 AA         5.81 AA         
+accent          8.37 AAA        8.99 AAA        9.47 AAA        
+success         5.49 AA         5.90 AA         6.21 AA         
+warning         5.23 AA         5.62 AA         5.91 AA         
+danger          5.16 AA         5.54 AA         5.83 AA         
+info            6.22 AA         6.68 AA         7.03 AAA        
+onPrimary on primary: 5.76 AA
+
+== T2 — Carta & Oliva (olive & ink) — dark
+role            background      surface         surfaceElevated 
+textPrimary     15.90 AAA       14.54 AAA       12.72 AAA       
+textSecondary   8.68 AAA        7.93 AAA        6.94 AA         
+textTertiary    5.73 AA         5.24 AA         4.59 AA         
+border          1.43 fail       1.31 fail       1.15 fail       
+primary         7.85 AAA        7.18 AAA        6.28 AA         
+secondary       9.71 AAA        8.88 AAA        7.77 AAA        
+accent          11.85 AAA       10.83 AAA       9.48 AAA        
+success         9.60 AAA        8.78 AAA        7.68 AAA        
+warning         9.63 AAA        8.80 AAA        7.70 AAA        
+danger          7.02 AAA        6.41 AA         5.61 AA         
+info            8.74 AAA        7.99 AAA        6.99 AA         
+onPrimary on primary: 7.49 AAA
+
+-- extra checks (light)
+  positive  on background      5.54  AA
+  positive  on surface         5.95  AA
+  positive  on surfaceElevated 6.26  AA
+  negative  on background      5.25  AA
+  negative  on surface         5.64  AA
+  negative  on surfaceElevated 5.94  AA
+  onPrimary on primary        5.76  AA
+  chart[0] #496211 on background 6.11  ok (>=3:1 mark)
+  chart[1] #9C629B on background 4.01  ok (>=3:1 mark)
+  chart[2] #AA7D30 on background 3.27  ok (>=3:1 mark)
+  chart[3] #2A5993 on background 6.30  ok (>=3:1 mark)
+  chart[4] #933606 on background 6.70  ok (>=3:1 mark)
+  chart[5] #1D9B86 on background 3.05  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 19.3 · protan 5.2 · deutan 5.5
+  ΔE primary↔negative: normal 18.7 · protan 5.8 · deutan 4.6
+  ΔE primary↔positive: normal 8.7 · protan 8.0 · deutan 8.4
+  ΔE positive↔negative: normal 22.8 · protan 7.5 · deutan 10.8
+  ΔE primary↔warning: normal 8.7 · protan 4.1 · deutan 5.6
+-- extra checks (dark)
+  positive  on background      9.64  AAA
+  positive  on surface         8.82  AAA
+  positive  on surfaceElevated 7.71  AAA
+  negative  on background      9.40  AAA
+  negative  on surface         8.60  AAA
+  negative  on surfaceElevated 7.52  AAA
+  onPrimary on primary        7.49  AAA
+  chart[0] #587519 on background 3.50  ok (>=3:1 mark)
+  chart[1] #BD78A9 on background 5.65  ok (>=3:1 mark)
+  chart[2] #B08D3B on background 5.91  ok (>=3:1 mark)
+  chart[3] #3B6AA6 on background 3.34  ok (>=3:1 mark)
+  chart[4] #A14E2B on background 3.20  ok (>=3:1 mark)
+  chart[5] #20A7A1 on background 6.25  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 17.8 · protan 9.2 · deutan 1.4
+  ΔE primary↔negative: normal 15.8 · protan 6.3 · deutan 7.7
+  ΔE primary↔positive: normal 8.3 · protan 9.2 · deutan 7.9
+  ΔE positive↔negative: normal 16.1 · protan 5.3 · deutan 3.8
+  ΔE primary↔warning: normal 10.5 · protan 6.1 · deutan 9.3
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t2.png
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t2-semantics.png
+
+################ T3 — Carta, Notte & Vinaccia (paper, night ink & wine)
+
+== T3 — Carta, Notte & Vinaccia (paper, night ink & wine) — light
+role            background      surface         surfaceElevated 
+textPrimary     13.52 AAA       14.59 AAA       15.22 AAA       
+textSecondary   6.07 AA         6.55 AA         6.83 AA         
+textTertiary    4.84 AA         5.22 AA         5.45 AA         
+border          1.20 fail       1.29 fail       1.35 fail       
+primary         8.46 AAA        9.13 AAA        9.52 AAA        
+secondary       7.53 AAA        8.12 AAA        8.47 AAA        
+accent          11.58 AAA       12.49 AAA       13.03 AAA       
+success         5.68 AA         6.12 AA         6.39 AA         
+warning         5.81 AA         6.27 AA         6.54 AA         
+danger          5.47 AA         5.90 AA         6.15 AA         
+info            5.22 AA         5.62 AA         5.87 AA         
+onPrimary on primary: 8.78 AAA
+
+== T3 — Carta, Notte & Vinaccia (paper, night ink & wine) — dark
+role            background      surface         surfaceElevated 
+textPrimary     15.91 AAA       14.35 AAA       12.32 AAA       
+textSecondary   8.69 AAA        7.84 AAA        6.73 AA         
+textTertiary    6.09 AA         5.49 AA         4.71 AA         
+border          1.49 fail       1.35 fail       1.16 fail       
+primary         5.93 AA         5.35 AA         4.59 AA         
+secondary       9.16 AAA        8.26 AAA        7.09 AAA        
+accent          9.35 AAA        8.43 AAA        7.24 AAA        
+success         8.99 AAA        8.11 AAA        6.96 AA         
+warning         9.59 AAA        8.65 AAA        7.42 AAA        
+danger          7.85 AAA        7.08 AAA        6.08 AA         
+info            8.80 AAA        7.94 AAA        6.81 AA         
+onPrimary on primary: 5.74 AA
+
+-- extra checks (light)
+  positive  on background      5.78  AA
+  positive  on surface         6.23  AA
+  positive  on surfaceElevated 6.50  AA
+  negative  on background      5.48  AA
+  negative  on surface         5.91  AA
+  negative  on surfaceElevated 6.16  AA
+  onPrimary on primary        8.78  AAA
+  chart[0] #BA6986 on background 3.42  ok (>=3:1 mark)
+  chart[1] #2A5993 on background 6.33  ok (>=3:1 mark)
+  chart[2] #A3812D on background 3.25  ok (>=3:1 mark)
+  chart[3] #496211 on background 6.14  ok (>=3:1 mark)
+  chart[4] #009A95 on background 3.08  ok (>=3:1 mark)
+  chart[5] #893F28 on background 6.65  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 14.1 · protan 12.0 · deutan 14.7
+  ΔE primary↔negative: normal 13.3 · protan 12.0 · deutan 14.0
+  ΔE primary↔positive: normal 20.0 · protan 15.1 · deutan 6.3
+  ΔE positive↔negative: normal 20.8 · protan 6.5 · deutan 8.6
+  ΔE primary↔warning: normal 16.5 · protan 16.0 · deutan 11.0
+-- extra checks (dark)
+  positive  on background      9.12  AAA
+  positive  on surface         8.23  AAA
+  positive  on surfaceElevated 7.06  AAA
+  negative  on background      8.78  AAA
+  negative  on surface         7.92  AAA
+  negative  on surfaceElevated 6.79  AA
+  onPrimary on primary        5.74  AA
+  chart[0] #C77592 on background 5.59  ok (>=3:1 mark)
+  chart[1] #597427 on background 3.46  ok (>=3:1 mark)
+  chart[2] #3B6AA6 on background 3.33  ok (>=3:1 mark)
+  chart[3] #B08D3B on background 5.88  ok (>=3:1 mark)
+  chart[4] #11A19B on background 5.78  ok (>=3:1 mark)
+  chart[5] #9D5038 on background 3.19  ok (>=3:1 mark)
+  ΔE primary↔danger: normal 11.8 · protan 11.6 · deutan 11.9
+  ΔE primary↔negative: normal 12.9 · protan 13.1 · deutan 12.9
+  ΔE primary↔positive: normal 19.8 · protan 16.7 · deutan 9.1
+  ΔE positive↔negative: normal 14.8 · protan 5.9 · deutan 5.8
+  ΔE primary↔warning: normal 19.4 · protan 19.8 · deutan 17.0
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t3.png
+wrote /home/user/Lilleri/packages/brand/explorations/colour/t3-semantics.png

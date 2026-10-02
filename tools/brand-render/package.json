@@ -1,0 +1,20 @@
+{
+  "name": "@lilleri/brand-render",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Rendering toolkit used to produce and judge Lilleri brand assets (SVG → PNG with embedded fonts, icon sheets, app-shelf recognition test, WCAG contrast, palette sheets).",
+  "scripts": {
+    "fonts": "python3 prepare-fonts.py"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "sharp": "^0.34.0",
+    "geist": "^1.5.0",
+    "@fontsource-variable/inter": "^5.2.0",
+    "@fontsource-variable/newsreader": "^5.2.0",
+    "@fontsource-variable/manrope": "^5.2.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.2.0",
+    "@fontsource-variable/instrument-sans": "^5.2.0"
+  }
+}

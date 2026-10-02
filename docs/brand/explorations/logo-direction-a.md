@@ -1,185 +1,197 @@
-# Logo exploration — Direction A: "Settling into order" (working name: *Posa*)
+# Logo exploration — Direction A: "Settling into order" (working name: *Si posa*)
 
 **Project:** LILLERI (consumer PFM, Italy-first then Europe).
-**Document type:** identity exploration, one of three directions (Phase 2). Not a final identity.
-**Date:** 2026-10-02.
-**Inputs:** `docs/brand/brand-strategy.md`, `docs/brand/messaging-framework.md`, `docs/brand/naming-analysis.md`, `docs/research/brand-competitor-analysis.md` (§3 palette census, §4 shape landscape, §7 clichés, §9 territory T1), `docs/research/raw/typography-options.md` (§6–§7).
-**Assets:** `packages/brand/explorations/direction-a/` (SVG sources, PNG renders, process sheets). All renders were made with the Phase-2 rendering toolkit (resvg) and inspected at 1:1 pixels; everything stated below about legibility is what was *seen* in those renders, not inferred.
+**Document type:** identity exploration, one of several parallel directions (Phase 2). Not a final identity, not a decision.
+**Date:** 2026-10-02 (second pass of Direction A; it replaces the first pass in full).
+**Inputs:** `docs/brand/brand-strategy.md` (§4 personality, §9 "which visual element", §10 anti-patterns, §11 "no € in the mark"), `docs/brand/messaging-framework.md` (§1 territories, §4 "Tu spendi. Lilleri sistema."), `docs/brand/naming-analysis.md` (D6 lowercase wordmark, tailed `l`), `docs/research/brand-competitor-analysis.md` (§3 palette census, §4 shape landscape, §7 clichés, §9 territory T2 and its Satispay caveat), `docs/research/raw/typography-options.md` (§7 Geist Sans).
+**Assets:** `packages/brand/explorations/direction-a/` (SVG sources, PNG renders, process sheets; full list in §16). Every render was made with the Phase-2 toolkit (resvg) and inspected at 1:1 pixels; every statement below about legibility is what was *seen* in those renders, not inferred.
 
-**Labels.** FACT = measured or computed (contrast ratios, pixel sizes, what the renders show). HYPOTHESIS = a reading that must be tested with users. DECISION = a choice made inside this direction. OPEN = for the human designer.
+**Labels.** FACT = measured or computed (contrast ratios, pixel sizes, what a render shows). HYPOTHESIS = a reading that must be tested with users. DECISION = a choice made inside this direction only. OPEN = for the human designer.
 
 ---
 
 ## 1. Concept
 
-**Two tiles. The lower one is settled. The upper one is in its last ten degrees of coming to rest.**
+**A level base and a thin sheet coming to rest on it.**
 
-The product promise is that scattered things settle into order by themselves ("Tu spendi. Lilleri sistema."). The mark is the freeze-frame of that promise one instant before it completes: a stack of two soft rounded tiles — the same shape, the same colour — where the bottom tile is perfectly level and the top tile is hinged on one end, its other end still lifted by 10°. Nothing is pushing it. It is simply landing.
+The brand promise is that scattered things settle into order by themselves ("Tu spendi. Lilleri sistema."; "I tuoi soldi, in ordine. Da soli."). The mark is the last frame before that happens: a solid, settled slab — *il registro*, the one correct record — and above it a thin, light sheet — *il movimento*, the single transaction — already seated at its left end and still eight degrees up at its right. Nothing is pushing it; it is landing.
 
-Italian working name: **Posa** (*posarsi* = to come to rest; *la posa* is also what a mason calls laying a tile). The two tiles are *tessere* — the units of a mosaic, the thing that has exactly one right place ("Ogni movimento al suo posto", finalist line #7).
+The two elements are deliberately unequal. The first pass of this direction (two equal tiles, one tilted) read as an "=" sign and as a two-line menu at 16 px, because two equal bars *are* those glyphs. Giving the two elements different weights fixes that: a heavy thing that is settled and a light thing that is settling is a silhouette the category does not use, and it carries the brand's two registers in one shape — **weight** (trust, correctness, "a posto") below and **lightness** (*leggera, non superficiale*) above.
 
-Why two elements and not three or four: the brief allowed 2–4; every three-element version tested (stacks of three slabs, three pebbles, a slab with a pebble) lost its meaning at 24 px and below — three horizontal slabs become a hamburger menu, three pebbles become a dot cluster, a pebble on a slab becomes an avatar (see `process-01-first-sketches.png`, `process-02-second-sketches.png`). Two chunky tiles keep one silhouette at 16 px and still carry the story at 24 px and above.
+Italian working name: **Si posa** ("it settles / it comes to rest"), the same verb family as *posare* (to lay a tile) and the same two-beat rhythm as the tagline. Two things no user needs to decode: the elements are *tessere* (tiles) in terracotta, the material of every Tuscan roof and floor; and the sheet is paper, the brand's own surface.
 
-## 2. Meaning (what a user may read into it, in order of likelihood — HYPOTHESIS)
+## 2. Meaning (what a user may read, in order of likelihood — HYPOTHESIS)
 
-| Reading | Link to the brand |
+| Reading | What it carries for the brand |
 |---|---|
-| Two things stacking neatly, the top one landing | "Si sistema da sé" — order arriving by itself; the brand's one motion |
-| A soft "=" sign | *Il conto torna* — the accounts balance; two legs of a transfer become one; pending = booked |
-| Two tiles / two stones at rest | Calm, weight, "a posto"; the Tuscan *tessera* without folklore |
-| A ledger line with a second line being filed onto it | One correct record, kept in order |
+| Something light landing on something solid | "Si sistema da sé": order arriving without effort; the brand's one motion |
+| A sheet filed onto a stack | One record, kept; every movement in its place ("Ogni movimento al suo posto") |
+| A tile laid on a slab (*posa*) | Craft, stone, Italy without flags; "Italian like a well-set table" |
+| A lid about to close | Done, closed, nothing left to do (the empty Review Inbox: "Niente da fare.") |
+| Two strokes becoming one line | Reconciliation: pending and booked, the two legs of a transfer, one movement — the second concept the strategy named in §9 |
 
-The mark deliberately contains no letter, no coin, no chart, no arrow, no shield, no flag, no currency sign. It is not derived from the name; the wordmark carries the name, the mark carries the promise (consistent with `brand-strategy.md` §9 "a warm paper field with a small ink mark").
+The mark contains no letter, no coin, no chart, no arrow, no shield, no lock, no flag, no currency sign, no card. It is not derived from the name; the wordmark carries the name, the mark carries the promise (`brand-strategy.md` §9: "a warm paper field with a small ink mark").
 
-## 3. Construction notes
+## 3. How it was arrived at (three rounds, what was seen)
 
-Grid: 1024 × 1024 units, `viewBox="0 0 1024 1024"`. Solid fills only; no strokes, no gradients, no transforms other than one rotation (which can be baked into a path by the designer).
+| Round | What was rendered | What the 1:1 renders showed | Outcome |
+|---|---|---|---|
+| 1 — ten sketches (`process-01-round1-ten-sketches.png`) | Two tiles tilted (control); two bricks + one bridging; three pebbles; bar + dot; bar with a dip + pebble; long bar + short bar flush right; base + 62 % lid; three bars; slab + square block; slab + two short tiles — all at 128/64/48/32/24/16 px on paper and on dark | Three pebbles = club suit / Asana; bricks = club/cloud blob at 16 px; three bars = hamburger menu; bar with dip + pebble = hat / avatar; slab + two tiles = bus/face; slab + block = chair; lid at 62 % and 12° = laptop | Only the two-tile control and "bar + dot" survived at 16 px; the equal-tile control still read as "=" |
+| 2 — stacks and *punto* (`process-02-round2-stacks-and-punto.png`) | Square-silhouette two-tile stacks (tilt 8/12, mirrored), **heavy base + thin sheet**, bar + dot floating / touching / side by side, cairn of three tiles, three thin tiles, tiles + dot | Dot touching the bar = key / match; dot beside the bar = Morse "·–"; cairn = seated figure; tiles + dot = text block with a badge. **The thin sheet over a heavy base was the only composition whose silhouette at 16 px was not "two bars"**: a block with a line above it, tilt visible from 24 px | The *foglio* (sheet) family chosen for round 3; "bar + dot" kept as the runner-up (§15) |
+| 3 — sheet variants (`process-03-round3-foglio-variants.png`) | Sheet full-length / 85 % / tilt 6 / thinner / touching the hinge / taller box base / hinge on the right, plus two-tile and bar + dot controls, all with the icon field | 85 % sheet looks like a peeling label; touching the hinge reads as an *open* box (not settled); the taller base reads as a jewellery box; the right-hand hinge makes the sheet look as if it is sliding off; tilt 6° is lost at 24 px; the thinner sheet (120) reads lighter but is 1.2 px at 16 px in the icon | Full-length sheet, hinge at the left, floating (seam 60), tilt 8°, sheet 140 — DECISION |
+| Corner craft (`process-08-first-smoothing-attempt.png`, `process-07-corner-exponent-bug.png`) | Two attempts at continuous-curvature corners | First attempt rendered faceted ("chamfered stone"); second attempt used the wrong superellipse exponent and produced concave *notched* corners (a ticket stub) — caught in the 512 px render, not in the SVG | Corners are now a true superellipse with n = 2.8 (between a circle and a square), which reads as stone at 256 px and as a plain rounded block at 16 px |
+| Lockup (`process-06-lockup-scales.png`) | Mark at 1.00 / 0.92 / 0.85 of the `l` ascender height, gaps 0.50 / 0.42 / 0.40 | At 1.00 the slab outweighs the type; at 0.85 the mark looks like a footnote; 0.92 with gap 0.42 balances at 900 px and at 220 px | DECISION: 0.92 / 0.42 |
+
+## 4. Construction notes
+
+Grid: 1024 × 1024 units, `viewBox="0 0 1024 1024"`. Solid fills only. Two closed paths. No strokes, no gradients, no transforms in the file (the rotation is baked into the sheet's path so the file is one plain path per element).
 
 | Element | Value | Note |
 |---|---|---|
-| Tile size | 680 × 290 units (aspect 2.34 : 1) | Chunky enough to read as a *tile*, not a line; the 3 : 1 and thinner versions read as a typed "=" or menu lines (see `process-03-proportions.png`, V1) |
-| Corner radius | 104 units = 0.36 × tile height | Soft but not a capsule (a full pill reads as medicine); the designer should convert to a superellipse (see §13) |
-| Bottom tile | x 190–870, y 590–880, level | The settled state |
-| Top tile | same size, hinged on its **bottom-left corner** at (190, 534), rotated −10° | Right end lifted by 680 · sin 10° ≈ 118 units |
-| Seam at the seated end | ≈ 72 units (hinge sits 56 above the bottom tile; the rounded corner rises ~16 more) | = 1/14 of the frame; 1.0 px at 16 px in the app icon. This seam must never close: at 10° with the earlier right-hand hinge it closed and the two tiles merged into one jaw-shaped blob (process round 4; corrected) |
-| Gap at the lifted end | ≈ 154 units | 2.1 px at 16 px in the app icon |
-| Mark bounding box | 714 × 734 units, centred optically by measuring the rendered pixels (bbox 156–869 × 146–879) | ≈ 70 % of the frame |
-| Thinnest feature | the 72-unit seam | Above the brief's 1/24 rule (43 units) |
-| App icon | field `#F1EADC`, mark scaled 0.889 → ≈ 62 % of the icon width | iOS masks the corners; no corner radius drawn |
-| Wordmark | "lilleri", lowercase, Geist 600, −0.025 em tracking, ink `#1F1B17` | Text element at this stage; Geist's tailed `l` and square `i` dots echo the tiles (`naming-analysis.md` D6 asks for a distinct `l`) |
-| Lockup | mark height = ascender height of the `l`; mark bottom on the baseline; gap = 0.55 × that height | Tested 0.42–0.70; 0.42 was tight, 0.70 fell apart (see process round 5) |
-| Clear space (proposed) | one tile height (290 units at mark scale) on all sides | OPEN — to be confirmed in the brand book |
+| Base (*il registro*) | 672 × 340 units, corner radius 120 (0.35 × height), superellipse exponent n = 2.8 | Level; the settled state. 2 : 1 proportion keeps it a slab, not a line (3 : 1 and thinner read as a dash or a typed "=") |
+| Sheet (*il movimento*) | 672 × 140 units, corner radius 58 (0.41 × height), same exponent | Same length as the base so the two read as a pair; 0.41 × height keeps the ends slightly squared (a full pill reads as a capsule) |
+| Weight ratio | sheet : base = 140 : 340 = 0.41 | The ratio that separates "a light thing on a heavy thing" from "two bars"; 0.35 looked like a hairline at 16 px, 0.5 drifted back toward "=" |
+| Hinge | sheet rotated −8° about its bottom-left corner, which floats **60 units above** the base's top edge | The seam never closes: a touching hinge reads as an open box (round 3). Right end rises 672 · sin 8° ≈ 93 units, so the gap at the lifted end is ≈ 153 units |
+| Tilt | 8° (DECISION) | 6° disappears at 24 px; 12° tips; 8–9° read at 24 px and stay calm at 256 px |
+| Mark bounding box | 685 × 626 units: x 169–855, y 187–813 | 67 % × 61 % of the frame; the union of both elements is centred and then raised by 1.2 % of the frame for the optical centre |
+| Thinnest feature | the sheet, 140 units = 1/7.3 of the frame; the seam, 60 units = 1/17 | Both above the brief's 1/24 (43 units) minimum |
+| App icon | field Carta scura `#EFE6D5`, mark scaled 0.68 about the centre → base 457 units wide (45 % of the icon), total mark 466 × 426 | No rounded corners drawn; the OS masks them. A dark-mode icon variant (`app-icon-dark.svg`: Notte field `#1F1B17`, mark in Cotto chiaro) is supplied for iOS 18 |
+| Wordmark | "lilleri", lowercase, **Geist Sans 600**, tracking −0.02 em, Inchiostro `#1F1B17` | Typeset at this stage (a `<text>` element). Chosen over Manrope, Plus Jakarta Sans, Instrument Sans, Inter and Newsreader in `process-05-wordmark-typefaces.png`: Geist is the only sans in the set whose `l` has a tail, which `naming-analysis.md` D6 requires so that l-i-l-l does not become a picket fence, and its square `i`-dots echo the tile corners |
+| Lockup | mark height = 0.92 × ascender height of the `l`; mark bottom on the baseline; gap = 0.42 × ascender | `lockup-horizontal.svg`; dark version with the same geometry |
+| Clear space (proposed) | one sheet height (140 units at mark scale) on all sides, measured from the bounding box | OPEN |
 
-Tilt angle: 8°, 10° and 12° were rendered side by side at 64–16 px. 8° disappears at 24 px; 12° looks like tipping at 100 px; **10° is the DECISION** (reads at 24 px, calm at 256 px).
+## 5. Colour
 
-## 4. Colour
+Territory **T2 — Carta, Inchiostro, Cotto** from `docs/research/brand-competitor-analysis.md` §9, chosen for this direction because the elements are tiles and terracotta is the material of a tile; the other directions explore olive, so the studio gets a real colour comparison, not three variations on one hue. The research's starting value `#8F3B22` (6.62 : 1 on paper, AA) was deepened to **`#86371F`** so that the signature passes **AAA on paper, white and ivory** and keeps presence at 16 px (`process-04-colourways.png` compared `#8F3B22`, `#7A3219`, olive, amaranth and ink in the icon at 60/40/29 px).
 
-Territory **T1 — Carta, Inchiostro, Oliva** from `docs/research/brand-competitor-analysis.md` §9, with one change: the olive was deepened from the research starting point `#4F5D3A` (6.30 : 1 on paper, AA) to **`#43522D`** so that the mark passes AAA on every paper tone and keeps its presence at 16 px (the lighter olive went grey-green at that size in the renders).
+Exactly one signature colour. Semantic colours are separate and never share the cotto hue: positive amounts are a teal, **negative amounts are shown in ink with the sign, never in a red**, and the error colour is a plum (`#7E2A4C`, hue ≈ 335°) so that nothing red-adjacent competes with the signature — the rule the research set for T2 ("never encode negatives in cotto").
 
-Exactly one signature colour. The semantic colours (positive, negative, warning, info) are separate and never share the olive hue: positives are a teal, not a green, so olive never means "gain" (research rule).
-
-| Role | Name | Hex | Contrast (FACT, WCAG 2.x) |
+| Role | Name | Hex | Contrast (FACT, WCAG 2.x, computed with `contrast.mjs`) |
 |---|---|---|---|
-| Signature | Oliva | `#43522D` | 7.51 : 1 on Carta `#F6F1E7` (AAA); 8.46 : 1 on white (AAA); 7.06 : 1 on the icon field `#F1EADC` (AAA); 7.98 : 1 on Avorio `#FBF8F2` (AAA) |
+| Signature | Cotto | `#86371F` | **7.23 : 1 on Carta `#F6F1E7` (AAA)**; **8.14 : 1 on white (AAA)**; 7.68 : 1 on Avorio `#FBF8F2` (AAA); 6.57 : 1 on the icon field `#EFE6D5` (AA) |
 | Paper (brand background) | Carta | `#F6F1E7` | Ink on it 15.20 : 1 (AAA) |
-| Paper, deeper (app-icon field, secondary surfaces) | Carta scura | `#F1EADC` | Ink on it 14.29 : 1 (AAA); only 1.20 : 1 against pure white and 1.07 : 1 against the iOS light home screen `#F2F2F7` — see weaknesses |
+| Paper, deeper (icon field, secondary surfaces) | Carta scura | `#EFE6D5` | Ink on it 14.56 : 1; only 1.24 : 1 against white and 1.11 : 1 against the iOS light home screen `#F2F2F7` — see §7 |
 | Card surface | Avorio | `#FBF8F2` | — |
 | Ink (text, wordmark) | Inchiostro | `#1F1B17` | as above |
 | Secondary text | — | `#6B635A` | 5.24 : 1 on Carta (AA) |
-| Signature on dark | Salvia | `#9FB084` | 7.97 : 1 on Notte `#15130F` (AAA); 7.35 : 1 on the dark surface `#1F1B17` (AAA). Chosen over `#A7B58B` (8.50 : 1, reads pastel) and `#8FA37E` (6.81 : 1, reads muddy) in a side-by-side render |
+| Signature on dark | Cotto chiaro | `#E09A7A` | 8.02 : 1 on Notte `#15130F` (AAA); 7.39 : 1 on the dark surface `#1F1B17` (AAA). Chosen over `#E3A58C` (8.86 : 1, reads peach) and `#DC9470` (6.94 : 1 on the surface, misses AAA) |
 | Dark background | Notte | `#15130F` | Dark text `#F3EDE2` on it 15.92 : 1 |
-| Semantic (light) | positive teal `#1F6B5E` 5.61 : 1 · warning `#8A5A12` 5.25 : 1 · negative `#A8352C` 5.81 : 1 · info `#2F5C8A` 6.18 : 1 | all AA on Carta |
+| Semantic (light) | positive teal `#1F6B5E` 5.61 : 1 · warning ochre `#8A5A12` 5.25 : 1 · error plum `#7E2A4C` 8.03 : 1 · info `#2F5C8A` 6.18 : 1 | all AA or better on Carta |
+| Semantic (dark) | `#7FC4B4` 9.24 : 1 · `#E3B45B` 9.67 : 1 · `#E39AB5` 8.44 : 1 · `#8FB6E0` 8.78 : 1 | all AAA on Notte |
 
-Full token set in `palette.json`; applied to a mock home screen in `palette-sheet.png` (light and dark).
+Full token set in `palette.json`; applied to a mock home screen in `palette-sheet.png` (light and dark). In the mock, cotto carries the one button, the progress fill and the "Controlla" link; the renewal warning is plum, income is teal, expenses are ink — the signature is never a signal of good or bad.
 
-## 5. Strengths
+**Hue honesty (FACT):** Cotto `#86371F` is hue 14°, saturation 62 %, lightness 32 %. Satispay's orange `#FF3D00` is hue 14°, saturation 100 %, lightness 50 %. Same hue; the separation is entirely in saturation, lightness and the cream field. This is the research's T2 caveat and it is the first thing to test (§13, §15).
 
-1. **It says the product truth without a metaphor from the finance drawer.** No coin, chart, wallet, card, lock or letter; the composition itself is the promise (reconciliation, "il conto torna", things in their place).
-2. **One silhouette at every size.** Two solid masses; the smallest feature is 1/14 of the frame. It held at 16 px in every render, on light and dark.
-3. **The app icon is found instantly.** In both shelf tests (`shelf.png` seed 3, slot 6; `shelf-seed11.png` seed 11, slot 27) the cream square with the olive tiles was the only warm, light, desaturated icon on a grid of 29 saturated squares.
-4. **Native to the warm paper system** the strategy already decided on (D2 in the competitor analysis, "calm not cold"). Olive on cream is the opposite of the category's cold black-on-white premium default and of its neon.
-5. **It comes with the brand's one motion built in.** The 10° → 0° settle is the signature animation (splash, empty-inbox state, a transaction being reconciled); the 0° state is a second, legitimate form of the mark for "all in order".
-6. **Works in one colour** (mono, reversed, embossed, print) with no loss of construction.
-7. **Travels.** No Italian flag, no dialect joke, no currency; a Tuscan *tessera* for those who know, two tiles for everyone else.
+## 6. Strengths
 
-## 6. Weaknesses (honest)
+1. **It says the product truth with the product's own vocabulary** — a record and a movement — and with nothing from the finance drawer: no coin, chart, wallet, card, lock, letter or €.
+2. **Two weights, one silhouette.** The unequal elements give a shape that is not "=", not a menu, not a bar chart and not a letter; at 16 px it is "a block with a line", which no neighbour on the shelf has.
+3. **Found instantly on the shelf** (§9): the only warm, light, desaturated square among 29 saturated ones in both seeds, and the only dark glyph on a light field apart from one pink icon.
+4. **Native to the warm paper system** the research decided on (D2): cotto on cream is the opposite of the category's cold black-on-white premium default and of its neon.
+5. **The brand's one motion is built in.** 8° → 0° with the sheet settling flush on the base is the signature animation (splash, a transaction being reconciled, the inbox reaching zero); the 0° state is a second, legitimate static form.
+6. **Works in one colour** (mono, reversed, embossed, engraved, die-cut) with no loss of construction, because the story is in the proportions, not the colour.
+7. **Travels.** No flag, no dialect joke, no currency. Terracotta reads "Mediterranean" to a European and "warm" to everyone else.
 
-1. **The idea lives in the tilt, and the tilt is the first thing to go.** At 16 px the mark is "two soft bars"; the story returns at 24 px and is clear from 32 px. At favicon size the mark is distinctive only together with its colour and field.
-2. **Static ambiguity: settling or slipping?** A single frame of a tilted tile can read as *misaligned* (the wrong state) rather than *about to align*. This is the HYPOTHESIS to test first; the motion resolves it, a still image may not.
-3. **Formal neighbours.** Two stacked horizontal bars sit in the family of "=", the two-line menu, the card-with-stripe glyph (three of the generic shelf icons are exactly that) and the "layers" icon. The tilt and the equal tile heights are what separate it.
-4. **Furniture reading.** At large sizes the two rounded tiles can read as two cushions or a mattress and pillow. Warm, but not finance. Superellipse corners (§13) will reduce it.
-5. **Light-on-light edge.** The paper icon field has no contrast against a flat white or `#F2F2F7` background; on a photo wallpaper (the usual case) and in the App Store (hairline border) this is handled, on a plain light wallpaper the square softens into the background (seen in the "iOS home (light)" row of `icon-sheet.png`).
-6. **No link to the name.** The mark does not teach "Lilleri"; the wordmark must do that work on its own, which argues for the lockup, not the symbol alone, in early communication.
-7. **Olive is a narrow road.** Cooler or darker and it reads military/khaki; lighter and it reads "organic/eco". The hue must be locked and never desaturated further in UI tints.
+## 7. Weaknesses (honest)
 
-## 7. Memorability
+1. **The idea lives in the tilt and the gap, and both shrink first.** At 16 px the mark is "a block with a line above it"; the settling reads from 24 px and is unambiguous from 32 px.
+2. **Lid readings.** At 128 px and above a thin sheet floating over a slab can read as a box with its lid ajar, a laptop seen from the side, or — the closest formal neighbour — a film clapperboard (*ciak*). The floating seam and the terracotta reduce it; they do not remove it. HYPOTHESIS to test with a still image.
+3. **A rising diagonal.** The sheet slopes up to the right. In isolation a rising line is a growth cue the brief forbids; here the slab beneath it and the sheet's thickness make it a thing, not a line, and the mirrored version (sheet descending to the right) read as *slipping* in round 3. To be tested; if "trend" is ever reported, lower the tilt to 7° rather than mirror.
+4. **Same hue as Satispay.** The most recognised Italian fintech icon is a saturated orange square; Lilleri's is a cream square with a deep cotto mark. Different objects, same hue. The research's gate test (20 users, 60 px, 2 s) is mandatory before this colour is frozen; the olive fallback is in `process-04-colourways.png` and costs nothing to switch to.
+5. **Light-on-light edge.** The paper field is 1.11 : 1 against the iOS light home screen; on a plain light wallpaper the square softens into the background (seen in the "iOS home (light)" row of `icon-sheet.png`). Photo wallpapers, the App Store's hairline border and the dark-mode variant handle the usual cases.
+6. **No link to the name.** The mark does not teach "Lilleri"; the wordmark must, which argues for the lockup rather than the symbol alone in early communication.
+7. **Thin element in tinted-icon modes.** In iOS "tinted" icons the 1.5 px sheet at 16 px may vanish; a size-specific cut with a 170-unit sheet is the fix (§15).
 
-Medium-high (HYPOTHESIS). It is *nameable* ("le due tessere", "the two green tiles", "the settling =") — the test that single-letter icons fail — and it has one gesture to remember. Most of the memory, however, is carried by the colour pair (olive on cream); in black the mark is more generic than in colour. Expected to be more memorable than a letter-on-colour icon and less than a figurative symbol with a strong silhouette (a star, a butterfly). The empty-inbox animation is the memory hook the still image lacks.
+## 8. Memorability
 
-## 8. Scalability
+Medium-high (HYPOTHESIS). The mark is *nameable* — "the tile landing", "la tessera che si posa", "the sheet on the block" — which single-letter icons are not, and it has one gesture to remember. The colour pair (cotto on cream) does much of the work at 60 px; in black the mark is more generic than in colour. Expected to be more memorable than any letter-on-colour icon in the set and less than a figurative silhouette with a strong outline (a star, a feather). The settle animation is the memory hook the still image lacks.
 
-High (FACT for geometry). Solid fills, two elements, minimum feature 1/14 of the frame, no strokes to thin out. From 16 px to signage without a redrawn version, although §13 recommends a size-specific favicon cut with a stronger tilt. The settled 0° tile also scales *down* into a UI element (a list row, a progress block) and *out* into a pattern (rows of tiles as a ledger texture) without new drawing.
+## 9. App Store / home-screen recognisability (what the shelf test showed, FACT for the renders)
 
-## 9. App Store / home-screen recognisability (what the shelf test showed)
+- **Seed 3 (`shelf.png`):** Lilleri at slot 6 (second row, first column). On a near-black home screen it is the only warm, light square; the eye lands on the square before the glyph. Found before reading any label.
+- **Seed 11 (`shelf-seed11.png`):** slot 27 (bottom row, fourth column). This seed has three pink squares (Money, Fund, Flow), the nearest neighbours in lightness; the cream square still reads as a different family (warm neutral, not pink), and the cotto block-and-line does not resemble the black bar chart on the pink Fund icon.
+- **Glyph neighbours at 60 px:** the generic "card" icons (a rounded rectangle with a horizontal stripe) are the closest family. Lilleri's base has no stripe and its sheet floats above the slab at an angle, so at 60 px the pair reads as "slab + lid", not "card". The dark glyph on a light field is itself a differentiator: every other icon on the shelf is a white glyph on a saturated field.
+- **What the toolkit cannot show:** the real neighbours. The research's rule 4 (60 px next to Satispay, Revolut, N26, PayPal and Intesa on iOS and Android) is the test that matters, and for this colour it is the gate (§15).
 
-- Seed 3 (`shelf.png`): Lilleri at slot 6, second row, first column. On a near-black home screen it is the only warm, light square; the olive glyph is quiet enough that the square itself is the first thing seen. Found before reading any label.
-- Seed 11 (`shelf-seed11.png`): slot 27, bottom row. This seed has two pastel-pink squares and one pink-with-bars, the nearest neighbours in lightness; the cream square still reads as a different family (warm neutral, not pink) and the olive glyph does not resemble the black bar-chart glyph on the pink icon.
-- A control run with an **olive field and cream tiles** (`process-05-shelf-olive-field-rejected.png`) was clearly less findable: it fell into the group of near-black and dark-green squares. DECISION: paper field.
-- Where it is weakest at 60 px: the glyph is formally closest to the "card" glyphs (a rounded rect with a horizontal stripe). The equal tile heights and the tilt distinguish it; on a real home screen the test that matters is next to Satispay, Revolut, N26, PayPal and Intesa (`brand-competitor-analysis.md` D7), which this toolkit cannot reproduce — see §13.
+## 10. Legibility at 16 / 24 / 32 px (FACT, measured from `icon-sheet.png` at 1 : 1)
 
-## 10. Legibility at 16 / 24 / 32 px (FACT, from `icon-sheet.png`, 1:1 pixels)
-
-| Size | Tile | Seam (seated end) | Gap (lifted end) | What is seen |
-|---|---|---|---|---|
-| 16 px (icon) | 9.4 × 4.0 px | 1.0 px | 2.1 px | Two olive bars in a cream square; the wedge is a hint, the mark is a recognisable blob of the right colour |
-| 24 px | 14.2 × 6.0 px | 1.5 px | 3.2 px | Two tiles, the top one visibly askew |
-| 32 px | 18.9 × 8.1 px | 2.0 px | 4.3 px | The settling reads; corners start to show |
-| 48–64 px | — | — | — | Full construction, the hinge/wedge story is clear |
-| 16 px, symbol alone (no field) | 11.2 px wide, tiles 4.5 px | 1.1 px | — | Holds as "two bars"; use the icon with its field wherever possible below 24 px |
+| Size | Base | Sheet | Seam at the hinge | Gap at the lifted end | What is seen |
+|---|---|---|---|---|---|
+| 16 px (icon) | 7.1 × 3.6 px | 1.5 px | 0.6 px (merges) | 1.6 px | A cream square with a solid cotto block and a thin line above it; the line is visibly not parallel to the block |
+| 24 px | 10.7 × 5.4 px | 2.2 px | 1.0 px | 2.4 px | Block and sheet, the sheet clearly tilted; the wedge opens to the right |
+| 32 px | 14.3 × 7.2 px | 3.0 px | 1.3 px | 3.3 px | The settling reads; the seam at the hinge appears; corners start to show |
+| 48–64 px | — | — | — | — | Full construction; superellipse corners legible at 64 px |
+| 16 px, symbol alone (no field) | 10.7 × 5.3 px | 2.2 px | 0.9 px | 2.4 px | Holds as "block + line" on white and on dark; below 24 px prefer the icon with its field |
 
 ## 11. Dark / light behaviour
 
-Light is the brand's native mode (strategy §10). On light: Oliva `#43522D` on Carta/white, AAA. On dark: Salvia `#9FB084` on Notte `#15130F`, AAA, with the wordmark in `#F3EDE2` (`dark-lockup.png`). The dark mark is the same geometry in a different fill — no re-drawing. For iOS 18 icon variants: light = as delivered; dark = Notte field with Salvia tiles; tinted = the mono symbol as an alpha mask (OPEN: produce the three files).
+Light is the brand's native mode (`brand-strategy.md` §10). On light: Cotto `#86371F` on Carta, white or ivory, AAA. On dark: Cotto chiaro `#E09A7A` on Notte, AAA, with the wordmark in `#F3EDE2` (`dark-lockup.png`). The dark mark is the same geometry with a different fill; nothing is redrawn. iOS 18 icon variants: light = `app-icon.svg`; dark = `app-icon-dark.svg` (Notte field, Cotto chiaro mark, `icon-sheet-dark-variant.png`); tinted = `symbol-mono.svg` as the alpha mask (OPEN: the thin sheet needs the size-specific cut of §15).
 
 ## 12. Monochrome behaviour
 
-`symbol-mono.svg` (pure `#000000`) is the same construction and loses nothing structurally: no stroke, no gradient, no secondary colour. What it loses is warmth and part of its distinctiveness (in black the "=" and "two-line menu" readings get stronger). Reversed white on black works identically. One-colour print, embossing and engraving are all possible.
+`symbol-mono.svg` (pure `#000000`) is the same construction and loses nothing structurally: no stroke, no gradient, no second colour. What it loses is warmth and part of the colour-borne distinctiveness; in black the "lid / clapperboard" readings are a little stronger. Reversed white on black works identically (`symbol-dark@256.png` shows the tint; a pure-white version is the same file with the fill changed). One-colour print, embossing, engraving and die-cutting are all possible; the 60-unit seam is the only feature that needs a minimum size in print (≈ 0.3 mm at a 5 mm mark).
 
-## 13. Similarity risks versus named competitors (described, never copied)
+## 13. Similarity risks versus named competitors (described from the research, never copied)
 
-| Brand | Their mark (from the research; ASSUMPTION where noted) | Risk | Why |
+| Brand | Their mark (from `brand-competitor-analysis.md`; ASSUMPTION where it says so) | Risk | Why |
 |---|---|---|---|
-| Revolut | White "R" with a diagonal cut on near-black | Negligible | Letter vs abstract; black vs cream |
-| N26 | "N26" wordmark on teal `#088177` | Negligible | Wordmark-only; teal vs olive (175° vs ~85°, saturated vs desaturated) |
-| Klarna | Wordmark with full stop, Klarna Pink | Negligible | — |
-| Satispay | Rounded intertwined loop on orange `#FF3D00` (Koto, May 2024) | Low | Shares only a "soft rounded" formal language; loops vs tiles, orange vs olive. The icon-confusion test the research mandates (20 users, 60 px) is still required because Satispay is the most recognised Italian icon |
-| Wise | Bright green `#9FE870` on forest `#163300`, merged-letterform wordmark | Low–medium | The only neighbour in the green family. Olive is warm, dark and desaturated; the cream field keeps the icon out of the "green square" group. If the icon field ever became olive, this risk rises (see the rejected control) |
-| Curve | Minimal wordmark, dark icon with blue accent (ASSUMPTION) | Negligible | — |
-| Monzo | Hot Coral `#FF4F40`; the icon echoes the card | Low–medium (form, not colour) | Two stacked bars can read as a card; Monzo's coral vs our olive keeps them apart, but the "card" family reading is the one to watch |
-| Lydia / Sumeria | Lydia blue "L"; Sumeria greys and deep greens | Low | Letter vs abstract; Sumeria's deep greens are cooler and used without a cream field (ASSUMPTION) |
-| Lili | US business banking; mark UNKNOWN in the research | UNKNOWN (visual) / known (name) | The research flags the *name* similarity (LIL-), not the mark. Lili's icon must be checked before any filing of a figurative mark |
+| Revolut | White "R" with a diagonal cut on near-black `#191C1F` | Negligible | Letter vs object; black vs cream |
+| N26 | "N26" wordmark on teal `#088177` | Negligible | Wordmark-only; teal vs cotto |
+| Klarna | Wordmark with a full stop, Klarna Pink `#FFB3C7` | Negligible | — |
+| **Satispay** | Rounded intertwined loop on orange `#FF3D00` (Koto, May 2024) | **Medium (colour), low (form)** | Identical hue 14°; separation only by saturation (62 % vs 100 %), lightness (32 % vs 50 %) and the cream field vs a solid orange square. Form is unrelated (two straight tiles vs a loop). The 20-user, 60 px, 2-second confusion test is the gate; ≤ 10 % confusion or switch to olive |
+| Wise | Bright green `#9FE870` on forest `#163300`, merged-letterform wordmark | Negligible | Opposite colour family; wordmark-led |
+| Curve | Minimal wordmark, dark icon with a blue accent (ASSUMPTION) | Negligible | — |
+| Monzo | Hot Coral `#FF4F40` (hue 5°); the icon echoes the card | Low | Coral is nearby in hue but saturated and light; the "card" family reading is the one to watch, and the floating sheet keeps the mark out of it |
+| Lydia / Sumeria | Lydia blue "L"; Sumeria greys and deep greens | Negligible | Letter vs object; cool vs warm |
+| Lili | US business banking; mark UNKNOWN in the research | UNKNOWN (visual) / known (name) | The research flags the *name*, not the mark; Lili's icon must be checked before any figurative filing |
 | Emma | Purple lowercase "e" (ASSUMPTION) | Negligible | — |
-| Monarch | Butterfly/"M" on indigo (ASSUMPTION) | Negligible | — |
+| Monarch | Butterfly / "M" on indigo (ASSUMPTION) | Negligible | — |
 | Copilot | Dark icon with a bright glyph (ASSUMPTION) | Negligible | Dark field vs cream |
 | YNAB | "YNAB" wordmark on blue | Negligible | — |
-| Generic | "=" glyph, two-line menu, "layers", card-with-stripe, "pause" if rotated | Medium | The real similarity risk of this direction is generic, not a competitor; the tilt, the equal heights and the colour pair are the defence. A figurative-mark search for stacked rounded bars (classes 9/36/42) is recommended alongside the word-mark clearance in `naming-analysis.md` |
+| Generic forms | Clapperboard; open box / lid; laptop profile; "card with a stripe"; "=" if the sheet thickens | Medium | The real similarity risk of this direction is generic, not a competitor. Defences: unequal weights, the floating seam, stone corners, cotto on cream. A figurative-mark search for "slab with tilted bar" in classes 9/36/42 is recommended with the word-mark clearance |
 
-## 14. What a human designer should refine (OPEN)
+## 14. Why this instead of the runner-up ("bar + dot")
 
-1. **Superellipse tiles.** Replace the rounded rectangles with a true squircle (iOS-icon curvature, n ≈ 4–5) so the tiles read as stone/tessera, not as UI buttons or cushions; keep the 0.36 radius-to-height ratio as the starting point.
-2. **Size-specific cuts.** 10° at ≥ 48 px; 13–14° in a dedicated 16–32 px favicon/notification cut so the wedge survives (the seam must stay ≥ 1 px: at a stronger tilt the hinge offset has to be recomputed, as the round-4 merge showed).
-3. **Settling vs slipping test.** Ten users, still image only, "what is happening?" If "falling/misaligned" wins, test the mirrored hinge (seated end on the right) and a 6° variant before abandoning the tilt.
-4. **The motion.** Specify the one brand motion: 10° → 0° with an ease-out and no bounce (bounce reads playful); the 0° state is the empty-inbox hero ("Niente da fare oggi.").
-5. **Wordmark.** Draw "lilleri" rather than typeset it: match the `l` tail radius and the `i`-dot squares to the tile corner, equalise the three `l`s, fix tracking per size, define clear space = one tile height. The Newsreader serif alternate (`wordmark-alt-newsreader.png`) is more distinctive and more "premium Italian" but risks "old-fashioned" and splits the type system; keep it as a marketing-display option only, per `typography-options.md` §7.
-6. **Icon field edge.** Test the icon on five common light wallpapers; if the edge is lost, darken the field to about `#ECE4D4` for the icon only, or rely on the iOS 18 dark/tinted variants.
-7. **Colour discipline.** Lock Oliva `#43522D` and Salvia `#9FB084`; run deuteranopia/protanopia simulation against the positive teal and negative red; confirm olive is never used for a positive amount or a success state.
-8. **The real shelf.** Place the icon next to the actual Satispay, Revolut, N26, PayPal and Intesa icons at 60 px on iOS and Android (the research's rule 4); record the 2-second "which is which" rate (target ≤ 10 % confusion).
-9. **Pattern and UI derivatives.** Derive the list-row block, the progress block and a tile pattern from the settled tile so the mark lives inside the product, not only on the icon.
-10. **Figurative-mark search** for stacked rounded bars, classes 9/36/42, together with the word-mark clearance.
+"Il punto" — a level bar with a dot settling onto its right end — was the cleanest alternative in rounds 1–3 and has a strong verbal hook (*fare il punto* = to take stock; *mettere un punto* = to settle a matter; the dots of the two `i`s and the two full stops of the tagline). It was not chosen because at 16 px it is a dash and a speck, because rotated 90° it is a lowercase "i" (a letter icon by another route), and because "a ball above a bar" reads as bouncing, not settling. It is recorded in `process-02-round2-stacks-and-punto.png` (R5–R7) and `process-03-round3-foglio-variants.png` (P1) in case the designer wants to revisit it.
 
-## 15. Files (relative to the repository root)
+## 15. What a human designer should refine (OPEN)
+
+1. **The Satispay gate, first.** Place `app-icon.svg` at 60 px next to the real Satispay, Revolut, N26, PayPal and Intesa icons on an iOS and an Android home screen; 20 Italian users, "which is Satispay?" after 2 s. If confusion > 10 %, rebuild the same mark in Oliva `#43522D` (`process-04-colourways.png`, row 3) — nothing else changes.
+2. **Settling vs lid vs trend.** Ten users, still image only, "what is happening?". If "opening" or "rising" beats "landing", try tilt 7° and a 48-unit seam before anything else; do not mirror the hinge (round 3 showed the mirrored sheet slipping).
+3. **True superellipse curves.** The paths are sampled polylines (14 points per quarter corner, invisible at any size rendered). Redraw each corner as a G2 continuous curve in the drawing tool so the file is editable and the outline is clean at signage size.
+4. **Size-specific cuts.** ≥ 48 px as delivered; a 16–32 px cut with the sheet at 170 units and the seam at 72 so that the sheet survives iOS tinted icons and 1-bit favicons.
+5. **The motion.** Specify the one brand motion: 8° → 0° with an ease-out and no bounce (bounce reads playful); the 0° state is the empty-inbox hero ("Niente da fare oggi.").
+6. **Wordmark.** Draw "lilleri" rather than typeset it: match the `l`-tail radius and the `i`-dot squares to the tile corners, equalise the three `l`s, set tracking per size, and define clear space = one sheet height. Keep Geist 600 as the fallback.
+7. **Icon field edge.** Test on five common light wallpapers; if the edge is lost, deepen the field to about `#EAE0CC` for the icon only, or rely on the iOS 18 dark/tinted variants.
+8. **Colour discipline.** Lock Cotto `#86371F` and Cotto chiaro `#E09A7A`; run deuteranopia/protanopia simulations against the teal positive and the plum error; confirm cotto never marks a negative amount or an error state.
+9. **UI derivatives.** Derive the list-row block, the progress fill and a tile pattern from the settled base so the mark lives inside the product, not only on the icon; the sheet at 0° is a natural "reconciled" row marker.
+10. **Figurative-mark search** for "slab with a tilted bar" in classes 9/36/42, with the word-mark clearance in `naming-analysis.md`.
+
+## 16. Files (relative to the repository root)
 
 Deliverables, `packages/brand/explorations/direction-a/`:
 
 | File | What it is |
 |---|---|
-| `symbol.svg` | The mark, Oliva on transparent, `viewBox 0 0 1024 1024` |
+| `symbol.svg` | The mark, Cotto `#86371F` on transparent, `viewBox 0 0 1024 1024`, two paths |
 | `symbol-mono.svg` | Same construction in `#000000` |
-| `symbol-dark.svg` | Same construction in Salvia `#9FB084` for dark backgrounds |
-| `app-icon.svg` | iOS-style icon, field `#F1EADC`, mark at 62 % width, no rounded corners (OS mask) |
-| `wordmark.svg` | "lilleri", Geist 600, −0.025 em, ink; cropped viewBox |
-| `wordmark-alt-newsreader.svg` | Serif alternate (Newsreader 500) for the designer's consideration only |
-| `lockup-horizontal.svg` | Mark + wordmark, light |
-| `lockup-horizontal-dark.svg` | Mark + wordmark, dark fills |
+| `symbol-dark.svg` | Same construction in Cotto chiaro `#E09A7A` for dark backgrounds |
+| `app-icon.svg` | iOS-style icon, field `#EFE6D5`, mark at 0.68, no rounded corners (OS mask) |
+| `app-icon-dark.svg` | Dark-mode icon variant, field `#1F1B17`, mark in Cotto chiaro |
+| `wordmark.svg` / `wordmark-dark.svg` | "lilleri", Geist 600, −0.02 em, ink / dark ink |
+| `lockup-horizontal.svg` / `lockup-horizontal-dark.svg` | Mark + wordmark, light / dark fills |
 | `palette.json` | Token set used for the palette sheet |
 | `symbol@256.png` | Mark at 256 px on Carta |
+| `symbol@1024.png` | Mark at 1024 px on Carta (corner inspection) |
 | `symbol-mono@256.png` | Mono mark at 256 px on white |
-| `app-icon@256.png` | App icon at 256 px |
+| `symbol-dark@256.png` | Dark-tint mark at 256 px on Notte |
+| `app-icon@256.png` / `app-icon-dark@256.png` | App icon at 256 px, light and dark variants |
 | `wordmark.png` | Wordmark render on Carta |
-| `wordmark-alt-newsreader.png` | Serif alternate render |
 | `lockup.png` | Horizontal lockup on Carta |
 | `dark-lockup.png` | Horizontal lockup on Notte |
-| `icon-sheet.png` | App icon at 256 → 16 px on white, dark, iOS light and iOS dark backgrounds, 1:1 px |
+| `icon-sheet.png` | App icon at 256 → 16 px on white, dark, iOS light and iOS dark backgrounds, 1 : 1 px |
+| `icon-sheet-dark-variant.png` | The dark icon variant on the same four backgrounds |
 | `shelf.png` | Recognition test, seed 3 (Lilleri at slot 6) |
 | `shelf-seed11.png` | Recognition test, seed 11 (Lilleri at slot 27) |
 | `palette-sheet.png` | Swatches with contrast ratios and a mock home screen, light and dark |
@@ -188,28 +200,32 @@ Process (kept so the iteration can be audited):
 
 | File | What it shows |
 |---|---|
-| `process-01-first-sketches.png` | Round 1: three-slab stack (tilt / nudge / big gap), two slabs, three pebbles, pebble-on-slab — the hamburger, dot-cluster and avatar readings that eliminated them |
-| `process-02-second-sketches.png` | Round 2: tall stack, two slabs with seam, decreasing pyramid, "=", short-on-long, two squares |
-| `process-03-proportions.png` | Round 3: the two-tile mark at four proportions; V2 chosen |
-| `process-04-wordmark-typefaces.png` | Geist, Manrope, Plus Jakarta Sans, Instrument Sans, Newsreader at 96/24/16/12 px |
-| `process-05-shelf-olive-field-rejected.png` | The olive-field icon on the shelf (rejected: less findable) |
+| `process-01-round1-ten-sketches.png` | Round 1: ten compositions at 128–16 px on paper and dark; the club-suit, hamburger, avatar, laptop and bus readings that eliminated eight of them |
+| `process-02-round2-stacks-and-punto.png` | Round 2: square-silhouette stacks, the heavy-base + thin-sheet idea (R4), the *punto* family (R5–R7), cairn, three tiles, tiles + dot |
+| `process-03-round3-foglio-variants.png` | Round 3: seven sheet variants with the icon field, plus two-tile and bar + dot controls |
+| `process-04-colourways.png` | Cotto `#8F3B22`, `#7A3219`, Oliva, Amaranto and Inchiostro: symbol at 240 px, icon at 60/40/29 px on dark and light grounds, dark tint on Notte, with contrast ratios |
+| `process-05-wordmark-typefaces.png` | Geist 500/600/700, Manrope, Plus Jakarta Sans, Instrument Sans, Inter, Newsreader 500/600 at 96/32/20/13 px, plus "Lilleri Plus" |
+| `process-06-lockup-scales.png` | Mark at 1.00 / 0.92 / 0.85 of the ascender, gaps 0.50 / 0.42 / 0.40 |
+| `process-07-corner-exponent-bug.png` | The concave-corner render that the wrong superellipse exponent produced (caught at 512 px) |
+| `process-08-first-smoothing-attempt.png` | The faceted first attempt at smooth corners |
 
 ## Decisions in this direction
 
 | # | Decision | Type |
 |---|---|---|
-| A1 | Two tiles, not three; 680 × 290, radius 0.36 h; hinge on the seated end with a guaranteed 72-unit seam; tilt 10° | DECISION |
-| A2 | Signature Oliva `#43522D` (deepened from the research's `#4F5D3A` for AAA and 16-px presence); Salvia `#9FB084` on dark; paper field for the app icon | DECISION |
-| A3 | Wordmark set in Geist 600 lowercase at this stage; serif alternate documented, not adopted | DECISION (pending custom drawing) |
-| A4 | Lockup rule: mark height = `l` ascender height, bottom on baseline, gap 0.55 × height | DECISION |
-| A5 | The 10° → 0° settle is proposed as the brand's single motion; the 0° state is a legitimate secondary form | RECOMMENDATION |
+| A1 | Two unequal elements: base 672 × 340 r120, sheet 672 × 140 r58, superellipse n = 2.8; hinge at the left floating 60 units above the base; tilt 8° | DECISION |
+| A2 | Signature Cotto `#86371F` (deepened from the research's `#8F3B22` for AAA on paper and white); Cotto chiaro `#E09A7A` on dark; paper field `#EFE6D5` for the icon; negatives in ink, errors in plum, never red | DECISION (conditional on the Satispay gate) |
+| A3 | Wordmark typeset in Geist Sans 600 lowercase at this stage; custom drawing recommended | DECISION (pending custom drawing) |
+| A4 | Lockup rule: mark height = 0.92 × `l` ascender, bottom on the baseline, gap 0.42 × ascender | DECISION |
+| A5 | The 8° → 0° settle is proposed as the brand's single motion; the 0° state is a legitimate secondary form | RECOMMENDATION |
+| A6 | "Bar + dot" (*il punto*) recorded as the runner-up, not developed | DECISION |
 
 ## Open questions
 
 | # | Question | How to resolve |
 |---|---|---|
-| Q1 | Does the still mark read as settling or as slipping? | 10-user still-image test (§14.3) |
-| Q2 | Confusion rate at 60 px next to Satispay, Revolut, N26, PayPal, Intesa | Real-icon shelf test (§14.8) |
+| Q1 | Confusion rate with Satispay at 60 px (same hue) | Real-icon shelf test, 20 users (§15.1); olive fallback ready |
+| Q2 | Does the still mark read as settling, as a lid opening, or as a rising line? | 10-user still-image test (§15.2) |
 | Q3 | Does the cream field survive light wallpapers and Android adaptive-icon masks? | Device test on 5 wallpapers, Android 13+ themed icons |
-| Q4 | Lili's figurative mark and any registered stacked-bar marks in 9/36/42 | Trademark search with the word-mark clearance |
-| Q5 | Custom wordmark vs typeset Geist; serif for marketing display or not | Designer refinement + the 20-user name-recall test already planned in `naming-analysis.md` |
+| Q4 | Lili's figurative mark and any registered "slab + bar" marks in 9/36/42 | Trademark search with the word-mark clearance |
+| Q5 | Custom wordmark vs typeset Geist | Designer refinement + the name-recall test already planned in `naming-analysis.md` |

@@ -1,3 +1,36 @@
-{"name":"Direction B — Carta, Inchiostro, Oliva","font":"Geist",
-"light":{"background":"#F6F1E7","surface":"#FBF8F2","textPrimary":"#1F1B17","textSecondary":"#6B635A","border":"#E3DCCF","primary":"#4F5D3A","onPrimary":"#F6F1E7","accent":"#4F5D3A","success":"#3F6B45","warning":"#8A5A12","danger":"#A8352C","info":"#4B5C7A"},
-"dark":{"background":"#15130F","surface":"#1F1B17","textPrimary":"#F3EDE2","textSecondary":"#B5AC9E","border":"#332D27","primary":"#B7C59E","onPrimary":"#15130F","accent":"#B7C59E","success":"#8FC496","warning":"#E3B45B","danger":"#F08A80","info":"#9DB3D6"}}
+{
+  "name": "Direction B — Carta, Notte, Amaranto",
+  "font": "Geist",
+  "light": {
+    "background": "#F6F1E7",
+    "surface": "#FBF8F2",
+    "surfaceDeep": "#EFE7D8",
+    "textPrimary": "#1F1B17",
+    "textSecondary": "#6B635A",
+    "border": "#E3DCCF",
+    "primary": "#6E1F3B",
+    "onPrimary": "#F6F1E7",
+    "accent": "#6E1F3B",
+    "accentSoft": "#EBD3DA",
+    "success": "#1F6B5E",
+    "warning": "#6F5A14",
+    "danger": "#A94A1E",
+    "info": "#4B5C7A"
+  },
+  "dark": {
+    "background": "#1E2030",
+    "surface": "#2B2F4A",
+    "surfaceDeep": "#363A58",
+    "textPrimary": "#F3EFE6",
+    "textSecondary": "#B9B5C2",
+    "border": "#3B3F5C",
+    "primary": "#D6A4AF",
+    "onPrimary": "#1E2030",
+    "accent": "#D6A4AF",
+    "accentSoft": "#4A2A3A",
+    "success": "#7FC4B4",
+    "warning": "#E3B45B",
+    "danger": "#F0A070",
+    "info": "#9DB3D6"
+  }
+}

@@ -1,20 +1,20 @@
 {
-  "name": "Direction A — Carta, Inchiostro, Oliva",
+  "name": "Direction A — Carta, Inchiostro, Cotto",
   "font": "Geist",
   "light": {
     "background": "#F6F1E7",
     "surface": "#FBF8F2",
-    "surfaceDeep": "#F1EADC",
+    "surfaceDeep": "#EFE6D5",
     "textPrimary": "#1F1B17",
     "textSecondary": "#6B635A",
     "border": "#E3DCCF",
-    "primary": "#43522D",
-    "onPrimary": "#F6F1E7",
-    "accent": "#43522D",
-    "accentSoft": "#A7B58B",
+    "primary": "#86371F",
+    "onPrimary": "#FBF8F2",
+    "accent": "#86371F",
+    "accentSoft": "#E7C5B4",
     "success": "#1F6B5E",
     "warning": "#8A5A12",
-    "danger": "#A8352C",
+    "danger": "#7E2A4C",
     "info": "#2F5C8A"
   },
   "dark": {
@@ -24,13 +24,13 @@
     "textPrimary": "#F3EDE2",
     "textSecondary": "#B5AC9E",
     "border": "#332D27",
-    "primary": "#9FB084",
+    "primary": "#E09A7A",
     "onPrimary": "#15130F",
-    "accent": "#9FB084",
-    "accentSoft": "#43522D",
+    "accent": "#E09A7A",
+    "accentSoft": "#5A2A1A",
     "success": "#7FC4B4",
     "warning": "#E3B45B",
-    "danger": "#F08A80",
+    "danger": "#E39AB5",
     "info": "#8FB6E0"
   }
 }

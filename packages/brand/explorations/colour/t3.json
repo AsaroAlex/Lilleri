@@ -1,0 +1,58 @@
+{
+  "name": "T3 — Carta, Notte & Vinaccia (paper, night ink & wine)",
+  "font": "Geist",
+  "light": {
+    "background": "#F6F1E8",
+    "surface": "#FCFAF5",
+    "surfaceElevated": "#FFFFFF",
+    "textPrimary": "#25233A",
+    "textSecondary": "#5B5870",
+    "textTertiary": "#6A677E",
+    "border": "#E3DDD3",
+    "primary": "#7A2746",
+    "onPrimary": "#FBF4F6",
+    "secondary": "#4C4A66",
+    "accent": "#5A1832",
+    "success": "#2A6B45",
+    "warning": "#745A0C",
+    "danger": "#B4321C",
+    "info": "#2F6A8F",
+    "positive": "#35684A",
+    "negative": "#AD3A24",
+    "chart": [
+      "#BA6986",
+      "#2A5993",
+      "#A3812D",
+      "#496211",
+      "#009A95",
+      "#893F28"
+    ]
+  },
+  "dark": {
+    "background": "#15131C",
+    "surface": "#1F1D29",
+    "surfaceElevated": "#2B2937",
+    "textPrimary": "#F2EEE8",
+    "textSecondary": "#B5B0BF",
+    "textTertiary": "#9792A2",
+    "border": "#363341",
+    "primary": "#CB7A97",
+    "onPrimary": "#1F1420",
+    "secondary": "#B9B4CC",
+    "accent": "#E7A7BF",
+    "success": "#7FC49A",
+    "warning": "#E3B45B",
+    "danger": "#F0916A",
+    "info": "#8CB8E0",
+    "positive": "#8FC2A3",
+    "negative": "#EFA082",
+    "chart": [
+      "#C77592",
+      "#597427",
+      "#3B6AA6",
+      "#B08D3B",
+      "#11A19B",
+      "#9D5038"
+    ]
+  }
+}
