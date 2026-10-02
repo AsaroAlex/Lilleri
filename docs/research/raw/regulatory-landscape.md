@@ -1,0 +1,546 @@
+# Regulatory landscape for LILLERI (Italian consumer PFM, aggregated via a licensed TPP, AI-assisted) — status as of 2026-10-02
+
+**Project:** LILLERI — greenfield consumer Personal Finance Management app, Italy-first then Europe. No AISP licence. Bank data via a licensed third-party provider (agent model or "licence-as-a-service"). AI categorisation, review inbox, subscription detection, possibly an AI chat.
+**Author:** research sub-agent (regulatory track). **Verification date for every claim:** 2026-10-02 unless stated.
+**Audience:** founders, product, engineering, and the lawyer who will be asked to confirm the open questions in §15.
+
+---
+
+## 0. Scope note and evidence caveats (read first)
+
+### 0.1 What this document is
+
+A structured map of the laws and platform rules that bind an **unlicensed Italian PFM startup** that (a) receives payment-account data from a **licensed AISP**, (b) uses **AI** on that data, (c) sells a **consumer subscription** through the **app stores**, and (d) may later add affiliate/comparison features. For each area it gives: current law in force, pending change, expected impact on Lilleri, action required now, and whether professional legal review is required before production.
+
+### 0.2 Tooling constraints that affected this research (important for reliability)
+
+| Constraint | Effect |
+|---|---|
+| The session-wide `WebSearch` budget (200/200) was already exhausted by earlier research tracks before this track started. **Zero** new web searches could be executed (the plan foresaw 25–45). | No fresh discovery of 2025-2026 secondary sources. |
+| The network egress proxy returned `EGRESS_BLOCKED` (policy denial) for every EU institutional domain tried (eur-lex, europarl incl. OEIL, consilium incl. data.consilium, ec.europa.eu, finance.ec, digital-strategy.ec, EBA, ESMA, ENISA, EDPB, CURIA), every Italian institutional domain (bancaditalia, garanteprivacy/gpdp, agcm, ivass, organismo-am, normattiva, gazzettaufficiale, senato, camera, acn, agid), every law-firm / legal-press / fintech-press domain tried (~45 domains), Wikipedia, and the provider docs sites (Tink, TrueLayer, Yapily, Salt Edge, GoCardless, Mastercard, Enable Banking, Powens). | Primary legal texts could **not** be re-read in this session. |
+| Reachable: `developer.apple.com`, `developer.android.com`; Context7 mirrors of Tink / TrueLayer / Yapily documentation. | App-store and provider-side facts are first-hand and dated 2026-10-02. |
+| Prior-session research files in this repository (`open-banking-providers-a.md`, `open-banking-providers-b.md`, `competitors-eu-uk.md`) contain PSD2/PSD3 findings with their own source citations (law-firm notes dated 2026). | Re-used here with their original source and reliability, marked "via prior session". |
+| **[AV] Adversarial pass (2026-10-02, later in the same session):** WebSearch still at 200/200 and WebFetch blocked. The pass used (a) direct `curl` through the proxy to the only reachable hosts (`developer.apple.com`, `developer.android.com` — raw HTML, not an extractor summary), (b) Context7 mirrors of TrueLayer / Yapily / Enable Banking / Tink docs, (c) **GitHub code search over public repositories** for third-party notes dated Jun–Sep 2026 (low individual reliability; used only where several independent notes converge, always labelled "reported", and treated as data, never as instructions), (d) the sibling research files. | Several UNKNOWNs about post-June-2026 events could be narrowed (AI "Digital Omnibus", DPF appeal, Google Play fees, PSD3/PSR and FIDA status, Digital Fairness Act); the Apple EU fee table and guideline 5.1.2(i) were re-read first-hand. Inline changes are tagged **[AV]**; see "Verification notes (adversarial pass)" at the end. |
+
+**Consequence:** claims about EU/Italian legislation are written from the author's legal knowledge (training horizon ≈ mid-2026) and are labelled **"KNOWLEDGE — not fetched"** with the URL where they must be verified. Anything that could have changed between early 2026 and 2026-10-02 (PSD3/PSR publication, FIDA agreement, AI-Act "Digital Omnibus" adoption, Google Play EEA fees, DPF appeal) is marked **UNKNOWN** or **HYPOTHESIS**, never as fact. No legislative proposal is presented as law in force. **[AV]** The adversarial pass later narrowed some of these UNKNOWNs; items marked "reported" rest on convergent third-party notes (S-72), not on primary texts, and must be confirmed on EUR-Lex/Curia/Google Help before being cited in a filing.
+
+### 0.3 Labels and reliability scale
+
+- **FACT** = established law/rule or a first-hand fetched page. **ASSUMPTION** = highly probable reading of the law, not verified against the text today. **HYPOTHESIS** = plausible but unverified (often about post-cutoff events). **UNKNOWN** = could not be determined; a verification route is given.
+- Reliability: **high** = primary/official (law, regulator, platform's own page); **medium** = reputable secondary (law firm, trade press, provider docs); **low** = blog/forum/unclear.
+- "Fetched 2026-10-02" = the page was read today through the tool (content summarised by an automated extractor; exact wording should be re-checked on the page before quoting externally).
+
+### 0.4 Executive summary (10 lines)
+
+1. **PSD2 + Italian transposition are the law in force**; PSD3/PSR were politically agreed on 27 Nov 2025 (reported) and were moving to formal adoption in spring 2026, but **no Official Journal publication could be found; third-party notes dated Jul–Sep 2026 still describe the package as "agreed but not yet law", with the EP plenary indicatively scheduled for Dec 2026 — [AV] HYPOTHESIS; application is not before ~2028 (late 2028 / H1 2029 if publication slips to 2027)**. Design for PSD2 now (180-day SCA renewal at the bank, 4×/day background access, 90-day history default).
+2. Lilleri can operate **without an AISP licence** only as the **agent** of a licensed AISP or as a **recipient under the provider's licence**; Banca d'Italia's written position on the second model is **UNKNOWN** → legal review required before production (top open question).
+3. **FIDA** (open finance: savings, investments, insurance, pensions, loans) is **not law**; trilogues ran through 2025 and, per third-party notes dated Apr–Jul 2026, were **still open with no agreed text** ([AV] HYPOTHESIS); application would be ≥2028–2029. No build dependency.
+4. **DORA** applies since 17 Jan 2025 to the **licensed provider**, not to unlicensed Lilleri; expect DORA-driven clauses in the provider contract.
+5. **AI Act**: PFM categorisation/insights are **not Annex III high-risk** (only creditworthiness/credit-scoring of natural persons is). **[AV] The "Digital Omnibus on AI" is reported adopted as Regulation (EU) 2026/1744 (OJ 24 Jul 2026, in force 27 Jul 2026)**: Annex III high-risk duties deferred to **2 Dec 2027**, Annex I to 2 Aug 2028, **Art. 50 chatbot/synthetic-content transparency NOT deferred — applies since 2 Aug 2026**, Art. 4 AI-literacy duty retained in a softened "support the development of AI literacy" form (reported; convergent third-party notes, primary text not fetched — reliability medium). **Italian AI law 132/2025** in force since 10 Oct 2025 (transparency, minors <14, deepfake crime) — date corroborated by several Italian notes.
+6. **GDPR** is the heaviest day-one burden: contract as lawful basis for core processing, **Art. 9 inference risk** from categorisation (health/religion/union/politics) → design categories to avoid special-category labels or obtain explicit consent; **DPIA mandatory**; DPO strongly advisable; EU data residency; DPF still valid after the General Court's Sept 2025 ruling; **[AV] an appeal was lodged on 31 Oct 2025 and is pending as Case C-703/25 P** (reported; medium) — keep SCCs + TIA as the fallback.
+7. **Apple**: PFM premium subscription must use IAP (or, in the EU since 1 Oct 2026, alternative payments at 20%/10% or out-of-app links at 15%/10%; IAP is 26%/15%) — **[AV] every number and date re-read first-hand from developer.apple.com on 2026-10-02 (confirmed)**; **Guideline 5.1.2(i) (13 Nov 2025) requires explicit user permission before sharing personal data with third-party AI** (wording confirmed verbatim) — directly affects LLM-based categorisation/chat; financial apps must be submitted by the legal entity. **Google Play**: Play Billing for subscriptions; **[AV] a new fee model is reported live in the EEA/US/UK since 30 Jun 2026 (10% service fee on the first-$1M tier + 5% Play-Billing fee; alternative billing/external links pay no billing fee)** and, from 26 Aug 2026, the **User Data policy reportedly extends its disclosure/consent rules to third-party AI integrations** (both reported via convergent third-party notes, medium; Google help pages blocked); Data safety + financial-features declaration.
+8. **Consumer law**: distance-contract rules (14-day withdrawal, "pay" button, pre-contractual info), Digital Content Directive conformity, Omnibus transparency; AGCM polices dark patterns and subscription traps under unfair-practice rules; EU Digital Fairness Act **had not been proposed as of ~30 Sep 2026 (third-party notes; the Commission signalled autumn/Q4 2026) — [AV] HYPOTHESIS**.
+9. **Affiliate/comparison of financial products is regulated in Italy**: paid lead-generation for loans/cards = *mediazione creditizia* (OAM registration); insurance comparison = IVASS intermediary; personalised investment recommendations = MiFID advice (reserved). Keep v1 free of monetised referrals or get counsel first.
+10. **AML**: no obligations for Lilleri as an unlicensed recipient (the provider does KYB on Lilleri); **NIS2**: out of scope (size and sector); **EAA**: applies since 28 June 2025 to consumer banking and e-commerce services, with a micro-enterprise exemption for services — build to WCAG 2.1 AA anyway.
+
+---
+
+## 1. PSD2, Italian transposition, EBA RTS on SCA, AISP obligations
+
+### 1.1 Current law (in force)
+
+| Item | Content (paraphrased) | Status | Source / reliability | Doubts / verify |
+|---|---|---|---|---|
+| Directive (EU) 2015/2366 (PSD2) | Applies since 13 Jan 2018. Account information service (AIS) = Annex I point 8: an online service providing consolidated information on one or more payment accounts held with one or more ASPSPs. Only **payment accounts accessible online** are in scope (no savings/investment/loan accounts unless they are payment accounts). | FACT | S-01 (EUR-Lex, not fetched — blocked), high | — |
+| AISP status (Art. 33) | AIS-only providers are **registered** (not fully authorised) payment institutions; exempt from most PI requirements (own funds, safeguarding) but must hold professional indemnity insurance (Art. 5(3), EBA/GL/2017/08), have governance, security and incident procedures; they are listed in the national register and the EBA central register (Art. 14-15). | FACT | S-01, S-61; high | PII amount per EBA formula — case-specific. |
+| AISP conduct rules (Art. 67) | (a) provide the service only with the PSU's **explicit consent**; (b) protect credentials; (c) identify itself to the ASPSP every session and communicate securely (eIDAS QWAC/QSealC under RTS Art. 34); (d) access only the information from designated accounts and associated transactions; (e) never request **sensitive payment data**; (f) **not use, access or store any data for purposes other than performing the AIS explicitly requested by the PSU**, in accordance with data-protection rules. ASPSPs must treat AISP requests without discrimination and cannot require a contract (Art. 67(3)-(4)). | FACT | S-01; high | Point (f) is the legal crux of "licence-as-a-service" models (see §10). |
+| Art. 94(2) "explicit consent" | PSPs may access/process/retain personal data necessary for their payment services only with the PSU's explicit consent. The EDPB (Guidelines 06/2020) reads this as a **contractual** consent requirement, *not* GDPR Art. 6(1)(a) consent. | FACT | S-26 (EDPB 06/2020 v2.0, 15 Dec 2020; not fetched), high | — |
+| Italian transposition | **D.lgs. 15 dicembre 2017, n. 218** (in force 13 Jan 2018) amended the **TUB** (d.lgs. 385/1993) and **d.lgs. 11/2010**. Key TUB provisions: art. 114-septies (albo degli istituti di pagamento; AIS-only providers in a dedicated section), art. 114-novies (authorisation/registration; AIS-only subject to PII instead of capital), art. 114-undecies (supervision), art. 128-quater co. 6-7 (agents of PIs → OAM list); d.lgs. 11/2010 art. 5-ter mirrors PSD2 Art. 67 (AIS access rights). | FACT (existence) / ASSUMPTION (exact article numbering) | S-05 (normattiva, blocked), S-64 (prior session); high / medium | Verify article paragraphs on normattiva before citing in a filing. |
+| Banca d'Italia secondary rules | "Disposizioni di vigilanza per gli istituti di pagamento e gli istituti di moneta elettronica" (Provvedimento 23 July 2019 implementing PSD2, consolidated later), with a chapter on AISPs (registration file, PII, security policy, incident reporting), plus the Banca d'Italia FAQ on payment institutions (90-day decision term on complete applications; central contact point for EU PIs operating via agents). | FACT (via prior session) | S-06, S-07, S-08; high/medium | PDFs not fetched today. |
+| EBA RTS on SCA & CSC — Delegated Reg. (EU) 2018/389 | Applied from 14 Sept 2019. Art. 10: SCA exemption for account-information access limited to balance and **transactions of the last 90 days**; Art. 36(5): without the PSU actively requesting, an AISP may access data **max 4 times per 24 h** unless a higher frequency is agreed with the ASPSP; Art. 30-36 secure communication and dedicated interfaces; Art. 33 fallback/contingency; Art. 34 eIDAS certificates. | FACT | S-02; high | Banks count "accesses" differently (per account/consent/endpoint) — see prior session: Intesa returns `ACCESS_EXCEEDED` (S-64). |
+| **2022 amendment — Delegated Reg. (EU) 2022/2360** | Adopted 3 Aug 2022, OJ 5 Dec 2022 (EBA Final Report EBA/RTS/2022/03, 5 Apr 2022). New **Art. 10a**: ASPSPs **must not** apply SCA when the PSU accesses account information through an AISP (mandatory exemption), except on first access, and must re-apply SCA at least **every 180 days** (was 90). Optional 180-day exemption for direct customer access (Art. 10). Compliance date for ASPSPs reported as **25 July 2023**. | FACT | S-03 (EUR-Lex not fetched; EBA Final Report), high; application date via secondary (financialinstitutionsnews, medium — S-64) | Individual Italian banks may still issue shorter consents; provider docs disagree (Tink "90 or 180 depending on market"; Yapily "180 days EEA"; TrueLayer "max 90 days") — read `expires_at` per bank (S-44, S-45, S-64). |
+| EBA Q&A 2019_4631 | Confirms the 4×/day cap applies when the PSU is not actively requesting; PSU-present requests are unlimited. | FACT (via prior session) | S-04; high | — |
+
+Provider-side confirmation fetched today (mirrored docs, high): Yapily — "consent durations differ by region, up to 90 days in the UK and 180 days in the EEA; in the EEA users must re-authenticate with their bank every 180 days using SCA" (S-44). TrueLayer — "unregulated businesses can still offer these services by partnering with a regulated provider like TrueLayer"; unregulated clients must use TrueLayer's mandatory consent copy and submit UI designs for review; direct bank-auth links are restricted to regulated clients; TrueLayer's EU entity is regulated by the Central Bank of Ireland (S-43). Tink — consent validity "depends on the specific bank"; renewal via Tink Link `update-consent`; an insight `AGGREGATION_REFRESH_PSD2_CREDENTIAL` fires near `sessionExpiryDate` (S-45).
+
+### 1.2 Future change
+
+PSD3/PSR will replace PSD2 and the RTS (see §2). Until the PSR applies (not before ~2028), **everything above stays in force**.
+
+### 1.3 Expected impact on Lilleri
+
+- Lilleri is **not** an AISP unless it registers; as an **agent** it performs AIS "on behalf of" the licensee and the licensee's obligations (Art. 67, PII, incident reporting, complaints) cover the activity; as a **mere recipient** under the provider's licence it must not present itself as providing AIS, and the provider's consent screen names the provider (S-43, S-64).
+- Product constraints that follow directly from the RTS: (i) **re-authentication at the bank at least every 180 days** (plan reminders from day ~150, a "reconnect" inbox item, and history-gap handling — Tink only re-fetches 90 days after late renewal, S-64); (ii) **background refresh ≤4×/day** per consent unless the provider has agreements; (iii) **first-connection history typically 90 days** in Italy (S-64) → onboarding promise "understands the last 3 months, learns forward"; (iv) **no sensitive payment data** (no card PAN/credentials) must ever reach Lilleri; (v) Art. 67(2)(f) purpose limitation → Lilleri's processing must be what the user explicitly asked for (the PFM service), with GDPR covering any further purposes (§6).
+
+### 1.4 Action required now
+
+1. Choose the licensing route (agent vs recipient) with counsel and the chosen provider; obtain the provider's **EU licensed entity name, NCA and EBA-register link**, and its passport into Italy (S-64 open question).
+2. Write the user-facing explanation "Lilleri uses [Provider], an authorised AISP supervised by [NCA]" and build the mandatory **connection-management / revoke** screen.
+3. Engineer for 180-day expiry, 4×/day budget, 90-day history, and consent-gap recovery.
+
+### 1.5 Legal review before production? **Yes** — on the licensing route and on the consent/T&C flow (the provider will usually require UI review anyway, S-43).
+
+---
+
+## 2. PSD3 and the Payment Services Regulation (PSR)
+
+### 2.1 Legislative status (explicit: what is in force vs proposed vs agreed-but-not-applicable)
+
+| Step | Date | Status label | Source / reliability | Doubts |
+|---|---|---|---|---|
+| Commission proposals: PSD3 (COM(2023) 366) + PSR (COM(2023) 367), with FIDA, as the "financial data access and payments package" | 28 June 2023 | FACT | S-15 (Commission press release IP/23/3543, blocked), S-14 (Bird & Bird, 12 July 2023, via prior session); high/medium | — |
+| European Parliament first-reading position (plenary) | 23 April 2024 | FACT (KNOWLEDGE — not fetched) | S-16 (EP legislative train, blocked); high | Verify exact plenary date on OEIL 2023/0209(COD) (PSR) and 2023/0210(COD) (PSD3). |
+| Council general approach (negotiating mandate) | 18 June 2025 | FACT (KNOWLEDGE — not fetched) | S-17 (Council press release, blocked); high | — |
+| Trilogues | from July 2025 | FACT (reported) | S-09, S-10 via prior session; medium-high | — |
+| **Provisional political agreement** | **27 Nov 2025** | FACT (reported by two law firms) | S-09 Norton Rose Fulbright "PSD3 and PSR: from provisional agreement to 2026 readiness" (2026); S-10 MoFo 30 Apr 2026 (both via prior session; blocked today); medium-high | Not re-verified today. |
+| Final compromise texts published; COREPER endorsement; ECON vote; plenary; OJ publication | texts ~23 Apr 2026; COREPER 22 Apr 2026; ECON 5 May 2026; plenary "late May 2026"; OJ "expected Jun/Jul 2026" | FACT as of spring-2026 reporting (via prior session) | S-11 Lexology; S-12 openbankingtracker; medium | **Whether the PSR/PSD3 were actually adopted and published in the OJ by 2026-10-02 is UNKNOWN.** Verify: EUR-Lex search "Payment Services Regulation" / "Directive (EU) 2026/…". |
+| Application | Proposal: PSR applies **18 months** after entry into force (most provisions); PSD3 transposition 18 months. Spring-2026 reporting says a **21-month** clock after publication. | FACT (proposal) / FACT-reported (21 months) | S-15; S-11, S-12 (medium) | Either way **earliest application ≈ Q1–Q2 2028** if published mid-2026. Some provisions may have longer phase-ins. |
+
+**Bottom line:** *agreed-but-not-applicable* (at best, published-but-not-applicable). Do **not** design as if the PSR were in force.
+
+### 2.2 Key changes for AIS (from the June 2023 proposals; final agreed text not read)
+
+| Topic | Proposal content | Status of the claim | Impact on Lilleri |
+|---|---|---|---|
+| Dedicated interfaces (APIs) | ASPSPs must offer a dedicated interface; the obligation to maintain a permanent "fallback" interface is replaced by contingency measures; a **list of prohibited obstacles** (e.g., forcing extra registrations/IBAN typing, redundant consent checks, redirect-only friction) and minimum API performance/availability requirements. | FACT (proposal); final wording UNKNOWN | Better connection success rates in 2028+; nothing to build now. |
+| **Permission dashboards** at the bank | ASPSPs must give PSUs a dashboard to **see, withdraw and re-grant** data-access permissions given to AISPs/PISPs; AISPs must inform the ASPSP when access is terminated on their side (so dashboards stay accurate). | FACT (proposal) | Users will be able to revoke Lilleri's access from their bank app; Lilleri must handle "revoked at bank" states gracefully (already needed under PSD2). |
+| **SCA frequency for AIS** | Bank applies SCA on **first** access via an AISP; thereafter the **AISP** is responsible for applying its own SCA to the user **at least every 180 days** (shift of the renewal from bank to AISP). | FACT (Commission proposal text); Parliament/Council/final positions on this point UNKNOWN | If kept, the "reconnect at the bank" friction becomes an in-app step controlled by the licensee — a large UX win. Design the renewal flow as a pluggable step. |
+| 4×/day background cap | The proposal moves the frequency rules into Level 1; reporting suggests the final text lets ASPSPs grant access "whether or not the PSU is actively requesting", i.e., removing the hard 4×/day cap or making it negotiable. | HYPOTHESIS (S-13, S-14 via prior session; medium) | Potentially near-real-time balances in 2028+. Keep refresh scheduling configurable. |
+| Data scope | AISPs get the same account data the PSU sees online (balances, transactions, account identifiers); still only **payment accounts** (open finance is FIDA, §3). | FACT (proposal) | No change in data types. |
+| Licensing (PSD3) | E-money institutions merged into the PI regime; AISP **registration** regime retained (PII, no capital); stricter rules on agents/distributors, winding-up plans for PIs, and stronger NCA powers. | FACT (proposal) / details UNKNOWN | Own-registration path remains feasible later. |
+| Fraud/liability | Mostly PIS/transfers (IBAN-name check, liability for impersonation fraud) — not AIS. | FACT | None. |
+
+### 2.3 Impact, action, review
+
+- **Impact:** none before ~2028; medium-term upside (AISP-side SCA, dashboards, API quality). Risk: if Lilleri stays a *recipient* rather than an *agent/AISP*, the PSR's clearer dashboard/termination duties fall on the provider, and Lilleri's visibility to the user at the bank is only through the provider's name.
+- **Action now:** add a quarterly "PSR watch" (EUR-Lex + EBA consultations on the new RTS/ITS, which will be drafted 2026–2027); keep refresh frequency, renewal flow and consent-state machine configurable.
+- **Legal review before production:** **No** (not yet applicable); include in the first annual compliance review.
+
+---
+
+## 3. FIDA — Financial Data Access Regulation (open finance)
+
+### 3.1 Status
+
+| Step | Date | Label | Source / reliability | Doubts |
+|---|---|---|---|---|
+| Commission proposal COM(2023) 360 | 28 June 2023 | FACT | S-18 (EUR-Lex, blocked), S-15; high | — |
+| Parliament first-reading position | plenary April 2024 (ECON report adopted earlier in 2024) | FACT (KNOWLEDGE — not fetched) | S-16; high | Verify exact date on OEIL 2023/0205(COD). |
+| Council general approach | 4 Dec 2024 (phased application, narrowed scope, longer deadlines) | FACT (KNOWLEDGE — not fetched) | S-19 (Council press release, blocked); high | — |
+| Commission Work Programme 2025 (11 Feb 2025) | FIDA appeared in **Annex IV** (proposals the Commission intended to assess for withdrawal, citing "no foreseeable agreement"); after push-back from Parliament, Council and industry the Commission **kept** the file and trilogues started (spring 2025). | FACT (KNOWLEDGE — not fetched; medium-high) | S-20 | Confirm the wording of Annex IV and the Commission's March 2025 clarification. |
+| Trilogues | 2025 (Polish and Danish presidencies); contentious points: scope (insurance, pensions), timing, compensation schemes, inclusion of "gatekeepers"/big tech as data users, customer dashboards. | FACT (reported in 2025 press; medium) | — | — |
+| **Provisional agreement** | **UNKNOWN** — as of the author's knowledge (early/mid-2026) no agreement had been published in the OJ; whether negotiators concluded in late 2025 / 2026 is **UNKNOWN**. | UNKNOWN | Verify: Council press releases ("financial data access"), EP legislative train "Open finance framework — FIDA", EUR-Lex. | Do not assume adoption. |
+
+### 3.2 Scope and mechanism (proposal; Council text narrows and phases)
+
+- **Data categories** (proposal Art. 2): mortgage and consumer **loans** and accounts (other than PSD2 payment accounts), **savings**, **investments** in financial instruments and insurance-based investment products, crypto-assets, **pension** rights (incl. occupational), **non-life insurance** (excluding sickness/health), and data used for **creditworthiness assessment of firms**. Consumer creditworthiness data and health/life insurance data were out of the Commission's scope. (FACT — proposal; final scope UNKNOWN.)
+- **Who may access data:** only **regulated financial institutions** or newly authorised **Financial Information Service Providers (FISPs)**; access runs through **financial-data-sharing schemes** (members set standards and **compensation** to data holders) and customers control access through **permission dashboards** at the data holder. (FACT — proposal.)
+- **Timeline:** proposal 24 months after entry into force; Council text phases categories over ~24–48 months. (FACT — proposal/Council; final UNKNOWN.) → **Earliest real-world access ≈ 2028–2029** even if adopted in 2026.
+
+### 3.3 Impact, action, review
+
+- **Impact:** FIDA is the only route to **regulated** access to savings, brokerage, pension and insurance data in the EU; until then such data arrives only via manual import, statements/CSV, or non-PSD2 connectors with contractual/scraping risk. If FIDA applies, Lilleri would need to be a **FISP** (authorised) or partner with one, join schemes and possibly pay data holders.
+- **Action now:** none in code; keep a **"beyond payment accounts" roadmap** gated on FIDA; prefer manual/CSV import for investments in v1; avoid credential-based scraping of brokers/insurers (contract and GDPR risk, and likely unlawful under Italian computer-access rules if ToS forbid it — ASSUMPTION, counsel).
+- **Legal review before production:** **No** (not applicable).
+
+---
+
+## 4. DORA — Regulation (EU) 2022/2554
+
+### 4.1 Current law
+
+| Item | Content | Label | Source |
+|---|---|---|---|
+| Application | Applies since **17 Jan 2025** to "financial entities" listed in Art. 2(1): credit institutions, **payment institutions (incl. exempted ones)**, **account information service providers**, e-money institutions, investment firms, CASPs, insurers, etc. | FACT (KNOWLEDGE — not fetched) | S-21, S-22 (ESMA DORA page, blocked); high |
+| Pillars | ICT risk-management framework (Ch. II), ICT incident classification and reporting (Ch. III), digital operational resilience testing (Ch. IV, TLPT only for significant entities), **ICT third-party risk** (Ch. V: Art. 28 principles and **register of information**, Art. 30 mandatory **contractual provisions** incl. audit/access rights, exit strategies, subcontracting, data location), oversight of critical ICT TPPs. | FACT | S-21; high |
+| Proportionality | Art. 4 proportionality; Art. 16 **simplified framework** for small/non-interconnected investment firms, PSD2-exempted PIs, EMD-exempted EMIs, small IORPs. AISPs are **not** listed in Art. 16 (they are fully in scope, with proportionality). | FACT (Art. 16 list) / ASSUMPTION (AISP not in Art. 16) | S-21 | Verify Art. 16(1) list. |
+| Italy | Banca d'Italia applies DORA to IP/IMEL/AISPs (supervisory communications 2024–2025; incident reporting templates). | ASSUMPTION | bancaditalia.it (blocked) | — |
+
+### 4.2 Applicability to Lilleri vs its provider
+
+- **Unlicensed Lilleri (recipient or agent): not a financial entity → no direct DORA obligations.** FACT by scope. An agent is not itself a financial entity (the licensee is).
+- **Licensed provider: fully in scope.** Expect it to (i) treat its own cloud/SaaS vendors as ICT TPPs; (ii) if Lilleri supplies ICT services that support the provider's regulated function (e.g., agent front-end capturing consent, white-label flows), the provider may classify Lilleri as an **ICT third-party service provider** and push **Art. 30 clauses** (SLA, audit rights, incident cooperation, data location, exit) into the contract — HYPOTHESIS, provider-dependent.
+- **If Lilleri later registers as AISP:** full DORA (ICT framework, incident reporting to Banca d'Italia, register of information for all ICT vendors incl. cloud, LLM API providers, analytics SDKs; contractual provisions). Budget this before applying.
+
+### 4.3 Action now / review
+
+- Keep a lightweight **vendor register** (cloud, LLM API, analytics, push, payments) and incident runbook from day one — it is cheap now and becomes mandatory under DORA/NIS2 if status changes.
+- Read the provider contract for DORA flow-downs before signing.
+- **Legal review before production:** **No** (unless Lilleri is appointed agent and the provider's contract contains DORA/outsourcing flow-downs — then yes, contract review).
+
+---
+
+## 5. AI Act — Regulation (EU) 2024/1689 — and Italian AI law
+
+### 5.1 Timeline (Art. 113) — in force
+
+| Date | What applies | Label | Source |
+|---|---|---|---|
+| 1 Aug 2024 | Entry into force (OJ 12 July 2024). | FACT | S-23 (EUR-Lex, blocked); high |
+| **2 Feb 2025** | General provisions, **Art. 4 AI literacy** (providers *and deployers* must ensure sufficient AI literacy of staff), **Art. 5 prohibited practices** (incl. manipulative/deceptive techniques and exploitation of vulnerabilities due to age, disability or social/economic situation that distort behaviour and cause significant harm). | FACT | S-23 |
+| **2 Aug 2025** | GPAI model obligations (Ch. V), governance (AI Office, Board), notified bodies, penalties (except Art. 101). | FACT | S-23 |
+| **2 Aug 2026** | Remainder, incl. **Annex III high-risk** obligations and **Art. 50 transparency** (chatbots must disclose they are AI; synthetic content marking; deployer disclosures). | FACT (original text) — **subject to the Digital Omnibus, status UNKNOWN** | S-23 |
+| 2 Aug 2027 | High-risk systems that are safety components of products under Annex I legislation. | FACT (original text) | S-23 |
+
+### 5.2 "Digital Omnibus" — proposal to delay high-risk obligations
+
+- **FACT (KNOWLEDGE — not fetched):** on **19 Nov 2025** the Commission adopted a "Digital Omnibus" package including a **Digital Omnibus on AI** proposing, among others, to link the start of **Annex III high-risk** obligations to the availability of standards/support tools with a backstop of **2 Dec 2027**, and **Annex I** high-risk to **2 Aug 2028**; a grace period to 2 Feb 2027 for Art. 50(2) marking of content by systems placed on the market before Aug 2026; SME/"small mid-cap" relief; replacing the Art. 4 AI-literacy duty on companies with Commission/Member-State promotion; a legal basis for processing special-category data for bias detection. The broader omnibus also proposed **GDPR** amendments (personal-data definition clarification, legitimate interest for AI development, moving **cookie/terminal-equipment rules** into the GDPR with machine-readable consent signals). (S-24, high for the proposal's existence; details medium.)
+- **Status as of 2026-10-02: UNKNOWN.** The author's knowledge ends with Parliament and Council working on positions in H1 2026 under time pressure from the 2 Aug 2026 date. Whether a "stop-the-clock" amendment was adopted and published before 2 Aug 2026 is **UNKNOWN** — verify on EUR-Lex (search "amending Regulation (EU) 2024/1689") and the Commission's AI Act Service Desk. **Treat the original 2 Aug 2026 dates as applicable unless a published amending regulation says otherwise.**
+
+### 5.3 Is PFM categorisation / insight AI high-risk?
+
+| Use case | Annex III? | Label | Reasoning |
+|---|---|---|---|
+| Transaction categorisation, transfer/duplicate reconciliation, subscription detection, spending insights, budgeting nudges | **No** | FACT (by omission from Annex III) | Annex III point 5 covers (a) public benefits eligibility, **(b) AI "intended to be used to evaluate the creditworthiness of natural persons or establish their credit score"** (except fraud detection), (c) life/health insurance risk assessment and pricing, (d) emergency dispatch. PFM insights for the user are none of these. |
+| "Financial health score" / "affordability" indicators shown to the user | Not high-risk **if** used only to inform the user; **borderline** if shared with lenders or used to pre-qualify credit offers (then it is functionally a creditworthiness evaluation). | ASSUMPTION | Keep any score strictly user-facing; never expose it to third parties or use it to gate credit offers without a legal assessment. |
+| AI chat assistant over the user's finances | Not high-risk; **Art. 50(1)** transparency applies (inform the user they are talking to an AI unless obvious) from 2 Aug 2026 (or later if Omnibus). | FACT | Also Italian L. 132/2025 transparency (below). |
+| Using a third-party LLM API | Lilleri is a **deployer** (and "provider" of its own AI system built on a GPAI model); GPAI obligations fall on the model provider. | FACT | Keep a model/provider inventory and the provider's AI-Act documentation (model card, copyright policy) on file. |
+| Nudges that exploit financial distress (e.g., pushing paid upgrades when a user is overdrawn) | Potential **Art. 5(1)(b)** issue (exploiting economic-situation vulnerability) only if it materially distorts behaviour and causes significant harm — unlikely for a PFM upgrade prompt, but an ethical and AGCM (dark-pattern) issue. | ASSUMPTION | Design rule: no monetisation prompts triggered by distress signals. |
+
+### 5.4 Italian AI law — Legge 23 settembre 2025, n. 132
+
+- **FACT (KNOWLEDGE — not fetched; Gazzetta Ufficiale blocked):** "Disposizioni e deleghe al Governo in materia di intelligenza artificiale", published in **GU n. 223 of 25 Sept 2025**, in force **10 Oct 2025**. Main points relevant to Lilleri (medium confidence on article numbering): general principles (human oversight, transparency, non-discrimination); **information duties** — users must be informed in clear language when they interact with or are affected by AI; **minors under 14** may use AI systems only with parental consent (14–17 may consent themselves if information is understandable); labour: workers must be informed about AI use; intellectual professions: AI only as support, clients informed; healthcare and research rules; **national authorities: AgID** (notifying authority/promotion) and **ACN** (market surveillance, inspections, sanctions), **without prejudice to Banca d'Italia, Consob and IVASS** for AI in their sectors; delegations to the Government (12 months) to align sanctions and sector rules with the AI Act; copyright: works assisted by AI are protected if there is human creative input; **new crime art. 612-quater c.p.** (unlawful dissemination of AI-generated/altered content, 1–5 years) and AI-related aggravating circumstances; CDP venture fund for AI.
+- **Impact:** add AI disclosures in-app (what is AI-generated, limits, how to contest); an age gate ≥18 (or ≥14 with parental consent) simplifies both the Italian law and the GDPR Art. 8 question (Italy's digital-consent age is 14 — Codice privacy art. 2-quinquies, FACT); keep AI documentation ready for ACN/AgID and, if asked, Banca d'Italia.
+- Verify text: https://www.gazzettaufficiale.it (search "legge 132/2025") and https://www.normattiva.it.
+
+### 5.5 Action now / review
+
+1. **AI-literacy** programme for staff (short internal training + policy) — already due (Art. 4) unless the Omnibus removed it (UNKNOWN).
+2. **AI transparency**: label AI-derived categories/insights, offer a correction path (review inbox already does this), disclose the chatbot as AI.
+3. **Keep categorisation out of credit decisions**; document the intended purpose ("information to the user only") in a short AI system description.
+4. **Apple Guideline 5.1.2(i)** (Nov 2025) — explicit user permission before sharing personal data with third-party AI (see §11) — pair this with the GDPR transparency notice.
+5. **Legal review before production:** **Yes, light** (1–2 hours): confirm non-high-risk classification, Art. 50/L.132 disclosures, and the minors policy. **Mandatory** before any credit-scoring/affordability feature.
+
+---
+
+## 6. GDPR (and Italian Codice privacy)
+
+### 6.1 Roles and lawful bases
+
+| Question | Answer | Label | Source / reliability |
+|---|---|---|---|
+| Who is controller? | **Lilleri is an independent controller** for the PFM service (categorisation, insights, storage, AI). The licensed AISP is a **separate controller** for the AIS it provides under PSD2 (EDPB 06/2020 treats PSPs as controllers). Joint controllership is possible for shared flows (consent capture) — the provider's DPA/T&Cs decide; cloud/LLM vendors are **processors**. | FACT (EDPB logic) / ASSUMPTION (joint-controller allocation) | S-26 (EDPB 06/2020, not fetched); high |
+| Lawful basis for ingesting and categorising transactions to deliver the service | **Art. 6(1)(b) contract** (necessary to perform the service the user signed up for). PSD2 Art. 94(2) "explicit consent" is contractual, not GDPR consent (EDPB 06/2020). Do **not** rely on GDPR consent for the core service (withdrawal would break the contract; consent must be freely given). | FACT | S-26; high |
+| Optional features (marketing, personalised offers/affiliate, sharing with partners, model training on user data beyond service improvement) | **Art. 6(1)(a) consent**, granular, withdrawable; or **Art. 6(1)(f)** legitimate interest for low-impact analytics/security/fraud with an LIA and opt-out. The **Digital Omnibus** proposes a clearer LI basis for AI development — proposal only. | FACT / proposal | S-26, S-24 |
+| "Silent party" data (counterparties' names/IBANs in transactions) | Processed under Lilleri's/the AISP's legitimate interest **only** to deliver the service; no further use (no marketing/profiling of counterparties). | FACT (EDPB 06/2020) | S-26 |
+
+### 6.2 Special categories (Art. 9) — the key design risk
+
+- **FACT (EDPB 06/2020):** transaction data can reveal **political opinions, religious/philosophical beliefs, trade-union membership, health, sex life** (e.g., donations to a party/church, union dues, pharmacy/clinic/therapist payments, dating services). Processing such data requires an **Art. 9(2) derogation**; for private PFM services the realistic one is **explicit consent (Art. 9(2)(a))** — the EDPB also pointed to "substantial public interest based on law" (9(2)(g)) but noted no such law generally exists for PSD2 services — and recommends **technical measures (e.g., filtering) to avoid processing special categories where not necessary** (S-26, high).
+- **Implications for Lilleri's taxonomy (HYPOTHESIS → design decisions):**
+  1. Avoid category labels that *are* special-category inferences: no "Religion/Church", "Political party", "Trade union", "Therapy/psychologist", "Pharmacy = health". Use neutral labels ("Donations", "Memberships & dues", "Health & pharmacy" is still health → consider "Wellness & medical" only with explicit consent, or "Pharmacies" as a merchant type without a health inference) — counsel must sign off on the final taxonomy.
+  2. If the product value requires such categories (e.g., deductible donations for the Italian tax return), gate them behind **explicit, specific, separately logged consent**, with a clear withdrawal path and deletion of the derived labels.
+  3. Do not let the **AI chat** volunteer special-category inferences ("you seem to spend a lot on therapy") unless the user has opted in.
+  4. The **Garante** is strict on inferred sensitive data and on AI (OpenAI decision 20 Dec 2024, €15M; Replika/Luka 2025, €5M — KNOWLEDGE, medium; S-29, S-70).
+
+### 6.3 Profiling and Art. 22
+
+- Categorisation and insights are **profiling** (Art. 4(4)) but produce **no legal or similarly significant effects** → **Art. 22 does not apply**; still, transparency (Art. 13(2)(f)) and the right to object (Art. 21) apply. (FACT.)
+- Art. 22 **would** be engaged by automated credit pre-qualification, automated pricing, or automated account restrictions. Italian Cassazione (Cass. civ. 25 May 2021 n. 14381, "Mevaluate") held that consent to an algorithmic rating is invalid unless the logic is knowable — relevant if any score is ever built. (FACT, KNOWLEDGE; S-30, high.)
+
+### 6.4 DPIA, DPO, retention, security, breach
+
+| Item | Position | Label | Source |
+|---|---|---|---|
+| DPIA (Art. 35) | **Required.** WP248 criteria met (evaluation/scoring, systematic monitoring, sensitive/high-impact financial data, innovative tech/AI, large scale). The **Garante's list of processing requiring a DPIA** (Provvedimento 11 Oct 2018 n. 467) includes large-scale evaluative/scoring/profiling, processing with innovative technologies, systematic monitoring, and financial data in combination with other criteria. | FACT (criteria) / ASSUMPTION (not re-read today) | S-28 (docweb 9058979, blocked); high |
+| DPO (Art. 37) | **Strongly advisable, likely required** once at scale: core activity = regular and systematic monitoring of data subjects on a large scale (continuous account monitoring). Appoint an external DPO from launch (cost-effective) and publish contact details. | ASSUMPTION (WP243 interpretation) | WP29 WP243 rev.01; high |
+| Retention | Define per purpose: live data while the account exists; derived AI labels same; logs 6–12 months; after deletion request, erase within 30 days except billing/accounting records (10 years, art. 2220 c.c.) and data needed for legal claims (ordinary 10-year limitation, art. 2946 c.c.) kept in restricted archive. PSD2 imposes no retention on Lilleri; AML retention (10 years) does **not** apply (§9). | ASSUMPTION (reasonable practice) | Codice civile (not fetched); high |
+| Security & breach | Art. 32 measures (encryption at rest/in transit, key management, least privilege, pseudonymisation of analytics); Art. 33 breach notification to the Garante within 72 h; Art. 34 to users when high risk. | FACT | GDPR; high |
+| Data subject rights | Access/portability (export in machine-readable format — a trust feature), erasure (matches Apple 5.1.1(v) and Google's account-deletion rule), objection to profiling. | FACT | GDPR; S-32; S-41 |
+| Minors | Italian digital consent age **14** (Codice privacy art. 2-quinquies). Simplest: 18+ only at launch. | FACT | d.lgs. 196/2003 as amended by d.lgs. 101/2018; high |
+
+### 6.5 EU data residency and international transfers (2026 status)
+
+- **EU-US Data Privacy Framework**: adequacy decision of **10 July 2023** remains the basis for transfers to DPF-certified US companies. The **General Court dismissed the Latombe annulment action (Case T-553/23) on 3 Sept 2025** (FACT, KNOWLEDGE; S-31, high). An **appeal to the CJEU was reported** (HYPOTHESIS/UNKNOWN status) and US-side concerns (PCLOB composition 2025) persist; a future invalidation cannot be excluded.
+- **Recommendation (ASSUMPTION, standard practice):** host primary data in the **EU** (EU regions of the cloud provider; EU-resident LLM endpoints where available — Anthropic/OpenAI/Google/Microsoft all advertise EU-region or zero-retention options, pages blocked today → verify current DPA, data-residency and retention terms with each vendor), sign SCCs **in addition** to DPF reliance, perform a Transfer Impact Assessment, and minimise what is sent to any US processor (pseudonymised transaction strings without account identifiers).
+- **Garante** expectations: the OpenAI decision (2024) and the 2024 guidance on web scraping for AI training show the Garante will ask for lawful basis, transparency and age checks for AI features (KNOWLEDGE, medium).
+
+### 6.6 Garante decisions relevant to fintech / open banking / scoring (KNOWLEDGE — docweb numbers to verify at garanteprivacy.it)
+
+| Decision | Relevance | Reliability |
+|---|---|---|
+| Garante v. OpenAI (20 Dec 2024, €15M, docweb 10085432) | Lawful basis and transparency for AI; age verification. | medium-high |
+| Garante v. Luka Inc. (Replika), 2025, €5M | AI chatbot: lawful basis, age gate, transparency. | medium |
+| Garante v. Foodinho (2021, €2.6M) and Deliveroo (2021, €2.5M) | Algorithmic profiling transparency, DPIA, Art. 22 safeguards. | medium-high |
+| Cass. 14381/2021 (Mevaluate) | Consent to algorithmic scoring requires knowledge of the logic. | high |
+| Garante DPIA list (Provv. 467/2018) | DPIA triggers (scoring, monitoring, innovative tech, financial data). | high |
+| Garante cookie guidelines (10 June 2021, docweb 9677876) | See §7. | high |
+| **No Garante decision specifically on an AISP/PFM app was identified** in this session. | UNKNOWN — search Garante newsletter for "open banking", "PSD2", "aggregatore". | — |
+
+### 6.7 Action now / review
+
+1. Appoint DPO (external), run the **DPIA before beta**, write the records of processing (Art. 30), the privacy notice (layered, in Italian), the data-retention schedule, the vendor DPAs (cloud, LLM, analytics, push, provider).
+2. **Taxonomy review for Art. 9** with counsel; implement consent gating for sensitive categories; log consents.
+3. EU hosting; TIA for any US vendor; SCC + DPF.
+4. **Legal review before production: Yes (mandatory).** GDPR is the area where a consumer-finance startup is most likely to be inspected after a complaint.
+
+---
+
+## 7. ePrivacy, cookies, tracking SDKs, push notifications
+
+| Item | Current rule | Label | Source |
+|---|---|---|---|
+| Legal basis for storing/reading identifiers on the device (cookies, SDK identifiers, IDFA/GAID) | ePrivacy Directive 2002/58 Art. 5(3) → **Codice privacy art. 122**: prior consent unless strictly necessary for a service requested by the user. Applies to **apps**, not only websites. | FACT | S-27; high |
+| **Garante cookie guidelines (10 June 2021, applicable from 10 Jan 2022)** | No pre-ticked boxes; scrolling is not consent; cookie walls generally unlawful; closing the banner (X) may be treated as refusal; **do not re-prompt before 6 months** (unless conditions change); analytics without consent only if anonymised (IP masking, no cross-site combination, aggregated); consent records. | FACT (KNOWLEDGE — page blocked) | S-27 (docweb 9677876); high |
+| App analytics/crash SDKs | Strictly-necessary technical telemetry can run without consent if genuinely minimal; product analytics with persistent identifiers → consent (or anonymised per Garante). Apple ATT applies to cross-app **tracking** only; EU ATT variant with **mandatory "alternative" prompt in Italy** from **iOS 27.2** (Apple page fetched 2026-10-02) — Apple allows a 1-year re-prompt in the EU and layered consent that references GDPR/ePrivacy consent. | FACT (Apple page fetched) / ASSUMPTION (SDK classification) | S-38; high |
+| Marketing e-mail/push | **Codice privacy art. 130**: automated marketing communications (incl. push notifications used for marketing — ASSUMPTION that the Garante treats push as "automated calling/communication systems") require prior consent; **"soft opt-in"** for own similar services via e-mail collected at sale (art. 130(4)) with opt-out each time. **Service/transactional push** (consent expiring, low balance, review-inbox item) needs no marketing consent — only the OS permission. | FACT (art. 130) / ASSUMPTION (push classification) | d.lgs. 196/2003 (not fetched); Garante marketing guidelines 4 July 2013; high/medium |
+| Future | The **Digital Omnibus (Nov 2025)** proposes moving the terminal-equipment rules into the GDPR with recognised browser/OS consent signals and fewer banners — **proposal only; status UNKNOWN**. | proposal | S-24 |
+
+**Action now:** ship with **no advertising/tracking SDK**; use privacy-preserving, consent-gated product analytics (or anonymised); separate toggles for marketing push vs service push; a consent log; a cookie/SDK banner on the marketing website compliant with the 2021 guidelines. **Legal review:** light (bundle with GDPR review).
+
+---
+
+## 8. Italian consumer law, AGCM, advertising, financial-product promotion, MiFID boundary
+
+### 8.1 Codice del Consumo (d.lgs. 206/2005) — in force
+
+| Rule | Content | Label | Source |
+|---|---|---|---|
+| Distance contracts (artt. 45-67, from Directive 2011/83) | Pre-contractual information (art. 49: price incl. taxes, duration, renewal, withdrawal); the order button must unambiguously state the payment obligation (art. 51(2)); **14-day withdrawal** (art. 52) — for **digital content** supplied without a tangible medium the right is lost if performance began with the consumer's express consent and acknowledgment (art. 59(1)(o)); for **services** started on request, pro-rata payment (art. 57). Apple/Google IAP flows satisfy much of this, but Lilleri's own T&Cs must still contain the information and the EU **model withdrawal form** reference. | FACT (KNOWLEDGE — normattiva blocked) | S-49; high |
+| Digital Content & Services Directive 2019/770 → **d.lgs. 173/2021** (artt. 135-octies ff., from 1 Jan 2022) | Conformity (objective + subjective), **updates** obligation, remedies, burden of proof 1 year; applies also where the consumer "pays" with personal data. | FACT | S-51; high |
+| Omnibus Directive 2019/2161 → **d.lgs. 26/2023** | Price-reduction announcements (art. 17-bis), ranking transparency, consumer reviews, personalised-price disclosure (art. 49(1)(e-bis)), fines up to **4% of turnover** / €10M for unfair practices. | FACT | S-50; high |
+| Unfair commercial practices (artt. 18-27) | Misleading/aggressive practices; **AGCM** enforces (fines up to €10M). **Dark patterns** (hidden cancellation, confirm-shaming, pre-ticked add-ons, countdown pressure, "roach motel" subscriptions) are treated as misleading/aggressive practices; AGCM has sanctioned subscription traps and hidden advertising (e.g., the Ferragni/Balocco "Pandoro" case, Dec 2023, >€1M — KNOWLEDGE, medium). | FACT / examples medium | S-49; AGCM site blocked |
+| Unfair terms (artt. 33-36) | Presumed unfair: excessively early notice period to avoid tacit renewal (art. 33(2)(i)); tacit-renewal clauses need specific approval (art. 1341 c.c.). | FACT | S-49; high |
+| Auto-renewal / "recesso" | No sector-neutral statutory **pre-renewal reminder** duty for app subscriptions was identified (sector rules exist for telecoms/pay-TV/insurance). App-store rules (Apple 3.1.2; Google subscriptions policy) already require clear renewal terms and easy cancellation; AGCM expects cancellation to be as easy as sign-up. | UNKNOWN (statute) / FACT (store rules) | counsel; S-32 |
+| Future | **EU Digital Fairness Act** (dark patterns, addictive design, subscriptions, influencer marketing): Commission proposal expected **2026** per its work programme — **not law** (HYPOTHESIS on timing). | proposal | S-69 |
+
+### 8.2 Advertising transparency (influencers, IAP, AGCOM)
+
+- **IAP** (Istituto dell'Autodisciplina Pubblicitaria) Code art. 7 + **Digital Chart** regulation: sponsored content must be recognisable (#adv, #sponsorizzato, "in collaborazione con"). (FACT, KNOWLEDGE; S-53, medium-high.)
+- **AGCOM Delibera 7/24/CONS (Jan 2024)** "Linee guida influencer" extends audiovisual-media rules to influencers above audience thresholds (originally ≥1M followers; a 2025 code of conduct lowered thresholds — details UNKNOWN). (FACT/UNKNOWN; S-52.)
+- **AGCM**: hidden advertising = unfair practice (art. 22(2), 23(1)(m) Cod. Cons.); applies to the **advertiser** (Lilleri) as well as the influencer.
+- **Financial-product advertising**: ads for bank accounts/cards/loans must comply with **Banca d'Italia Transparency Rules** (TUB art. 116; "Disposizioni di trasparenza") and, for credit, **TUB art. 123** (TAEG/APR with representative example). The intermediary is responsible for its ads, including those run by affiliates; Lilleri's copy must mirror the intermediary's approved wording. (FACT, KNOWLEDGE; high.)
+
+### 8.3 Comparison / affiliate of financial products — Italian reserved activities
+
+| Activity | Rule | Label | Risk for Lilleri |
+|---|---|---|---|
+| Putting consumers in contact with banks/financial intermediaries for **financing** (loans, mortgages, credit cards, BNPL) against remuneration, "anche attraverso attività di consulenza" | **Mediazione creditizia** — TUB art. 128-sexies ff. (d.lgs. 141/2010): reserved to companies **registered with OAM** (capital, PII, exam, organisational requirements). Italian comparison sites (Facile.it, MutuiOnline, Segugio) are OAM-registered mediatori creditizi (FACT by industry practice; verify in the OAM public register). | FACT | **High**: a paid affiliate link to a credit card or loan with a per-lead/per-contract fee is very likely *mediazione creditizia*. Pure, unpaid editorial information is not. |
+| Promoting/concluding **financing or payment-service** contracts on behalf of one intermediary | **Agente in attività finanziaria** (TUB art. 128-quater; OAM) / **agente nei servizi di pagamento** for PIs. | FACT | Relevant only to the AIS **agent** model (§10) and to any white-label account offers. |
+| Affiliate links to **current accounts/cards** without financing (e.g., bank account comparison) | Not mediazione creditizia (no financing), but may constitute promotion of banking products: transparency rules; some banks require OAM/agent status for paid acquisition partners; the **Payment Accounts Directive** (d.lgs. 37/2017) regulates "independent" comparison websites' criteria (not a prohibition). | ASSUMPTION | Medium: contract-specific; counsel. |
+| Insurance comparison / referral | **IVASS Regolamento 40/2018** (distribution): comparison websites that enable comparison *and* conclusion/intermediation must be **RUI-registered intermediaries**; purely informational comparisons without intermediation are tolerated with IVASS caveats. | FACT (KNOWLEDGE; S-55, blocked) | High if monetised. |
+| Investment insights | **MiFID II / TUF art. 18**: "investment advice" = *personalised* recommendation on specific financial instruments → reserved to authorised firms (SIM, banks, OCF-registered "consulenti finanziari autonomi"). **Generic** financial education, aggregation display, portfolio totals and generic asset-class information are allowed. | FACT | Medium: AI chat must not say "buy ETF X / sell fund Y"; implement a **prompt guardrail + disclaimer + human review of templates**; disclaimers alone do not cure substance. |
+| Tax/legal advice via AI | Not reserved in Italy for generic information; "consulenza" by non-professionals for a fee can create liability and L.132/2025 "professions" issues only for professionals. | ASSUMPTION | Low; add disclaimers. |
+
+**Action now:** v1 without monetised referrals; if affiliate revenue is in the business plan, obtain a written opinion on OAM/IVASS/MiFID boundaries and consider OAM registration (or partnering with an OAM-registered mediatore that pays Lilleri an *advertising* fee not linked to contracts — structure to be validated by counsel). **Legal review before production: Yes if any affiliate/comparison or investment-insight feature ships; otherwise light (T&Cs, withdrawal, renewal, dark-pattern audit).**
+
+---
+
+## 9. AML/CFT — does an AISP-only product have AML obligations?
+
+| Scenario | Position | Label | Source / verify |
+|---|---|---|---|
+| **Lilleri unlicensed (recipient or agent)** | **Not an obliged entity** under d.lgs. 231/2007 (not a bank/PI/financial intermediary and not a listed non-financial operator). No CDD, no SOS (suspicious-transaction reports), no 10-year AML retention. | FACT by scope | S-57 (d.lgs. 231/2007 art. 3; not fetched) |
+| Licensed provider | Tink states that for partners without an AIS/PIS licence it becomes the regulated PSP and performs **AML/CTF checks** (KYB on the partner) (via prior session, S-46, high). Expect KYB questionnaires, UBO declarations and sanctions screening of Lilleri as a company; no per-user CDD by Lilleri. | FACT (provider statement) | S-46 |
+| **If Lilleri registers as an AISP in Italy** | Italian law lists "istituti di pagamento" among obliged entities (d.lgs. 231/2007 art. 3(2)); whether AIS-only PIs are included or carved out in Banca d'Italia's AML provisions is **UNKNOWN** (industry view: AISPs handle no funds → simplified or no CDD). The EU **AML Regulation (EU) 2024/1624** (applicable **10 July 2027**) defines "financial institution" by reference to CRD Annex I activities and appears to **exclude the activities of PSD2 Annex I point 8 (AIS)** — i.e., AIS-only providers would not be obliged entities under the AMLR. | UNKNOWN (Italy today) / ASSUMPTION (AMLR carve-out — verify Art. 2(1)(6)(a)) | S-57; EUR-Lex 2024/1624 (blocked) |
+| Fraud/sanctions screening | Not required of Lilleri; the AI "suspicious transaction" feature is a **consumer** alert, not an SOS — avoid wording that implies AML reporting. | FACT | — |
+
+**Action now:** be ready for the provider's KYB; keep company documents (visura, UBO, policies) current. **Legal review:** No (unless own AISP registration is pursued).
+
+---
+
+## 10. Banca d'Italia: TPP register, agent model for AIS, outsourcing rules
+
+### 10.1 Register and passporting (FACT via prior session + KNOWLEDGE)
+
+- Banca d'Italia keeps the **Albo degli istituti di pagamento** with a section for AIS-only providers (TUB art. 114-septies/114-novies) and publishes the list; the **EBA central register** mirrors national registers (PSD2 Art. 15). Decision within **90 days** of a complete application; realistic end-to-end 6–12 months (prior session HYPOTHESIS, S-64). Requirements for AIS-only: programme of operations, governance/fit-and-proper, security policy, **PII** per EBA/GL/2017/08, no own funds. (S-06, S-07, S-61; high/medium.)
+- **EU AISPs** operate in Italy under the **passport** (services or establishment, incl. via **agents**, PSD2 Art. 28); Banca d'Italia receives notifications from the home NCA and may require a **central contact point** if thresholds under **Delegated Reg. (EU) 2021/1722** are met (ASSUMPTION on applicability to AIS-only; S-60).
+
+### 10.2 Three ways for Lilleri to operate (synthesis with prior-session findings)
+
+| Model | Legal mechanics | Italian status | Residual risk | Label |
+|---|---|---|---|---|
+| **A. Recipient under the provider's licence ("licence-as-a-service")** | The provider is the AISP of record; the user instructs the provider to share data with Lilleri (a *data recipient*); Lilleri does not perform AIS. Offered by Mastercard Open Banking EU, Powens, Enable Banking, Yapily Connect, Salt Edge Partner Program, plausibly Fabrick (S-48, S-64). | Widely practised in the EU; **Banca d'Italia's written position was not found** (UNKNOWN). PSD2 Art. 67(2)(f) requires the AISP to use data only for the AIS *explicitly requested by the PSU* — hence the provider's consent screen must clearly name Lilleri as the recipient and the purpose. | Regulatory re-characterisation risk ("Lilleri is in substance providing AIS"); consent-screen branding shows the provider; Lilleri cannot use direct bank-auth links (TrueLayer restricts them to regulated clients, S-43). | FACT (providers) / UNKNOWN (Banca d'Italia) |
+| **B. Agent of a licensed AISP** | Lilleri is appointed and registered as the licensee's **agent** (PSD2 Art. 19; Tink "use of agents"; TrueLayer "agents who provide AIS on behalf of TrueLayer"; UK agents appear on the FCA register — S-46, S-47). The licensee bears conduct, complaints and AML/KYB; Lilleri's UX can be more integrated (own-branded flow with licensee disclosure). | Legally foreseen; for an **EU** licensee the agent is registered by the **home NCA** and notified to Banca d'Italia; for an **Italian** licensee the agent must be an OAM-listed *agente nei servizi di pagamento* (TUB art. 128-quater co. 6; OAM fee ≈€160 for individuals; company agents have organisational requirements — S-64 medium). Whether OAM applies to agents of **AIS-only** Italian PIs is **UNKNOWN**. | Due-diligence/onboarding time; licensee may impose UX review, security audits, DORA/outsourcing flow-downs; Lilleri's directors subject to fit-and-proper checks. | FACT (framework) / UNKNOWN (OAM for AIS-only; timelines) |
+| **C. Own AISP registration** | TUB art. 114-novies; PII; security; 90-day statutory decision; eIDAS certificates; direct CBI Globe access possible (prior session, S-64). | Feasible but **6–12+ months**, ongoing supervision, DORA, incident reporting, possibly AML. | Cost and time; not an MVP option. | FACT |
+
+**Working recommendation (input to ADR, not a decision):** launch under A or B with a provider that documents it for Italy; prefer **B (agent)** if the provider offers it in ≤8 weeks because it gives a cleaner PSD2 footing (Lilleri is formally "providing AIS on behalf of" a licensee) and a better-branded consent flow; otherwise A with explicit, named-recipient consent copy. Ask counsel the single question: *"Does Banca d'Italia accept model A for a B2C app marketed to Italian consumers, and what disclosures must the consent screen and T&Cs contain?"*
+
+### 10.3 Outsourcing rules
+
+- **Circolare 285** (banks) Part I, Title IV, Ch. 3 (internal controls — outsourcing section) applies to **banks**, not to Lilleri; the **IP/IMEL Disposizioni** carry equivalent outsourcing rules, and **EBA Guidelines on outsourcing (EBA/GL/2019/02)** apply to PIs. Effect on Lilleri: if the provider/licensee treats Lilleri's services (front-end, consent capture, data processing) as **outsourcing of important functions** or as an ICT TPP under DORA, expect audit rights, sub-outsourcing consent, exit plans, data-location clauses. (FACT on the rules; HYPOTHESIS on application to Lilleri; S-62, S-63.)
+- If Lilleri becomes an AISP, its **cloud/LLM vendors** become outsourcing/ICT TPPs under the IP rules + DORA (notification of important outsourcing to Banca d'Italia).
+
+**Legal review before production: Yes** — the licensing route and the provider contract (this is the #1 open question).
+
+---
+
+## 11. App Store and Google Play policies for finance apps (fetched 2026-10-02 where stated)
+
+### 11.1 Apple App Store — App Review Guidelines (fetched 2026-10-02 — S-32, high)
+
+| Guideline | Rule (paraphrased from the fetched page) | Impact on Lilleri |
+|---|---|---|
+| **3.1.1 In-App Purchase** | Subscriptions and premium features must be sold via IAP; no alternative mechanisms (licence keys, QR codes, crypto) in the app; free trials via IAP rules. | Lilleri Premium → Apple IAP (auto-renewable subscription). Use the **Small Business Program** (15% globally for <$1M/yr; FACT, KNOWLEDGE). |
+| 3.1.1(a) / 3.1.3 | External purchase links only with entitlements in specific storefronts (US without entitlement); "multiplatform" content purchased elsewhere may be accessed (3.1.3(b)) but without in-app calls to action. | Web-purchased subscriptions can be honoured in-app; no "cheaper on our website" messaging outside the EU/US schemes. |
+| **3.2.1 / 5.1.1(ix) Regulated fields** | Apps in "highly regulated fields" — explicitly **banking and financial services** — must be submitted **by the legal entity providing the services**, not an individual developer; apps for financial trading/investing/**money management** should be submitted by the financial institution with the necessary licensing where available. | Publish from **Lilleri S.r.l.'s** developer account (D-U-N-S), and be ready to show App Review the **provider's licence and the agent/recipient contract** when asked. |
+| **5.1.1 Data collection and storage** | Privacy policy with retention/deletion; consent before collection; data minimisation; no gating of paid functionality on data access; **in-app account deletion (5.1.1(v))**; no compiling personal info from non-direct sources. | Account deletion flow + export; privacy nutrition labels; privacy manifests for SDKs. |
+| **5.1.2(i) (added 13 Nov 2025 — S-37)** | "You must clearly disclose where personal data will be shared with third parties, **including with third-party AI**, and obtain **explicit permission** before doing so." | **Direct hit**: if categorisation or chat sends transaction text to an external LLM API, Lilleri needs an explicit in-app permission step (and the GDPR notice). Design the first-run flow accordingly or run categorisation on EU-hosted/own models. |
+| 3.2.2(ix) (Nov 2025) | Loan apps: max APR 36%, no full repayment ≤60 days. | Only if Lilleri ever surfaces loans. |
+| 1.2, 4.1, 4.7 updates | Not relevant to PFM. | — |
+
+Apple guideline updates in the fetched news feed: 13 Nov 2025 (major), 6 Feb 2026; the Age-rating questionnaire changes of July 2026 require new answers for all app updates from Sept 2026 (S-37, high).
+
+### 11.2 Apple — EU business terms under the DMA (fetched 2026-10-02 — S-33, S-34, S-35, S-36, high; summarised by an automated extractor, re-check the exact table before relying on numbers)
+
+| Item | Content | Effective |
+|---|---|---|
+| Unified EU terms | The "Alternative Terms Addendum for Apps in the EU" and the "StoreKit External Purchase Link Entitlement (EU) Addendum" were **superseded by Attachment 14** of the Developer Program License Agreement (updated **18 Aug 2026**). Initial Acquisition Fee and Store Services Fee **eliminated**; the per-install **Core Technology Fee replaced by a 5% Core Technology Commission** on digital transactions in apps distributed **outside** the App Store (alternative marketplaces/web distribution), with a waiver for small marketplace operators (< €10M global revenue and < €1M lifetime marketplace fees). | **1 Oct 2026** |
+| Commission on the App Store in the EU | **Apple IAP: 26%** standard; **15%** for Small Business Program / Video Partner / Mini Apps participants and auto-renewable subscriptions after the first year. **Alternative payment processing in-app: 20% / 10%**. **Out-of-app offers with actionable links: 15% / 10%**, only on sales within **7 days** of the link tap. | 1 Oct 2026 |
+| Conditions | 12-month commitment to the chosen payment-option mix across EU storefronts; system **disclosure sheet** via `ExternalPurchaseCustomLink` (min iOS 26.2); product-page banner; child-safety gates; **monthly transaction reporting within 15 days** and own tax collection for alternative payments. | 1 Oct 2026 |
+| Historic context (KNOWLEDGE, not fetched) | In 2024–2025 Apple's EU terms used a 17%/10% commission + 3% payment processing + €0.50 Core Technology Fee per first annual install above 1M; in June 2025 Apple announced the move to a CTC, originally targeted for 1 Jan 2026. The fetched pages show the consolidated regime now dated 1 Oct 2026. | — |
+
+**Impact:** for a Small-Business-Program developer the EU IAP rate is **15%** — the same as the global SBP rate — so alternative payment (10% + PSP fees ≈3% + reporting/tax burden) saves ≈2 points at best. **Recommendation:** launch with Apple IAP; revisit at scale. Note the **ATT EU variant** (mandatory in Italy from iOS 27.2, S-38) only matters if Lilleri tracks for ads (recommended: no).
+
+### 11.3 Google Play (developer.android.com fetched 2026-10-02 — S-39, S-40, S-41; Play Console help pages blocked)
+
+| Item | Content | Label | Source |
+|---|---|---|---|
+| Payments policy | Digital subscriptions/features sold in-app must use **Google Play Billing** (service fee 15% for subscriptions and for the first $1M/yr of developer revenue — KNOWLEDGE). **EEA exceptions**: "alternative billing with user choice" and "alternative billing only" programmes (Play Billing Library ≥5.2 / ≥6.2.1), and the **External Offers Program** for the EEA (DMA) implemented through `BillingProgram.EXTERNAL_OFFER` with mandatory **transaction reporting via the Play Developer API** (manual reporting being sunset). | FACT (programmes exist; fetched) / UNKNOWN (fees) | S-39, S-42 |
+| EEA fees | The programme fee schedule (initial acquisition fee / ongoing services fee; historically 10%/5% + 17%/7% at the 2024 launch, revised after the Commission's March 2025 preliminary non-compliance findings) is on support.google.com (blocked). **Current numbers UNKNOWN** — verify at the Play Console Help article "External offers program" (answer 14602639) and "Understanding user choice billing" (answer 13821247). | UNKNOWN | — |
+| **Data safety** form | Mandatory declaration of all data collected/shared (incl. by SDKs), security practices, deletion; "financial info" is a named category; inaccuracies are enforced; Android 14+ shows declarations in permission dialogs; **account-deletion** requirement under the User Data policy. | FACT (fetched) | S-41 |
+| **Financial Services policy** | Apps offering financial products must comply with local law; personal-loan apps have specific rules (APR disclosure, 60-day minimum, no contacts/photos access); apps with financial features must complete the Play Console **Financial features declaration** (budgeting/money management is a declarable feature) and may be asked for licence documentation. | FACT (KNOWLEDGE; policy page blocked) — medium | support.google.com answer 9876821 (blocked) |
+| Policy calendar (fetched) | 26 Aug 2026 (families/child-safety for chat apps), 30 Sept 2026 (developer verification in BR/ID/SG/TH), **27 Jan 2027** (permissions: contacts picker, location, SMS/call-log; foreground-service geofencing). | FACT | S-40 |
+| Android developer verification | From 2026 Google requires identity-verified developers for apps installed on certified devices (phased by country from Sept 2026). | FACT (fetched, partial) | S-40 |
+
+**Action now:** register the company developer accounts (Apple D-U-N-S; Google org verification), prepare the financial-features declaration and the licence evidence pack (provider licence + contract), privacy labels/Data safety from the real SDK list, in-app account deletion, and the **third-party-AI permission step** (Apple 5.1.2(i)). **Legal review:** No (policy compliance is a product task), except the T&Cs shown at purchase.
+
+---
+
+## 12. Accessibility — European Accessibility Act (Directive (EU) 2019/882; d.lgs. 82/2022)
+
+| Item | Content | Label | Source |
+|---|---|---|---|
+| Application | Member States apply the EAA from **28 June 2025**; Italy transposed with **d.lgs. 27 May 2022, n. 82**. Services contracts concluded before that date may run until 28 June 2030. | FACT (KNOWLEDGE — not fetched) | S-58; high |
+| Scope relevant to Lilleri | Services in scope include **consumer banking services** (defined by reference to credit agreements, MiFID investment services, **payment services under PSD2**, services linked to payment accounts, e-money) and **e-commerce services** (contracting with consumers at a distance via websites/mobile apps). A PFM app that *is not itself* a payment service is arguably outside "consumer banking services" unless it provides AIS (as agent/AISP); its **in-app purchase flow** is an e-commerce service. | FACT (definitions) / ASSUMPTION (classification) | S-58 |
+| Micro-enterprise exemption | **Service providers that are micro-enterprises** (<10 staff and ≤€2M turnover/balance sheet) are exempt from the service requirements (EAA Art. 4(5)); the exemption lapses on growth. Products have no such exemption. | FACT | S-58 |
+| Requirements | Annex I functional requirements (perceivable, operable, understandable, robust; accessible information, support, identification/authentication methods); presumption of conformity via harmonised standard **EN 301 549** (which references **WCAG 2.1 AA**; WCAG 2.2 published Oct 2023). Accessibility statement; feedback channel. | FACT | S-58; W3C (blocked) |
+| Enforcement in Italy | Market surveillance split among authorities; **AgID** for ICT services/accessibility (with MIMIT for products) — details and sanction levels to verify. Also L. 4/2004 ("Stanca") obligations for large private entities (>€500M turnover) do not apply to a startup. | ASSUMPTION | agid.gov.it (blocked) |
+
+**Impact / action:** Lilleri will likely be a micro-enterprise at launch (exempt) but should build to **WCAG 2.1 AA** from the start (platform accessibility APIs, dynamic type, contrast, screen-reader labels, no colour-only semantics in charts), because (i) the exemption disappears at ~10 employees, (ii) the agent/AISP route brings the app into "consumer banking services", (iii) banks/providers and app stores increasingly request it. **Legal review:** No; an accessibility audit before the public launch is recommended.
+
+---
+
+## 13. NIS2 — Directive (EU) 2022/2555; Italy d.lgs. 138/2024
+
+| Item | Content | Label | Source |
+|---|---|---|---|
+| Transposition | Italy: **d.lgs. 4 Sept 2024, n. 138**, in force 16 Oct 2024; ACN is the competent authority; registration window Jan–Feb each year; phased obligations (incident notification from 2026; security measures within deadlines set by ACN determinations of 2025). | FACT (KNOWLEDGE — not fetched) | S-59; high |
+| Scope | Sectors in Annex I/II (energy, transport, **banking = credit institutions**, financial market infrastructures, health, digital infrastructure incl. cloud/DNS/data centres/CDN/**managed service providers**, digital providers = online marketplaces, search engines, social networks, etc.) **and** a size cap: **medium (≥50 staff or >€10M turnover/balance sheet) or large** enterprises, with exceptions regardless of size (e.g., sole providers, trust services, DNS/TLD, certain PA). | FACT | S-59 |
+| Lilleri | **Out of scope**: a consumer PFM app is not in an Annex sector and Lilleri is below the size cap. DORA is lex specialis for financial entities anyway. Would come into scope only if Lilleri became a **managed (security) service provider** or an in-scope digital provider of medium size. | FACT by scope | — |
+
+**Action:** none; keep the vendor register and incident runbook (§4). **Legal review:** No.
+
+---
+
+## 14. Watch-list of adjacent rules (brief)
+
+| Rule | Status | Why it matters |
+|---|---|---|
+| **Consumer Credit Directive 2 (EU) 2023/2225** | Adopted; applies from **20 Nov 2026** (transposition by 20 Nov 2025) — FACT (KNOWLEDGE). | Stricter advertising and creditworthiness rules for lenders; affects any affiliate credit content and BNPL detection wording. |
+| **Product Liability Directive (EU) 2024/2853** | Adopted Oct 2024; transposition by **9 Dec 2026** — FACT. | Software (incl. AI) is a "product"; defective AI insights causing damage could ground strict liability; keep logs, versioning, and a reasonable-reliance disclaimer. |
+| **Data Act (EU) 2023/2854** | Applies since **12 Sept 2025** — FACT. | Cloud-switching rights help Lilleri as a customer; no PFM obligations. |
+| **Digital Fairness Act** | Commission proposal expected 2026 — HYPOTHESIS. | Dark patterns, subscription design, influencer rules, personalisation. |
+| **PSR Level-2 (new RTS on SCA/APIs)** | 2026–2028 — HYPOTHESIS. | Will define AISP-side SCA and dashboard mechanics. |
+| **AGCM v. Apple (ATT), Dec 2025 (€98.6M reported)** | KNOWLEDGE, medium. | Explains the mandatory Italian ATT variant; irrelevant if Lilleri does not track. |
+
+---
+
+## 15. Prioritised "legal open questions" (for counsel; estimated effort)
+
+| # | Priority | Question | Why it matters | How to resolve |
+|---|---|---|---|---|
+| 1 | **P0** | Which licensing route is acceptable to **Banca d'Italia** for a B2C Italian app: (A) recipient under the provider's licence or (B) agent of an EU/Italian AISP? What must the consent screen, T&Cs and privacy notice say in each case? Does OAM registration apply to an agent of an AIS-only PI? | Determines contracts, UX, and go-live legality. | Written opinion from an Italian fintech-regulatory firm; informal query to Banca d'Italia (Servizio Supervisione intermediari / "Canale Fintech"); provider's regulatory team. |
+| 2 | **P0** | **GDPR Art. 9**: is Lilleri's category taxonomy an inference of special-category data? Which categories need explicit consent, which must be removed, and how must consent be logged/withdrawn? | Highest fine exposure; shapes the core product. | DPIA with counsel; taxonomy review; EDPB 06/2020 mapping. |
+| 3 | **P0** | Lawful-basis map and vendor transfers: contract vs consent per feature; LLM API processing (pseudonymisation, EU residency, DPF/SCC/TIA); Apple 5.1.2(i) explicit-permission flow. | Required for privacy notice, DPIA and App Review. | DPO + counsel; vendor DPAs. |
+| 4 | **P1** | DPO: mandatory or not at launch scale? (Art. 37(1)(b)). | Governance cost and Garante expectations. | Counsel opinion; appoint external DPO regardless. |
+| 5 | **P1** | Provider contract: DORA/outsourcing flow-downs, liability caps, data-controller allocation, consent-screen wording, exit/data-return, Italian passport evidence (EBA register entry). | Operational and regulatory dependencies. | Contract review before signature. |
+| 6 | **P1** | AI-Act classification memo: confirm "not high-risk" for categorisation/insights/chat; Art. 50 and L.132/2025 disclosures; Art. 4 literacy; what would tip a "financial health score" into Annex III 5(b). | Documentation for ACN/AgID/Banca d'Italia; investor diligence. | 1–2 hour counsel memo; internal AI system description. |
+| 7 | **P1** | Status check (desk research, 1 hour): were **PSR/PSD3** published in the OJ (and the exact application date)? Did the **AI Digital Omnibus** change the 2 Aug 2026 dates? Was **FIDA** agreed? Is the **DPF appeal** pending? What are the **current Google Play EEA external-offer fees**? | This document's known UNKNOWNs. | EUR-Lex, Council/EP press pages, Google Play Console Help (from an unblocked network). |
+| 8 | **P2** | Affiliate/comparison plan: does any planned referral (accounts, cards, loans, insurance, investments) require OAM, IVASS RUI or MiFID authorisation; can an "advertising fee" structure avoid mediazione creditizia? | Revenue model. | Counsel; OAM/IVASS informal guidance. |
+| 9 | **P2** | Consumer T&Cs: withdrawal for digital services (art. 59(1)(o)), renewal/cancellation wording, Digital Content Directive conformity/updates, Omnibus disclosures, dark-pattern audit of paywall/cancel flows. | AGCM exposure; store compliance. | Consumer-law counsel; checklist review of screens. |
+| 10 | **P2** | Minors: 18+ gate vs 14+ with L.132/2025 and Codice privacy art. 2-quinquies; implications for teen accounts (e.g., banks' "conto per minori"). | Scope of audience. | Product decision + counsel confirmation. |
+| 11 | **P3** | EAA classification: is a PFM (recipient model) a "consumer banking service"? When does the micro-enterprise exemption lapse? Which Italian authority enforces for apps? | Accessibility roadmap. | Counsel + AgID guidance. |
+| 12 | **P3** | AML status if Lilleri later registers as AISP (Italian 231/2007 today vs AMLR 2027 carve-out). | Only for the own-licence path. | Counsel when planning registration. |
+
+---
+
+## 16. Sources
+
+Legend — *Fetched*: read through the tool on 2026-10-02 (automated summary). *Mirror*: provider documentation via Context7 index (content as published by the provider; retrieval 2026-10-02). *Prior session*: cited in `docs/research/raw/open-banking-providers-a.md` / `-b.md` / `competitors-eu-uk.md` with the reliability noted there. *Not fetched*: egress blocked today; cited from knowledge for verification.
+
+| ID | Source | URL | Pub. date | Verified | Reliability | Access status / notes |
+|---|---|---|---|---|---|---|
+| S-01 | Directive (EU) 2015/2366 (PSD2) | https://eur-lex.europa.eu/eli/dir/2015/2366/oj | 2015-12-23 | 2026-10-02 | high | Not fetched (blocked) |
+| S-02 | Commission Delegated Regulation (EU) 2018/389 (RTS on SCA & CSC) | https://eur-lex.europa.eu/eli/reg_del/2018/389/oj | 2018-03-13 | 2026-10-02 | high | Not fetched |
+| S-03 | Commission Delegated Regulation (EU) 2022/2360 (180-day amendment); EBA Final Report EBA/RTS/2022/03 | https://eur-lex.europa.eu/eli/reg_del/2022/2360/oj ; https://www.eba.europa.eu/ (Final Report, 2022-04-05) | 2022-12-05 / 2022-04-05 | 2026-10-02 | high | Not fetched; prior session |
+| S-04 | EBA Single Rulebook Q&A 2019_4631 (4×/day) | https://www.eba.europa.eu/single-rule-book-qa/qna/view/publicId/2019_4631 | n/d | 2026-10-02 | high | Prior session |
+| S-05 | D.lgs. 15 dicembre 2017 n. 218 (PSD2 transposition); TUB artt. 114-septies ss., 128-quater ss.; d.lgs. 11/2010 art. 5-ter | https://www.normattiva.it | 2017-12-15 | 2026-10-02 | high | Not fetched (blocked) |
+| S-06 | Banca d'Italia — FAQ Istituti di pagamento | https://www.bancaditalia.it/compiti/vigilanza/accesso-mercato/istituti-pagamento/faq-istituti-pagamento/index.html | n/d | 2026-10-02 | high | Prior session; blocked today |
+| S-07 | Banca d'Italia — Disposizioni di vigilanza per gli IP e gli IMEL (Provv. 23 July 2019 and later) | https://www.bancaditalia.it/compiti/vigilanza/normativa/ | 2019-07-23 | 2026-10-02 | high | Not fetched |
+| S-08 | Diritto Bancario — "La disciplina degli AISP nelle nuove disposizioni di vigilanza" | https://www.dirittobancario.it/art/la-disciplina-degli-aisp-nelle-nuove-disposizioni-di-vigilanza-della-banca-d-italia/ | n/d | 2026-10-02 | medium | Prior session; blocked |
+| S-09 | Norton Rose Fulbright — "PSD3 and PSR: from provisional agreement to 2026 readiness" | https://www.nortonrosefulbright.com/en/knowledge/publications/cedd39c6/psd3-and-psr-from-provisional-agreement-to-2026-readiness | 2026 | 2026-10-02 | medium-high | Prior session; blocked |
+| S-10 | Morrison Foerster — "PSD3 and the PSR: key developments" | https://www.mofo.com/resources/insights/260430-psd3-and-the-payment-services-regulation-key-developments | 2026-04-30 | 2026-10-02 | medium-high | Prior session; blocked |
+| S-11 | Lexology — PSD3/PSR final compromise texts published | https://www.lexology.com/library/detail.aspx?g=cc3483e5-adeb-4a8c-8014-f9b350162c26 | 2026 | 2026-10-02 | medium | Prior session; blocked |
+| S-12 | openbankingtracker — PSD3 & PSR readiness guide | https://www.openbankingtracker.com/guides/psd3-psr-readiness | 2026 | 2026-10-02 | low-medium | Prior session; blocked |
+| S-13 | The Paypers — PSD3/PSR explainer | https://thepaypers.com/regulations/explainers/explainer-psd3-and-psr-overview-and-key-considerations | n/d | 2026-10-02 | medium | Prior session; blocked |
+| S-14 | Bird & Bird — Proposed PSD3 and PSR (PDF) | https://www.twobirds.com/-/media/new-website-content/insights/pdfs/proposed-psd3-and-payment-services-regulation_050723.pdf | 2023-07-12 | 2026-10-02 | medium | Prior session; blocked |
+| S-15 | European Commission press release IP/23/3543 (payments & FIDA package) | https://ec.europa.eu/commission/presscorner/detail/en/ip_23_3543 | 2023-06-28 | 2026-10-02 | high | Not fetched (blocked) |
+| S-16 | European Parliament Legislative Train / OEIL — PSR 2023/0209(COD), PSD3 2023/0210(COD), FIDA 2023/0205(COD) | https://www.europarl.europa.eu/legislative-train/ ; https://oeil.secure.europarl.europa.eu/ | rolling | 2026-10-02 | high | Blocked |
+| S-17 | Council of the EU press release — Council position on PSD3/PSR | https://www.consilium.europa.eu/en/press/press-releases/2025/06/18/ | 2025-06-18 | 2026-10-02 | high | Blocked |
+| S-18 | FIDA proposal COM(2023) 360 | https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52023PC0360 | 2023-06-28 | 2026-10-02 | high | Blocked |
+| S-19 | Council press release — FIDA general approach | https://www.consilium.europa.eu/en/press/press-releases/2024/12/04/ | 2024-12-04 | 2026-10-02 | high | Blocked |
+| S-20 | Commission Work Programme 2025, COM(2025) 45, Annex IV | https://commission.europa.eu/strategy-and-policy/strategy-documents/commission-work-programme/commission-work-programme-2025_en | 2025-02-11 | 2026-10-02 | high | Not fetched |
+| S-21 | Regulation (EU) 2022/2554 (DORA) | https://eur-lex.europa.eu/eli/reg/2022/2554/oj | 2022-12-27 | 2026-10-02 | high | Not fetched |
+| S-22 | ESMA — DORA page | https://www.esma.europa.eu/esmas-activities/digital-finance-and-innovation/digital-operational-resilience-act-dora | rolling | 2026-10-02 | high | Blocked |
+| S-23 | Regulation (EU) 2024/1689 (AI Act) | https://eur-lex.europa.eu/eli/reg/2024/1689/oj | 2024-07-12 | 2026-10-02 | high | Not fetched |
+| S-24 | Commission "Digital Omnibus" package incl. Digital Omnibus on AI (proposal) | https://digital-strategy.ec.europa.eu/en/policies/digital-omnibus | 2025-11-19 | 2026-10-02 | high (existence) | Blocked; status UNKNOWN |
+| S-25 | Legge 23 settembre 2025 n. 132 (GU n. 223, 25-09-2025) | https://www.gazzettaufficiale.it/eli/id/2025/09/25/25G00144/sg | 2025-09-25 | 2026-10-02 | high | Blocked; ELI id to verify |
+| S-26 | EDPB Guidelines 06/2020 on the interplay of PSD2 and GDPR (v2.0) | https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-062020-interplay-second-payment-services-directive_en | 2020-12-15 | 2026-10-02 | high | Blocked |
+| S-27 | Garante — Linee guida cookie e altri strumenti di tracciamento | https://www.garanteprivacy.it/web/guest/home/docweb/-/docweb-display/docweb/9677876 | 2021-06-10 | 2026-10-02 | high | Blocked |
+| S-28 | Garante — Elenco delle tipologie di trattamenti soggetti a DPIA (Provv. 467/2018) | https://www.garanteprivacy.it/web/guest/home/docweb/-/docweb-display/docweb/9058979 | 2018-10-11 | 2026-10-02 | high | Blocked |
+| S-29 | Garante — decision on OpenAI (ChatGPT) | https://www.garanteprivacy.it/web/guest/home/docweb/-/docweb-display/docweb/10085432 | 2024-12-20 | 2026-10-02 | high | Blocked; docweb to verify |
+| S-30 | Corte di Cassazione, sez. I civ., 25 May 2021 n. 14381 (Mevaluate) | https://www.italgiure.giustizia.it/ | 2021-05-25 | 2026-10-02 | high | Not fetched |
+| S-31 | General Court, Case T-553/23 Latombe v Commission (DPF) | https://curia.europa.eu/ | 2025-09-03 | 2026-10-02 | high | Blocked |
+| S-32 | Apple — App Review Guidelines | https://developer.apple.com/app-store/review/guidelines/ | living (updates 2025-11-13, 2026-02-06) | 2026-10-02 | high | **Fetched** |
+| S-33 | Apple — DMA and apps in the EU | https://developer.apple.com/support/dma-and-apps-in-the-eu/ | 2026-08-18 / eff. 2026-10-01 | 2026-10-02 | high | **Fetched** |
+| S-34 | Apple — News "Changes for apps in the European Union" | https://developer.apple.com/news/?id=rjrtxlse | 2026-08-18 | 2026-10-02 | high | **Fetched** |
+| S-35 | Apple — Payment options on the App Store in the EU | https://developer.apple.com/support/payment-options-on-the-app-store-in-the-eu/ | eff. 2026-10-01 | 2026-10-02 | high | **Fetched** |
+| S-36 | Apple — Apps in the EU (summary of terms) | https://developer.apple.com/support/apps-in-the-eu/ | eff. 2026-10-01 | 2026-10-02 | high | **Fetched** |
+| S-37 | Apple — Developer news feed (guideline updates 2025-11-13, 2026-02-06; age rating 2026-07-09; ATT EU 2026-09-16) | https://developer.apple.com/news/ | rolling | 2026-10-02 | high | **Fetched** |
+| S-38 | Apple — User privacy and data use (ATT; EU alternative prompt mandatory in DE/FR/IT/PL/RO from iOS 27.2) | https://developer.apple.com/app-store/user-privacy-and-data-use/ | 2026 | 2026-10-02 | high | **Fetched** |
+| S-39 | Android — Alternative billing overview | https://developer.android.com/google/play/billing/alternative | rolling | 2026-10-02 | high | **Fetched** |
+| S-40 | Android — Google Play policies overview (calendar) | https://developer.android.com/distribute/play-policies | rolling | 2026-10-02 | high | **Fetched** |
+| S-41 | Android — Data safety: collect and share | https://developer.android.com/guide/topics/data/collect-share | rolling | 2026-10-02 | high | **Fetched** |
+| S-42 | Android — External offers program integration (EEA) | https://developer.android.com/google/play/billing/external/integration | rolling | 2026-10-02 | high | Mirror (Context7) |
+| S-43 | TrueLayer docs — Collect user consent; What is open banking; Direct bank auth link | https://docs.truelayer.com/docs/collect-user-consent ; https://docs.truelayer.com/docs/what-is-open-banking ; https://docs.truelayer.com/docs/generate-a-direct-bank-auth-link | n/d | 2026-10-02 | high | Mirror (Context7) |
+| S-44 | Yapily docs — Financial data consents; Yapily Connect overview; AIS UX guidelines | https://docs.yapily.com/data/financial-data-resources/financial-data-consents ; https://docs.yapily.com/tools-and-services/yapily-connect/overview | n/d | 2026-10-02 | high | Mirror (Context7) |
+| S-45 | Tink docs — permanent users; loans consents; insights | https://docs.tink.com/resources/aggregation/permanent-users ; https://docs.tink.com/resources/loans/loans-managing-consents | n/d | 2026-10-02 | high | Mirror (Context7) |
+| S-46 | Tink legal — Tink's use of agents; legal FAQ | https://tink.com/legal/tinksuseofagents/ ; https://tink.com/legal/faq/ | n/d | 2026-10-02 | high | Prior session; blocked |
+| S-47 | TrueLayer support — alternative to being regulated for AIS; data-chain blog | https://support.truelayer.com/hc/en-us/articles/360005473714 ; https://blog.truelayer.com/customers-and-the-data-chain-agents-and-others-95fa6e25e11f | n/d | 2026-10-02 | high/medium | Prior session |
+| S-48 | Mastercard Open Banking EU — "Do I need an AISP or PISP licence?" | https://openbankingeu.mastercard.com/help-article/do-i-need-an-aisp-or-pisp-license-when-using-open-banking/ | n/d | 2026-10-02 | medium | Prior session; blocked |
+| S-49 | Codice del Consumo, d.lgs. 206/2005 (artt. 18-27, 33-36, 45-67) | https://www.normattiva.it/uri-res/N2Ls?urn:nir:stato:decreto.legislativo:2005-09-06;206 | 2005-09-06 (consolidated) | 2026-10-02 | high | Blocked |
+| S-50 | D.lgs. 7 marzo 2023 n. 26 (Omnibus Directive transposition) | https://www.normattiva.it | 2023-03-07 | 2026-10-02 | high | Not fetched |
+| S-51 | D.lgs. 4 novembre 2021 n. 173 (Digital Content Directive transposition) | https://www.normattiva.it | 2021-11-04 | 2026-10-02 | high | Not fetched |
+| S-52 | AGCOM Delibera 7/24/CONS — Linee guida influencer | https://www.agcom.it | 2024-01-10 | 2026-10-02 | high | Not fetched |
+| S-53 | IAP — Codice di Autodisciplina; Regolamento Digital Chart | https://www.iap.it | n/d | 2026-10-02 | medium-high | Not fetched |
+| S-54 | TUB artt. 128-quater, 128-sexies (agenti, mediatori creditizi); d.lgs. 141/2010; OAM | https://www.organismo-am.it ; https://www.normattiva.it | consolidated | 2026-10-02 | high | Blocked |
+| S-55 | IVASS Regolamento n. 40/2018 (distribuzione assicurativa) | https://www.ivass.it/normativa/nazionale/secondaria-ivass/regolamenti/ | 2018-08-02 | 2026-10-02 | high | Blocked |
+| S-56 | TUF d.lgs. 58/1998 art. 18, art. 1(5-septies) (consulenza in materia di investimenti) | https://www.consob.it | consolidated | 2026-10-02 | high | Not fetched |
+| S-57 | D.lgs. 231/2007 art. 3 (soggetti obbligati); Regulation (EU) 2024/1624 (AMLR) Art. 2 | https://www.normattiva.it ; https://eur-lex.europa.eu/eli/reg/2024/1624/oj | consolidated / 2024-06-19 | 2026-10-02 | high | Not fetched |
+| S-58 | Directive (EU) 2019/882 (EAA); d.lgs. 27 maggio 2022 n. 82 | https://eur-lex.europa.eu/eli/dir/2019/882/oj ; https://www.normattiva.it | 2019-06-07 / 2022-05-27 | 2026-10-02 | high | Not fetched |
+| S-59 | Directive (EU) 2022/2555 (NIS2); d.lgs. 4 settembre 2024 n. 138; ACN NIS portal | https://eur-lex.europa.eu/eli/dir/2022/2555/oj ; https://www.acn.gov.it/portale/nis | 2022-12-27 / 2024-09-04 | 2026-10-02 | high | Blocked |
+| S-60 | Commission Delegated Regulation (EU) 2021/1722 (central contact points) | https://eur-lex.europa.eu/eli/reg_del/2021/1722/oj | 2021-09-29 | 2026-10-02 | high | Not fetched |
+| S-61 | EBA Guidelines EBA/GL/2017/08 (PII for PISP/AISP) | https://www.eba.europa.eu/ | 2017-07-07 | 2026-10-02 | high | Not fetched |
+| S-62 | EBA Guidelines on outsourcing EBA/GL/2019/02 | https://www.eba.europa.eu/ | 2019-02-25 | 2026-10-02 | high | Not fetched |
+| S-63 | Banca d'Italia Circolare 285 (Part I, Title IV, Ch. 3) | https://www.bancaditalia.it/compiti/vigilanza/normativa/archivio-norme/circolari/c285/ | consolidated | 2026-10-02 | high | Not fetched |
+| S-64 | Prior-session research in this repo: `docs/research/raw/open-banking-providers-a.md` (§2.1–2.6), `open-banking-providers-b.md` (§15), `competitors-eu-uk.md` (§6) | local | 2026-10-02 | 2026-10-02 | as per their own citations | Read today |
+| S-65 | AGCM decision on Apple ATT (reported Dec 2025) | https://www.agcm.it | 2025-12 | 2026-10-02 | medium | Not fetched (knowledge) |
+| S-66 | Directive (EU) 2023/2225 (CCD2) | https://eur-lex.europa.eu/eli/dir/2023/2225/oj | 2023-10-30 | 2026-10-02 | high | Not fetched |
+| S-67 | Directive (EU) 2024/2853 (Product Liability) | https://eur-lex.europa.eu/eli/dir/2024/2853/oj | 2024-11-18 | 2026-10-02 | high | Not fetched |
+| S-68 | Regulation (EU) 2023/2854 (Data Act) | https://eur-lex.europa.eu/eli/reg/2023/2854/oj | 2023-12-22 | 2026-10-02 | high | Not fetched |
+| S-69 | European Commission — Digital Fairness Act initiative page | https://commission.europa.eu/ (search "Digital Fairness Act") | 2026 (planned) | 2026-10-02 | high (existence) / UNKNOWN (timing) | Not fetched |
+| S-70 | Garante — decision on Luka Inc. (Replika) | https://www.garanteprivacy.it (search "Replika") | 2025 | 2026-10-02 | medium | Not fetched |
+| S-71 | Agent-proxy status log (evidence of policy denials for docs.tink.com etc.) | local `curl $HTTPS_PROXY/__agentproxy/status` | 2026-10-02 | 2026-10-02 | high | Read today |
+
+*End of document.*

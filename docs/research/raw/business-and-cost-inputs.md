@@ -1,0 +1,627 @@
+# Business-model and unit-economics inputs for Lilleri (prices, benchmarks, cost drivers)
+
+**Project:** LILLERI (greenfield consumer PFM, Italy-first then Europe; no AISP licence yet)
+**Research date / verification date for every claim:** 2026-10-02
+**Author:** specialist research sub-agent (Phase 0, "business and cost inputs")
+**Adversarial verification pass:** 2026-10-02 (same day) — 23 decision-critical claims re-checked against primary pages and official documentation mirrors; corrections and annotations are marked **[AV]** in the body and listed in the final section "Verification notes (adversarial pass)".
+
+## Scope note and method (read before using any number)
+
+This document collects quantitative inputs for Lilleri's business model and unit-economics spreadsheet: competitor prices, willingness-to-pay signals, open-banking data costs, AI inference and embedding prices, OCR prices, EU infrastructure prices, auth/billing/notification/analytics/support vendors, growth and affiliate benchmarks. It ends with a consolidated **Inputs table** (Low / Base / High, status) ready to paste into a model.
+
+**Method constraints that materially affect evidence quality:**
+
+- The session-wide **WebSearch budget (200 calls) was already exhausted by sibling agents before this agent ran its first query**; 8 queries were attempted and all were refused. No search-engine evidence was gathered by this agent.
+- **WebFetch/curl were egress-blocked for most vendor domains** (openai.com, ai.google.dev, mistral.ai, ynab.com, monarchmoney.com, revenuecat.com, stripe.com, hetzner.com, scaleway.com, fly.io, railway.com, render.com, vercel.com, neon.com, supabase.com, upstash.com, clerk.com, auth0.com, stytch.com, ory.sh, onesignal.com, resend.com, postmarkapp.com, aws.amazon.com, azure.microsoft.com, support.google.com, play.google.com, revolut.com, n26.com, hype.it, apps.apple.com, eur-lex.europa.eu, agenziaentrate.gov.it, all app-analytics vendors, all Italian comparators). 
+- **Channels that did work** (and were used): (a) `platform.claude.com` and `claude.com` (Anthropic pricing, official); (b) `developer.apple.com` (Small Business Program; "Apps in the EU" terms, official); (c) `cloud.google.com` pricing pages fetched raw and text-mined (Document AI, Vertex AI Gemini, Cloud SQL, Cloud Run, Cloud Storage, network); (d) the **AWS public Price List bulk API** (`pricing.us-east-1.amazonaws.com`, official JSON, publication date 2026-10-01) for Textract, SES, S3, data transfer and Cognito in EU regions; (e) `datadoghq.com/pricing` (official, text-mined); (f) **official documentation repositories mirrored on `raw.githubusercontent.com`** (Fly.io, Railway, Neon, Supabase, Cloudflare R2, Sentry, Mixpanel, PostHog, Expo) and **Context7 documentation mirrors** (Supabase, Fly.io, Upstash, Grafana Cloud, Vercel, Resend, RevenueCat, Voyage AI, Mindee, Auth0, PostHog, Mixpanel); (g) the **LiteLLM `model_prices_and_context_window.json`** community price registry (fetched raw from GitHub) for OpenAI, Gemini, Mistral, Voyage, Bedrock and Vertex prices; (h) the six **sibling research documents** already in `docs/research/raw/` (search-snippet-based facts verified 2026-10-02 by other agents; their source IDs are cited as R-US/R-EU/R-IT/R-OBA/R-OBB/R-AI/R-NB).
+- **Status labels:** **FACT** = stated by the cited source as read on 2026-10-02; **ASSUMPTION** = background knowledge or inference, not verified this session (always with a "verify at" URL); **HYPOTHESIS** = our interpretation; **UNKNOWN** = not findable, with how to verify. **Reliability:** high = official/primary page or API read directly; medium = official docs via a mirror/community registry, reputable secondary; low = blog/forum/community guide/creator video.
+- **Adversarial-pass channels [AV]:** WebSearch was again unavailable (16 queries attempted, 0 executed — session budget still exhausted) and WebFetch blocked. Re-verification therefore used `curl` through the policy proxy to the only reachable official hosts (developer.apple.com, platform.claude.com, cloud.google.com, pricing.us-east-1.amazonaws.com, raw.githubusercontent.com, developer.android.com), Context7 mirrors of enablebanking.com and revenuecat.com documentation, and the sibling `regulatory-landscape.md` (cited as R-REG) for legal and licensing status. Everything else (Google Play Console Help, EUR-Lex/Council/EP, Stripe, Hetzner, Auth0, YNAB/Monarch/Moneyhub/Satispay, GoCardless, Mastercard) stayed blocked; claims resting on those hosts are labelled "unverifiable today", not confirmed.
+- Prices are quoted in the vendor's currency (USD unless stated) and exclude VAT. Marketing text is paraphrased. Nothing here is legal, tax or pricing advice; **every number must be re-verified on the vendor's own page before it drives a contract or a price decision.**
+
+---
+
+## 1. Competitor pricing (state as of 2026-10-02)
+
+All rows below are taken from the sibling competitor documents (search-snippet evidence verified 2026-10-02) unless marked otherwise; the sibling source IDs are given so the original URL can be found in their Sources tables. Monthly/annual prices are list prices; promotional first-year discounts are noted separately.
+
+### 1.1 US-centric PFM apps (USD)
+
+| Product | Monthly | Annual | Free tier | Trial | Family / household | Status (source, reliability) | Doubts |
+|---|---|---|---|---|---|---|---|
+| YNAB | $14.99 | $109 (≈$9.08/mo, −39% vs monthly) | None | 34 days, no card; students 12 months free | YNAB Together: up to 6 people on one subscription | FACT (R-US S13/S191/S192 medium; S6 high) | $109 step dated Aug–Sep 2024 (low-reliability forum) |
+| Monarch Money | $14.99 | Core $99.99 (−44%); Plus $199/yr annual-only (launched 2026-04-21) | None | 7 days (card required per reviewers) | Unlimited household members | FACT (R-US S20 PR Newswire high; S40/S42 medium) | Frequent 50%-off first-year promos ($49.99) seen on deal sites (low) |
+| Copilot Money | $13 | $95 (−39%) | None | 1 month | Single-user only (A, low) | FACT (R-US S63 Forbes medium) | — |
+| Rocket Money | Free; Premium "pay what you want" $7–$14; Premium+ $15 | — | Yes (limited: 2 custom category budgets) | — | UNKNOWN | FACT (R-US S71 vendor high; S72 high) | Sources vary $7–$12 vs $7–$14 for the slider; bill-negotiation success fee 35–60% of first-year savings outside Premium+ |
+| Quicken Simplifi | n/a (annual only) | Promo $3.99/mo billed $47.88/yr; renewal $5.99–$6.99/mo (conflict) | None (30-day money-back) | — | 1 shared "Space" | FACT (R-US S101/S103 medium/low) | Renewal price conflict unresolved; verify quicken.com/simplifi |
+| PocketGuard | $12.99 | $74.99 | Historically 2 accounts/2 categories; Aug-2026 observation: trial-only | 7 days | UNKNOWN | FACT (R-US S133/S134 low) | Free plan status conflicting |
+| Origin | $12.99 | $99 ($1 first-year promo seen) | None | 7 days | Partner added at no extra fee (A, medium) | FACT (R-US S140/S148 medium) | — |
+| Empower Personal Dashboard | Free | Free | Entire product | — | — | FACT (R-US S117 medium) | Monetised via advisory upsell (AUM fee from 0.89%) |
+| Cleo (US) | Plus $5.99; Pro $8.99; Builder $14.99 | — | Yes (chat/budget) | — | — | FACT (R-EU S-44 medium) | UK Pro price UNKNOWN |
+| Splitwise Pro | ≈$4.99 | ≈$39.99 | Yes (ads; daily add cap reported) | — | n/a | ASSUMPTION (R-IT K-03; background) | EUR price in the Italian App Store UNKNOWN — verify apps.apple.com/it In-App Purchases |
+
+### 1.2 UK/EU PFM apps (local currency)
+
+| Product | Monthly | Annual | Free tier | Family | Status (source) | Doubts |
+|---|---|---|---|---|---|---|
+| Emma (UK/US/CA) | Plus £4.99; Pro £9.99; Ultimate £14.99 | £41.99 / £83.99 / £124.99 (≈−30%) | Yes: 2 bank logins, notifications, pots | No evidence | FACT (R-EU S-03 official help high; S-01 medium) | Which? (2026) lists Plus at £5.99 — conflict; regional price tests likely |
+| Snoop (UK) | Plus £4.99 | £39.99 (−33%) | Yes (most features) | — | FACT (R-EU S-09 medium) | — |
+| Plum (UK + 9 EU incl. Italy) | UK (from 7 Jul 2025): Plus £3.99; Boost £7.99; Max £14.99. EU legacy: Pro €2.00; Premium €9.99 | — | Basic free | — | FACT (R-EU S-10 official help, high; snippet only) | EU plan line-up after July 2025 for new EU users UNKNOWN — verify help.withplum.com |
+| Moneyhub (UK, D2C closed 31 Jul 2026) | £1.49 | £14.99 | 6 months free | — | FACT (R-EU S-07a low; S-08 high for closure) | Benchmark of a very low price that still did not sustain D2C. **[AV]** D2C exit announced Feb 2025 is well corroborated; the 31 Jul 2026 sunset date rests on the official help-centre article alone (R-EU S-08) and could not be re-read — one secondary source says 14 Aug |
+| Spendee (CZ, Italy via Salt Edge) | Plus $1.99; Premium $2.99 | $14.99 / $22.99 | Basic free | Shared wallets (Premium) | FACT (R-EU S-13 medium) | EUR price UNKNOWN |
+| Wallet by BudgetBakers (CZ, Italy via Salt Edge) | ≈€4.49 | discounted (amount UNKNOWN); occasional lifetime | Yes (manual tracking) | Group sharing (A) | FACT (R-EU S-36b low) | Official EUR list price UNKNOWN — verify in app |
+| MoneyWiz | Premium $4.99 | $49.99; Standard $19.99/yr | None (trial) | — | FACT (R-EU S-40a medium) | — |
+| Money Pro (iBear) | — | Basic $12.99; Plus $29.99; Gold $69.99 (bank sync requires Gold) | Limited | — | FACT (R-EU S-41 high) | — |
+| Toshl | Pro $2.99; Medici $4.99 | $19.99 / $39.99 | Yes (2 accounts, 2 budgets) | — | FACT (R-EU S-14 medium) | Whether EU (Salt Edge) sync is in Pro or Medici UNKNOWN |
+| Finanzguru (DE) | Plus €2.99 regular (A/B tests €0.99–€4.99) | €29.99 (−16%) | Yes, generous (multibanking, categorisation, contracts, cancellation, 1 budget, 3-month history) | — | FACT (R-EU S-15 medium, 07/2025) | — |
+| Outbank (DE/AT/CH) | €3.99 | €39.99 | None (14-day trial) | — | FACT (R-EU S-30 medium) | — |
+| Bankin' (FR) | Plus €4.99; Pro from €8.33 | €39.99 | Yes (aggregation, categorisation, balance forecast) | — | FACT (R-EU S-33 low-medium) | "from €2.49/mo" promo seen; conflicting |
+| Linxo (FR) | Premium ≈€4 | €29.99 | Yes; Linxo Lab fully free | — | FACT (R-EU S-17 medium) | — |
+| Dyme (NL) | Silver €6.99; Gold €9.99 | — | Yes | — | FACT (R-EU S-49) | — |
+| Finanzfluss Copilot (DE) | Plus €8.99 | — | Yes | — | FACT (R-EU S-51 high) | Investor-first product |
+| Buddy | $9.99 | $49.99 | Yes | Shared budgets | FACT (R-EU S-42 medium) | — |
+| Monefy (manual) | — | $59.99–$69.99 (intro $34.99) | Yes | — | FACT (R-EU S-43) | — |
+
+### 1.3 Italian neobank / bank plans (EUR, Italy) — reference anchors for "what Italians already pay for a money app"
+
+| Product | Plans (monthly) | Status (source) | How to verify |
+|---|---|---|---|
+| Revolut (IT branch; IT IBAN "since Jan 2025" per a creator — exact launch date unverified, low-medium **[AV]**) | Standard €0; Plus ≈€4 (€3.99); Premium ≈€10 (€9.99); Metal ≈€16 (€15.99); Ultra ≈€45 | FACT for rounded values (R-IT Y-01 creator video, 2025-11, low-medium); exact list prices ASSUMPTION (R-IT K-02) | revolut.com/it-IT/our-pricing-plans/ |
+| N26 (IT) | Standard €0; Smart ≈€4.90; You ≈€9.90; Metal ≈€16.90 | ASSUMPTION (R-IT K-02); plans "You/Metal" confirmed to exist (Y-19, low) | n26.com/it-it/piani |
+| Hype (Banca Sella group) | Hype €0; Next ≈€2.90; Premium ≈€9.90 | ASSUMPTION (R-IT K-02); paid plans confirmed to exist (Y-06) | hype.it/trasparenza |
+| bunq | Free; Core €3.99; Pro €9.99; Elite €18.99 (May 2026) | FACT (R-IT Y-21 creator, low) | bunq.com/pricing |
+| Satispay | App free; Plus / Metal / Velvet card plans announced 7–8 Jul 2026; third-party *observed* prices ≈€3.99 / €9.99 / €39.99 per month **[AV]** | ASSUMPTION low-medium (R-IT V-01/V-02 third-party observations, Y-12 creator video); official list prices UNKNOWN (satispay.com blocked in both passes) | satispay.com/it-it/privati/costi |
+
+### 1.4 Published scale, revenue, ARPU and conversion signals
+
+| Company | Metric | Value | Status (source) | Derived input |
+|---|---|---|---|---|
+| Monarch Money | Paying subscribers / total users | >500k paying, ≈1M total users (May 2025); >1M "members" early 2026; $75M Series B at $850M post (May 2025); "20x paid-subscriber surge" in the year after Mint's shutdown | FACT (R-US S34/S35 Sacra medium; S36 PR high) | Paid share of registered ≈50% (trial-gated product, not freemium — do not use as freemium conversion). Implied ARR at $99.99 × 500k ≈ $50M (HYPOTHESIS; Sacra estimates not read) |
+| YNAB | Revenue, subscribers | UNKNOWN (private; nothing found by sibling searches) | UNKNOWN | Verify: Sacra/Latka estimates; YNAB press |
+| Emma | Customers | "more than 1.3m customers across UK, US and Canada" (undated) | FACT (R-EU S-22a medium; may be stale) | Paid share UNKNOWN |
+| Plum | ARR, customers, AUM | Operational profitability Jan 2026; ARR £34m; >60% growth; ≈£3bn AUM; "2 million customers across 10 markets"; 5m+ downloads | FACT (R-EU S-29 medium) | Blended revenue ≈£17 per customer per year, ≈£6.8 per download per year (derived, HYPOTHESIS: includes AUM/interest revenue, not only subscriptions) |
+| Finanzguru | Revenue mix, users | ≈€4m revenue in 2022, ≈70% from commissions (insurance/switching); >500k registered users | FACT (R-EU S-35 medium) | ≈€8 revenue per registered user per year, of which ≈€2.4 subscription (derived, HYPOTHESIS) |
+| Rocket Money | Members, premium | "10M+ members" claim; premium members "nearly doubled YoY"; revenue inside Rocket Companies segment reporting | FACT (R-US S77/S78 medium, snippet); revenue UNKNOWN | Verify: Rocket Companies 10-K/10-Q 2025–2026 |
+| Snoop | Downloads | 1M downloads (undated) | FACT (R-EU S-23a low-medium) | — |
+| Fintonic | Profitability | First profitability Sept 2025 after pivot to credit (loan originations >€1m/day) | FACT (R-EU S-18a medium/high) | Subscription PFM alone did not get there |
+| Moneyhub, Spiir, Yolt, Grip, Oval | Exits | Subscription-only or free D2C PFMs closed 2021–2026 | FACT (R-EU §5) | Qualitative: plan a second revenue rail |
+| Free-to-paid conversion for PFM | — | **UNKNOWN** for every named competitor | UNKNOWN | Verify: Sacra company pages (sacra.com/c/monarch-money, /cleo), RevenueCat "State of Subscription Apps" category cuts, app-store intelligence (Sensor Tower/Appfigures) |
+
+**Pricing pattern (HYPOTHESIS, medium):** US full-PFM list prices cluster at **$95–$109/yr** with ~40% annual discount and 7–34-day trials; Europe clusters at **€3–€5/mo "Plus"** tiers (annual €30–€40) above a genuinely useful free tier; >€9/mo only sustains where tangible perks (Plum Max, Dyme Gold) or investing/AUM revenue exist. Italian neobanks anchor consumers at **€0 / ≈€3–5 / ≈€10 / ≈€16** monthly tiers (R-IT).
+
+---
+
+## 2. Willingness-to-pay signals (Europe/Italy)
+
+No survey with a published WTP figure for PFM in Italy could be retrieved this session (search budget exhausted; survey publishers blocked). The following are indirect signals.
+
+| Signal | Evidence | Status (source) | Implication for the model |
+|---|---|---|---|
+| Price points that European PFMs have sustained | Finanzguru €2.99, Outbank €3.99, Bankin' €4.99, Linxo ≈€4, Wallet ≈€4.49, Snoop £4.99, Emma Plus £4.99; A/B tests at Finanzguru between €0.99 and €4.99 | FACT (R-EU §8) | Base price for an Italian "Plus" tier €3.49–€4.99/mo; test €2.99 vs €4.99 |
+| Annual discount norms | Emma ≈30%; Snoop 33%; Finanzguru 16%; Outbank 16%; YNAB 39%; Monarch 44% | FACT (derived from §1) | Annual ≈ 8–10× monthly |
+| Price-increase backlash | YNAB $99→$109 (2024) generated forum/price-complaint content; Monefy/MoneyWiz/Money Pro one-time→subscription migrations caused lasting 1-star reviews | FACT (R-US S11 low; R-EU §10/§12) | Grandfather early users; avoid silent renewal step-ups |
+| Trial auto-conversion complaints | Emma Trustpilot theme (charged £83.99 after cancelling trial); Cleo FTC $17m settlement (Mar 2025) partly over obstructive cancellation | FACT (R-EU S-20 low-medium; S-45 high) | Pre-renewal reminders reduce refunds/chargebacks |
+| Italian expectation of "free" | Italian creators recommend free apps ("2 app gratis per gestire le tue spese"), bank apps' analytics are free and pre-installed; Moneyhub at £1.49 was "loved for value" yet closed | FACT (R-IT Y-33 low; R-EU S-07b) | Free tier must be real; monetise depth/automation, not basics |
+| Effort pricing in minutes | Italian creators rank tools by minutes per month (ChatGPT 2 min, sheet 5 min, Wallet 15 min) | FACT (R-IT Y-02 low-medium) | WTP is for *time saved*; zero-setup is the paid value |
+| Referral/bonus culture | Italian neobanks pay users €5–€50 referral bonuses; creators carry 5–10 bank codes each | FACT (R-IT Y-01/Y-06/Y-07/Y-14 low) | Cash incentives, not features, drive first installs in Italy |
+| Household/couples WTP | Monarch includes unlimited household on one subscription and is "best-in-class" for couples; Italian couples use free split apps or joint accounts | FACT (R-US S40/S42; R-IT Y-05) | Household included in Plus raises WTP; charging per seat does not fit the Italian norm |
+| What users pay for elsewhere | Revolut Plus ≈€4, Premium ≈€10; Satispay/Hype paid plans exist; Plum EU Premium €9.99 | FACT/ASSUMPTION (§1.3) | €9.99 is the ceiling for a "Pro" tier without banking perks |
+| Direct WTP survey (Italy) | **UNKNOWN** | UNKNOWN | Verify: Osservatorio Fintech & Insurtech PoliMi survey; run a Van Westendorp survey in the beta |
+
+---
+
+## 3. Open-banking (AIS) data costs
+
+No aggregator publishes a price list for Italy; all figures below are either third-party listings (low reliability) or UNKNOWN. Full provider profiles are in R-OBA and R-OBB.
+
+| Provider | Pricing model | Public numbers | Minimum commitment | Status (source) | How to verify |
+|---|---|---|---|---|---|
+| Enable Banking (FI) | **Per account accessed per month** (plus per payment), volume-based; "Get a Quote" tool launched March 2026; two modes documented by Enable Banking itself: (a) Enable Banking acts as the **regulated entity** and its terms-consent widget is shown to the end user — the mode for customers without a licence; (b) licensed TPPs use it as a pure technical service provider and present their own terms **[AV]** | None found | **A minimum monthly invoice exists** (it includes a set quota of accounts and payments; amount UNKNOWN) **[AV — corrects "UNKNOWN"]** | FACT for the pricing model, the minimum and the two modes (enablebanking.com/docs FAQ "How much does it cost…", API widgets "Terms consent", TPP getting-started — read via Context7 mirror 2026-10-02, S37; R-OBB §4); UNKNOWN numbers; **legal acceptability of mode (a) in Italy UNKNOWN** (see licensing caveat below) | Use the quote tool on enablebanking.com; ask for the minimum invoice, the included quotas, sandbox terms, and which of the two modes (and which registration, if any) they propose for an Italian B2C app |
+| Tink (Visa) | Sales-led; agent model for unlicensed partners | Third-party blog: "Standard ≈ €0.50 per user per month" for Transactions; Account Check ≈ €0.25 per verification | UNKNOWN | UNKNOWN (R-OBA §3.1; finexer/xpay low) | Request quote; ask whether enrichment is bundled |
+| TrueLayer | Sales-gated: Development (free), Scale (monthly fee + usage), Enterprise | None | UNKNOWN | UNKNOWN (R-OBA §3.2, low) | Request quote; ask if new data-only Italian clients are onboarded after the 2025 restructuring |
+| Yapily | "Per call + subscription" | Third-party: entry production ≈ GBP 200–500/month depending on coverage scope | UNKNOWN | UNKNOWN (R-OBA §3.3, low) | Request quote; confirm EU licensed entity |
+| Salt Edge | Usage-based, **per consented end-user** for AIS | Listing sites: Free plan ≈100 live connections; "Growth" ≈ USD 500/month unlimited connections; Custom | Annual/multi-year once volumes known (secondary) | UNKNOWN numbers (R-OBA §3.4, low) | Request quote; ask whether the free tier applies to the Partner Program |
+| GoCardless Bank Account Data (ex-Nordigen) | — | Free tier existed until 2025 | — | FACT: **closed to new Bank Account Data customers from July 2025** (R-OBB §3: gocardless.com pricing-page snippet "From July 2025 … stopped accepting new Bank Account Data accounts", high; corroborated by Actual Budget #5505 of 2025-08-06 and Firefly III #10753 of 2025-08-13). **[AV]** Not independently re-read today (gocardless.com blocked; those GitHub repositories are outside this session's scope); scope caveat: the community threads speak of the free/personal tier, the pricing snippet of all new accounts | Not an option; if in doubt, attempt a sign-up |
+| Neonomics (NO) | Per-user-per-month for data, volume tiers, **no setup fee** | None | None (claim) | FACT model (R-OBB §7, GetApp low-medium) | Request quote |
+| Plaid Europe | Sales-led; no pay-as-you-go in Europe; third-party sites say Europe adds 5–15% to licence cost | None | UNKNOWN | FACT (R-OBB §6, low for uplift) | Request quote; startup programme |
+| Mastercard Open Banking Europe (ex-Aiia) | Enterprise sales; "no licence needed" documented | None | UNKNOWN | UNKNOWN (R-OBB §8) | Request Italian ASPSP list + indicative pricing |
+| Fabrick (Sella) | Enterprise; setup + volume tiers (historical) | None | UNKNOWN | UNKNOWN (R-OBB §2) | Request startup plan |
+| CBI Globe direct (needs own AISP registration) | TPP fees | Low-reliability SME-integration blog (2021): TPP contract setup €0–1,500; analysis €2–4k; connector dev €5–15k; test/go-live €1–3k; annual TPP fees €600–3,600 | — | UNKNOWN (R-OBB §13, brentasoft low) | Request CBI Globe fee schedule |
+| Own AISP registration (Banca d'Italia) | PII insurance, governance, eIDAS certificates, legal | No initial-capital requirement for AIS-only (PSD2 Art. 33 *registration* regime, transposed in TUB art. 114-novies; professional-indemnity insurance per EBA/GL/2017/08 is required); costs UNKNOWN. **Legislative status [AV]:** PSD2 and its Italian transposition are the law in force. PSD3/PSR were only *politically agreed* (27 Nov 2025) and were moving to formal adoption in spring 2026; whether they were published in the Official Journal by 2026-10-02 is **UNKNOWN** (EUR-Lex, Council and Parliament sites unreachable in both passes) and application is not before ~2028. The PSD3 text as proposed keeps the AISP registration regime (no own funds). Model under PSD2; do not treat PSR provisions as in force. | — | FACT (law in force; statute not re-fetched) / UNKNOWN costs (R-OBB §15; R-REG §2, §10.1) | 2–3 law-firm quotes; QTSP price list; quarterly EUR-Lex check for "Payment Services Regulation" / "Directive (EU) 2026/…" |
+
+**Licensing caveat (adversarial pass) [AV]:** every "no licence needed" / "serves customers without an AISP licence" / "agent model for unlicensed partners" statement in the table above (Enable Banking, Tink, Mastercard Open Banking Europe, Salt Edge Partner Program, GoCardless historically) is a **provider statement**, not a regulatory confirmation, and none of those provider pages could be re-read today except Enable Banking's docs. Two legally distinct routes exist and quotes should be requested for both: **(A) data recipient under the provider's licence** — the provider is the AISP of record, the user instructs it to share data with Lilleri, and the provider's consent screen must name Lilleri as recipient and purpose (PSD2 Art. 67(2)(f)); widely practised in the EU, but **Banca d'Italia's written position on this model for a B2C app marketed in Italy was not found (UNKNOWN)** and there is a re-characterisation risk ("Lilleri is in substance providing AIS"); **(B) registered agent of a licensed AISP** (PSD2 Art. 19; for an Italian licensee possibly an OAM listing under TUB art. 128-quater) — legally foreseen, cleaner footing, slower onboarding with due-diligence, UX-review and audit costs that route A may not carry. Neither route is a FACT about Lilleri's own status until counsel and the chosen provider confirm it (R-REG §1 item 2, §10.2 — top open legal question). Route choice also affects COGS: agent onboarding fees and the licensee's conduct/complaints obligations are typically priced in.
+
+**Working ranges for the model (ASSUMPTION, low-medium; triangulated from the third-party figures above and the authors' background knowledge of EU AIS contracts):**
+
+| Input | Low | Base | High | Notes |
+|---|---|---|---|---|
+| Price per **connected account** per month (production, Italy) | €0.10 | €0.30 | €0.60 | Enable Banking/Neonomics per-account models at startup volumes; Tink "€0.50/user" is per *user* (a user with 3 accounts may be cheaper per account under per-user pricing) |
+| Monthly minimum / platform fee | €0 | €500 | €2,000 | Salt Edge "Growth" USD 500; Yapily GBP 200–500; enterprise players higher. **[AV]** Low = €0 is now unlikely for Enable Banking (minimum monthly invoice confirmed in its FAQ, amount unknown); keep €0 only for a provider that states "no minimum" in writing |
+| Enrichment (vendor categorisation/merchant) per connected account per month | €0 (build in-house) | €0.05 | €0.20 | Vendors quote separately; R-AI recommends in-house cascade |
+| Accounts per paying user | 2.0 | 3.0 | 4.5 | Italian creators report 3–5 relationships (R-IT Y-02/Y-03, low-medium) |
+| **Implied AIS cost per paying user per month** | €0.20 | €0.90 | €2.70 | = accounts × price; **the single largest variable COGS line** — must be quoted before pricing is fixed |
+
+---
+
+## 4. AI inference, embeddings, data residency (as of 2026-10-02)
+
+### 4.1 Anthropic Claude (first-party API) — FACT, high (platform.claude.com pricing page read directly 2026-10-02; claude.com/pricing cross-checked)
+
+| Model | Input $/MTok | Output $/MTok | Cache write 5m / 1h | Cache read | Batch (−50%) in/out | Notes |
+|---|---|---|---|---|---|---|
+| Claude Haiku 4.5 | 1.00 | 5.00 | 1.25 / 2.00 | 0.10 | 0.50 / 2.50 | 200k context; cheapest current Claude |
+| Claude Sonnet 5.5 | 2.00 | 10.00 | 2.50 / 4.00 | 0.20 | 1.00 / 5.00 | 1M context at standard price |
+| Claude Sonnet 5 | 2.00 | 10.00 | 2.50 / 4.00 | 0.20 | 1.00 / 5.00 | Price FACT. **[AV]** The earlier note "introductory price made permanent (planned Sep-2026 rise to $3/$15 cancelled)" is **not stated anywhere on the pricing page** (no "introductory"/"permanent" wording) — downgraded to ASSUMPTION of unknown origin; do not model a future rise on it either way |
+| Claude Sonnet 4.6 / 4.5 | 3.00 | 15.00 | 3.75 / 6.00 | 0.30 | 1.50 / 7.50 | Older tokenizer (≈30% fewer tokens than 4.7+ models) |
+| Claude Opus 5.5 | 4.00 | 20.00 | 5.00 / 8.00 | 0.20 (0.05×) | 2.00 / 10.00 | Fast mode $8/$40 |
+| Claude Opus 5 / 4.8 / 4.7 / 4.6 / 4.5 | 5.00 | 25.00 | 6.25 / 10.00 | 0.50 | 2.50 / 12.50 | |
+| Claude Fable 5.1 / Fable 5 (Claude Mythos 5.1 / Mythos 5 are listed at identical prices) | 10.00 | 50.00 | 12.50 / 20.00 | 0.25 (5.1) / 1.00 (5) | 5.00 / 25.00 | Frontier tier. **[AV]** Every row of this table was re-read on the live page in the adversarial pass and matched (Haiku 4.5, Sonnet 5.5/5/4.6/4.5, Opus 5.5/5/4.8/4.7/4.6/4.5, Fable 5.1/5, batch halves) |
+
+Other Anthropic facts (high): prompt-cache multipliers 1.25× (5-min write), 2× (1-h write), 0.1× read (0.05× Opus 5.5; 0.025× Fable 5.1); Batch API −50% on input and output, stacks with caching; web search $10 per 1,000 searches; **data residency: `inference_geo` is `global` (default) or `us` (1.1× multiplier on input, output, cache-write and cache-read tokens) for Claude 4.6+ models — there is no EU-only inference option on the first-party API; the same 1.1× applies to Claude Platform on AWS and to Microsoft Foundry "US Data Zone" deployments; earlier models return a 400 if the parameter is sent** (platform.claude.com pricing "Data residency pricing" section, re-read 2026-10-02 in the adversarial pass — confirmed, no EU option appears anywhere on the page **[AV]**; R-AI confirms the 400 on Haiku 4.5). Regional/multi-region endpoints on **Bedrock and Vertex carry a 10% premium** over global endpoints for Claude 4.5+ models (same page). Bedrock EU cross-region profiles (`eu.anthropic.*`) list Haiku 4.5 at $1.10/$5.50, Sonnet 5.5 at $2.20/$11, Opus 5.5 at $4.40/$22 (LiteLLM registry, medium — consistent with the 10% premium). Zero-data-retention on the first-party API is offered to eligible customers on request (ASSUMPTION; verify platform.claude.com/docs privacy/ZDR pages and the DPA).
+
+### 4.2 OpenAI (LiteLLM registry, medium; R-AI Context7 snapshot of developers.openai.com for the 5.4 family, medium) — verify at platform.openai.com/docs/pricing
+
+| Model | Input | Cached input | Output | Batch (−50%) | Notes |
+|---|---|---|---|---|---|
+| GPT-5 | 1.25 | 0.125 | 10.00 | 0.625 / 5.00 | Aug 2025 generation |
+| GPT-5 mini | 0.25 | 0.025 | 2.00 | 0.125 / 1.00 | |
+| GPT-5 nano | 0.05 | 0.005 | 0.40 | 0.025 / 0.20 | |
+| GPT-5.1 | 1.25 | 0.125 | 10.00 | yes | |
+| GPT-5.2 | 1.75 | 0.175 | 14.00 | yes | |
+| GPT-5.4 | 2.50 | 0.25 | 15.00 | 1.25 / 7.50 | 1M context |
+| GPT-5.4 mini | 0.75 | 0.075 | 4.50 | 0.375 / 2.25 | |
+| GPT-5.4 nano | 0.20 | 0.02 | 1.25 | 0.10 / 0.625 | Current cheap tier |
+| GPT-5.5 | 5.00 | 0.50 | 30.00 | 2.50 / 15.00 | |
+| GPT-5.6 "luna" / "terra" / "sol" | 0.20 / 2.00 / 4.00 | 0.02 / 0.20 / 0.40 | 1.20 / 12.00 / 20.00 | 0.10/0.60; 1/6; 2/10 | Jul 2026 family |
+| text-embedding-3-small / -large | 0.02 / 0.13 | — | — | 0.01 / 0.065 | |
+
+EU residency: OpenAI offers EU data residency for API projects (regional endpoint, ≈10% uplift per R-AI snapshot) — ASSUMPTION/medium; verify "Data residency" page. Azure OpenAI: same list prices in Azure's catalogue (LiteLLM `azure/*` entries identical), EU regions (e.g., Sweden Central, France Central, West Europe) and "EU Data Zone" deployments exist — ASSUMPTION; verify azure.microsoft.com pricing. ZDR: OpenAI "zero data retention" available for eligible API use cases; Azure abuse-monitoring opt-out via Limited Access form — ASSUMPTION.
+
+### 4.3 Google Gemini — FACT, high for Vertex AI (cloud.google.com Gemini pricing page read 2026-10-02 and re-read in the adversarial pass: every Flash / Flash-Lite / Pro-Preview row below matched, including the 3.6/3.7/3.8 Flash introductory window and the non-global +10% columns **[AV]**); LiteLLM for Gemini API (medium)
+
+| Model | Input $/MTok (global) | Output | Cached input | Batch/Flex (−50%) | Non-global (regional incl. EU) |
+|---|---|---|---|---|---|
+| Gemini 2.5 Flash | 0.30 | 2.50 | 0.03 | 0.15 / 1.25 | +10% (Vertex) |
+| Gemini 2.5 Flash-Lite | 0.10 | 0.40 | 0.01 | 0.05 / 0.20 | +10% |
+| Gemini 3.1 Flash-Lite | 0.25 | 1.50 | 0.025 | 0.125 / 0.75 | 0.275 / 1.65 |
+| Gemini 3.5 Flash-Lite | 0.30 | 2.50 | 0.03 | 0.15 / 1.25 | 0.33 / 2.75 |
+| Gemini 3.5 Flash | 1.50 | 9.00 | 0.15 | 0.75 / 4.50 | 1.65 / 9.90 |
+| Gemini 3.6 / 3.7 / 3.8 Flash | **0.75 introductory through 2026-12-31; 1.50 from 2027-01-01** | 3.75 → 7.50 | 0.075 → 0.15 | 0.375 / 1.875 → 0.75 / 3.75 | 0.825 / 4.125 |
+| Gemini 3.1 Pro Preview | 2.00 (≤200k) / 4.00 | 12.00 / 18.00 | 0.20 / 0.40 | 1.00 / 6.00 | — |
+| gemini-embedding-001 | 0.15 | — | — | 0.075 | — |
+| gemini-embedding-2 | 0.20 | — | — | 0.10 | — |
+
+Context caching storage ≈ $1 per MTok per hour (R-AI snapshot). Page footnote **[AV]**: non-global (regional) pricing took effect for the GA Gemini 3+ families on 1 July 2026; tuned-model endpoints cost 1.5× the base model; requests above 200k input tokens are billed at long-context rates for all tokens. EU residency: Vertex AI regional endpoints in EU regions (e.g., europe-west1/4/8/9) at the "non-global" +10% rate; the consumer Gemini API (ai.google.dev) publishes no residency commitment — ASSUMPTION (R-AI); verify cloud.google.com/vertex-ai/generative-ai/docs/learn/locations. Vertex does not train on customer data and offers caching/abuse-logging opt-outs — ASSUMPTION.
+
+### 4.4 Mistral — LiteLLM (medium) + R-AI Context7 snapshot (medium); verify at mistral.ai/pricing
+
+| Model | Input | Output | Notes |
+|---|---|---|---|
+| Mistral Small 4 (`mistral-small-2603`) | 0.15 | 0.60 | Apache-2.0 weights; EU endpoint |
+| Ministral 3 — 3B / 8B / 14B (`-2512`) | 0.10 / 0.15 / 0.20 | 0.10 / 0.15 / 0.20 | symmetric pricing |
+| Mistral Medium 3.5 | 1.50 | 7.50 | |
+| Mistral Large 3 | 0.50 | 1.50 | |
+| mistral-embed / codestral-embed | 0.10 / 0.15 | — | |
+| Mistral OCR 3 / OCR 4 | $2 / $4 per 1,000 pages | — | (`ocr_cost_per_page` 0.002 / 0.004) |
+
+Batch −50% (FACT, R-AI). EU residency: `api.eu.mistral.ai`, data centres in EU/EFTA (FACT medium, R-AI). ZDR available on request (ASSUMPTION).
+
+### 4.5 Embeddings summary (per 1M tokens)
+
+| Model | Price | Status |
+|---|---|---|
+| OpenAI text-embedding-3-small / large | $0.02 / $0.13 (batch $0.01 / $0.065) | FACT medium (LiteLLM) |
+| Voyage voyage-4-lite / voyage-4 / voyage-4-large (and context-4, code-4, finance/law) | $0.02 / $0.06 / $0.12; **200M free tokens per account** on the voyage-4 family; older models $0.02–$0.18 | FACT high (docs.voyageai.com/docs/pricing via Context7) |
+| Gemini embedding-001 / embedding-2 | $0.15 / $0.20 (batch $0.075 / $0.10) | FACT high (Vertex page) / medium |
+| Mistral embed / Codestral embed | $0.10 / $0.15 | FACT medium |
+| Self-hosted multilingual-e5-small / bge-m3 on CPU | ≈$0 marginal | ASSUMPTION (R-AI) |
+
+Cost per 1,000 transactions embedded (10–20 tokens each): **<$0.004 at any vendor** (derived; R-AI agrees). The binding cost is pgvector storage/compute, not embedding fees.
+
+### 4.6 Worked per-transaction LLM cost (from R-AI §7.2, prices FACT, token counts ASSUMPTION)
+
+| Tier | Vendor/model | $ per 1,000 transactions |
+|---|---|---|
+| Rules + merchant map + TF-IDF/Bayes | in-process | ≈ $0 |
+| Small LLM, sync, cached prefix | Claude Haiku 4.5 | $0.15–0.25 (batch + 1h cache: $0.08–0.13) |
+| | GPT-5.4 nano | $0.03–0.05 (batch $0.02–0.03) |
+| | Gemini 3.1 Flash-Lite | $0.04–0.06 (batch $0.02–0.03) |
+| | Mistral Small 4 (EU endpoint) | $0.03–0.04 (batch ≈ $0.02) |
+| Frontier on 3–5% routed residual | Claude Sonnet 5.5 / Opus 5.5 | $0.01–0.03 / $0.02–0.05 per 1,000 overall |
+| **Blended AI COGS per active user per month** (≈150 new transactions/month, 100% through small LLM once, 5% to frontier, plus monthly summary) | — | **$0.01–0.05** (ASSUMPTION; Base $0.02) |
+
+---
+
+## 5. OCR / receipt extraction prices
+
+| Vendor / product | Price | Free tier | Status (source) | Notes |
+|---|---|---|---|---|
+| Google Document AI — Enterprise Document OCR | $1.50 per 1,000 pages (1,001–5,000,000); $0.60 above 5M; OCR add-ons $6/1,000 | first 1,000 pages/month free | FACT high (cloud.google.com/products/document-ai/pricing, 2026-10-02; re-read in the adversarial pass — matched **[AV]**) | 1-yr/3-yr Flexible Savings Plans −10%/−20% ($1.35 / $1.20) |
+| Google Document AI — Expense Parser (receipts) / Invoice Parser | **$0.10 per document** ("1 count equals up to 10 pages"; $0.20 for 11–20 pages) | — | FACT high (same page; re-read **[AV]** — $0.09 / $0.08 under 1-yr / 3-yr savings plans) | Italian receipts supported "in specific versions" (R-NB S-18) |
+| Google Document AI — Form Parser / Custom Extractor | $30 per 1,000 pages ($20 above 1M) | — | FACT high | |
+| Google Document AI — Layout Parser | $10 per 1,000 pages | — | FACT high | |
+| AWS Textract (eu-central-1 Frankfurt) — DetectDocumentText | $1.50 per 1,000 pages (0–1M); $0.60 above | AWS free tier (ASSUMPTION: 1,000 pages/month for 3 months) | FACT high (AWS Price List API, offer 2026-09-11) | eu-south-1 (Milan) not offered |
+| AWS Textract — AnalyzeExpense (receipts/invoices) | **$10 per 1,000 pages** ($8 above 1M) | — | FACT high | |
+| AWS Textract — Layout / Tables / Queries / Forms+Queries / Signatures / ID | $4 / $15 / $15 / $55 / $3.50 / $25 per 1,000 pages | — | FACT high | Forms+Queries+Tables+Custom $80/1,000 |
+| Azure AI Document Intelligence | Read ≈$1.50/1,000 pages; Layout and prebuilt receipt/invoice ≈$10/1,000; custom ≈$30–50/1,000; free tier 500 pages/month | — | ASSUMPTION (azure.microsoft.com blocked; Context7 mirror had no pricing) | Verify azure.microsoft.com/pricing/details/ai-document-intelligence/ |
+| Mistral OCR 3 / 4 | $2 / $4 per 1,000 pages | — | FACT medium (LiteLLM) | No receipt schema; markdown output |
+| Mindee | Starter and Pro plans: minimum **6,000 credits/year**, overage **€0.044 per credit**; Enterprise from 500,000 credits; free trial 200 credits or 14 days | trial only | FACT high (docs.mindee.com plans via Context7) | 1 credit ≈ 1 page (ASSUMPTION); ≈€264/year minimum |
+| Veryfi | Quote-based tiers | — | UNKNOWN (site blocked) | Request quote; check sandbox terms |
+| Vision LLM per receipt photo (≈1,024×1,365 px ≈ 1,860 Claude image tokens; ≈300 output tokens) | Claude Haiku 4.5 ≈ $0.0034; Sonnet 5.5 ≈ $0.0067; Gemini 2.5 Flash-Lite ≈ $0.0003–0.001; GPT-5.4 nano ≈ $0.0008 | — | ASSUMPTION (prices FACT; image-token formulas from R-NB §6, medium) | Cheapest structured extraction path; EU residency only via Vertex/Bedrock/Mistral |
+
+**Model input:** receipt extraction cost Low $0.001 / Base $0.004 / High $0.10 per receipt (vision LLM → specialised parser), applied only to the share of users who scan (ASSUMPTION 5–15% of MAU, 5–20 receipts/month).
+
+---
+
+## 6. Infrastructure prices (EU)
+
+### 6.1 Hetzner Cloud (EUR, excl. VAT) — community price guide stating "verified 2026-07-06" (Sagargupta16/deploy-guide on GitHub), **low-medium reliability**; verify at hetzner.com/cloud. **[AV: unverifiable today — hetzner.com and docs.hetzner.com blocked in both passes and GitHub code search is not available in this session; no second source found. Treat every number below as ASSUMPTION until the Hetzner page is opened from a normal browser.]**
+
+| Plan | vCPU / RAM / SSD | EUR per month | Notes |
+|---|---|---|---|
+| CX23 (shared x86, EU only) | 2 / 4 GB / 40 GB | 5.49 | Old CX22/CX32/CX42/CX52 and EU CPX11–51 deprecated 2026-01-01; prices rose for new orders 2026-06-15 |
+| CX33 | 4 / 8 GB / 80 GB | 8.49 | |
+| CX43 | 8 / 16 GB / 160 GB | 15.99 | |
+| CX53 | 16 / 32 GB / 320 GB | 29.49 | |
+| CAX11 / CAX21 / CAX31 / CAX41 (Ampere ARM) | 2/4 GB; 4/8; 8/16; 16/32 | 5.99 / 10.49 / 20.99 / 40.99 | |
+| CPX22 / CPX32 / CPX42 (shared AMD Gen2, EU) | 2/4; 4/8; 8/16 | 19.49 / 35.49 / 69.49 | |
+| CCX13 (dedicated vCPU) | 2 / 8 GB | from 42.99 | |
+| Primary IPv4 | — | 0.50 | IPv6 free; firewalls free |
+| Included outgoing traffic (EU) | 20 TB/month | — | overage **€1 per TB** |
+| Volumes / Load Balancer / Object Storage | ≈€0.044 per GB-month; LB11 ≈€5.39/month; Object Storage ≈€4.99/month base incl. 1 TB | — | ASSUMPTION (background); verify |
+
+### 6.2 Scaleway (Paris/Amsterdam/Warsaw) and OVHcloud — ASSUMPTION only (both sites blocked; Context7 Scaleway docs carry no prices)
+
+| Item | Working value (ASSUMPTION, low) | Verify at |
+|---|---|---|
+| Scaleway PLAY2-PICO / PLAY2-NANO (shared, 1 vCPU 2 GB / 2 vCPU 4 GB) | ≈€7 / ≈€14 per month | scaleway.com/en/pricing/virtual-instances/ |
+| Scaleway PRO2-XXS (2 vCPU 8 GB) | ≈€20–25 per month | same |
+| Scaleway Managed PostgreSQL (DB-DEV-S) | ≈€20–30 per month | scaleway.com/en/pricing/managed-databases/ |
+| Scaleway Object Storage | ≈€0.012–0.015 per GB-month; 75 GB egress free then ≈€0.01/GB | scaleway.com/en/pricing/storage/ |
+| OVHcloud Public Cloud B3-8 (2 vCPU 8 GB) / VPS | ≈€25–30 / from ≈€4 per month; egress unmetered in EU | ovhcloud.com/en/public-cloud/prices/ |
+
+### 6.3 AWS — EU (Milan eu-south-1 / Frankfurt eu-central-1) — FACT high (AWS Price List bulk API, index publication 2026-10-01)
+
+| Service / SKU | Price | Notes |
+|---|---|---|
+| S3 Standard storage, Milan | $0.024 per GB-month (first 50 TB); $0.023 next 450 TB; $0.022 above | |
+| S3 requests, Milan | PUT/COPY/POST/LIST $0.0053 per 1,000; GET $0.004 per 10,000 | |
+| Data transfer out to internet from Milan | $0.09 per GB (first 10 TB/month); $0.085 (next 40 TB); $0.07 (next 100 TB); $0.05 above | first 100 GB/month free account-wide (ASSUMPTION, AWS free tier) |
+| SES outbound email, Milan | Essentials $0.00016 per email ($0.16 per 1,000); Pro $0.00022; Enterprise $0.00023; attachments $0.12 per GB; managed dedicated IP $15/month subscription + $0.00008 per recipient | tiers at 10M and 100M emails |
+| Cognito (Frankfurt) | Lite $0.0055 per MAU (0–90k), $0.0046 (90k–990k), $0.00325 (990k–9.99M); **10,000 free MAU** account-wide (legacy pre-Nov-2024 user pools keep a 50,000-MAU free tier); Essentials $0.015 per MAU; Plus $0.02; advanced security add-on $0.05 per MAU (first 50k) | **[AV]** re-fetched from the Price List API in the adversarial pass (offer version 2026-09-25) — matched; passkeys in Essentials (ASSUMPTION medium) |
+| Textract (Frankfurt) | see §5 | Milan not available |
+| Bedrock EU (eu.* cross-region inference) Claude | +10% vs global (e.g., Haiku 4.5 $1.10/$5.50) | FACT medium (LiteLLM; consistent with Anthropic's regional-premium note) |
+| EC2 / RDS Milan (e.g., t4g.small, db.t4g.micro) | UNKNOWN this session (offer files 206 MB / 13 MB not parsed) | ASSUMPTION: t4g.small ≈$14/month, db.t4g.micro PostgreSQL ≈$15–18/month + storage $0.13/GB-month in Milan; verify via `pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonEC2/current/eu-south-1/index.csv` |
+
+### 6.4 Google Cloud — FACT high for the numbers shown (pages read 2026-10-02); **region attribution partially UNKNOWN** because the pages render region tables client-side
+
+| Item | Price | Notes |
+|---|---|---|
+| Cloud SQL Enterprise edition (representative region; Milan premium UNKNOWN) | vCPU $0.0413/h; memory $0.007/GiB-h; HA doubles; 1-yr CUD −25%, 3-yr −52% | a 1 vCPU / 3.75 GB single-zone instance ≈ $49/month + storage; Milan typically ≈10–20% higher (ASSUMPTION) |
+| Cloud Run (request-based) | CPU $0.000024 per vCPU-second active; memory $0.0000025 per GiB-second; instance-based CPU $0.000018 per vCPU-second | free tier applies; Milan (europe-west8) is a Tier-2 region with ≈+20% (ASSUMPTION) |
+| Cloud Storage Standard (Milan region group) | $0.000030137 per GiB-hour ≈ $0.022 per GB-month | Class A ops $0.005–0.01 per 1,000 |
+| Network egress to internet (Standard tier, per GiB, EU destinations) | 0–1 GiB free; $0.12 up to 1 TiB; $0.11 up to 10 TiB; $0.08 above (table read for North America; Europe column assumed identical — ASSUMPTION) | Cloud CDN cache egress $0.02–0.20 per GiB |
+| Vertex AI Gemini regional ("non-global") endpoints | +10% over global (see §4.3) | FACT high |
+
+### 6.5 PaaS and managed databases — FACT high unless noted (official docs repositories / Context7 mirrors read 2026-10-02)
+
+| Vendor | Plan / unit | Price | EU region | Notes |
+|---|---|---|---|---|
+| Fly.io compute (computed from official per-second constants; Ashburn base, EU markups ams 1.038, cdg 1.135, **fra 1.154**) | shared-cpu-1x 256 MB / 512 MB / 1 GB / 2 GB | **fra:** $2.53 / $4.26 / $7.73 / $14.65 per month; **ams:** $2.28 / $3.84 / $6.95 / $13.19 | yes (ams, fra, cdg, arn, lhr…) | extra RAM ≈$6.93 per GB-month in fra; performance-1x 2 GB $38.08 (fra); stopped machines $0.15 per GB rootfs-month; 40% discount for reserved compute blocks |
+| Fly.io storage/network | Volumes $0.15 per GB-month; snapshots $0.08 per GB-month (first 10 GB free, charged since Jan 2026); egress Europe **$0.02 per GB**; dedicated IPv4 $2/month; static egress IP ≈$3.60/month | | | support plans $29 / $199 / $2,500 per month |
+| Fly.io Managed Postgres | Basic (shared-2x, 1 GB) **$38/month**; Starter (2 GB) $72; Launch (performance-2x, 8 GB) $282; Scale $962; storage $0.28 per GB-month | | yes | unmanaged Fly Postgres ≈$2/month dev single node; ≈$82–164/month 3-node |
+| Railway | Free $0 (+$1 credit); **Hobby $5/month incl. $5 usage; Pro $20/month incl. $20 usage**; usage: RAM $10 per GB-month, CPU $20 per vCPU-month, egress **$0.05 per GB**, volumes $0.15 per GB-month | | EU region available (ASSUMPTION: Amsterdam) | VM product line priced at $50 per GB / $50 per vCPU-month |
+| Render | Hobby $0; Professional ≈$19 per user/month; web service Starter ≈$7 (512 MB) / Standard ≈$25 (2 GB); Postgres Basic-256 MB ≈$6, Basic-1 GB ≈$19, Pro ≈$85+; bandwidth 100 GB free then ≈$0.30 per GB; Frankfurt region | ASSUMPTION (site blocked) | yes (Frankfurt) | verify render.com/pricing |
+| Vercel | Hobby free (Fluid: 4 h active CPU, 360 GB-h memory, 1M invocations); **Pro $20 per member/month incl. $20 credit, 1 TB Fast Data Transfer, 10M edge requests**; overage **$0.15–0.35 per GB** and $2.00–3.20 per 1M edge requests by region | FACT high (docs) | EU regions (fra1, cdg1, dub1, arn1, lhr1 — ASSUMPTION) | on-demand Fluid compute rates by region UNKNOWN |
+| Neon Postgres | **Free** $0 (100 CU-hours/project, 1 GB storage/project up to 20 GB, 5 GB egress); **Launch** pay-as-you-go: **$0.106 per CU-hour**, storage $0.35 per GB-month, 500 GB egress then $0.10/GB, extra branches $1.50/branch-month, instant restore $0.20/GB-month; **Scale** $0.222 per CU-hour (SLA, private networking, compliance); no minimum fee | FACT high | yes (Frankfurt and others — ASSUMPTION) | 1 CU ≈ 4 GB RAM; a 0.25-CU compute always on ≈ 180 CU-h ≈ $19/month on Launch |
+| Supabase | Free (500 MB DB, 50k MAU, 5 GB egress, 1 GB storage, 500k edge invocations); **Pro $25/month** (price now FACT high — `billing-on-supabase.mdx` and `manage-your-usage/monthly-active-users.mdx` in the supabase/supabase repository, re-read 2026-10-02 **[AV]**; included: 8 GB disk then $0.125/GB, 100k MAU then **$0.00325 per MAU**, 250 GB egress then **$0.09 per GB** ($0.03 cached), 100 GB storage then $0.021/GB, 2M edge invocations then $2/M); compute add-ons Micro $0.01344/h (≈$10/mo), Small $0.0206/h (≈$15), Medium $0.0822/h (≈$60), Large $0.1517/h (≈$110) | FACT high (docs) | yes (eu-central-1 Frankfurt, eu-west-1/2/3 — ASSUMPTION) | Pro includes a $10 compute credit (ASSUMPTION) |
+| Crunchy Bridge | smallest hobby plan ≈$30–45/month | ASSUMPTION | yes (AWS/Azure/GCP EU regions) | verify crunchybridge.com/pricing |
+| Upstash Redis | Free: 256 MB, 500k commands/month, 10 GB bandwidth; **PAYG $0.20 per 100k commands**, storage $0.25 per GB-month (1 GB free), bandwidth free to 200 GB then $0.03/GB; Fixed 250 MB $10, 1 GB $20, 5 GB $100, 10 GB $200 per month | FACT high (docs via Context7) | yes (eu-west-1, eu-central-1 — ASSUMPTION) | |
+| Redis Cloud (Redis Inc.) | Free 30 MB; Essentials from ≈$5/month (250 MB) | ASSUMPTION | yes | verify redis.io/pricing |
+| Cloudflare R2 | Standard **$0.015 per GB-month**; Class A $4.50 per million; Class B $0.36 per million; **egress free**; free tier 10 GB, 1M Class A, 10M Class B per month; Infrequent Access $0.01 per GB-month + $0.01 per GB retrieval | FACT high (cloudflare-docs) | EU jurisdiction restriction available (ASSUMPTION) | |
+
+**Infra model inputs (per 1,000 MAU per month, ASSUMPTION medium; see §14):** compute+DB+cache+storage Low $15 / Base $40 / High $120 at 1k–50k MAU scale, declining per unit above 50k MAU.
+
+---
+
+## 7. Authentication vendors (passkeys = WebAuthn/FIDO2 passwordless)
+
+| Vendor | Free tier | Paid | Passkeys | EU residency | Status (source) |
+|---|---|---|---|---|---|
+| Auth0 (Okta) | **Free up to 25,000 MAU**, 1 custom domain, passwordless, unlimited social, 5 organizations, 1 enterprise connection, community support | Essentials / Professional self-service (prices not in docs; ASSUMPTION: Essentials from ≈$35/month, Professional from ≈$240/month, MAU-scaled) | Yes (documented in Universal Components) | EU tenant region available (ASSUMPTION, high confidence) | FACT high (auth0/docs-v2 pricing reference via Context7) for free tier; prices ASSUMPTION — verify auth0.com/pricing. **[AV: not re-verifiable today — auth0.com blocked and the docs-v2 path could not be fetched raw; the 25k-MAU free tier matches the plan Auth0 introduced in 2024 (recollection)]** |
+| Supabase Auth | 50,000 MAU on Free | Pro: 100,000 MAU included, then $0.00325 per MAU; SSO MAU $0.015 | WebAuthn/passkeys support UNKNOWN (ASSUMPTION: available 2026) | yes (EU projects) | FACT high (docs) |
+| AWS Cognito (Frankfurt) | 10,000 MAU free | Lite $0.0055 per MAU; Essentials $0.015 per MAU; Plus $0.02 per MAU | Yes in Essentials/Plus (ASSUMPTION medium) | yes | FACT high (Price List API) |
+| Clerk | ≈10,000 MAU free | Pro ≈$25/month + ≈$0.02 per MAU above 10k; add-ons for enhanced auth/organizations | Yes | US-hosted by default; EU data residency UNKNOWN | ASSUMPTION (site blocked; docs mirror had only billing-component pages) — verify clerk.com/pricing |
+| Stytch (Consumer) | ≈10,000 MAU free (ASSUMPTION) | per-MAU above (≈$0.05/MAU, ASSUMPTION) | Yes (marketed) | EU data residency option UNKNOWN | UNKNOWN/ASSUMPTION — verify stytch.com/pricing |
+| Ory Network | Developer/free tier (≈1,000 DAU, ASSUMPTION) | Essentials ≈$29/month; Scale ≈$199+/month (ASSUMPTION) | Yes (Kratos passkeys) | yes (EU regions; German company) | ASSUMPTION — verify ory.sh/pricing |
+| Keycloak (self-hosted) | OSS, $0 licence | hosting: one Hetzner CX33 (€8.49) + Postgres + ops time ≈ €50–150/month all-in at small scale | Yes (WebAuthn passwordless; passkeys conditional UI in recent versions — ASSUMPTION medium) | yes (own servers) | FACT for OSS/licence; ASSUMPTION for ops cost |
+
+**Model input:** auth cost per 1,000 MAU per month Low $0 (Supabase/Auth0 free tiers up to 25k–50k MAU) / Base $3.25 (Supabase overage) / High $20 (Clerk/Stytch per-MAU) — ASSUMPTION medium.
+
+---
+
+## 8. Billing, app-store commissions, VAT
+
+| Item | Value | Status (source) | Notes / verify |
+|---|---|---|---|
+| RevenueCat | **Free while Monthly Tracked Revenue (MTR) < $2,500; above that 1% of MTR** (Pro plan); returns to free if MTR falls below; Enterprise custom; ad revenue excluded from MTR | FACT high (revenuecat.com/docs account-management via Context7; re-queried in the adversarial pass — unchanged **[AV]**) | 30-day grace to add a card applies only when the limit is first exceeded in the *first* month after joining; a later overrun restricts dashboard features immediately until paid **[AV]** |
+| Stripe (Italy) | Standard EEA cards ≈**1.5% + €0.25**; premium EEA cards ≈1.9% + €0.25; UK cards ≈2.5% + €0.25; international ≈3.25% + €0.25; +2% currency conversion; SEPA Direct Debit ≈0.35% (capped); Stripe Billing +0.7%; Stripe Tax +0.5% | ASSUMPTION (stripe.com/it/pricing and docs.stripe.com blocked in both passes) **[AV: unverifiable today]** | Verify exact Italy page; Lilleri would be seller of record (VAT by customer country) |
+| Apple App Store — standard commission (worldwide) | 30% on paid apps/IAP; **15% for Small Business Program (< $1M USD prior-year proceeds)** and for auto-renewable subscriptions after year one | FACT high for 15%/$1M (developer.apple.com Small Business Program page); 30% standard rate is referenced but not stated on that page — FACT medium (widely published) | Re-qualification rules: exceed $1M → standard rate for future sales; drop below → 15% next year |
+| **Apple — EU (unified business terms effective 2026-10-01**, per Apple Developer Program License Agreement update of 2026-08-18) | **In-app purchases via Apple IAP: 26%** (15% for Small Business Program, Mini Apps Partner Program, Video Partner Program and auto-renewable subscriptions after year one). **Alternative payment processing in-app: 20%** (10% for programme participants / subscriptions after year one). **Out-of-app offers (actionable links): Store Services Commission 15%** (10%), on sales within 7 days of link tap. **Alternative distribution (marketplaces/web): Core Technology Commission 5%** on digital sales; CTC waived for marketplace operators under €10M global revenue and €1M lifetime EU marketplace fees. **Core Technology Fee (per-install), Initial Acquisition Fee and Store Services Fee are discontinued/eliminated as of 2026-10-01.** **[AV additions from the same page:** alternative payment methods are offered *alongside* Apple IAP, not instead of it; a developer's choice of payment options must be kept for 12 months; for alternative-payment sales the developer collects and remits VAT itself and must report all such transactions to Apple monthly within 15 days of month-end; new child-safety requirements apply to apps using alternative payments; the 5% CTC applies **only** to apps distributed outside the App Store, so an App-Store-distributed Lilleri never pays it; the CTC waiver (< €10M global revenue and < €1M lifetime) concerns only a marketplace operator's own download/subscription fees; the old Alternative Terms Addendum and External Purchase Link Entitlement addendum were superseded by DPLA Attachment 14 on 2026-10-01.**]** | FACT high (developer.apple.com/support/apps-in-the-eu/, read 2026-10-02; **re-read in full in the adversarial pass — every rate, the effective date and the "eliminate the Initial Acquisition Fee and Store Services Fee" wording confirmed [AV]**) | Italy is EU → for Lilleri on the App Store: **15% (SBP) on IAP; 10% via alternative payment in-app or out-of-app link** (both at 15%/10% also for auto-renewable subscriptions after year one irrespective of SBP) |
+| Google Play — service fee | 15% on the first $1M USD of annual revenue (reduced-fee programme, enrolment required), 30% above; auto-renewing subscriptions 15% from day one | ASSUMPTION (support.google.com, play.google.com and all Google policy/blog hosts blocked in both passes; policy stable since 2021–2022 to the authors' knowledge) **[AV: unverifiable today]** | Verify support.google.com/googleplay/android-developer/answer/112622 |
+| Google Play — EEA External Offers programme / alternative billing | Programme fees for EEA apps linking out or using alternative billing: a one-time initial acquisition fee plus an ongoing services fee. 2024 version as recalled: **initial acquisition fee 10% for in-app purchases / 5% for auto-renewing subscriptions**, charged for 2 years after acquisition; **ongoing services fee 17% for IAP / 7% for subscriptions**; Google announced further EEA fee revisions in 2025–2026 after the Commission's March 2025 DMA non-compliance decision — current values UNKNOWN **[AV]** | UNKNOWN exact 2026 values; ASSUMPTION low (recollection) **[AV: unverifiable — developer.android.com lists an "External offers", "External content links", "External payment links" and "Billing Choice" programme set in its navigation but carries no fee table; support.google.com blocked]** | Verify support.google.com/googleplay/android-developer/answer/14498688 and Google's 2025–2026 EEA announcements |
+| VAT — Italy standard rate | **22%** (reduced 10%/5%/4% do not apply to SaaS/digital services) | FACT (law: DPR 633/1972 art. 16; background legal knowledge, not fetched — reliability medium-high) **[AV: law in force; agenziaentrate.gov.it blocked in both passes, so not re-read]** | Verify agenziaentrate.gov.it "Aliquote IVA" |
+| VAT — EU B2C digital services and OSS | B2C electronically supplied services are taxed in the consumer's member state; the **EU-wide €10,000 micro-business threshold** lets a small supplier apply home-country VAT until exceeded; above it, register for the **Union OSS** (one quarterly return in Italy covering all EU countries) instead of registering in each state | FACT (law: Council Directive (EU) 2017/2455, in force since 2019/2021; background legal knowledge, not fetched — medium-high) **[AV: EUR-Lex and vat-one-stop-shop.ec.europa.eu blocked; the €10,000 threshold (Art. 59c VAT Directive) is, to the authors' knowledge, unchanged by the separate EU SME-exemption scheme that applied from 1 Jan 2025 — ASSUMPTION]** | Verify vat-one-stop-shop.ec.europa.eu; Apple and Google act as merchant of record for IAP and remit consumer VAT themselves — the developer's proceeds are net of VAT and commission (FACT medium, widely published; verify App Store Connect "Paid Apps" schedule) |
+
+**Net-revenue inputs (per €4.99 gross monthly price incl. 22% VAT = €4.09 ex-VAT):** via App Store IAP at 15% → ≈€3.48 to Lilleri; via Google Play at 15% → ≈€3.48; via Stripe web at 1.5% + €0.25 → ≈€3.78 (FACT-derived from the rates above; EU-link-out flows at 10% → ≈€3.68 minus Stripe fees).
+
+---
+
+## 9. Notifications and email
+
+| Vendor | Price | Status (source) |
+|---|---|---|
+| Expo Push Notification service | No pricing mentioned anywhere in the push-notifications docs; service is free to use (FCM/APNs relayed by Expo) | FACT high that docs carry no price (expo/expo docs read 2026-10-02); "free, no hard volume cap" ASSUMPTION (expo.dev pricing blocked) |
+| Firebase Cloud Messaging (FCM) | Free, unlimited | FACT medium (background; firebase.google.com blocked) |
+| OneSignal | Free plan (≈10,000 subscriptions, limited features); Growth from ≈$9/month; Professional from ≈$99/month; priced per subscription tiers | ASSUMPTION (site and docs mirror lacked pricing) — verify onesignal.com/pricing |
+| Resend | **Free 3,000 emails/month (100/day); Pro $20/month for 50,000 emails, overage $0.90 per 1,000**, 10 domains; Scale/Enterprise above (Scale ≈$90/month for 100k — ASSUMPTION); EU region available (ASSUMPTION) | FACT high (resend.com/docs + pricing via Context7) |
+| Postmark | ≈$15/month for 10,000 emails; ≈$60.50/50k; ≈$115/125k; overage ≈$1.80 per 1,000; dedicated IP ≈$50/month | ASSUMPTION (site blocked) — verify postmarkapp.com/pricing |
+| Amazon SES (Milan) | $0.16–0.23 per 1,000 emails depending on tier (Essentials/Pro/Enterprise); attachments $0.12/GB; managed dedicated IP $15/month | FACT high (Price List API) |
+
+**Model input:** messaging cost per 1,000 MAU per month: push ≈ $0; email Low $0.5 / Base $2 / High $5 (ASSUMPTION; ≈5 emails per MAU per month).
+
+---
+
+## 10. Analytics and observability
+
+| Vendor | Price (FACT unless noted) | EU residency | Source |
+|---|---|---|---|
+| PostHog | Product analytics: **1M events free, then $0.00005/event** (declining to $0.000009 above 250M); session replay 5k free then ≈$0.005/recording; error tracking 100k free then $0.00037; feature flags 1M requests free then $0.0001; surveys 1,500 free then $0.10/response; no per-seat fees | EU Cloud (eu.posthog.com) — ASSUMPTION high | posthog.com repo (compare page + billing fixture), high/medium |
+| Mixpanel | Free: 1M events/month (5 saved reports per user); Growth: first 1M events free, **$0.00028 per event** at the 1M plan, volume discounts for pre-commits; annual plans need >1M committed; MTU Enterprise from $20,000/year | EU via api-eu.mixpanel.com — FACT high | mixpanel/docs pricing.mdx, high |
+| Amplitude | Starter free (≈50k MTU); Plus from ≈$49/month; Growth custom | EU data centre available (ASSUMPTION) | ASSUMPTION (site blocked) — verify amplitude.com/pricing |
+| Sentry | Developer free (limited: ≈5k errors/month — ASSUMPTION); Team ≈$26/month and Business ≈$80/month (ASSUMPTION) with included quotas (Team: 50k errors, 5M spans, 50 replays — FACT); PAYG: errors $0.00029 (Team) / $0.00089 (Business) per error at 50k–100k; spans $0.0000016–0.0000020; replays $0.003; attachments $0.25/GB; Seer $40 per active contributor | EU data region available (ASSUMPTION high) | getsentry/sentry-docs pricing index, high |
+| Grafana Cloud | Free: 10,000 metrics series, 50 GB logs, 50 GB traces, 3 users, 14-day retention; usage rates: metrics $6.50–8 per 1,000 series, logs $0.40 per GB written (+$0.05 per GB processed; older invoices $0.50/GB), users $8 per active user; Frontend Observability $0.75 per 1,000 sessions; Pro base ≈$19/month (ASSUMPTION) | EU stacks available (ASSUMPTION) | grafana.com docs via Context7, high |
+| Better Stack | Free tier (≈3 GB logs, 3-day retention; uptime monitors); paid from ≈$0.25–0.30 per GB logs; uptime from ≈$29/month | — | ASSUMPTION (site blocked) — verify betterstack.com/pricing |
+| Datadog | Infrastructure Pro **$15 per host/month** (annual; $18 on-demand), Enterprise $23; APM $31 per host; Logs $0.10 per GB ingested + $1.70 per million indexed events (15-day); RUM Measure $0.15 per 1,000 sessions, Session Replay $2.50 per 1,000; Error Tracking $25/month flat under 50k errors; Product Analytics $0.80 per 1,000 sessions; LLM Observability Pro $160/month (100k spans) | EU site (datadoghq.eu) — FACT medium | datadoghq.com/pricing read 2026-10-02, high |
+
+**Model input:** analytics + observability per 1,000 MAU per month Low $0 (free tiers) / Base $5 / High $40 (ASSUMPTION; ≈200 events per MAU per month).
+
+---
+
+## 11. Support tooling and ticket benchmarks
+
+| Item | Value | Status |
+|---|---|---|
+| Intercom | Essential ≈$29 per seat/month; Advanced ≈$85; Expert ≈$132; Fin AI agent ≈$0.99 per resolution | ASSUMPTION (site blocked) — verify intercom.com/pricing |
+| Crisp | Free (2 seats); Mini ≈€25/month; Essentials ≈€95/month; Plus ≈€295/month per workspace (EU company, FR) | ASSUMPTION — verify crisp.chat/en/pricing |
+| Zendesk | Suite Team ≈$55 per agent/month (annual); Growth ≈$89; Professional ≈$115 | ASSUMPTION — verify zendesk.com/pricing |
+| Support tickets per 1,000 MAU per month (consumer fintech / PFM) | **UNKNOWN** — no public benchmark found | ASSUMPTION for the model: Low 5 / Base 15 / High 40 contacts per 1,000 MAU per month; bank-connection breakage is the dominant driver (R-EU §10) |
+| AI deflection | YNAB replaced a basic chatbot with Forethought and saw deflection go from 25% to ≈70% | FACT medium (R-US S10 vendor case study) |
+| Cost per human-handled ticket | ≈€4–€8 (chat/email, outsourced EU) | ASSUMPTION |
+
+---
+
+## 12. Growth: CAC, retention, conversion benchmarks
+
+All vendor benchmark sites (AppsFlyer, Adjust, Sensor Tower, data.ai, Business of Apps, RevenueCat State of Subscription Apps, Appfigures, Statista) were egress-blocked and no search was possible; the values below are **ASSUMPTION (low-medium)** from the authors' recollection of the 2024–2025 editions of those reports and must be re-verified against the 2025/2026 editions.
+
+| Metric | Low | Base | High | Status / source to verify |
+|---|---|---|---|---|
+| Paid CPI, finance apps, Italy — Apple Search Ads | €1.50 | €3.00 | €6.00 | ASSUMPTION; verify Apple Search Ads benchmarks (searchads.apple.com), AppsFlyer "Performance Index", Business of Apps CPI by country |
+| Paid CPI, finance apps, Italy/EU — Meta | €2.00 | €4.50 | €9.00 | ASSUMPTION; finance is among the most expensive verticals; US finance CPI often $5–15 |
+| Blended CAC per registered user (incl. organic/ASO/referral) | €2 | €6 | €15 | ASSUMPTION |
+| Blended CAC per **paying** subscriber (at 3–5% conversion from install) | €40 | €120 | €300 | derived |
+| Referral payout benchmark | $4–10 per install/sign-up (Rocket Money affiliate programme) | — | — | FACT medium (R-US S83/S84) |
+| Italian neobank referral bonuses paid to users | €5 | €20 | €50 | FACT low-medium (R-IT creators) |
+| Retention, finance apps (Android+iOS, global) — D1 / D7 / D30 | 22% / 10% / 4% | 28% / 14% / 6% | 35% / 18% / 9% | ASSUMPTION; verify AppsFlyer "App Retention Benchmarks" and Adjust "Mobile App Trends" 2025/2026 (finance category) |
+| Install → trial start (freemium with trial) | 3% | 6% | 10% | ASSUMPTION; verify RevenueCat State of Subscription Apps 2025/2026 |
+| Trial → paid conversion (7–14-day trials) | 25% | 38% | 50% | ASSUMPTION (RevenueCat 2024/2025 reported ≈35–45% median for trials across categories; finance tends to the lower half); longer no-card trials convert lower per trial but higher per install |
+| Freemium free → paid (no trial), lifetime | 1.5% | 3% | 6% | ASSUMPTION |
+| Monthly churn, monthly plans | 6% | 9% | 14% | ASSUMPTION (RevenueCat: monthly plans lose roughly a third of subscribers in month 1–2) |
+| Annual plan renewal rate (year 1 → 2) | 35% | 45% | 60% | ASSUMPTION |
+| Share of subscribers on annual plans | 40% | 60% | 80% | ASSUMPTION (US PFMs push annual with 40% discounts) |
+| ARPU per paying subscriber per month (Italy, net of VAT) | €2.50 | €3.60 | €7.00 | derived from §1 prices and annual mix |
+| Scale references | Monarch: 20× paid-subscriber growth after Mint's shutdown; >500k paying (May 2025) | — | — | FACT medium (R-US) |
+
+---
+
+## 13. Affiliate and marketplace revenue benchmarks
+
+| Rail | Benchmark | Status / source | Model input (per converting user) |
+|---|---|---|---|
+| Bank/neobank account referral (Revolut, Hype, N26, isybank, Buddybank, Tinaba) | Bonuses paid to the referred user €5–€50; creators carry referral codes for 5–10 banks; Buddybank "Buddy Club 100" up to €5,000 in vouchers for 100 invites (≈€50/invite) | FACT low-medium (R-IT Y-01, Y-06, Y-07, Y-14–Y-16) | Partner payout to Lilleri per funded account: Low €10 / Base €25 / High €60 (ASSUMPTION; verify with each bank's affiliate programme or networks such as Awin/Tradedoubler) |
+| US PFM affiliate reference | Rocket Money pays affiliates $4–$10 per install/sign-up | FACT medium (R-US S83/S84) | — |
+| Broker/investing referral (Trade Republic, Moneyfarm, Scalable) | Creator codes common (Moneyfarm, R-IT Y-03); typical referral is a free share/€ bonus to the user, CPA to publishers UNKNOWN | FACT low (existence) / UNKNOWN (CPA) | Low €20 / Base €50 / High €120 per funded account (ASSUMPTION) |
+| BNPL (Scalapay) | UNKNOWN | UNKNOWN | — |
+| Utility/telco switching via comparators (Facile.it, SOStariffe, Segugio) | CPA per completed switch UNKNOWN (sites blocked) | UNKNOWN | Low €15 / Base €35 / High €70 per switch (ASSUMPTION; energy/telco CPAs in Italian affiliate networks) |
+| Insurance leads/policies (car, home) via comparators | UNKNOWN | UNKNOWN | lead €5–€20; issued policy €30–€80 (ASSUMPTION) |
+| Snoop (UK) | Switching commissions on energy, mobile, broadband/TV, life insurance are "by far the biggest" revenue; amounts undisclosed | FACT medium (R-EU S-23) | — |
+| Finanzguru (DE) | ≈70% of revenue from insurance brokerage/switching commissions (2022) | FACT medium (R-EU S-35) | Affiliate revenue per registered user per year ≈€5.6 (derived) |
+| Emma (UK) | Cashback via partner links; Emma Invest AUM fee 0.10–0.60%; interest margin on pots | FACT high (R-EU S-22b–d) | — |
+| Cashback networks (Italy) | Typical consumer cashback 1–5% of basket; publisher share of merchant commission 30–50% | ASSUMPTION | €0.5–€2 per active cashback user per month (ASSUMPTION) |
+| **Blended affiliate revenue per MAU per month** | — | — | Low €0.05 / Base €0.20 / High €0.60 (ASSUMPTION; Finanzguru-derived €0.47/registered user/month is an upper anchor for a mature DE app) |
+
+---
+
+## 14. Inputs table for the spreadsheet model (Low / Base / High)
+
+Currency: EUR unless stated; USD prices converted at **1 EUR = 1.17 USD (ASSUMPTION; use the live rate)**. "Status" refers to the underlying price evidence; the Low/Base/High spread encodes the uncertainty.
+
+| # | Input | Unit | Low | Base | High | Status | Primary evidence (section) |
+|---|---|---|---|---|---|---|---|
+| **Pricing** | | | | | | | |
+| 1 | Plus tier monthly list price (gross, incl. VAT) | €/mo | 2.99 | 4.49 | 5.99 | FACT anchors / HYPOTHESIS choice | §1.2, §2 |
+| 2 | Plus tier annual list price (gross) | €/yr | 24.99 | 39.99 | 49.99 | same | §1, §2 |
+| 3 | Pro/household tier monthly (gross) | €/mo | 6.99 | 8.99 | 9.99 | ASSUMPTION | §1.2–1.3 |
+| 4 | Annual discount vs 12× monthly | % | 16 | 30 | 44 | FACT (observed range) | §2 |
+| 5 | US-market annual anchor (if launching there later) | $/yr | 95 | 99 | 109 | FACT | §1.1 |
+| 6 | Share of subscribers on annual plans | % | 40 | 60 | 80 | ASSUMPTION | §12 |
+| 7 | VAT rate Italy | % | 22 | 22 | 22 | FACT (law) | §8 |
+| 8 | Store/payment commission on gross-ex-VAT | % | 1.5% + €0.25 (web) | 15 (SBP IAP) | 26–30 (standard IAP) | FACT | §8 |
+| 9 | RevenueCat fee | % of MTR | 0 (< $2.5k MTR) | 1 | 1 | FACT | §8 |
+| **Conversion and retention** | | | | | | | |
+| 10 | Install → registered | % | 50 | 65 | 80 | ASSUMPTION | — |
+| 11 | Registered → bank connected (activation) | % | 30 | 50 | 70 | ASSUMPTION (consent friction, R-EU §6) | — |
+| 12 | Install → trial start | % | 3 | 6 | 10 | ASSUMPTION | §12 |
+| 13 | Trial → paid | % | 25 | 38 | 50 | ASSUMPTION | §12 |
+| 14 | Free → paid lifetime (freemium) | % | 1.5 | 3 | 6 | ASSUMPTION | §12 |
+| 15 | Monthly churn (monthly plans) | %/mo | 6 | 9 | 14 | ASSUMPTION | §12 |
+| 16 | Annual renewal rate | % | 35 | 45 | 60 | ASSUMPTION | §12 |
+| 17 | D1 / D7 / D30 retention (finance apps) | % | 22/10/4 | 28/14/6 | 35/18/9 | ASSUMPTION | §12 |
+| **Acquisition** | | | | | | | |
+| 18 | Paid CPI Italy (ASA / Meta blended) | €/install | 1.50 | 3.50 | 7.00 | ASSUMPTION | §12 |
+| 19 | Blended CAC per registered user | € | 2 | 6 | 15 | ASSUMPTION | §12 |
+| 20 | Referral payout per activated referral | € | 2 | 5 | 10 | ASSUMPTION (anchored on Rocket $4–10) | §12–13 |
+| 21 | Creator/referral bonus norm in Italy | € | 5 | 20 | 50 | FACT low-medium | §2, §13 |
+| **Variable COGS** | | | | | | | |
+| 22 | AIS price per connected account per month | € | 0.10 | 0.30 | 0.60 | UNKNOWN → ASSUMPTION | §3 |
+| 23 | AIS monthly minimum / platform fee | €/mo | 0 | 500 | 2,000 | UNKNOWN → ASSUMPTION | §3 |
+| 24 | Connected accounts per active user | # | 2.0 | 3.0 | 4.5 | FACT low-medium | §3 |
+| 25 | Enrichment vendor per account per month (if bought) | € | 0 | 0.05 | 0.20 | ASSUMPTION | §3 |
+| 26 | LLM categorisation + summaries per active user per month | $ | 0.01 | 0.02 | 0.05 | prices FACT, volumes ASSUMPTION | §4.6 |
+| 27 | Small-LLM price (input/output per MTok) | $ | 0.20/1.25 (GPT-5.4 nano) | 0.25/1.50 (Gemini 3.1 Flash-Lite) | 1.00/5.00 (Haiku 4.5) | FACT | §4 |
+| 28 | Frontier-LLM price (input/output per MTok) | $ | 2/10 (Sonnet 5.5) | 4/20 (Opus 5.5) | 10/50 (Fable 5.1) | FACT | §4.1 |
+| 29 | Batch discount / cache-read multiplier | — | 50% / 0.1× | 50% / 0.1× | 50% / 0.1× | FACT | §4 |
+| 30 | EU-residency premium on LLM (regional endpoints) | % | 0 (Mistral EU) | 10 (Vertex/Bedrock) | 10 | FACT | §4 |
+| 31 | Embedding cost per 1,000 transactions | $ | 0.0002 | 0.001 | 0.004 | FACT prices | §4.5 |
+| 32 | Receipt OCR per receipt | $ | 0.001 | 0.004 | 0.10 | FACT prices / ASSUMPTION route | §5 |
+| 33 | Share of MAU scanning receipts × receipts/month | — | 5% × 5 | 10% × 10 | 15% × 20 | ASSUMPTION | §5 |
+| 34 | Infra (compute+DB+cache+storage) per 1,000 MAU per month | $ | 15 | 40 | 120 | ASSUMPTION on usage; unit prices FACT | §6 |
+| 35 | Egress price | $/GB | 0.00 (R2) / 0.02 (Fly) | 0.05 (Railway) | 0.09–0.12 (AWS/GCP) | FACT | §6 |
+| 36 | Postgres managed, smallest production | $/mo | 19 (Neon 0.25 CU always-on) | 38 (Fly MPG Basic) | 110 (Supabase Large) | FACT | §6.5 |
+| 37 | VPS baseline (2 vCPU/4 GB EU) | €/mo | 5.99 (Hetzner CX23+IPv4) | 7.73 (Fly shared-1x 1 GB fra, $) | 20 (Scaleway/OVH) | FACT low-medium / ASSUMPTION | §6 |
+| 38 | Auth per 1,000 MAU per month | $ | 0 | 3.25 | 20 | FACT (Supabase) / ASSUMPTION | §7 |
+| 39 | Push per 1,000 MAU per month | $ | 0 | 0 | 2 | FACT (Expo/FCM free) | §9 |
+| 40 | Email per 1,000 MAU per month | $ | 0.5 | 2 | 5 | FACT prices / ASSUMPTION volume | §9 |
+| 41 | Analytics + observability per 1,000 MAU per month | $ | 0 | 5 | 40 | FACT prices / ASSUMPTION volume | §10 |
+| 42 | Support contacts per 1,000 MAU per month | # | 5 | 15 | 40 | UNKNOWN → ASSUMPTION | §11 |
+| 43 | Cost per human-handled contact | € | 4 | 6 | 8 | ASSUMPTION | §11 |
+| 44 | AI deflection of support contacts | % | 40 | 60 | 70 | FACT (YNAB 70%) / ASSUMPTION | §11 |
+| 45 | Support tooling seat | €/seat/mo | 0 (Crisp free) | 29 (Intercom Essential) | 115 (Zendesk Pro) | ASSUMPTION | §11 |
+| **Other revenue** | | | | | | | |
+| 46 | Affiliate revenue per MAU per month | € | 0.05 | 0.20 | 0.60 | ASSUMPTION (Finanzguru upper anchor FACT) | §13 |
+| 47 | Bank referral payout per funded account | € | 10 | 25 | 60 | ASSUMPTION | §13 |
+| 48 | Switching/insurance CPA | € | 15 | 35 | 80 | ASSUMPTION | §13 |
+| **Fixed costs (ranges only)** | | | | | | | |
+| 49 | Own AISP registration (legal, PII, certificates), one-off | € | 40k | 80k | 150k | UNKNOWN → ASSUMPTION (R-OBB §15) | §3 |
+| 50 | Apple Developer Program + Google Play registration | €/yr | 99 + 25 one-off | — | — | FACT (background, medium) | — |
+
+**Derived unit economics at Base (illustrative, HYPOTHESIS):** Plus €4.49/mo gross → €3.68 ex-VAT → after 15% IAP ≈ €3.13 net; variable COGS per paying user ≈ €0.90 AIS + €0.02 AI + €0.05 infra/auth/analytics + €0.10 support ≈ **€1.07** → contribution ≈ **€2.06/mo (66% margin)**; a Base CAC of €120 per paying subscriber therefore needs ≈ **58 months** of a monthly subscriber or a mix of annual plans and affiliate revenue to pay back — the AIS per-account price (input 22) and the free-user AIS cost (free users also consume AIS) are the levers that decide viability. **Free users cost ≈ €0.90/mo in AIS at Base**; with a 3% free→paid conversion, each paying user "carries" ≈ 32 free users ≈ €29/mo of AIS — unless free-tier connections are capped, refreshed less often, or priced per user rather than per account. This is the most important finding for Phase 1.
+
+---
+
+## 15. Open questions and verification plan (priority order)
+
+| # | Question | How to verify |
+|---|---|---|
+| 1 | Actual per-connected-account AIS price and minimums for Italy (Enable Banking quote tool; Salt Edge Partner Program; Tink/Yapily/TrueLayer/Neonomics/Mastercard/Fabrick quotes) | Request 6 quotes with the same volume ladder (1k / 10k / 100k connected accounts); ask for free-user pricing and background-refresh pricing |
+| 2 | Exact EUR App Store prices of Spendee, Wallet, MoneyWiz, Toshl, Splitwise, Buddy in Italy; Revolut/N26/Hype/Satispay plan prices | Open apps.apple.com/it listings (In-App Purchases) and the banks' "trasparenza" pages from a normal browser |
+| 3 | YNAB/Monarch/Copilot/Rocket revenue and conversion data | Sacra, Latka, Rocket Companies 10-K, App-store intelligence |
+| 4 | Google Play EEA programme fees in force in Oct 2026 | support.google.com/googleplay/android-developer/answer/14498688 |
+| 5 | Stripe Italy exact card fees, SEPA DD, Billing/Tax add-ons | stripe.com/it/pricing |
+| 6 | RevenueCat State of Subscription Apps 2025/2026 category benchmarks (trial conversion, retention, ARPU for finance) | revenuecat.com/state-of-subscription-apps |
+| 7 | AppsFlyer/Adjust retention and CPI benchmarks for finance apps in Italy | appsflyer.com/resources, adjust.com/resources, Apple Search Ads benchmarks |
+| 8 | OpenAI/Azure/Vertex/Mistral EU-residency terms and ZDR availability for a startup contract | Each vendor's data-residency and DPA pages |
+| 9 | Hetzner/Scaleway/OVH list prices after the 2026 adjustments | Vendor pricing pages |
+| 10 | Clerk/Stytch/Ory/Auth0 paid-tier prices and EU residency | Vendor pricing pages |
+| 11 | Italian comparator CPAs (Facile.it, SOStariffe, Segugio) and bank affiliate payouts | Awin/Tradedoubler/TradeTracker IT programme pages; direct partnership talks |
+| 12 | Support contacts per 1,000 MAU for PFM apps | Ask Intercom/Crisp benchmarks; measure in beta |
+| 13 **[AV]** | Which licensing route (data recipient under the provider's licence vs registered agent) each shortlisted provider offers for an Italian B2C app, and Banca d'Italia's position on the recipient model | Counsel question + provider RFP (R-REG §10.2); ask for route-specific onboarding fees |
+| 14 **[AV]** | PSD3/PSR: were they published in the Official Journal, and what is the application date? FIDA status? | EUR-Lex search from an unblocked network; Council/EP press pages (R-REG §2–3) |
+| 15 **[AV]** | Hetzner, Stripe Italy, Auth0 paid tiers, Google Play fees, YNAB/Monarch/Moneyhub/Satispay prices and dates — all blocked in both passes | Open each vendor page from a normal browser; record the date |
+
+---
+
+## Sources
+
+Verification date for all entries: 2026-10-02. Reliability: high = official/primary read directly (or official docs via a mirror where noted); medium = community registry / reputable secondary / sibling snippet-based fact; low = blog, forum, community guide, creator video.
+
+| ID | Source | URL | Pub. date (if visible) | Reliability | Used for / doubts |
+|---|---|---|---|---|---|
+| S1 | Anthropic — Claude API pricing (official docs) | https://platform.claude.com/docs/en/about-claude/pricing | live (undated) | high | All Claude model prices, cache/batch multipliers, data-residency (`inference_geo` global/us 1.1×), regional 10% premium on Bedrock/Vertex |
+| S2 | Anthropic — claude.com pricing page | https://claude.com/pricing | live | high | Cross-check Haiku 4.5 / Sonnet 5.5 / Opus 5.5 and "save 50% with batch" |
+| S3 | LiteLLM community model price registry | https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json | rolling (fetched 2026-10-02) | medium | OpenAI, Gemini API, Mistral, Voyage, Bedrock EU, Vertex prices; community-maintained — cross-check vendor pages |
+| S4 | Google Cloud — Vertex AI generative AI pricing (Gemini) | https://cloud.google.com/vertex-ai/generative-ai/pricing (redirects to /gemini-enterprise-agent-platform/generative-ai/pricing) | live | high | Gemini 2.5/3.x Flash and Flash-Lite prices, introductory pricing through 2026-12-31, non-global +10%, batch/flex |
+| S5 | Google Cloud — Document AI pricing | https://cloud.google.com/document-ai/pricing (redirects to /products/document-ai/pricing) | live | high | OCR $1.50/1k pages, Expense/Invoice parser $0.10/doc, Form Parser/Custom Extractor $30/1k, Layout $10/1k |
+| S6 | Google Cloud — Cloud SQL pricing | https://cloud.google.com/sql/pricing | live | high (region attribution uncertain) | Enterprise vCPU/memory hourly rates and CUD discounts |
+| S7 | Google Cloud — Cloud Run pricing | https://cloud.google.com/run/pricing | live | high | CPU/memory per-second rates |
+| S8 | Google Cloud — Cloud Storage pricing | https://cloud.google.com/storage/pricing | live | high | Standard storage ≈$0.022/GB-month (Milan group), operations |
+| S9 | Google Cloud — VPC network pricing | https://cloud.google.com/vpc/network-pricing | live | high | Internet egress tiers $0.12/$0.11/$0.08 per GiB; CDN |
+| S10 | AWS Price List bulk API — AmazonTextract eu-central-1 | https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonTextract/current/eu-central-1/index.json | offer 2026-09-11; index 2026-10-01 | high | Textract per-page prices incl. AnalyzeExpense $0.01/page |
+| S11 | AWS Price List bulk API — AmazonSES eu-south-1 | https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonSES/current/eu-south-1/index.json | 2026-09-11 | high | SES Milan per-email tiers, attachments, dedicated IP |
+| S12 | AWS Price List bulk API — AmazonS3 eu-south-1 | https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/eu-south-1/index.json | 2026-09-28 | high | S3 Milan storage and request prices |
+| S13 | AWS Price List bulk API — AWSDataTransfer eu-south-1 | https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AWSDataTransfer/current/eu-south-1/index.json | 2026-10 | high | Milan → internet egress tiers |
+| S14 | AWS Price List bulk API — AmazonCognito eu-central-1 | https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonCognito/current/eu-central-1/index.json | 2026-09-25 | high | Cognito Lite/Essentials/Plus per-MAU, 10k free MAU |
+| S15 | Apple — App Store Small Business Program | https://developer.apple.com/app-store/small-business-program/ | live | high | 15% commission, $1M threshold, re-qualification |
+| S16 | Apple — Apps in the EU (business terms effective 2026-10-01) | https://developer.apple.com/support/apps-in-the-eu/ | updated per DPLA 2026-08-18 | high | 26%/15% IAP, 20%/10% alternative payment, 15%/10% store services commission (7-day window), 5% CTC, elimination of CTF/IAF/SSF |
+| S17 | Fly.io docs — Resource pricing, Billing, RegionPricingSelector constants, Managed Postgres pricing | https://fly.io/docs/about/pricing/ ; https://fly.io/docs/about/billing/ ; https://github.com/superfly/docs (about/pricing.mdx, snippets/RegionPricingSelector.jsx) ; https://fly.io/docs/mpg/ (via Context7) | live | high | Per-second compute constants and EU region markups (monthly prices computed by this agent), volumes, egress, IPv4, MPG plans |
+| S18 | Railway docs — Plans | https://docs.railway.com/pricing/plans (raw: github.com/railwayapp/docs content/docs/pricing/plans.md) | live | high | Hobby/Pro prices, RAM/CPU/egress/volume rates |
+| S19 | Neon docs — Plans | https://neon.com/docs/introduction/plans (raw: github.com/neondatabase/website) | live | high | Free/Launch/Scale rates |
+| S20 | Supabase docs — Billing on Supabase; MAU; Egress; Compute and Disk | https://supabase.com/docs/guides/platform/billing-on-supabase ; .../manage-your-usage/monthly-active-users ; .../egress ; .../compute-and-disk (raw + Context7) | live | high | Included quotas and overage rates, compute add-on prices |
+| S21 | Upstash docs — Redis pricing & billing | https://upstash.com/docs/redis/overall/billing (via Context7) | live | high | Free/PAYG/Fixed plan prices |
+| S22 | Cloudflare docs — R2 pricing | https://developers.cloudflare.com/r2/pricing/ (raw: github.com/cloudflare/cloudflare-docs) | live | high | Storage, operations, free egress, free tier |
+| S23 | Sentry docs — Pricing | https://docs.sentry.io/pricing/ (raw: github.com/getsentry/sentry-docs) | live | high | PAYG unit prices, Team quotas, Seer |
+| S24 | PostHog website repo — compare page, pricing fixture, product-analytics pricing | https://github.com/posthog/posthog.com (contents/compare/best-product-analytics-tools-for-startups.mdx; src/components/Pricing/PricingCalculator/__fixtures__/billing-products.json) via Context7 | live | high/medium | Free tiers and per-event tiers |
+| S25 | Mixpanel docs — Pricing | https://docs.mixpanel.com/docs/pricing (raw: github.com/mixpanel/docs) | live | high | Free 1M events, $0.00028/event overage, EU endpoints |
+| S26 | Grafana Cloud docs — invoices, cloud API usage example, features | https://grafana.com/docs/grafana-cloud/cost-management-and-billing/... (via Context7) | live | high | Free tier allotments and per-unit rates |
+| S27 | Datadog — Pricing | https://www.datadoghq.com/pricing/ | live | high | Infra/APM/Logs/RUM/Error tracking prices |
+| S28 | Vercel docs — Pro plan, regional pricing, functions usage and pricing | https://vercel.com/docs/plans/pro-plan ; https://vercel.com/docs/pricing/regional-pricing (via Context7) | live | high | Pro $20/member, 1 TB included, $0.15–0.35/GB overage |
+| S29 | Resend docs — What is Resend pricing; pricing page | https://resend.com/docs/knowledge-base/what-is-resend-pricing ; https://resend.com/pricing (via Context7) | live | high | Free 3k/month, Pro $20 for 50k, $0.90 per 1k overage |
+| S30 | RevenueCat docs — Account management / billing | https://www.revenuecat.com/docs/welcome/set-up-revenuecat/account-management (via Context7) | live | high | Free under $2.5k MTR, 1% above |
+| S31 | Voyage AI docs — Pricing | https://docs.voyageai.com/docs/pricing (via Context7) | live | high | voyage-4 family prices and 200M free tokens |
+| S32 | Mindee docs — Plans | https://docs.mindee.com/account-management/plans (via Context7) | live | high | 6,000 credits/yr minimum, €0.044 per credit overage, trial |
+| S33 | Auth0 docs-v2 — feature audit / pricing reference | https://github.com/auth0/docs-v2 (.mintlify/skills/auth0/references/feature-audit-pricing/index.md) via Context7 | live | high | Free plan 25,000 MAU and included features |
+| S34 | Community guide — Hetzner Cloud plans and pricing ("verified 2026-07-06") | https://github.com/Sagargupta16/deploy-guide/blob/3f4621b101ac18be47241ca1d9a7b010249fe8f1/guides/hetzner.md | 2026-07-06 | low-medium | CX23/CX33/CAX/CPX/CCX prices, IPv4 €0.50, 20 TB traffic, €1/TB overage; must be re-verified at hetzner.com/cloud |
+| S35 | Expo docs — Push notifications overview | https://docs.expo.dev/push-notifications/overview/ (raw: github.com/expo/expo docs/pages) | live | high | No pricing stated for the push service |
+| S36 | Scaleway docs (Context7 mirror of github.com/scaleway/docs-content) | https://www.scaleway.com/en/docs/ | live | high (no prices) | Instance ranges only; prices referenced to scaleway.com/en/pricing (blocked) |
+| S37 **[AV]** | Enable Banking documentation — FAQ "How much does it cost to use the Enable Banking API?"; API widgets "Terms consent"; "Getting Started for TPPs" / "TPP Infrastructure-as-a-Service" | https://enablebanking.com/docs/faq ; https://enablebanking.com/docs/api/widgets ; https://enablebanking.com/docs/tpp/getting-started ; https://enablebanking.com/docs/tpp (read via Context7 mirror `/websites/enablebanking`, 2026-10-02) | live | high (official docs via mirror) | Volume-based pricing by accounts accessed and payments per month; **minimum monthly invoice** with included quota; two modes (Enable Banking as regulated entity with its consent widget vs licensed TPP using it as technical service provider) |
+| S38 **[AV]** | RevenueCat docs — Billing and account settings ("What happens when you reach $2.5k in MTR?"), Ad monetization, Stripe Projects quickstart | https://www.revenuecat.com/docs/welcome/set-up-revenuecat/account-management ; https://www.revenuecat.com/docs/ad-monetization (via Context7 `/websites/revenuecat`, 2026-10-02) | live | high | Free < $2,500 MTR, 1% above; 30-day grace only in the first month; ad revenue excluded |
+| S39 **[AV]** | Supabase docs source files — `billing-on-supabase.mdx`, `manage-your-usage/monthly-active-users.mdx`, `manage-your-usage/egress.mdx` | https://raw.githubusercontent.com/supabase/supabase/master/apps/docs/content/guides/platform/billing-on-supabase.mdx (and siblings), 2026-10-02 | live | high (official repo) | Pro $25; 100k MAU then $0.00325; SSO 50 MAU then $0.015; egress 250 GB then $0.09 / $0.03 cached; disk 8 GB then $0.125; storage 100 GB then $0.021; edge 2M then $2/M; Free-plan quotas |
+| S40 **[AV]** | Google — developer.android.com "Alternative billing" documentation hub (navigation lists External offers / External content links / External payment links / Billing Choice programmes; no fee table) | https://developer.android.com/google/play/billing/alternative | live | high (official) but no prices | Confirms programme names only; EEA fee values remain on support.google.com (blocked) |
+| R-REG **[AV]** | Sibling: `docs/research/raw/regulatory-landscape.md` (sources S-01–S-64 therein) | — | 2026-10-02 | medium-high (law-firm and official sources via prior session) | PSD2 in force; PSD3/PSR political agreement 27 Nov 2025, OJ status UNKNOWN, application ≥2028; FIDA not law; three licensing routes (recipient / agent / own registration) and Banca d'Italia's unknown position on the recipient model |
+| R-US | Sibling: `docs/research/raw/competitors-us.md` (sources S1–S201 therein) | — | 2026-10-02 | medium (snippet-based) | US competitor prices, Monarch/Rocket/YNAB metrics, Rocket affiliate payouts, YNAB support deflection |
+| R-EU | Sibling: `docs/research/raw/competitors-eu-uk.md` (sources S-01–S-54) | — | 2026-10-02 | medium | UK/EU competitor prices, Plum/Finanzguru/Emma/Snoop revenue signals, affiliate models, shutdowns |
+| R-IT | Sibling: `docs/research/raw/competitors-italy-and-ai-first.md` (sources Y-01–Y-34, K-01–K-08) | — | 2026-10-02 | low-medium | Italian neobank plan prices (creator videos), referral bonus culture, multi-account behaviour |
+| R-OBA | Sibling: `docs/research/raw/open-banking-providers-a.md` | — | 2026-10-02 | medium/low for prices | Tink/TrueLayer/Yapily/Salt Edge pricing signals and licensing routes |
+| R-OBB | Sibling: `docs/research/raw/open-banking-providers-b.md` | — | 2026-10-02 | medium/low for prices | Enable Banking per-account model, GoCardless closure, Neonomics, CBI Globe fee anchors, own-licence costs |
+| R-AI | Sibling: `docs/research/raw/ai-ml-transaction-intelligence.md` | — | 2026-10-02 | high/medium | Context7 snapshots of OpenAI/Gemini/Mistral docs; per-1k-transaction cost model; `inference_geo` behaviour |
+| R-NB | Sibling: `docs/research/raw/non-bank-sources-and-os-limits.md` | — | 2026-10-02 | medium | OCR vendor landscape, image-token formulas |
+| K-1 | Background legal knowledge: Italian VAT 22% (DPR 633/1972 art. 16); EU VAT e-commerce package / OSS (Directive (EU) 2017/2455) | verify: https://www.agenziaentrate.gov.it ; https://vat-one-stop-shop.ec.europa.eu | — | medium-high (law in force; not fetched) | §8 |
+| K-2 | Background knowledge (ASSUMPTION): Stripe Italy fees; Google Play service fees and EEA programme; Clerk/Stytch/Ory/Render/OneSignal/Postmark/Intercom/Crisp/Zendesk/Amplitude/Better Stack/Scaleway/OVH/Crunchy/Redis Cloud prices; Azure Document Intelligence; retention/CPI/conversion benchmarks (AppsFlyer, Adjust, RevenueCat SoSA 2024–2025) | verify at each vendor's pricing page named in the relevant section | — | low-medium | §6–§12 |
+
+**Search log:** WebSearch: 8 queries attempted, 0 executed (session budget exhausted before start). WebFetch: 40 attempts; 7 succeeded (platform.claude.com, claude.com, developer.apple.com ×3 pages, cloud.google.com ×2 — truncated), 33 EGRESS_BLOCKED. curl reachability probes: ≈120 URLs; reachable hosts: platform.claude.com, claude.com, developer.apple.com, cloud.google.com, datadoghq.com, developer.android.com, pricing.us-east-1.amazonaws.com, api.github.com, raw.githubusercontent.com, pypi.org. AWS Price List API: 8 offer files downloaded and parsed. GitHub raw docs: 19 files downloaded. Context7: 20 library resolutions, 22 documentation queries (16 with usable results). GitHub code search (MCP): 9 queries (3 rate-limited). Sibling documents read: 6.
+
+**Adversarial-pass log (2026-10-02, same day) [AV]:** WebSearch: 16 queries attempted, 0 executed (budget exhausted). curl reachability probes: 70 URLs; reachable: developer.apple.com (3 pages), platform.claude.com, cloud.google.com (Document AI, Vertex Gemini pricing), developer.android.com, pricing.us-east-1.amazonaws.com (Cognito eu-central-1 offer, version 2026-09-25), api.github.com (session-scoped only) and raw.githubusercontent.com (Supabase docs fetched; the Auth0 docs-v2 path returned nothing). Policy-blocked (403 on CONNECT): support.google.com, play.google.com, blog.google, android-developers.googleblog.com, eur-lex.europa.eu, ec.europa.eu, consilium.europa.eu, europarl.europa.eu, op.europa.eu, eba.europa.eu, bancaditalia.it, agenziaentrate.gov.it, vat-one-stop-shop.ec.europa.eu, stripe.com, docs.stripe.com, hetzner.com, docs.hetzner.com, revenuecat.com (site), supabase.com (site), auth0.com, clerk.com, stytch.com, ory.sh, neon.com, fly.io, railway.com, ynab.com, monarchmoney.com, moneyhub.com, satispay.com, help.withplum.com, help.revolut.com, gocardless.com, enablebanking.com (site), tink.com, openbankingeu.mastercard.com, fca.org.uk, nortonrosefulbright.com, mofo.com, reuters.com, techcrunch.com, 9to5mac.com, macrumors.com, wikipedia.org, youtube.com. Context7: 2 library resolutions, 3 documentation queries (Enable Banking ×2, RevenueCat ×1). GitHub issues #5505 (actualbudget/actual) and #10753 (firefly-iii) could not be opened (repositories outside this session's GitHub scope). Sibling documents consulted: regulatory-landscape.md, open-banking-providers-b.md, competitors-us.md, competitors-eu-uk.md, competitors-italy-and-ai-first.md.
+
+---
+
+## Verification notes (adversarial pass)
+
+**Date:** 2026-10-02 (same day as the original research). **Method:** an independent fact-checker selected the claims that matter most for pricing, COGS and legal decisions and that were most likely to be wrong or stale, then tried to refute each one against the live primary page or the official documentation mirror. WebSearch was unavailable (session budget exhausted) and WebFetch blocked, so every check used `curl` through the policy proxy, Context7 mirrors or the sibling research documents; the search log above lists what was reachable. **Verdict key:** *confirmed* = re-read on a primary/official source today and found identical; *corrected* = text changed or status downgraded; *unverifiable* = no reachable source today — status left as the original author set it (or downgraded where it was labelled FACT on thin evidence) and the claim is flagged **[AV]** in the body.
+
+| # | Claim (section) | Verdict | Evidence and sources | Change made |
+|---|---|---|---|---|
+| 1 | Apple EU unified business terms effective 2026-10-01: IAP 26% / 15%; alternative payment in-app 20% / 10%; store services commission 15% / 10% on link-outs (7-day window); CTC 5% (§8) | **Confirmed** | developer.apple.com/support/apps-in-the-eu/ fetched and read in full today (S16): "DPLA updated August 18, 2026 … Effective October 1, 2026"; rate table matches line by line | Added page details: alternative payments offered *alongside* IAP; 12-month lock-in of payment choice; developer remits VAT and reports monthly for alternative payments; child-safety requirements; CTC only for distribution outside the App Store; waiver scope; Attachment 14 supersedes the old addenda |
+| 2 | Core Technology Fee, Initial Acquisition Fee and Store Services Fee discontinued (§8) | **Confirmed** | Same page: "The Core Technology Fee … has been replaced by the Core Technology Commission … The new terms also eliminate the Initial Acquisition Fee and Store Services Fee" | None (wording confirmed) |
+| 3 | Apple Small Business Program: 15%, $1M USD prior-year proceeds, re-qualification rules (§8) | **Confirmed** | developer.apple.com/app-store/small-business-program/ fetched today (S15): 15%, "up to 1 million USD in proceeds in the prior calendar year", standard rate applies after exceeding, re-qualify the year after | None |
+| 4 | Anthropic Claude list prices for Haiku 4.5, Sonnet 5.5/5/4.6/4.5, Opus 5.5/5/4.8/4.7/4.6/4.5, Fable 5.1/5; cache multipliers; batch −50% (§4.1) | **Confirmed** | platform.claude.com/docs/en/about-claude/pricing fetched today (S1): every value in the table matched, including cache-read 0.025× on Fable 5.1 / Mythos 5.1 and 0.05× on Opus 5.5, fast mode $8/$40, web search $10 per 1,000 | Added Mythos 5.1 / 5 at identical prices; marked rows as re-read |
+| 5 | `inference_geo` = `global` (default) or `us` (1.1×) for Claude 4.6+; no EU-only option on the first-party API; Bedrock/Vertex regional +10% (§4.1) | **Confirmed** | Same page, "Data residency pricing" and "Regional and multi-region endpoint pricing" sections; no EU option appears anywhere on the page; 1.1× also applies to Claude Platform on AWS and Foundry US Data Zone; older models return 400 | Expanded the note with the AWS/Foundry scope and the 400 behaviour |
+| 6 | "Claude Sonnet 5 introductory price made permanent; planned Sep-2026 rise to $3/$15 cancelled" (§4.1) | **Corrected** | The pricing page lists Sonnet 5 at $2 / $10 with no "introductory", "permanent" or "price change" wording; the narrative has no identifiable source | Price kept as FACT; the narrative downgraded to ASSUMPTION of unknown origin |
+| 7 | Vertex AI Gemini prices: 2.5 Flash $0.30/$2.50, 2.5 Flash-Lite $0.10/$0.40 (batch $0.05/$0.20), 3.1 Flash-Lite $0.25/$1.50, 3.5 Flash-Lite $0.30/$2.50, 3.6/3.7/3.8 Flash $0.75/$3.75 through 2026-12-31 then $1.50/$7.50, non-global +10% (§4.3) | **Confirmed** | cloud.google.com/vertex-ai/generative-ai/pricing fetched today (S4): all rows matched, including non-global $0.825/$4.125 and $0.275/$1.65 | Added page footnotes (non-global pricing effective 1 Jul 2026 for GA Gemini 3+; tuned endpoints 1.5×; long-context rule) |
+| 8 | Google Document AI: OCR $1.50/1,000 pages (1,001–5M), $0.60 above, first 1,000 free, add-ons $6; Form Parser / Custom Extractor $30 ($20 above 1M); Layout $10; Expense/Invoice parser $0.10 per document up to 10 pages; savings plans −10%/−20% (§5) | **Confirmed** | cloud.google.com/document-ai/pricing fetched today (S5): "1 count equals up to 10 pages"; "To parse a document with between 1 to 10 pages costs $0.10"; FSP columns $1.35/$1.20 and $0.09/$0.08 | Added the savings-plan values for the parsers |
+| 9 | AWS Cognito Frankfurt: Lite $0.0055/MAU, Essentials $0.015, Plus $0.02, advanced security $0.05, 10,000 free MAU (§6.3, §7) | **Confirmed** | AWS Price List bulk API offer re-fetched today (S14; publication 2026-09-25): Lite tiers 0–90k $0.0055, 90k–990k $0.0046, 990k–9.99M $0.00325; global free tier 0–10,000 MAU; legacy user-pool free tier 50,000 | Added the full Lite tier ladder and the legacy free-tier note |
+| 10 | Supabase Pro $25/month; 100k MAU included then $0.00325; egress 250 GB then $0.09 ($0.03 cached); disk 8 GB then $0.125/GB; storage 100 GB then $0.021; edge functions 2M then $2/M; Free-plan quotas (§6.5, §7) | **Confirmed (upgraded)** | Official docs source files in github.com/supabase/supabase fetched raw today (S39): `<Price price="25" />` for the Pro Plan line item and every overage rate as listed | Pro price upgraded from "FACT medium (not in mirrored docs)" to FACT high; Free-plan edge-function quota added |
+| 11 | RevenueCat free below $2,500 MTR, 1% of MTR above, returns to free below, ad revenue excluded (§8) | **Confirmed** | RevenueCat docs via Context7 today (S38): "RevenueCat will remain free until you reach $2.5k in MTR … we will bill for 1% of revenue" | Grace-period note corrected: the 30-day grace applies only if the limit is exceeded in the first month after joining; later overruns restrict features immediately |
+| 12 | Enable Banking: per-connected-account pricing; "serves customers without an AISP licence"; minimum commitment UNKNOWN (§3) | **Corrected / confirmed as provider statement** | Enable Banking's own docs via Context7 today (S37): FAQ says pricing is "determined by the number of accounts accessed and payments made per month. There is a minimum monthly invoice that includes a set quota of accounts and payments"; widgets page says the terms-consent widget is "intended for use when the application relies on Enable Banking to access ASPSPs as a regulated entity"; licensed TPPs skip it | "Minimum commitment: UNKNOWN" → "minimum monthly invoice exists (amount UNKNOWN)"; the licence claim re-labelled as a provider statement with the legal route for Italy marked UNKNOWN; §14 input 23 annotated (Low €0 unlikely) |
+| 13 | Tink "agent model for unlicensed partners"; Mastercard Open Banking Europe "no licence needed"; Salt Edge Partner Program (§3) | **Unverifiable today — downgraded in effect** | tink.com, openbankingeu.mastercard.com blocked; the sibling evidence (R-OBA S-46 high, R-REG S-48 medium) is provider copy. R-REG §10.2 documents two distinct legal routes (data recipient under the provider's licence vs registered agent, PSD2 Art. 19) and records that Banca d'Italia's position on the recipient model was not found | New "Licensing caveat" paragraph in §3: all "no licence needed" statements are provider statements; route and Italian acceptability UNKNOWN until counsel and the provider confirm; added open questions 13–15 |
+| 14 | GoCardless Bank Account Data closed to new customers from July 2025 (§3) | **Unverifiable today (sibling evidence strong)** | gocardless.com blocked; the Actual Budget #5505 and Firefly III #10753 threads could not be opened from this session; R-OBB cites the official pricing-page snippet (high) and both threads (Aug 2025) | Status kept FACT; provenance and the free-tier-vs-all-accounts scope caveat written into the row |
+| 15 | Own AISP registration has no capital requirement (§3) — and the legislative status behind it | **Confirmed as law in force (not re-fetched) / PSD3-PSR status UNKNOWN** | PSD2 Art. 33 registration regime (no initial capital; PII required), TUB art. 114-novies — statute pages blocked; R-REG §2: PSD3/PSR politically agreed 27 Nov 2025, final texts spring 2026, OJ publication "expected Jun/Jul 2026" but **unconfirmed**, application ≥ 2028; PSD3 as proposed retains the registration regime; FIDA not law | Row rewritten to state the legal basis and to warn that PSR provisions are not in force; EUR-Lex check added to the verification plan |
+| 16 | Google Play service fee 15% on first $1M, 30% above, subscriptions 15% from day one (§8) | **Unverifiable** | support.google.com, play.google.com and all Google policy/blog hosts blocked in both passes; developer.android.com carries no fee table | Status kept ASSUMPTION; flagged |
+| 17 | Google Play EEA External Offers / alternative-billing fees (§8) | **Unverifiable; wording corrected** | As above. The 2024 programme as recalled charged an initial acquisition fee of 10% (IAP) / **5% (subscriptions)** for two years plus an ongoing services fee of 17% / 7%; Google announced further EEA revisions in 2025–2026 after the Commission's March 2025 DMA decision | Added the 5% subscription acquisition fee and the two-year window to the recollection; kept UNKNOWN for 2026 values; §15 item 4 unchanged |
+| 18 | Stripe Italy card fees 1.5% + €0.25 etc. (§8) | **Unverifiable** | stripe.com and docs.stripe.com blocked in both passes | Status kept ASSUMPTION; flagged |
+| 19 | VAT: Italy 22%; EU €10,000 micro-business threshold; Union OSS; Apple/Google as merchant of record (§8) | **Confirmed as law in force (not re-fetched)** | DPR 633/1972 art. 16; VAT Directive Art. 59c (as amended by Directive (EU) 2017/2455); EU sites blocked | Annotated; note that the 2025 EU SME-exemption scheme is a separate mechanism and does not change the €10,000 threshold (ASSUMPTION) |
+| 20 | Hetzner Cloud prices (CX23 €5.49, CX33 €8.49, IPv4 €0.50, 20 TB traffic, €1/TB) (§6.1, §14 input 37) | **Unverifiable — downgraded** | hetzner.com and docs.hetzner.com blocked; GitHub code search unavailable in this session; the only source remains one community guide | Section header now instructs to treat all values as ASSUMPTION until the vendor page is opened |
+| 21 | Auth0 Free plan up to 25,000 MAU (§7) | **Unverifiable today** | auth0.com blocked; the auth0/docs-v2 reference path could not be fetched raw; figure is consistent with the plan Auth0 introduced in 2024 (recollection) | Flagged; status unchanged (official-docs mirror read the same day by the original author) |
+| 22 | Competitor prices and dates: YNAB $109/yr; Monarch Plus $199/yr launched 2026-04-21; Moneyhub D2C sunset 31 Jul 2026; Satispay plan prices UNKNOWN (§1) | **Unverifiable / partly corrected** | Transcription checked against the sibling documents: YNAB $109 (R-US S7/S10, high); Monarch Plus (R-US S20 PR Newswire, high); Moneyhub sunset rests on the official help-centre article alone (R-EU S-08) with one secondary source saying 14 Aug; Satispay plan prices were in fact observed by third parties at €3.99 / €9.99 / €39.99 per month (R-IT V-01/V-02, low-medium) | Satispay row updated from "prices UNKNOWN" to third-party-observed prices (ASSUMPTION low-medium); Moneyhub date caveat added; Revolut IT-IBAN date flagged as unverified |
+| 23 | Zero-data-retention and EU-residency statements for OpenAI, Azure, Vertex and Mistral (§4.2–4.4) | **Not re-checked** | All vendor hosts blocked; the original document already labels these ASSUMPTION with "verify at" URLs | None (already correctly labelled) |
+
+**Net effect on the model inputs (§14):** no Base value changes. Inputs 8 (store commission), 9 (RevenueCat), 26–31 (LLM/embedding prices) and 38 (auth) rest on sources re-read today and can be used with confidence. Input 22–23 (AIS price and minimum) remain UNKNOWN; the Low of €0 for the minimum is now implausible for Enable Banking. Input 37 (Hetzner VPS baseline) should be treated as ASSUMPTION. The licensing route (recipient vs agent) is a new explicit uncertainty that affects both AIS COGS and time-to-market and must be resolved with counsel before pricing is fixed.

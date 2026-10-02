@@ -1,0 +1,481 @@
+# Non-bank data sources and OS limits: what Lilleri can really collect beyond PSD2
+
+**Project:** LILLERI (consumer PFM, Italy-first, no AISP licence of its own)
+**Research date / verification date:** 2026-10-02
+**Author:** specialist research agent (raw notes; inputs to `docs/research/`, `docs/compliance/`, `docs/architecture/`)
+
+## Scope note
+
+This document answers one question: *beyond PSD2 bank APIs (covered in `open-banking-providers-*.md`), which data sources can Lilleri realistically ingest, at what cost, with what policy and privacy exposure, and which belong in the MVP?* It covers PayPal, Satispay, Apple (Apple Pay / Wallet / FinanceKit / App Store rules), Google (Wallet, Android notification / SMS / accessibility policies, Play financial policies), e-mail receipts, receipt OCR, file imports, investments/crypto, BNPL, Amazon, utilities/telco and "anything else".
+
+**Research-environment constraint (important for readers).** The session's web-search budget was already exhausted when this task started (0 of 8 attempted searches executed) and the egress proxy blocked direct fetches for almost every vendor, bank, regulator and policy domain (Google Play policy centre, support.google.com, Microsoft Learn, AWS, Azure, PayPal, Satispay, Tink, Yapily, Salt Edge, GoCardless, Revolut, Amazon, Agenzia delle Entrate, EUR-Lex, Banca d'Italia, all OCR vendors, OpenAI, Gemini). What *was* verifiable first-hand on 2026-10-02:
+
+- `developer.apple.com` (FinanceKit landing page and API JSON, App Store Review Guidelines, App Privacy Details, PassKit, App Tracking Transparency) — primary, high.
+- `developer.android.com` (NotificationListenerService, AccessibilityService, permissions overview) — primary, high.
+- GitHub mirrors of official Microsoft docs (`MicrosoftDocs/entra-docs` publisher verification; `MicrosoftDocs/azure-ai-docs` receipt model; `microsoftgraph/microsoft-graph-docs-contrib` permissions) — primary content, high.
+- Context7 mirrors of official Google (Gmail scopes, Document AI processors list) and PayPal (Transaction Search) documentation — primary content via mirror, medium-high.
+- GitHub code search for cached GoCardless/Nordigen institution lists (PayPal institution id, countries, history) — secondary, medium.
+- LiteLLM `model_prices_and_context_window.json` (community price registry) and the bundled `claude-api` skill's price table (cached 2025-09-25) for LLM vision pricing — medium / high respectively.
+
+Everything else is labelled **ASSUMPTION** (from the author's prior knowledge, with a "how to verify" note), **HYPOTHESIS** or **UNKNOWN**. Nothing in this file should drive a contract, legal or pricing decision without re-verification against the primary source listed in the Sources table.
+
+**Adversarial verification pass (same day, 2026-10-02, marked [AV] in the text).** A second agent tried to refute the most decision-relevant claims. The session's WebSearch budget was already exhausted (0 searches possible) and WebFetch was blocked, so re-verification used direct fetches through the egress proxy (only `developer.apple.com`, `developer.android.com`, `cloud.google.com` and `raw.githubusercontent.com` were reachable; 20 other vendor/regulator/policy hosts returned 403 from the egress policy), official source files mirrored on GitHub, the bundled first-party Anthropic price cache and the sibling notes `open-banking-providers-a.md` / `open-banking-providers-b.md`. Claims that could not be re-fetched were checked against the reviewer's own knowledge (cut-off mid-2026) and are marked "unverifiable today" in the verification table at the end; their labels were left at ASSUMPTION/UNKNOWN or downgraded, never upgraded.
+
+**Label key.** FACT = verified against a cited source on 2026-10-02. ASSUMPTION = working value from prior knowledge, unverified today. HYPOTHESIS = belief to validate. UNKNOWN = could not be established; includes how to verify. Reliability: high = official/primary; medium = reputable secondary or official content via mirror; low = blog/forum/memory.
+
+---
+
+## 0. Executive summary
+
+| # | Source | Feasibility (2026-10-02) | Cost (order of magnitude) | Privacy / policy risk | User value (IT) | MVP or later |
+|---|---|---|---|---|---|---|
+| 1 | PayPal — consumer history via PayPal's own API | NOT FEASIBLE (Transaction Search is merchant-side) | n/a | n/a | High (PayPal widely used in IT e-commerce) | — |
+| 1b | PayPal via PSD2 AIS (PayPal Europe, Luxembourg bank) | FEASIBLE WITH CONSENT+COST, depends on aggregator coverage | Same per-connection price as a bank through the AIS provider | Low (regulated channel) | High | MVP if the chosen AIS provider lists PayPal; otherwise CSV import |
+| 1c | PayPal CSV "activity download" | FEASIBLE | Free | Low | Medium | MVP fallback |
+| 2 | Satispay (EMI) — consumer API / PSD2 AIS | UNKNOWN (no evidence of aggregator coverage found) | — | Low if via AIS | High (Satispay is the dominant Italian P2P/POS wallet) | Verify with AIS shortlist; fallback = bank-side top-ups + manual |
+| 3 | Apple Pay transaction history / Wallet | NOT FEASIBLE (no API; FinanceKit is US/UK only) | n/a | n/a | — | Never (unless Apple extends FinanceKit to EU) |
+| 3b | iOS notification reading | NOT FEASIBLE (no OS API for third-party apps) | n/a | n/a | — | Never |
+| 4 | Android NotificationListenerService (bank push alerts) | FEASIBLE WITH CONSENT; POLICY RISK moderate | Engineering only | High (reads all notifications; prominent disclosure + Data safety) | Medium-high (near-instant pending transactions, Satispay/Apple-Pay-equivalents on Android) | Later (post-MVP experiment, Android only) |
+| 4b | Android SMS reading | POLICY RISK high / effectively NOT FEASIBLE on Play | — | Very high | Low in IT (banks use push, SMS alerts are paid add-ons) | Never |
+| 4c | Android Accessibility API scraping | NOT FEASIBLE (policy) | — | Very high | — | Never |
+| 4d | Google Pay / Wallet transactions API | NOT FEASIBLE (issuer-side APIs only); Takeout export exists | — | — | Low | Never (Takeout import: later, low priority) |
+| 5 | Gmail API receipts (restricted scope + CASA) | FEASIBLE WITH CONSENT+COST | CASA Tier 2 assessment annually (UNKNOWN exact; historically hundreds to tens of thousands USD) + verification lead time | High (whole-mailbox access) | Medium | Later; MVP alternative = **forward-to-Lilleri inbox** (no restricted scope) |
+| 5b | Microsoft Graph Mail.Read | FEASIBLE WITH CONSENT | Free; publisher verification needs Partner Center account | High | Low-medium in IT | Later |
+| 6 | Receipt OCR (camera/scontrino) | FEASIBLE | LLM vision ≈ $0.0003–0.007 per receipt (ASSUMPTION); specialised parsers ≈ $0.01 per page (Azure/AWS, ASSUMPTION) to $0.10 per page (Google Expense Parser, FACT [AV]) | Medium (images may contain personal data; third-party AI disclosure) | Medium (cash + itemisation) | MVP-lite (manual photo → line items), never required for core promise |
+| 7 | File imports (CSV/XLS/PDF statements) | FEASIBLE | Engineering per bank template | Low | High as fallback / history backfill beyond 90 days | MVP (top formats), rest later |
+| 7b | OFX/QIF/MT940/CAMT.053 for consumers | NOT FEASIBLE in IT (business/corporate formats) | — | — | Low | Never |
+| 8 | Investments: Degiro CSV, Directa API, TR/Moneyfarm/Fineco | Degiro CSV FEASIBLE; Directa API FEASIBLE (client API); others NOT FEASIBLE officially | Engineering | Low-medium | Medium (net-worth view) | Later |
+| 8b | Crypto: Binance/Kraken read-only keys; Coinbase OAuth | FEASIBLE WITH CONSENT | Engineering | Medium (key custody) | Low-medium | Later |
+| 9 | BNPL (Klarna, Scalapay, PayPal Pay in 3) | Only visible via bank/card/PayPal statements | — | — | Medium (instalment detection) | MVP via pattern detection on bank data |
+| 10 | Amazon order history | Manual GDPR export only; e-mails as alternative | — | Medium | Medium (itemised "AMZN Mktp" lines) | Later |
+| 11 | Utilities / telco (Enel, TIM) | Only via bank SDD lines or e-mail PDFs | — | — | Medium (bill forecasting) | MVP via bank-side recurring detection |
+| 12 | Screen scraping / credential sharing with banks | NOT FEASIBLE (PSD2 + bank T&Cs + no licence) | — | Extreme | — | Never |
+
+**Bottom line.** For an unlicensed startup in Italy, the only reliable automatic sources are (a) PSD2 AIS through a licensed provider (which may also cover PayPal, and possibly Satispay — unverified), and (b) user-pushed artefacts: statement files, forwarded e-mails, receipt photos. Everything that touches the OS (Apple Pay, iOS notifications, Android SMS/accessibility) is closed or policy-hostile; the one OS-level channel worth an experiment is Android notification access, Android-only, opt-in, after MVP.
+
+### 0.1 Legal baseline for everything below (in force vs. proposed) — added by the [AV] pass
+
+Every "via a licensed provider" statement in this document rests on the legal framework below. Read it before quoting any feasibility verdict in a contract or compliance document.
+
+| Item | Status on 2026-10-02 | Label | Source / cross-reference |
+|---|---|---|---|
+| **PSD2** (Directive (EU) 2015/2366, transposed in Italy by D.Lgs. 218/2017 → TUB art. 114-novies) and the **RTS on SCA/CSC** (Delegated Regulation (EU) 2018/389) | **In force.** This is the regime that governs AIS access, the 4×/day background-access limit (RTS art. 36(5)(b)) and the SCA exemption for balance + 90 days of history (RTS art. 10). | FACT (law) | Sibling `open-banking-providers-a.md` §2.1–2.2, `open-banking-providers-b.md` §15 (eur-lex blocked today). |
+| **Consent/SCA renewal every 180 days** (Delegated Regulation (EU) 2022/2360, applicable since 25 July 2023) | **In force.** The "90 days" that appears elsewhere in this note (PayPal PSD2 history, bank practice) is a *history-depth* limit, not the consent-validity period. | FACT (law) | Sibling `open-banking-providers-a.md` §2.1. |
+| **PSD3 / PSR** (payment services package proposed by the Commission in June 2023) | **Not in force.** Provisional political agreement reported 27 Nov 2025; final compromise texts reported spring 2026; **OJ publication and entry into application not verifiable today** (EU institutional and legal-press hosts blocked). Even once published, the application clock is 18–21 months, i.e. ~2028. No verdict in this note depends on the PSR; the reported removal of the 4×/day cap is a HYPOTHESIS. | FACT (proposed / agreed) — **UNKNOWN whether published** | Sibling `open-banking-providers-a.md` §2.2 (Norton Rose Fulbright, MoFo, Lexology as cited there). |
+| **FIDA** (Financial Data Access regulation, open-finance proposal of June 2023 — would cover investment, insurance and savings data) | **Not in force**; legislative status UNKNOWN today. Investment/crypto/insurance sources in §8 must be planned as if FIDA never arrives. | UNKNOWN | Verify on OEIL (2023/0205(COD)) and eur-lex when reachable. |
+| **"An unlicensed startup can operate under a provider's licence"** — the working assumption of this whole note | **ASSUMPTION, not a FACT.** Three distinct routes exist and are *not* interchangeable: (A) **licence-as-a-service / data-recipient**: the provider is the AISP of record, the user consents to the provider, Lilleri receives data and must not present itself as providing AIS (documented by Yapily Connect, Salt Edge Partner Program, Enable Banking, Mastercard Open Banking EU, Fabrick Pass); (B) **registered agent** of a licensed AISP (documented by Tink and TrueLayer; the licensee performs due diligence and AML/CTF, its name appears on consent screens); (C) **own AISP registration** with Banca d'Italia (no capital, PII insurance, 90-day decision window after a complete file, realistically 6–12 months). **Banca d'Italia's written position on route A was not retrieved** in any session, and PSD2 art. 67(2)(f) limits the AISP to the service *explicitly requested by the user*, so the provider's consent screen must name Lilleri as recipient and the purpose. Choosing A vs. B is a P0 question for counsel before the RFP is signed; the App Store 3.2.1(viii) wording in §3.3 and the Play Financial-features declaration in §4.5 inherit the same caveat. | ASSUMPTION (route exists commercially — FACT; its acceptability in Italy for a B2C PFM — UNKNOWN) | Sibling `open-banking-providers-a.md` §2.6 (Tink "use of agents", TrueLayer support articles, Yapily/Salt Edge docs) and `open-banking-providers-b.md` §15.1–15.2 (Enable Banking, Mastercard, Fabrick; Banca d'Italia FAQ, TUB art. 114-novies, EBA/GL/2017/08). |
+
+---
+
+## 1. PayPal
+
+### 1.1 Facts and assumptions
+
+| Claim | Status | Source / how to verify |
+|---|---|---|
+| PayPal's **Transaction Search API** (`GET /v1/reporting/transactions`) authenticates with OAuth 2.0 **client-credentials** (the app's own client id/secret), lists transactions "for the previous three years", and executed transactions take "a maximum of three hours" to appear. | FACT | S-13 (PayPal .NET server SDK docs, official, via Context7; verified 2026-10-02), S-14 (PayPal REST docs v1→v2 migration page via Context7). Reliability medium-high (official text via mirror). |
+| The API is a **merchant/reporting** API: it returns the transactions of the PayPal (business) account that owns the API credentials or that granted third-party merchant permissions. There is no "Log in with PayPal" scope that lets a consumer app read a personal account's activity. | ASSUMPTION (high confidence) | Not verifiable today (developer.paypal.com blocked). Verify: developer.paypal.com → Transaction Search → "Enable Transaction Search in your app's features" and the Log in with PayPal scope list (openid, profile, email, address, phone, paypalattributes — no transaction scope). |
+| PayPal (Europe) S.à r.l. et Cie, S.C.A. is a **Luxembourg credit institution**, so PSD2 account-information access to its payment accounts applies and PayPal exposes a PSD2 interface. | FACT (indirect) | Indirect evidence: GoCardless/Nordigen listed institution `PAYPAL_PPLXLULL` ("PayPal", BIC PPLXLULL) with **90 days** of transaction history and availability in **IT** plus ~30 other EEA countries + GB (S-15, S-16: third-party repositories caching the official institution list; medium). Also sibling note `competitors-us.md` records PayPal double-entry problems in US aggregators (shows PayPal is aggregatable). [AV] The "90 days" is PayPal's PSD2 *history depth* as cached by one aggregator, not a PSD2 rule; consent validity is 180 days (§0.1). |
+| GoCardless Bank Account Data is reported closed to new customers in the sibling provider research, so PayPal reachability must be re-checked with the actual AIS shortlist (Tink, TrueLayer, Salt Edge, Yapily, Enable Banking, Fabrick, Powens, CRIF). | UNKNOWN | Verify: each provider's institution list for country=IT (and LU), e.g. Tink "connectivity coverage" page, Salt Edge providers list, Enable Banking `GET /aspsps?country=IT` sandbox call. Ask explicitly: "Is PayPal (PPLXLULL) supported for AIS for Italian users; history depth; consent validity?" |
+| Consumers can download their PayPal activity as **CSV** (and PDF monthly statements) from paypal.com "Activity → Statements/Download". | ASSUMPTION (high confidence) | paypal.com help blocked today. Verify: https://www.paypal.com/cshelp (search "download activity"). |
+| **Pay in 3 / Pay Later** instalments appear in the same PayPal activity feed and, on the bank side, as PayPal debits (SEPA DD or card). | ASSUMPTION | Verify with a test account. |
+
+### 1.2 Assessment
+
+- **Feasibility:** via PayPal's own APIs: NOT FEASIBLE for a consumer PFM. Via PSD2 AIS: FEASIBLE WITH CONSENT+COST *if* the chosen provider covers PayPal (90-day history only, per the cached listing). Via CSV import: FEASIBLE now.
+- **Cost:** same per-connected-account price as a bank through the AIS provider; CSV import is free beyond engineering.
+- **Privacy risk:** low via AIS (regulated channel, explicit consent); CSV import — user handles the file.
+- **User value:** high. PayPal is one of the main duplicate/transfer sources ("bank card → PayPal → merchant"), exactly what the Lilleri reconciliation promise is about; without PayPal data, card settlements of PayPal purchases show only as "PAYPAL *MERCHANT" on the card.
+- **Recommendation:** make "PayPal supported for IT users" a *hard requirement* in the AIS RFP (`open-banking-providers-b.md` gap list). Ship CSV import of PayPal activity in MVP as a fallback. Reconciliation rule: card/SEPA line "PAYPAL *X" ↔ PayPal activity line within ±3 days and same amount.
+
+---
+
+## 2. Satispay
+
+| Claim | Status | Source / how to verify |
+|---|---|---|
+| Satispay offers **merchant/business** APIs ("Satispay Online API", "Business API") to accept payments; no consumer account-information API is documented publicly. | FACT (partial) / ASSUMPTION | S-17 (FindAPIs list entry for "Satispay Online API"; low-medium). developers.satispay.com blocked today — verify there that no consumer AIS endpoint exists. |
+| Satispay is an electronic money institution (EMI) supervised in the EU (Italy / previously Luxembourg); EMIs that hold online-accessible payment accounts fall under PSD2 Art. 66/67 obligations to provide PIS/AIS access. | ASSUMPTION (legal reading; high confidence on the rule, medium on Satispay's exact status) | Verify: Banca d'Italia "Albo degli istituti di moneta elettronica" (bancaditalia.it blocked today) and Satispay's PSD2/TPP developer page if any. |
+| No aggregator institution list cached on GitHub mentions Satispay (searched GoCardless/Nordigen-style and generic "satispay aspsp" patterns, 0 results). This is **absence of evidence**, not evidence that no aggregator supports it. | UNKNOWN | Verify with each shortlisted AIS provider: "Is Satispay (IT EMI) available for AIS? Which account types? History depth?" Also check CBI Globe participant list (cbiglobe.com) — Satispay is not known to be a CBI Globe participant (ASSUMPTION). |
+| Consumer app export: whether Satispay lets a user export movements (CSV/PDF "estratto conto") | UNKNOWN | support.satispay.com blocked today. Verify in the app: Profile → "Movimenti" → look for "Esporta"/"Scarica". If PDF-only, a PDF-statement parser would be needed. |
+
+**Assessment.** Satispay is probably the single most important non-bank source for Italian users under 40 (P2P, small POS payments, "Salvadanaio", bill payments, bollettini). Today the only certain visibility is bank-side: Satispay top-ups appear as SEPA direct debits "SATISPAY" on the user's bank account (ASSUMPTION, high confidence), so Lilleri will see *money moving into Satispay* but not *what it was spent on*. Recommendation: (1) treat Satispay AIS coverage as a scored criterion in the provider RFP; (2) in MVP, auto-detect Satispay top-up debits and present a "Satispay wallet" pseudo-account whose balance = top-ups − known spends, with a manual/CSV path; (3) later, Android notification parsing of Satispay payment notifications (section 4) is the only automatic itemisation path if no AIS coverage exists.
+
+---
+
+## 3. Apple
+
+### 3.1 Apple Pay transaction history and Wallet
+
+| Claim | Status | Source |
+|---|---|---|
+| PassKit lets apps **process Apple Pay payments**, **create/distribute/update passes** and surface them on the lock screen. The documentation contains no API to read the user's Apple Pay transaction history or other issuers' cards. | FACT | S-05 (developer.apple.com PassKit framework JSON; high; verified 2026-10-02). |
+| Apple Pay transaction history (the "Transactions" list under a card in Wallet) is written by the card issuer via Apple's issuer integration; third-party apps have no API to read it. The only developer-facing route to Wallet financial data is FinanceKit. | FACT (by exclusion of documented APIs) + ASSUMPTION | S-02, S-03, S-05. |
+| App Store Guideline 5.1.2(vii): apps using Apple Pay may share Apple-Pay-acquired user data with third parties only to facilitate/improve delivery of goods and services. | FACT | S-04. |
+
+### 3.2 FinanceKit (iOS 17+)
+
+| Claim | Status | Source |
+|---|---|---|
+| FinanceKit (iOS 17.0+, iPadOS 17.0+, Mac Catalyst 17.0+) "provides secure access to Apple Wallet orders and financial data": accounts (asset/liability), balances, transactions, credit info; `FinanceStore` offers `accounts(query:)`, `transactions(query:)`, `accountBalances(query:)`, history/change tokens (`HistoryToken`, `transactionHistory(forAccountID:since:isMonitoring:)`) and **background delivery** (`enableBackgroundDelivery(for:frequency:)`). | FACT | S-02 (FinanceKit framework JSON), S-03 (FinanceStore JSON); high; verified 2026-10-02. |
+| Data exposed: **United States** — Apple Card (excluding Apple Card Family participants), Apple Cash (excluding Apple Cash Family children), Savings — iPhone on **iOS 17.4+**. **United Kingdom** — accounts connected to Wallet via UK open banking (Barclays, Barclaycard, First Direct, Halifax, HSBC, Lloyds, M&S Bank, MBNA, Monzo, Nationwide, NatWest, RBS, Santander) — iPhone on **iOS 18.4+**. It provides "balance and transaction details about eligible accounts in Apple Wallet". | FACT | S-01 (developer.apple.com/financekit/); high; verified 2026-10-02. |
+| **Italy / EU: not available.** The entitlement criteria require the app to be "listed in the Finance category in App Store Connect and distributed through the App Store for iPhone in the United States or United Kingdom". No EU availability is mentioned anywhere on the page or in the framework docs. | FACT (as of 2026-10-02; **re-fetched independently by the [AV] pass the same day — the "Requirements and availability" section still lists only United States (iOS 17.4+) and United Kingdom (iOS 18.4+)**) | S-01, S-02. Whether Apple announced an EU/Italy expansion at WWDC 2026 is UNKNOWN (newsroom blocked); the developer page, which Apple updates when regions are added, shows none. Verify: apple.com/newsroom and the FinanceKit page quarterly. |
+| Entitlement: a **managed entitlement** granted per bundle ID; request must come from the **Account Holder** of an **organisation-level** Apple Developer account; app must "provide financial management tools (for example, a comprehensive view of net worth, spending trends, budgeting)"; apps that themselves offer financial products must allow their customers to connect those accounts to Wallet and not prohibit sharing with FinanceKit (reciprocity rule); `NSFinancialDataUsageDescription` required in Info.plist. | FACT | S-01, S-02. |
+| Apple Pay transactions made with *other* issuers' cards are **not** part of FinanceKit (only the Apple-issued products in the US and the open-banking-connected accounts in the UK). | FACT (by the enumerations in S-01) | S-01. |
+
+### 3.3 App Store Review Guidelines relevant to a finance app (text verified 2026-10-02; page states it is a "living document" — [AV] correction: the page footer does carry a date, **"Last Updated: June 8, 2026"**, so the clauses below reflect the June 2026 revision)
+
+| Guideline | What it says (paraphrase, with key quoted fragments) | Implication for Lilleri | Status |
+|---|---|---|---|
+| **3.1.1 In-App Purchase** | Unlocking features/subscriptions inside the app must use IAP; apps "may not use their own mechanisms to unlock content or functionality, such as license keys … cryptocurrencies". | Premium tier must be sold via StoreKit subscriptions (EU alternative terms / DMA options aside). | FACT (S-04) |
+| **3.2.1(viii)** | "Apps used for financial trading, investing, or money management should be submitted by the financial institution performing such services and must have necessary licensing and permissions in the locations where you make them available." | Lilleri performs no trading/investing/money transfer; it is an aggregation/budgeting tool relying on a licensed AISP. Expect reviewer questions: keep metadata explicit ("read-only insights; account access through [licensed provider]; Lilleri does not hold funds"). Many non-bank PFM apps are on the App Store, so this is a **manageable review risk, not a blocker**. [AV] "Relying on a licensed AISP" is itself the licensing ASSUMPTION of §0.1: under the agent route (B) Lilleri *is* named as agent of the licensee, under route (A) it is only a data recipient — the review answer differs, so settle the route before submission. | FACT (text) / HYPOTHESIS (review outcome) |
+| **5.1.1(i)–(iii)** | Privacy policy link in metadata and in-app; must identify data collected, uses, third parties (incl. SDKs and group entities), retention/deletion and how to revoke consent. Consent required for collecting user/usage data "even if … anonymous"; **"Paid functionality must not be dependent on or require a user to grant access to this data"**; purpose strings must be complete. Data minimisation: request only data "relevant to the core functionality". | Consent-first onboarding; the subscription must not be conditioned on granting data permissions; purpose strings for camera/photos (receipts) must be precise. | FACT (S-04) |
+| **5.1.1(v)** | "If your app supports account creation, you must also offer account deletion within the app"; apps without significant account-based features must work without a login; no personal information may be required "except when directly relevant to the core functionality of the app or required by law". | Implement in-app deletion in MVP; keep bank linking optional for a logged-out "try it" path if one is offered. | FACT (S-04, [AV] re-fetched 2026-10-02 — upgraded from ASSUMPTION) |
+| **5.1.2(i)** | No use/transmission/sharing of personal data without permission; "You must clearly disclose where personal data will be shared with third parties, **including with third-party AI**, and obtain explicit permission before doing so." ATT permission required to track. | Sending transactions/receipts to an external LLM provider (OpenAI/Anthropic/Google) counts as sharing with third-party AI → explicit disclosure + permission in onboarding and privacy policy. Prefer EU-hosted inference and a DPA. | FACT (S-04; [AV] re-fetched 2026-10-02: the exact sentence "You must clearly disclose where personal data will be shared with third parties, including with third-party AI, and obtain explicit permission before doing so" is present) — the clause was added in the November 2025 revision (ASSUMPTION on the date, high confidence) |
+| **5.1.2(ii)–(iv)** | No repurposing of data without consent; no surreptitious profiling; no building contact databases; no collecting installed-app lists for analytics/marketing. | Keep AI personalisation strictly first-party and purpose-bound. | FACT (S-04) |
+| **App Tracking Transparency** | ATT prompt (`NSUserTrackingUsageDescription` + `ATTrackingManager.requestTrackingAuthorization`) is required only if the app links user/device data with third-party data for advertising or shares with data brokers. | Lilleri with no ad-tech SDKs needs **no ATT prompt**; adding any SDK that combines data across apps for ads would trigger it. | FACT (S-06) |
+| **App Privacy Details ("nutrition label")** | "Financial Info" data types: *Payment Info* (card/bank account number — exempt if entered outside the app and never accessible to the developer), *Credit Info* (e.g. credit score), *Other Financial Info* ("salary, income, assets, debts, or any other financial information"). Data is "linked to you" unless de-identified before collection. Third-party SDKs that combine data across apps for ads must be declared as tracking. | Declare "Other Financial Info" (linked, used for app functionality), plus identifiers, contact info; no tracking. | FACT (S-07) |
+
+### 3.4 Assessment (Apple)
+
+- Apple Pay history, iOS notifications, other apps' data: **NOT FEASIBLE** on iOS by design. There is no iOS equivalent of Android's NotificationListenerService for third-party apps (FACT by absence of any such API in the iOS SDK; high confidence).
+- FinanceKit: NOT FEASIBLE in Italy today; worth a one-line watch item (US/UK only; if Apple extends to EU open banking, Lilleri's Finance-category listing and "financial management tools" positioning would already satisfy the criteria).
+- Review risk: moderate but manageable; the new third-party-AI disclosure language in 5.1.2(i) is the most relevant *new* compliance item for an AI-categorisation product.
+
+---
+
+## 4. Google / Android
+
+### 4.1 Google Pay / Google Wallet
+
+| Claim | Status | Source |
+|---|---|---|
+| Google Wallet API is an **issuer-side** passes API (loyalty, tickets, etc.); Google Pay APIs are for merchants accepting payments. No API returns a consumer's Google Pay transaction history to third parties. | ASSUMPTION (high confidence) | Google developer pages blocked today. Verify: developers.google.com/wallet and developers.google.com/pay. |
+| Users can export their own Google Pay data (transactions) through **Google Takeout** (JSON/CSV in the "Google Pay" product). | ASSUMPTION (medium) | Verify: takeout.google.com → "Google Pay". Value is low for Italy (Google Pay transactions already appear on the underlying card/bank). |
+
+### 4.2 Android NotificationListenerService (reading bank/wallet push notifications)
+
+| Claim | Status | Source |
+|---|---|---|
+| `NotificationListenerService` lets an app receive notifications posted by other apps. It must be declared with `BIND_NOTIFICATION_LISTENER_SERVICE` and the **user must explicitly enable it** under Settings → Special app access → Notification access; the user can revoke at any time. The platform docs describe the access as sensitive (private message content, financial information, authentication codes). | FACT | S-08 (developer.android.com reference; high; verified 2026-10-02). |
+| Android 15 (API 35) introduced protection of **OTP/2FA codes** in notifications from untrusted notification listeners ("sensitive notifications"). Bank *transaction* alerts are not OTPs, but this shows the platform direction: expect further narrowing. | ASSUMPTION (medium) — [AV] **not confirmed on developer.android.com**: neither the Android 15 "behaviour changes" page nor the "features" page (both fetched 2026-10-02) mentions OTP redaction or sensitive notifications; the feature was announced through Google's security channels and is implemented via the signature/role permission `RECEIVE_SENSITIVE_NOTIFICATIONS`. Keep as ASSUMPTION until seen on a primary page. | Verify: Google security blog "Android 15" posts; AOSP `android.permission.RECEIVE_SENSITIVE_NOTIFICATIONS`; test on an Android 15/16 device with a listener app. |
+| **Google Play policy:** notification access is not one of the named "restricted permissions" (SMS, Call Log, All-files, Accessibility, VPN, exact alarms, Health Connect, photos/videos). It is governed by the general **Permissions and APIs that Access Sensitive Information** policy (request only for core features, prominent in-app disclosure) and the **User Data** policy (prominent disclosure + runtime consent before accessing personal/sensitive data the user would not expect; accurate **Data safety** form; secure handling; no selling). | ASSUMPTION (medium; policy centre blocked today — [AV] still blocked on the second pass; the claim is consistent with the reviewer's knowledge of the policy as of mid-2026 but remains unverified, and Google adds restricted permissions without notice: treat as a pre-launch check item, not a settled fact) | Verify at https://support.google.com/googleplay/android-developer/answer/9888170 (Permissions & APIs) and /answer/10144311 (User Data). |
+| Precedent: several Indian PFM apps (e.g. Walnut/axio, later others) moved from SMS parsing to notification parsing after the 2019 SMS/Call-Log crackdown and remain on Play; this is a de-facto tolerated pattern when disclosed. | HYPOTHESIS (medium-low) | Verify by inspecting current Play listings and their Data safety sections. |
+| Italian banks and wallets (Intesa, UniCredit, Fineco, BancoPosta/Postepay, Revolut, N26, Hype, Satispay, Nexi, Amex) send **push notifications** for card payments, Satispay payments, incoming transfers etc.; many banks charge for SMS alerts while push is free. Notification text typically contains amount, merchant/payee and sometimes the card suffix; the format is unstandardised and changes without notice. | ASSUMPTION (high confidence on the behaviour; formats must be sampled) | Verify by collecting real notification samples per bank app (test devices). |
+
+**Assessment:** FEASIBLE WITH CONSENT, **POLICY RISK moderate**, **privacy risk high** (the listener sees *every* notification: WhatsApp, health, OTPs on older OS versions). Mitigations if pursued: Android-only opt-in feature launched *after* MVP; filter by package name on-device and discard everything else immediately; parse on-device; never transmit raw notification text off-device; explicit prominent disclosure screen before the system settings hop; declare in Data safety ("Financial info — collected, not shared"). Value: near-real-time pending transactions and Satispay itemisation on Android, closing the gap PSD2 polling leaves (and the 4× per day access limit without user presence). Decision: **later**, as an instrumented experiment with a kill-switch.
+
+### 4.3 Android SMS reading
+
+| Claim | Status | Source |
+|---|---|---|
+| `READ_SMS` / `RECEIVE_SMS` are dangerous runtime permissions; Google Play's **"Use of SMS and Call Log permission groups"** policy (since Jan 2019) allows them only to the default SMS/Phone/Assistant handler or a short list of core-use-case exceptions (backup/restore, device automation, companion devices, cross-device sync, enterprise archive/CRM, caller-ID/spam, connected vehicles, proxy calls, physical-safety alerts, SMS-based money transfer / account management for "SMS-based financial transactions", write-and-show SMS apps). Expense tracking by parsing bank alert SMS is **not** an accepted exception; apps doing so were rejected/removed in 2019. | ASSUMPTION (medium — well-known policy; exact current wording not verifiable today; [AV] still unverifiable on the second pass, knowledge-consistent) | Verify: https://support.google.com/googleplay/android-developer/answer/10208820 (SMS/Call Log) and the exceptions table. Also "Permissions Declaration Form" in Play Console. |
+| In Italy, bank SMS alerts are typically **paid add-ons** (push is free), so the value is low anyway. | ASSUMPTION (high confidence) | Spot-check bank fee sheets ("servizio SMS alert"). |
+
+**Assessment:** NOT FEASIBLE on Google Play in practice; **never**.
+
+### 4.4 Android Accessibility API (reading other apps' screens)
+
+| Claim | Status | Source |
+|---|---|---|
+| Android docs: "An accessibility service is a specialized tool, not a standard way to make your app accessible … Only build an accessibility service if you are creating a general-purpose assistive tool." | FACT | S-09 (developer.android.com; high). |
+| Google Play policy: the AccessibilityService API must be used to help users with disabilities; non-accessibility uses require the **Accessibility API declaration** in Play Console, `isAccessibilityTool=false`, and prominent disclosure, and must not be used to circumvent other apps' security or collect data from them (Device and Network Abuse / Malicious Behavior). Reading bank-app screens would be treated as scraping. | ASSUMPTION (medium; policy page blocked) | Verify: Play policy "AccessibilityService API" section under Permissions & APIs. |
+
+**Assessment:** NOT FEASIBLE / POLICY RISK extreme; **never**. It would also breach the banks' terms and the spirit of PSD2 (unlicensed access).
+
+### 4.5 Google Play Financial Services policy and declarations
+
+| Claim | Status | Source |
+|---|---|---|
+| Google Play requires a **Financial features declaration** in Play Console for apps that provide or facilitate financial features (banking, personal loans, crypto, trading, cards, etc.). Apps in the Finance category that offer none of these can declare "no financial features" (the form includes that option). The strict **Personal Loans** rules (licence documents, APR disclosure, country-specific requirements) and the 2024–2025 restrictions on loan apps accessing contacts/photos do **not** apply to a budgeting app that offers no products. | ASSUMPTION (medium; [AV] unverifiable on the second pass — the declaration exists and is mandatory for all apps since 2024/2025 to the reviewer's knowledge, but whether an *aggregation* app that relies on a third-party AISP must tick a financial feature and upload the provider's licence evidence is UNKNOWN; it depends on the licensing route of §0.1) | Verify: Play Console → Policy → App content → "Financial features"; policy text at support.google.com/googleplay/android-developer/answer/9876821 (Financial Services). Re-check if Lilleri later adds product referrals (cards, loans, insurance), which may require the declaration and partner licence evidence. |
+| Google Play also requires **account deletion** (in-app + web link) for apps with account creation, and an accurate Data safety form; the User Data policy requires prominent disclosure and consent for notification-access data. | ASSUMPTION (high confidence) | Verify: Play "Data deletion" requirement page. |
+
+### 4.6 Summary (Google/Android)
+
+Nothing on Android gives transaction data officially. Notification access is the only tolerated "grey" channel; SMS and Accessibility are off the table. The Financial features declaration is a form-filling task, not a gate, for a product that holds no funds and offers no credit.
+
+---
+
+## 5. E-mail receipts
+
+### 5.1 Gmail API
+
+| Claim | Status | Source |
+|---|---|---|
+| Gmail scopes are tiered **non-sensitive / sensitive / restricted**. Restricted scopes "grant wide access to user data and necessitate a rigorous restricted scope verification process, which may include a security assessment if data is stored or transmitted on servers". `https://mail.google.com/` (full access) is restricted. | FACT | S-10 (Gmail API scopes page, official, via Context7; verified 2026-10-02). |
+| `gmail.readonly`, `gmail.modify`, `gmail.metadata` (headers only) and `mail.google.com` are all **restricted**; `gmail.labels`, `gmail.send`, `gmail.compose` are sensitive; `gmail.addons.*` are non-sensitive. Reading receipts needs `gmail.readonly` (or `gmail.metadata` for subject/sender only, which is still restricted). | ASSUMPTION (high confidence; scope table not fully returned by the mirror) | Verify on https://developers.google.com/workspace/gmail/api/auth/scopes. |
+| Restricted-scope verification: brand verification, privacy-policy review, demo video, **Limited Use** compliance, and — because Lilleri would store extracted data on servers — an annual **CASA (Cloud Application Security Assessment) Tier 2** by an authorised assessor with a Letter of Assessment; re-assessment yearly. Unverified apps are limited to 100 users and refresh tokens expire after 7 days in testing mode. | ASSUMPTION (medium) | Verify: Google "OAuth App Verification" help centre (support.google.com/cloud/answer/13464321 / 9110914) and App Defense Alliance CASA pages (appdefensealliance.dev/casa). |
+| **Cost and timeline:** Google's older FAQ quoted USD 15,000–75,000 per assessment (2019–2021 era, pre-CASA). Under CASA (2022+), Tier 2 can be done through authorised labs with a scan-based approach; prices reported in the low hundreds to a few thousand USD for Tier 2 scan-based (e.g. ~USD 540 self-scan offers in 2023), and up to tens of thousands for Tier 3 / full pen-test style. Lead time: 4–12 weeks incl. remediation; verification review itself can take weeks. | UNKNOWN (exact) / ASSUMPTION (ranges, low reliability; [AV] appdefensealliance.dev and support.google.com both blocked on the second pass — the "~USD 540 self-scan" figure is a 2023 report and the CASA tiering/assessor rules have been revised since, so **do not budget from it**; the only safe planning number is "a yearly four-figure to low-five-figure line item plus 2–3 months") | Verify: request quotes from 2–3 CASA authorised labs (list on appdefensealliance.dev), and read current Google FAQ text on who needs CASA. |
+| **Limited Use** policy: Gmail data may be used only to provide user-facing features, no ads, no human reading except narrow exceptions, no transfer except for security/legal/with consent; must be reflected in the privacy policy. | ASSUMPTION (high confidence) | Verify: Google API Services User Data Policy. |
+| **[AV] corrected.** Password-based IMAP through "less secure apps" is gone (personal accounts since 2022; Google Workspace from Sept 2024, with the last Google Sync/LSA cut-off in early 2025), and IMAP via OAuth needs the restricted `mail.google.com` scope. **However, consumer Gmail accounts with 2-Step Verification can still create an app password and use it for IMAP**, so IMAP-with-app-password is technically possible without any OAuth scope verification. It is still not a route Lilleri should take: it means custodying a full-mailbox credential (same objection as the Libero/Virgilio row in §5.3), gives no granular scope, and Google can revoke app passwords at any time. The original "IMAP is not a loophole" conclusion stands for *policy* reasons, not because the mechanism is unavailable. | ASSUMPTION (medium — Google account help pages blocked today) | Verify: Google Account Help "Sign in with app passwords" and Workspace admin "Turn off less secure app access" notices. |
+
+### 5.2 Microsoft (Outlook.com / Microsoft 365)
+
+| Claim | Status | Source |
+|---|---|---|
+| Graph delegated **`Mail.Read`** = "Allows the app to read the signed-in user's mailbox." **`Mail.ReadBasic`** = reads mail "except for body, previewBody, attachments and extensions" (insufficient for receipts) and needs no admin consent. **[AV] CONFLICT resolved** by re-reading the official source file on 2026-10-02: the `Mail.Read` entry lists **AdminConsentRequired = No for the delegated permission** (Yes only for the *application* permission "Read mail in all mailboxes"), and the page notes that the delegated `Mail.Read` "is available for consent in personal Microsoft accounts". A tenant admin can still restrict user consent by policy, which is a tenant setting, not a Graph requirement. | FACT (descriptions and admin-consent values) | S-11 (microsoft-graph-docs-contrib `concepts/permissions-reference.md`, raw file re-read 2026-10-02; high). |
+| **Publisher verification** (blue badge): not strictly mandatory, but since November 2020 tenants with risk-based step-up consent enabled block users from consenting to newly registered multi-tenant apps from unverified publishers. Requirements: Microsoft AI Cloud Partner Program (CPP) account, app registered with a work/school Entra account (apps registered with a personal Microsoft account "can't be publisher verified"), verified publisher domain (not *.onmicrosoft.com), MFA; **no charge**. | FACT | S-12 (MicrosoftDocs/entra-docs publisher-verification-overview.md via raw.githubusercontent; high). |
+| Personal outlook.com/hotmail users consent directly (no tenant admin); Microsoft has also tightened consumer-app requirements over 2024–2026 (e.g. basic auth removal Sept 2024). | ASSUMPTION (medium) | Verify on learn.microsoft.com (Outlook basic auth retirement). |
+
+### 5.3 Other mailboxes and the no-OAuth alternative
+
+| Option | Feasibility | Notes | Status |
+|---|---|---|---|
+| **Forward-to-Lilleri inbox** (user forwards or sets a Gmail/Outlook filter to auto-forward receipts to `receipts-<token>@in.lilleri.app`, handled by an inbound-parse service) | FEASIBLE, no restricted scopes, no CASA | Inbound mail: Postmark/SendGrid/Mailgun inbound routes or AWS SES receiving; cost ≈ USD 0.10 per 1,000 inbound e-mails (SES) to a few USD per month on hosted plans (ASSUMPTION). Lilleri sees only what the user forwards → strong data-minimisation story. Gmail auto-forwarding to an external address requires the user to verify the destination address (one-time). | ASSUMPTION (medium) — verify provider pricing pages |
+| **iCloud Mail / Libero / Virgilio / Aruba via IMAP + app-specific password** | FEASIBLE technically | Poor UX (app passwords), full-mailbox credential custody — high privacy risk; Italian legacy providers (Libero, Virgilio) are still common among 45+. | ASSUMPTION |
+| **Vendors**: Nylas (unified e-mail API; hosted auth), Unipile, EmailEngine (self-hosted), Mailparser/Parseur (rule-based parsing), Zapier Email Parser | FEASIBLE WITH COST | Prices UNKNOWN today (sites blocked). Historically: Nylas free tier for a handful of accounts then per-connected-account monthly fees; Mailparser from ~USD 40/month; Parseur similar. **Vendors do not remove the Google restricted-scope obligation**: production use of Gmail restricted scopes under Lilleri's own OAuth client still needs Lilleri's own verification + CASA (Nylas' own CASA covers Nylas' client only; whether a customer may ship on Nylas' client in production is UNKNOWN — ask Nylas). | UNKNOWN — request quotes |
+
+### 5.4 Privacy / GDPR considerations (e-mail)
+
+- Legal basis: explicit **consent** (Art. 6(1)(a) GDPR) per mailbox, revocable in-app; purpose limited to receipt/invoice extraction.
+- A **DPIA** is very likely required (systematic processing of financial data at scale with innovative technology — EDPB criteria). Document data minimisation: server-side filters by sender/subject/attachments, immediate discard of non-receipt messages, no storage of raw bodies beyond processing, short retention of attachments.
+- Google **Limited Use** and Apple **5.1.2(i)** both require disclosure of any third-party AI processing of mailbox content; prefer EU-hosted models and signed DPAs.
+- Mailboxes contain third parties' personal data (senders) — transparency obligations are satisfied through the privacy policy; avoid building sender profiles.
+
+### 5.5 Assessment (e-mail)
+
+- Gmail OAuth: FEASIBLE WITH CONSENT+COST, **later** (after the product proves receipt itemisation is valued); budget the CASA line item and 2–3 months of verification lead time.
+- Forward-to-inbox: FEASIBLE, cheap, privacy-friendly; a sensible **MVP-lite** way to test demand (Amazon, Ryanair/Trenitalia, utilities' PDF bills, Apple/Google receipts).
+- Value: medium — e-mail receipts matter for *itemisation* (Amazon, bills), not for the core "what happens to my money" promise, which bank data already answers.
+
+---
+
+## 6. Receipt OCR
+
+### 6.1 Vendors and prices
+
+| Vendor / model | What it returns | Italian support | Price (list) | Status / how to verify |
+|---|---|---|---|---|
+| **Google Document AI — Expense Parser** | Receipt fields (supplier, date, total, tax, line items) | Supported languages include German, English, Spanish, French, Japanese, Dutch; "specific versions introduce additional language support like **Italian** and Portuguese" | **FACT [AV] (pricing page fetched in full 2026-10-02):** "Expense parser (formerly receipt parser)" **USD 0.10 per page** (list; USD 0.09 / 0.08 only under 1- or 3-year Gemini Enterprise Flexible Savings Plans — there is **no volume tier above 1M pages** for this processor; the USD 30→20 per 1,000 volume tier applies to Custom extractor / Form parser). **Enterprise Document OCR:** first 1,000 pages/month free, **USD 1.50 per 1,000 pages** from 1,000 to 5M, USD 0.60 per 1,000 above 5M. | S-18 (processors list via Context7, official; medium-high); S-26 (pricing page, official, fetched; high). |
+| **Azure AI Document Intelligence — prebuilt receipt** (v4.0) | MerchantName/Phone, TransactionDate/Time, Subtotal, Tax, Tip, Total, Items (description, qty, price, total); v4.0 adds ReceiptType, TaxDetails (NetAmount, Description, Rate), CountryRegion and **VAT table extraction**. Limits: JPEG/PNG/PDF/TIFF ≤ 50 MB, ≤ 2,000 pages (2 on free tier F0), 50×50 to 10,000×10,000 px. | **FACT [AV] (official source file read 2026-10-02):** `prebuilt-receipt` (v3.0+) lists **Italian (`it`)** among ~100 languages for *thermal receipts* and **`it-IT`** among the seven locales for *hotel receipts*; the older v2.1 model supported English locales only. | UNKNOWN today; ASSUMPTION ≈ USD 10 per 1,000 pages (S0), F0 free 500 pages/month ([AV] pricing host still blocked; figure knowledge-consistent) | S-19 (azure-ai-docs receipt.md via raw.githubusercontent; high for fields); S-27 (azure-ai-docs `language-support/prebuilt.md`, raw file; high). Verify pricing at azure.microsoft.com/pricing/details/ai-document-intelligence/ |
+| **AWS Textract — AnalyzeExpense** | Summary fields (vendor name, receipt number, date, total …) and line items (item, quantity, price, EXPENSE_ROW), with ExpenseGroupProperties for addresses/names | Not stated in the fetched page | **[AV] corrected (order of magnitude):** AnalyzeExpense is priced at **≈ USD 0.01 per page** (USD 10 per 1,000 pages for the first 1M pages/month, ≈ USD 0.008 above; EU regions at or slightly above US rates) — the original "≈ USD 0.10/page" was 10× too high and matched Google's parser, not AWS's. Still ASSUMPTION (reviewer's knowledge; pricing host blocked both passes). | S-20 (awsdocs developer guide mirror on GitHub — repository archived in 2023, content may be stale; medium). Verify at aws.amazon.com/textract/pricing |
+| **Veryfi, Taggun, Mindee (Receipt OCR)** | Structured receipt JSON incl. line items; Veryfi/Taggun advertise fast turnaround and multi-language | Veryfi/Mindee advertise multi-language incl. Italian (ASSUMPTION) | UNKNOWN (all three sites blocked). Mindee historically had a free tier (~100 pages/month) and per-page pricing; Taggun pay-as-you-go cents per receipt; Veryfi quote-based tiers | UNKNOWN — request quotes; check sandbox terms |
+| **Mistral OCR** | Markdown/text OCR with layout; optional "annotation" (structured JSON) add-on; no receipt schema | Multilingual | **[AV] corrected:** the LiteLLM registry *does* carry Mistral OCR entries (`mistral/mistral-ocr-latest` = `mistral-ocr-4-1`: **USD 0.004 per page** sync / 0.002 batch; `mistral-ocr-2512`: USD 0.002 / 0.001; annotation add-on USD 0.005 / 0.0025 per page) — i.e. **USD 2–4 per 1,000 pages**, not 1. Registry values (medium); vendor page blocked. | S-22 (LiteLLM registry re-read 2026-10-02). Verify at mistral.ai/pricing |
+| **LLM vision — Anthropic** | Free-form extraction to Lilleri's own JSON schema (structured outputs) | Yes (multilingual) | Claude Haiku 4.5 USD 1 / 5 per MTok (in/out); Claude Sonnet 5.5 USD 2 / 10; Claude Opus 5.5 USD 4 / 20 (first-party API rates, cached 2026-09-25) | S-21 (bundled `claude-api` skill price table; high). [AV] re-checked against the same first-party cache (dated 2026-09-25) on the second pass: Haiku 4.5 USD 1/5, Sonnet 5.5 USD 2/10, Opus 5.5 USD 4/20 confirmed; the LiteLLM registry carries identical values. Image tokens ≈ (width × height) / 750 → a 1,024×1,365 receipt photo ≈ 1,860 tokens (ASSUMPTION, medium; verify on docs.anthropic.com vision page) |
+| **LLM vision — OpenAI** | Same | Yes | gpt-5-mini USD 0.25 / 2.00 per MTok; gpt-5-nano 0.05 / 0.40; gpt-4.1-mini 0.40 / 1.60; gpt-5.4-mini 0.75 / 4.50 (registry values) | S-22 (LiteLLM price registry, community-maintained; medium). [AV] registry re-read 2026-10-02: values transcribed correctly; gpt-5-mini / gpt-5-nano / gpt-4.1-mini match OpenAI's published list prices as known to the reviewer (the registry also lists gpt-5.4-nano at 0.20 / 1.25 and newer gpt-5.5/5.6 families not assessed here). Image token accounting is patch/tile-based with model multipliers (ASSUMPTION). Verify at platform.openai.com/docs/pricing |
+| **LLM vision — Google Gemini** | Same | Yes | gemini-2.5-flash USD 0.30 / 2.50 per MTok; gemini-2.5-flash-lite 0.10 / 0.40; gemini-3.1-flash-lite 0.25 / 1.50 (registry values) | S-22 (medium). [AV] registry re-read 2026-10-02: values transcribed correctly; gemini-2.5-flash and -flash-lite match Google's published list prices as known to the reviewer; the registry also lists gemini-3-flash-preview at 0.50 / 3.00 and 3.5/3.6/3.7/3.8-flash entries not assessed here. Images ≈ 258 tokens per 768-px tile (ASSUMPTION). Verify at ai.google.dev/gemini-api/docs/pricing |
+
+**Per-receipt cost estimate (ASSUMPTION, order of magnitude, 1.4 MP photo + ~300 output tokens):** Gemini Flash-Lite ≈ USD 0.0003; gpt-5-mini ≈ USD 0.001; Mistral OCR ≈ USD 0.002–0.004 (+0.005 with annotation); Claude Haiku 4.5 ≈ USD 0.0035; Claude Sonnet 5.5 ≈ USD 0.007; specialised parsers ≈ USD 0.01 (Azure, AWS — [AV] corrected) to 0.10 (Google Expense Parser — FACT). At 5 receipts per active user per month, even the most expensive path is < USD 0.50/user/month; at Haiku-class pricing it is < USD 0.02. Cost is therefore **not** the deciding factor; accuracy on Italian thermal receipts and privacy posture (EU hosting, DPA, Apple 5.1.2(i) disclosure) are.
+
+### 6.2 Italian "scontrino" specifics
+
+| Claim | Status | Source / how to verify |
+|---|---|---|
+| Since 1 Jan 2020 Italian retailers issue the **documento commerciale** (electronic receipt) from a *registratore telematico* (RT) that transmits daily totals to Agenzia delle Entrate. The printed document shows: seller name/address/P.IVA, date/time, line items with VAT rate code, "TOTALE COMPLESSIVO", payment split (contante / elettronico), "Resto", a progressive document number and the RT serial. Layouts vary by RT vendor; there is **no standard machine-readable barcode** on the receipt itself. | ASSUMPTION (high confidence on the regime; medium on layout details) | agenziaentrate.gov.it blocked today. Verify: ADE "Scontrino elettronico" pages and the RT technical specifications ("Specifiche tecniche RT"). |
+| **Lotteria degli scontrini** (from Feb 2021): the customer shows a personal **codice lotteria** (obtained on lotteriadegliscontrini.gov.it) at checkout; electronic payments only; the code is printed on the receipt; participating receipts are transmitted by the RT. A QR code on receipts was foreseen for an "instant lottery" variant; implementation status as of 2026 is UNKNOWN. | ASSUMPTION (medium) / UNKNOWN (QR status) | Verify: lotteriadegliscontrini.gov.it "Come funziona" and the latest ADE provvedimenti. Also check whether the customer's reserved area exposes a list/export of participating receipts (would be a free, structured itemisation source for opted-in users — HYPOTHESIS). |
+| Consumer **e-invoices (fattura elettronica B2C)** are made available in the consumer's reserved area on ADE's portal (SPID/CIE login); there is no third-party API. | ASSUMPTION (medium) | Verify on ADE "Fatture e corrispettivi" consumer section. |
+| Accuracy: generic receipt parsers report ~90–95% field-level accuracy on clean receipts in vendor marketing; thermal paper, folds, Italian decimal commas, "IVA" codes and mixed-case uppercase printing degrade line-item accuracy. Independent Italian benchmarks: none found. | HYPOTHESIS | Build a 200-receipt labelled Italian test set (supermarkets, bars, pharmacies, fuel) and benchmark 2 LLMs + 1 specialised parser before choosing. |
+
+### 6.3 Assessment (OCR)
+
+- Feasibility: FEASIBLE; privacy risk medium (photos may include other data; third-party AI disclosure); value medium (cash spending capture, itemisation of supermarket spend, receipts-to-transaction matching by amount/date/time ± minutes).
+- Recommendation: **MVP-lite** — optional photo capture that attaches a receipt to an existing transaction (match by amount ± €0.01, date, and merchant if possible); run extraction with an EU-hosted LLM under a DPA; no OCR dependency in the core flow.
+
+---
+
+## 7. File imports (statements and exports)
+
+### 7.1 Italian bank/wallet export formats
+
+All rows below are **ASSUMPTION** (prior knowledge; bank sites blocked today). How to verify: log into each provider's web/app with a real account, open "Movimenti/Lista movimenti", and record the export options; collect one anonymised sample per format for the parser test suite.
+
+| Institution | Export options believed available to consumers | Notes / confidence |
+|---|---|---|
+| Intesa Sanpaolo (web + app) | PDF, Excel (XLS/XLSX); CSV possibly | Medium. Column names Italian ("Data", "Operazione", "Dettagli", "Conto o carta", "Contabilizzazione", "Categoria", "Valuta", "Importo"). |
+| UniCredit (web) | Excel, CSV, PDF | Medium. Historically also offered Quicken/Money formats — UNKNOWN today. |
+| Fineco (web) | Excel (XLS), PDF | Medium-high. Fineco card accounts also exposed via PSD2 at some providers (see sibling note). |
+| BancoPosta / Postepay (web/app) | PDF; Excel/CSV via web "Lista movimenti" | Low-medium. |
+| Revolut (app) | PDF statement; **Excel/CSV export** per account and period | High (well-known feature). |
+| N26 (web app) | **CSV** download ("Download CSV") with English headers; PDF statements | High. |
+| Hype (app) | PDF estratto conto; CSV export UNKNOWN | Low. |
+| American Express Italia (web) | Excel/CSV download of transactions; PDF statements; QIF/OFX UNKNOWN for the IT site (US site offers CSV/QFX/QBO/OFX) | Medium. |
+| Nexi (app/portal) | Excel/PDF export of card movements | Medium. |
+| PayPal (web) | CSV activity download, PDF statements | High. |
+| Satispay (app) | UNKNOWN | — |
+| Trade Republic / Degiro / Directa | See section 8 | — |
+
+### 7.2 Standard formats
+
+| Format | Availability to Italian consumers | Status |
+|---|---|---|
+| **OFX / QFX / QIF** | Essentially **not offered** by Italian retail banks (US/UK-centric; Amex IT unknown). | ASSUMPTION (high confidence) |
+| **MT940 / CAMT.052/053/054** | Offered to **business/corporate** customers (remote banking, CBI "RH"/"RI" flows); not to retail. CAMT.053 is the ISO 20022 statement used in corporate channels and by some EU neobanks for business accounts. | ASSUMPTION (high confidence) |
+| **CBI standard** (Corporate Banking Interbancario, fixed-length records) | Corporate only; CBI Globe (PSD2) is a different thing. | ASSUMPTION (high) |
+| **PDF statements** | Universal; parsing needs per-bank templates (LLM-assisted parsing is viable but must be validated for totals reconciliation). | ASSUMPTION |
+
+### 7.3 Assessment (file imports)
+
+- Feasibility: FEASIBLE; cost = engineering per template + ongoing template drift; privacy risk low (user-initiated; files processed server-side or on-device).
+- Value: **high** as (a) history backfill beyond the ~90 days of history most banks return at first consent ([AV] this is the RTS art. 10 SCA-exemption window and bank practice, not a PSD2 cap — consent itself is valid 180 days, §0.1), (b) fallback when a bank's PSD2 API is flaky, (c) onboarding users whose institution is not covered (Satispay, Amex, brokers). Competitors' lesson (sibling notes): CSV import/export on every tier is a trust feature.
+- Recommendation: MVP — generic CSV/XLSX importer with column-mapping UI + pre-built mappings for Intesa, UniCredit, Fineco, Revolut, N26, PayPal; PDF-statement parsing later; OFX/QIF as a cheap bonus for the few Amex/foreign users. Deduplicate imports against PSD2-sourced transactions by (date, amount, normalised description) with a tolerance window.
+
+---
+
+## 8. Investments and crypto
+
+| Source | Official API for third parties? | Export | Status / source |
+|---|---|---|---|
+| **Moneyfarm** | No public API known; periodic PDF/online reports | PDF | ASSUMPTION (high confidence). Verify at moneyfarm.com/it/help. Not a payment account → outside PSD2 scope. |
+| **Directa** | Yes — Directa offers a documented **Trading API** for its clients (portfolio, orders, historical data; socket/HTTP). Read-only portfolio use is possible with client credentials; terms/cost UNKNOWN. | CSV from the platform (ASSUMPTION) | ASSUMPTION (medium). DNS for app.directa.it failed today; verify on directa.it ("API"). |
+| **Fineco** | No public API; brokerage positions only via web/app; current and card accounts via PSD2 | Excel/PDF | ASSUMPTION (high). |
+| **Trade Republic** | **No official API**; `pytr` is an unofficial client of the private API (not affiliated), exporting a transactions CSV and all PDF documents. Using it would violate TR's terms and is operationally fragile. TR holds a German banking licence, so its **cash account** may be reachable via PSD2 AIS (UNKNOWN which aggregators list it). | CSV (unofficial), PDF | FACT (pytr) via S-23; TR PSD2 coverage UNKNOWN — ask providers. |
+| **Degiro** | No official API (unofficial libraries exist); consumer **CSV export** of "Transactions" and "Account statement" is available in the web app | CSV | ASSUMPTION (high confidence; widely documented). Verify in Degiro web → Activity → Export. |
+| **Binance** | Yes — user-generated API keys with **read-only** permission (account info, trade history) | CSV export too | ASSUMPTION (high confidence; docs blocked today). Verify at developers.binance.com. |
+| **Coinbase** | "Sign in with Coinbase" OAuth2 (scopes like `wallet:accounts:read`, `wallet:transactions:read`) historically available; current status under CDP docs UNKNOWN | CSV statements | UNKNOWN — verify at docs.cdp.coinbase.com. |
+| **Kraken** | API keys with query-only permissions | CSV | ASSUMPTION (high). |
+
+**Assessment.** Out of MVP scope; the core promise is about money *flows* (bank, card, PayPal, Satispay), and investments add net-worth value later. When added: prefer (1) manual balances, (2) CSV imports (Degiro, TR via official PDF/CSV when available, Directa), (3) read-only exchange keys stored in a KMS with least-privilege and withdrawal-disabled keys, (4) explicit disclosure that Lilleri never trades. Never ship reverse-engineered private APIs.
+
+---
+
+## 9. BNPL (Klarna, Scalapay, PayPal Pay in 3)
+
+| Claim | Status |
+|---|---|
+| Klarna and Scalapay expose **merchant** APIs only; there is no consumer-facing API for third parties to read a shopper's instalment plans (Klarna's consumer app has no public API). | ASSUMPTION (high confidence; docs blocked today). Verify at docs.klarna.com and developers.scalapay.com. |
+| Instalments are visible **only** on the funding instrument: card/SEPA lines "KLARNA", "SCALAPAY", or PayPal activity ("Pay in 3") → bank/card statement. Each instalment appears as a separate debit; the original purchase amount and merchant are not on the bank line (Scalapay/Klarna lines usually carry only the BNPL brand). | ASSUMPTION (high confidence). |
+| Detection HYPOTHESIS: identical amounts, 30-day cadence (or 2-week), 3–4 occurrences, BNPL brand in descriptor → "instalment plan" entity with projected remaining payments; user confirms merchant once in the review inbox. | HYPOTHESIS — validate on real data. |
+
+**Assessment:** FEASIBLE from bank data in MVP (pattern detection), high value for the subscription/recurring module; no direct integration possible or needed.
+
+---
+
+## 10. Amazon order history
+
+| Claim | Status / how to verify |
+|---|---|
+| Amazon retired the self-service **Order History Reports** (CSV) feature in the US in March 2023; it was never offered on amazon.it. | ASSUMPTION (medium; widely reported). |
+| EU/IT customers can request a copy of their personal data ("Richiedi i tuoi dati" / Privacy Central) under GDPR; the archive (delivered within days to weeks) includes order history files. Not suitable for routine sync. | ASSUMPTION (medium). Verify on amazon.it help "Richiedi i tuoi dati". |
+| No consumer API; browser-extension scraping violates Amazon's Conditions of Use and is a POLICY RISK. | ASSUMPTION (high). |
+| Practical path: order-confirmation / shipment e-mails (section 5) and bank descriptors ("AMZN Mktp IT", "Amazon.it", "AMZN Digital"). | HYPOTHESIS. |
+
+**Assessment:** Later; value medium (itemising "Amazon" into categories). Delivered through the e-mail channel rather than a dedicated Amazon integration.
+
+---
+
+## 11. Utilities and telco (Enel, TIM and peers)
+
+| Claim | Status |
+|---|---|
+| Enel Energia, Eni Plenitude, A2A, TIM, Vodafone, WindTre, Iliad, Fastweb: no consumer APIs for third parties; bills as PDF in web/app and by e-mail; payments via SEPA direct debit (SDD), bollettino/pagoPA, card. | ASSUMPTION (high confidence). |
+| Bank SDD lines contain creditor name, creditor identifier and mandate reference → reliable recurring-bill detection and amount forecasting from bank data alone; e-mailed PDF bills (section 5) add consumption details. | ASSUMPTION (high) / HYPOTHESIS (forecasting quality). |
+| Italy's **Portale Consumi** (ARERA / Acquirente Unico) exposes energy consumption to the customer via SPID; no third-party API. **pagoPA/IO app** keeps receipts of public payments; no third-party API. | ASSUMPTION (medium). |
+
+**Assessment:** MVP via bank-side recurring detection (SDD creditor id is the key); e-mail PDFs later.
+
+---
+
+## 12. Other sources considered
+
+| Source | Verdict | Notes |
+|---|---|---|
+| **Screen scraping / storing bank credentials** | NOT FEASIBLE — never | Unlicensed access to payment accounts is outside PSD2 (RTS on SCA/CSC permit fallback access only to licensed TPPs), breaches bank T&Cs, and is a catastrophic security/PR risk. |
+| **iOS: reading other apps' notifications, SMS, Wallet** | NOT FEASIBLE | No APIs exist (sections 3, 4). |
+| **Share-sheet / "Open in Lilleri"** (iOS share extension, Android share target) for PDFs, CSVs, receipt images, e-mails | FEASIBLE, cheap | Good MVP companion to file import and receipt OCR; zero policy risk. |
+| **Camera / Photos** | FEASIBLE | Use the out-of-process picker (Apple 5.1.1(iii) explicitly prefers picker/share sheet over full Photos access). |
+| **Location** | Later, optional | Useful for merchant enrichment and receipt↔transaction matching; adds a sensitive-data category; not needed in MVP. |
+| **Apple Wallet passes / Google Wallet passes (loyalty cards)** | Low value | Issuer-side APIs only; no spend data. |
+| **Government portals (ADE e-invoices, lottery receipts, IO app receipts, Portale Consumi)** | NOT FEASIBLE for automation | SPID-gated, no third-party API; manual export at best (HYPOTHESIS for lottery receipts list). |
+| **Apple Card statements (CSV/OFX/QFX)** | n/a in Italy | Apple Card is US-only. |
+| **Browser extension (web banking enrichment)** | NOT RECOMMENDED | Same legal problems as scraping. |
+| **Payslips (cedolino) via e-mail/PDF** | Later | Income detection is already possible from bank credits ("STIPENDIO"/"EMOLUMENTI"). |
+
+---
+
+## 13. Recommendations: MVP vs later
+
+**MVP (zero-setup promise, Italy):**
+1. PSD2 AIS through a licensed provider — require **PayPal** coverage and ask for **Satispay** and **Trade Republic cash account** coverage in the RFP. [AV] The RFP must also settle *which* licensing route is on offer (data-recipient vs. registered agent, §0.1) and obtain counsel's view on its acceptability in Italy before signature.
+2. **File import** (CSV/XLSX) with mappings for Intesa, UniCredit, Fineco, Revolut, N26, PayPal; share-sheet entry point; de-duplication against API data.
+3. **Bank-side detection** of Satispay top-ups, BNPL instalments, SDD bills, salary — no integrations needed.
+4. Compliance plumbing that the stores require anyway: consent-first onboarding, account deletion, privacy labels/Data safety, explicit **third-party AI disclosure** (Apple 5.1.2(i)), no ATT prompt, IAP for subscriptions, Play Financial features declaration ("no financial features").
+
+**Later (sequenced by evidence of demand):**
+5. **Forward-to-inbox** receipts (cheap test of e-mail demand) → then Gmail OAuth with CASA if demand is proven (budget: assessment fee UNKNOWN, 2–3 months lead time).
+6. **Receipt photo → line items** with an EU-hosted LLM, benchmarked on an Italian receipt set.
+7. **Android notification access** experiment (opt-in, on-device parsing, kill-switch) for instant pending transactions and Satispay itemisation.
+8. Investments/crypto: manual balances → CSV (Degiro/Directa/TR) → read-only exchange keys.
+9. Watch list: FinanceKit EU expansion; Android notification-listener policy changes; Satispay PSD2 TPP availability; lotteria/receipt QR evolution.
+
+### Open questions (with verification path)
+
+| # | Question | How to verify |
+|---|---|---|
+| Q1 | Which shortlisted AIS providers list PayPal (PPLXLULL) for Italian users, with what history and consent model? | Provider institution lists / sandbox `aspsps?country=IT`; written confirmation in RFP. |
+| Q2 | Is Satispay reachable via any AIS provider or via its own PSD2 TPP portal? Does the consumer app offer CSV/PDF export? | Ask providers; developers.satispay.com; in-app check. |
+| Q3 | Exact current Google Play policy wording for NotificationListenerService use by finance apps, and any 2025–2026 changes. | support.google.com/googleplay/android-developer (Permissions & APIs; User Data). |
+| Q4 | Current CASA Tier 2 cost and timeline for Gmail restricted scopes; whether Nylas/others can shield Lilleri from its own verification. | Quotes from CASA labs; Nylas sales. |
+| Q5 | List prices for Document AI Expense Parser, Azure receipt, Textract AnalyzeExpense, Veryfi, Taggun, Mindee in EU regions. | Vendor pricing pages (blocked today). |
+| Q6 | Does the lotteria degli scontrini reserved area let a consumer export participating receipts? Is the instant-lottery QR live? | lotteriadegliscontrini.gov.it; ADE provvedimenti. |
+| Q7 | Real export options per Italian bank (section 7.1) and sample files. | Manual collection with real accounts. |
+| Q8 | Has Apple announced FinanceKit for any EU market? | apple.com/newsroom; developer.apple.com/financekit quarterly check. |
+| Q9 | ~~Admin-consent status of delegated `Mail.Read`~~ — **RESOLVED [AV] 2026-10-02:** delegated `Mail.Read` does not require admin consent and is consentable on personal Microsoft accounts (official source file, S-11). | — |
+| Q10 | Trade Republic / Directa / Degiro official export and API terms. | Vendor help centres. |
+| Q11 | [AV] Which licensing route (data-recipient under the provider's AISP licence vs. registered agent) each shortlisted provider offers to an Italian B2C startup, and whether Banca d'Italia accepts route A for a consumer PFM. | Provider compliance teams; regulatory counsel; Banca d'Italia FAQ "Istituti di pagamento"; see sibling `open-banking-providers-a.md` §2.6 / `-b.md` §15. |
+| Q12 | [AV] Has the PSR/PSD3 package been published in the OJ, and what is its date of application? Has FIDA been adopted? | eur-lex.europa.eu; OEIL 2023/0209(COD) and 2023/0205(COD). Until confirmed, design for PSD2 as in force. |
+
+---
+
+## Sources
+
+| ID | Source | URL | Verified | Published | Reliability | Notes / doubts |
+|---|---|---|---|---|---|---|
+| S-01 | Apple — FinanceKit overview page (data, regions, entitlement criteria) | https://developer.apple.com/financekit/ | 2026-10-02 | n/d | high (official) | US (iOS 17.4+) and UK (iOS 18.4+) only; criteria quoted in §3.2 |
+| S-02 | Apple — FinanceKit framework documentation (JSON endpoint of docs) | https://developer.apple.com/documentation/financekit (fetched via /tutorials/data/documentation/financekit.json) | 2026-10-02 | n/d | high | Managed entitlement; iOS 17.0+; `NSFinancialDataUsageDescription` |
+| S-03 | Apple — FinanceStore API reference | https://developer.apple.com/documentation/financekit/financestore (JSON) | 2026-10-02 | n/d | high | Accounts/balances/transactions/history/background delivery |
+| S-04 | Apple — App Store Review Guidelines (3.1.1, 3.2.1(viii), 5.1.1, 5.1.2, 5.1.3) | https://developer.apple.com/app-store/review/guidelines/ | 2026-10-02 (×2: original + [AV] re-fetch) | "Last Updated: June 8, 2026" (footer; [AV] correction to "no visible date") | high | Includes "including with third-party AI" wording in 5.1.2(i) and the 5.1.1(v) in-app account-deletion rule |
+| S-05 | Apple — PassKit (Apple Pay and Wallet) framework docs | https://developer.apple.com/documentation/passkit (JSON) | 2026-10-02 | n/d | high | No transaction-history API |
+| S-06 | Apple — App Tracking Transparency framework docs | https://developer.apple.com/documentation/apptrackingtransparency (JSON) | 2026-10-02 | n/d | high | |
+| S-07 | Apple — App Privacy Details | https://developer.apple.com/app-store/app-privacy-details/ | 2026-10-02 | n/d | high | Financial Info definitions, tracking definition |
+| S-08 | Android — NotificationListenerService reference | https://developer.android.com/reference/android/service/notification/NotificationListenerService | 2026-10-02 | n/d | high | User-granted special access |
+| S-09 | Android — AccessibilityService guide | https://developer.android.com/guide/topics/ui/accessibility/service | 2026-10-02 | n/d | high | "Only build an accessibility service if you are creating a general-purpose assistive tool" |
+| S-09b | Android — Permissions overview | https://developer.android.com/guide/topics/permissions/overview | 2026-10-02 | n/d | high | Permission categories only |
+| S-10 | Google — Gmail API scopes (sensitivity tiers, restricted scope verification) | https://developers.google.com/workspace/gmail/api/auth/scopes (via Context7 mirror) | 2026-10-02 | n/d | medium-high (official via mirror) | Full scope table not returned by mirror |
+| S-11 | Microsoft — Graph permissions reference (Mail.Read, Mail.ReadBasic) | https://learn.microsoft.com/graph/permissions-reference (fetched from github.com/microsoftgraph/microsoft-graph-docs-contrib) | 2026-10-02 (×2: original + [AV] raw-file re-read) | n/d | high (official source file) | [AV] CONFLICT resolved: delegated Mail.Read `AdminConsentRequired = No`; application Mail.Read = Yes |
+| S-12 | Microsoft — Publisher verification overview | https://learn.microsoft.com/entra/identity-platform/publisher-verification-overview (fetched from github.com/MicrosoftDocs/entra-docs) | 2026-10-02 | n/d | high | Nov 2020 consent restriction; CPP account; no charge |
+| S-13 | PayPal — Server SDK (.NET) Transaction Search controller docs | https://github.com/paypal/paypal-dotnet-server-sdk/blob/main/doc/controllers/transaction-search.md (via Context7) | 2026-10-02 | n/d | medium-high (official) | OAuth2 client credentials; 3-year history; ≤3h delay |
+| S-14 | PayPal — REST docs, Payments v1→v2 migration (Transaction Search as List Payments replacement) | https://developer.paypal.com/api/rest/integration/payments-api/v1-v2-migration (via Context7) | 2026-10-02 | 2025+ | medium-high | Merchant context |
+| S-15 | frieser/openbanking-cli README (cached Nordigen/GoCardless institution table incl. PAYPAL_PPLXLULL, 90 days, IT) | https://github.com/frieser/openbanking-cli | 2026-10-02 | n/d (cache date unknown) | medium (third-party cache of official list) | Re-verify with live provider lists |
+| S-16 | Other repositories caching the same institution id (mateitudose/payfren; Edscon/Finovara; emmanz1995/banking-prediction-ui with logo URL cdn-logos.gocardless.com/ais/PAYPAL_PPLXLULL.png) | GitHub code search "PAYPAL_PPLXLULL" | 2026-10-02 | n/d | medium | Corroboration only |
+| S-17 | paytience/FindAPIs — finance API list entry "Satispay Online API" | https://github.com/paytience/FindAPIs (categories/finance.md) | 2026-10-02 | n/d | low | Merchant API only |
+| S-18 | Google Cloud — Document AI processors list (Expense Parser languages) | https://cloud.google.com/document-ai/docs/processors-list (via Context7 mirror; direct URL redirected to docs.cloud.google.com which is blocked) | 2026-10-02 | n/d | medium-high | Italian "in specific versions" |
+| S-19 | Microsoft — Azure AI Document Intelligence prebuilt receipt model | https://learn.microsoft.com/azure/ai-services/document-intelligence/prebuilt/receipt (fetched from github.com/MicrosoftDocs/azure-ai-docs) | 2026-10-02 | n/d | high | Fields, limits, F0 tier; language list not in excerpt |
+| S-20 | AWS — Textract developer guide, expense documents (GitHub mirror, archived) | https://github.com/awsdocs/amazon-textract-developer-guide/blob/master/doc_source/expensedocuments.md | 2026-10-02 | ≤2023 (repo archived) | medium | May be stale |
+| S-21 | Anthropic model price table (bundled `claude-api` skill, cached 2026-09-25) | docs.anthropic.com pricing (not fetched; skill cache) | 2026-10-02 | 2026-09-25 | high (first-party cache) | Image-token formula from prior knowledge |
+| S-22 | LiteLLM `model_prices_and_context_window.json` (OpenAI/Gemini per-token prices) | https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json | 2026-10-02 | rolling | medium (community-maintained) | Cross-check vendor pages before budgeting |
+| S-23 | pytr — unofficial Trade Republic API client README | https://github.com/pytr-org/pytr | 2026-10-02 | rolling | medium | "not affiliated with Trade Republic"; CSV + PDF export |
+| S-24 | Sibling raw note: `open-banking-providers-b.md` (CBI Globe, Enable Banking, GoCardless BAD closure, Italian ASPSP coverage gaps) | /home/user/Lilleri/docs/research/raw/open-banking-providers-b.md | 2026-10-02 | 2026-10-02 | internal | Used for cross-reference only |
+| S-25 | Sibling raw note: `competitors-us.md` (PayPal duplicate issues in US aggregators; CSV import/export lessons) | /home/user/Lilleri/docs/research/raw/competitors-us.md | 2026-10-02 | 2026-10-02 | internal | |
+| S-26 | Google Cloud — Document AI pricing page (full page fetched by the [AV] pass; "Pretrained processor charges" table) | https://cloud.google.com/document-ai/pricing | 2026-10-02 | n/d (live page) | high (official) | Expense parser USD 0.10/page; Enterprise Document OCR USD 1.50 per 1,000 (first 1,000/month free; USD 0.60 per 1,000 above 5M) |
+| S-27 | Microsoft — Azure AI Document Intelligence "Language support: prebuilt models" (source file) | https://learn.microsoft.com/azure/ai-services/document-intelligence/language-support/prebuilt (fetched from raw.githubusercontent.com/MicrosoftDocs/azure-ai-docs/main/articles/ai-services/document-intelligence/language-support/prebuilt.md) | 2026-10-02 | n/d | high (official source file) | Receipt v3.0+: Italian `it` (thermal), `it-IT` (hotel) |
+| S-28 | Apple — FinanceKit overview page, second independent fetch by the [AV] pass | https://developer.apple.com/financekit/ | 2026-10-02 | n/d | high | Same text as S-01: US iOS 17.4+, UK iOS 18.4+, no other region |
+| S-29 | Android — "Android 15 behaviour changes" and "Android 15 features and APIs" pages (fetched to test the OTP-redaction claim) | https://developer.android.com/about/versions/15/behavior-changes-15 ; https://developer.android.com/about/versions/15/features | 2026-10-02 | n/d | high (official) | Neither page mentions OTP redaction / sensitive notifications → claim stays ASSUMPTION |
+| S-30 | Sibling raw note: `open-banking-providers-a.md` §2.1–2.2 (PSD2/RTS, 180-day renewal, PSD3/PSR timeline) and §2.6 (licensing routes: Tink agents, TrueLayer agents, Yapily Connect, Salt Edge Partner Program, Fabrick Pass) | /home/user/Lilleri/docs/research/raw/open-banking-providers-a.md | 2026-10-02 | 2026-10-02 | internal (cites official/legal-press sources) | Used for §0.1 |
+| S-31 | Bundled `claude-api` skill — "Current Models" price table (first-party cache dated 2026-09-25), re-read by the [AV] pass | skill cache (docs.anthropic.com pricing not fetched) | 2026-10-02 | 2026-09-25 | high (first-party cache) | Confirms the S-21 figures |
+| — | Blocked today (to re-verify): Google Play policy centre; support.google.com OAuth verification; appdefensealliance.dev CASA; developer.paypal.com; developers.satispay.com; docs.tink.com; docs.yapily.com; docs.saltedge.com; developer.gocardless.com; cloud.google.com/document-ai/pricing (truncated on the first pass; **fetched in full on the [AV] pass → S-26**); azure pricing; aws pricing; veryfi/taggun/mindee/nylas; platform.openai.com; ai.google.dev; agenziaentrate.gov.it; lotteriadegliscontrini.gov.it; eur-lex; bancaditalia.it; amazon.it; docs.klarna.com; binance/coinbase docs; help.revolut.com; app.directa.it (DNS). [AV] pass additionally confirmed 403 (egress policy) for: eba.europa.eu, consilium.europa.eu, europarl.europa.eu, play.google.com, openai.com, satispay.com, gocardless.com, aws.amazon.com, azure.microsoft.com, ai.google.dev, lotteriadegliscontrini.gov.it, agenziaentrate.gov.it, bancaditalia.it, paypal.com, appdefensealliance.dev, mistral.ai, docs.klarna.com, docs.cdp.coinbase.com, amazon.it, traderepublic.com | — | 2026-10-02 | — | — | Each attempted once per domain per task rules |
+
+---
+
+## Verification notes (adversarial pass)
+
+**Method (2026-10-02, second agent).** Goal: refute the 8–12 claims most likely to change a decision. Constraint: the session's WebSearch budget was exhausted (0 of 15 attempted queries ran) and WebFetch is blocked, so every check below used one of: a direct fetch through the egress proxy (succeeded only for `developer.apple.com`, `developer.android.com`, `cloud.google.com`, `raw.githubusercontent.com`; 20 other hosts were denied by policy), an official source file mirrored on GitHub, the Context7 documentation mirror (Google Play / Android / Gmail API — no policy-centre content available there), the bundled first-party Anthropic price cache, the sibling research notes, or — where none of those reached the claim — the reviewer's own knowledge (cut-off mid-2026), in which case the verdict is "unverifiable today" and the label was not upgraded. Edits in the body are tagged **[AV]**.
+
+| # | Claim checked (section) | Verdict | What was found | Sources |
+|---|---|---|---|---|
+| 1 | FinanceKit is US/UK only; no EU/Italy availability (§3.2, exec summary row 3) | **Confirmed** | Independent re-fetch of the FinanceKit overview page: "Requirements and availability" lists only United States (iOS 17.4+; Apple Card, Apple Cash, Savings) and United Kingdom (iOS 18.4+; UK open-banking institutions); entitlement criteria still say "distributed through the App Store for iPhone in the United States or United Kingdom". Verdict "Never (unless Apple extends)" stands. | S-01, S-28 |
+| 2 | App Store Guidelines: 5.1.2(i) "including with third-party AI" clause; 5.1.1(v) in-app account deletion; page has "no visible last-updated date" (§3.3) | **Confirmed (clauses) / Corrected (date)** | Both clauses present verbatim on the live page. The page footer reads "Last Updated: June 8, 2026" — the "no visible date" statement was wrong and was corrected; 5.1.1(v) upgraded from ASSUMPTION to FACT. | S-04 |
+| 3 | PSD2 vs PSD3/PSR legislative status; "90-day PSD2 window"; ability to operate under a provider's licence (implicit throughout; now §0.1) | **Corrected / downgraded** | The note never stated the legal baseline. Added §0.1: PSD2 + RTS 2018/389 (as amended by 2022/2360, 180-day renewal) are the law in force; PSD3/PSR are *agreed but not in force* (political agreement reported 27 Nov 2025, compromise texts spring 2026; OJ publication **not verifiable today**; application ~2028); FIDA status UNKNOWN. The "90-day window" was re-labelled as a history-depth/SCA-exemption limit, not a consent period. The implicit claim that an unlicensed startup "relies on a licensed AISP" was **downgraded to ASSUMPTION** with the three routes (data-recipient, registered agent, own registration) and the open Banca d'Italia question spelled out, cross-referencing the sibling notes that hold the primary sources (Tink "use of agents", TrueLayer support articles, Yapily/Salt Edge/Enable Banking/Mastercard docs, Banca d'Italia FAQ). EU institutional hosts (eur-lex, consilium, europarl, eba) were all egress-blocked. | S-30; `open-banking-providers-b.md` §15 |
+| 4 | Microsoft Graph delegated `Mail.Read` requires admin consent (flagged CONFLICT, §5.2, Q9) | **Corrected (conflict resolved)** | Official `permissions-reference.md` source file: delegated `Mail.Read` → `AdminConsentRequired: No`; application `Mail.Read` ("Read mail in all mailboxes") → Yes; delegated `Mail.Read` is consentable on personal Microsoft accounts. Q9 closed. | S-11 (raw file re-read) |
+| 5 | Google Document AI Expense Parser ≈ USD 0.10/page "tiered down above 1M pages"; Document OCR ≈ USD 1.50 per 1,000 (§6.1) | **Confirmed (prices) / Corrected (tiering)**; upgraded to FACT | Full pricing page fetched: Expense parser USD 0.10 per page list, 0.09/0.08 only under 1-/3-year savings plans — no volume tier; the ">1M pages" tiering belongs to Custom extractor / Form parser (USD 30→20 per 1,000). Enterprise Document OCR: first 1,000 pages/month free, USD 1.50 per 1,000 up to 5M, USD 0.60 above. | S-26 |
+| 6 | AWS Textract AnalyzeExpense ≈ USD 0.10/page (§6.1, per-receipt estimate) | **Corrected (unverifiable online)** | Reviewer's knowledge: AnalyzeExpense is USD 10 per 1,000 pages (≈ 0.01/page) for the first 1M pages, ≈ 0.008 above; the original figure was 10× too high. aws.amazon.com blocked both passes → label stays ASSUMPTION, figure corrected, exec-summary and per-receipt ranges adjusted. | — (verify at aws.amazon.com/textract/pricing) |
+| 7 | Mistral OCR ≈ USD 1 per 1,000 pages, "not present in the LiteLLM registry" (§6.1) | **Corrected** | Registry re-read: `mistral/mistral-ocr-latest` (= 4.1) USD 0.004/page sync, 0.002 batch; `mistral-ocr-2512` 0.002 / 0.001; annotation add-on 0.005 / 0.0025. So USD 2–4 per 1,000 pages and the entries do exist. | S-22 |
+| 8 | Azure prebuilt receipt supports Italian (it-IT) (§6.1) | **Confirmed**; upgraded to FACT | Official language-support source file: receipt v3.0+ lists Italian `it` for thermal receipts and `it-IT` for hotel receipts; v2.1 was English-only. Price (USD 10 per 1,000) remains ASSUMPTION — pricing host blocked. | S-27 |
+| 9 | Anthropic prices (Haiku 4.5 1/5, Sonnet 5.5 2/10, Opus 5.5 4/20) and OpenAI/Gemini registry values (§6.1) | **Confirmed** | First-party skill cache (2026-09-25) matches; LiteLLM registry re-read matches for all quoted OpenAI/Gemini models and for the three Claude models; the quoted gpt-5-mini/nano/4.1-mini and gemini-2.5-flash/-lite figures also match vendor list prices as known to the reviewer. Vendor pricing pages themselves remain blocked. | S-21, S-22, S-31 |
+| 10 | Android 15 redacts OTPs from untrusted notification listeners (§4.2) | **Unverifiable today — kept ASSUMPTION, verify path corrected** | Neither the Android 15 "behaviour changes" nor the "features" page (both fetched) mentions OTP redaction or sensitive notifications; the "how to verify" pointer to the behaviour-changes page was therefore wrong and was replaced (security-blog announcement; AOSP `RECEIVE_SENSITIVE_NOTIFICATIONS`; device test). Reviewer's knowledge agrees the feature shipped in Android 15, but no primary page was found. | S-29 |
+| 11 | Gmail: "basic-auth IMAP with password is unavailable (removed 2024); IMAP is not a loophole" (§5.1) | **Corrected** | Less-secure-app password sign-in is gone (consumer 2022, Workspace 2024/early 2025), but consumer accounts with 2-Step Verification can still create **app passwords** for IMAP, so the mechanism is not "unavailable". Conclusion ("not a route for Lilleri") kept, grounds changed to credential-custody/policy. Google help pages blocked → ASSUMPTION (medium). | — |
+| 12 | Google Play policy claims: notification access is not a "restricted permission"; SMS/Call-Log exceptions exclude expense tracking; Financial-features declaration is a form-filling task for a no-product app (§4.2, §4.3, §4.5) | **Unverifiable today — left ASSUMPTION, one downgraded** | support.google.com and play.google.com both egress-blocked on both passes; Context7's Google Play mirror holds developer docs, not policy text. All three statements are consistent with the reviewer's knowledge of the policies as of mid-2026, but the claim that the Financial-features declaration is "not a gate" for an app relying on a third-party AISP was softened: whether such an app must declare a feature and upload licence evidence depends on the licensing route (§0.1) and is UNKNOWN. | — (verify URLs unchanged in text) |
+| 13 | CASA Tier 2 cost ranges, incl. "~USD 540 self-scan" (§5.1, exec summary row 5) | **Unverifiable today — flagged stale** | appdefensealliance.dev and support.google.com blocked. The low-hundreds figure is a 2023 report and CASA tiering has been revised since; a "do not budget from it" warning was added. Label stays UNKNOWN/ASSUMPTION (low). | — |
+| 14 | Amazon Order History Reports retired March 2023; never offered on amazon.it; GDPR "Richiedi i tuoi dati" is the only export (§10) | **Unverifiable today — knowledge-consistent** | amazon.it blocked. Reviewer's knowledge agrees (feature removed March 2023, replaced by the privacy-data request). Label unchanged (ASSUMPTION, medium). | — |
+| 15 | PayPal Transaction Search is merchant-side; PayPal reachable via PSD2 AIS with 90-day history (§1) | **Confirmed (merchant-side) / unchanged (coverage UNKNOWN)** | Original FACT rests on official SDK docs via mirror; nothing found contradicts it. The "90 days" was annotated as PayPal's history depth, not a PSD2 rule. Provider coverage for Italian users remains the RFP question Q1. | S-13, S-15 |
+
+**Net effect on decisions.** No MVP/later verdict flips. Three things change for planning: (1) the licensing route and PSD3/PSR status are now explicit assumptions with owners (Q11, Q12) rather than silent premises; (2) specialised receipt parsers are cheaper than stated at the AWS end (USD 0.01/page) and pricier than stated at the Mistral end (USD 0.002–0.004/page), which does not alter the "cost is not the deciding factor" conclusion; (3) the Gmail IMAP and Graph admin-consent corrections slightly *widen* the e-mail options (Outlook.com needs no admin consent; Gmail app passwords exist) without changing the recommendation to start with forward-to-inbox.

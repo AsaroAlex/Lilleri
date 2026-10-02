@@ -1,0 +1,295 @@
+# Brand and Visual Identity Landscape: Fintech / PFM Competitors and White-Space for Lilleri
+
+**Scope note.** This document maps the visual identities (logo concept, wordmark, app icon, palette, typography, visual language, tone, positioning, premium/mass perception, recognizability, 2022–2026 rebrands) of 38 fintech, payment, investing and personal-finance brands relevant to an Italy-first, Europe-next PFM app, and derives (1) a palette landscape map, (2) a logo-shape landscape, (3) typography trends, (4) iconography/illustration trends, (5) clichés to avoid and (6) white-space opportunities (colour territories, mark concepts, naming/verbal territory) for Lilleri, whose promise is "connect your accounts once and your finances organise themselves". Verification date for every claim: **2026-10-02**. Research-environment caveat (important): the session's web-search budget was already exhausted when this task started (0 of 8 attempted searches executed) and the network egress proxy blocked all 15 page-fetch attempts (brand sites, press kits, Brand New, It's Nice That, Dezeen, Behance, Design Week, Wikipedia, Brandfetch, brandcolors.net). Evidence was therefore gathered from channels that *were* reachable: the public npm registry (official design-system packages published by Wise, Revolut and Qonto; the community `simple-icons` dataset, which records one official brand hex per brand with its source URL; two older brand-colour datasets) and Context7 snapshots of developer-documentation sites (Revolut, Satispay, Klarna, Nexi, PayPal, Google Pay, Wise). Everything else is recollection and is labelled ASSUMPTION / HYPOTHESIS / UNKNOWN with a concrete verification route. Nothing in this file should be treated as a verified design-industry quotation; where commentary is referenced it is flagged as unverified.
+
+---
+
+## 0. Method, evidence channels and reliability
+
+| Channel | What it gave | Reliability | Caveats |
+|---|---|---|---|
+| `simple-icons` npm package v16.33.0 (published 2026-09-27) — `data/simple-icons.json` and `icons/*.svg` (S1) | One "official" brand hex per brand plus the maintainer's source URL (often the brand's own press/brand page) and sometimes a guidelines URL; monochrome SVG of the mark | medium–high (maintainers require an official source; hex is a single value chosen by maintainers, not the whole palette) | A single hex flattens multi-colour identities (e.g. Monzo stored as navy, not coral) |
+| `@transferwise/neptune-tokens` v8.26.0 (2026-06-19) and `@transferwise/neptune-css` v14.29.4 (2026-09-11) — Wise's public design tokens (S2) | Full semantic palette per theme, font-family tokens, font files | high (primary, published by Wise) | Product-UI tokens, not the marketing brand book |
+| `@revolut/ui-kit` v14.16.2 (2025-02-24; the last full public build before the package became a private shim at v15.0.0 on 2025-02-25) (S3) | 147 CSS colour variables, theme-background hue families, bundled font files, text-style names | high (primary, Apache-2.0 licensed, "Copyright 2018-present Revolut LTD") | Product UI, 2025 snapshot |
+| `@qonto/login-button` v0.5.1 (2025-02-24) (S4) | Qonto's button font stack, colours, radius | high (primary, published by Qonto) | A single component |
+| `brand-colors` npm v2.1.1 (last modified 2022-06-13) (S5) | Older hex values for PayPal, Square Cash, Stripe, Coinbase, Visa, Mastercard | low–medium, stale | Useful only to show how palettes moved |
+| Context7 snapshots of developer docs (S6–S12) | Logo-usage rules, button colour rules, asset names | high for the facts quoted; undated snapshots | Developer docs, not brand books |
+| Recollection (model knowledge, cut-off mid-2026) | Logo descriptions, agencies, dates, tone | low until verified | Always labelled ASSUMPTION / HYPOTHESIS / UNKNOWN |
+
+Status labels: **FACT** (verified against a cited source on 2026-10-02), **ASSUMPTION** (recollection or inference, plausible, unverified), **HYPOTHESIS** (belief to test with users or data), **UNKNOWN** (could not be established; verification route given).
+
+---
+
+## 1. Verified evidence ledger (the hard data points)
+
+| # | Claim | Status | Source | Notes / doubts |
+|---|---|---|---|---|
+| E1 | Revolut's single official brand colour as recorded by simple-icons is near-black `#191C1F`; source cited by maintainers is Revolut's developer "marketing assets guidelines" page | FACT | S1 (`revolut`, source developer.revolut.com/docs/resources/marketing-assets-guidelines/marketing-guidelines) | Confirms the 2023 identity is black/white-led |
+| E2 | Revolut ui-kit 14.16.2 sets `--rui-color-black: #191c1f`, `--rui-color-foreground: #191c1f` (light) / `#f4f4f4` (dark), backgrounds `#ffffff`, `#000000`, `#111111`; ships font files `AeonikPro-Black-Capitalised.woff2` and `AeonikPro-Medium.woff2` and sets `--rui-font-brand: 'Inter', …`; text styles include `marketing-display1..3`, `display1..3`, `heading1..3`, `body1..3` | FACT | S3 | Aeonik Pro (CoType Foundry) is bundled; which surfaces use it vs Inter is not stated in the package |
+| E3 | Revolut ui-kit defines user-selectable dark "theme backgrounds" as HSL families: blue (h210 s100 l5), deep-blue (h240 s93 l5), green (h170 s60 l4), orange (h22 s100 l4), teal (h190 s100 l4), purple (h280 s40 l6), holo, minimal; product sets named Default, Business, RevolutX, Ramp, Invest, People; accent variants include cold-blue `#0666EB`, blue `#4F55F1`, deep-purple `#805CF5`, pink `#FF50A4`, deep-pink `#E61E49`, teal `#00A87E`, lime `#CBDD00`, cyan `#0CD9E6`, orange `#EC7E00`, terracotta (token family present) | FACT | S3 | Shows Revolut's product UI is a near-black canvas with many tinted sub-brands |
+| E4 | Wise tokens: `--font-family-display: 'Wise Sans', 'Inter', sans-serif`; `--font-family-regular: 'Inter', Helvetica, Arial, sans-serif`; font file `WiseSans-Heavy.woff2`; personal theme `--color-interactive-primary: #163300` (forest green), `--color-interactive-accent: #9fe870` (bright green), `--color-content-primary: #0e0f0c`, `--color-content-secondary: #454745`, `--color-sentiment-positive: #054d28`, `--color-sentiment-negative: #cb272f`, `--color-background-screen: #ffffff` | FACT | S2 | Primary evidence of the 2023 Wise palette and type system |
+| E5 | Wise still ships a legacy "navy" theme with `--color-base-brand-blue: #00b9ff`, `--color-base-brand-purple: #485cc7`, `--color-base-brand-amber: #ffb619`, `--color-base-brand-borderless: #44ee70` and `--color-content-primary: #37517e` | FACT | S2 | This is the pre-2023 TransferWise palette (blue-led), evidence of the move from blue to green |
+| E6 | simple-icons official hexes (source URL in brackets): Wise `#9FE870` (wise.design/foundations/logo); Klarna `#FFB3C7` (klarna.design); N26 `#48AC98` (n26.com); Monzo `#14233C` (monzo.com/press); Starling Bank `#6935D3` (starlingbank.com/media; guidelines PDF starlingbank.com/docs/brand/starling-bank-brand-guidelines.pdf); Fineco `#00549F` (finecobank.com); PayPal `#002991` (paypal.com; guidelines newsroom.paypal-corp.com/media-resources); Cash App `#00C244` (cash.app/press); Venmo `#008CFF` (venmo.com/about/brand); Robinhood `#CCFF00` (press.robinhood.com); bunq `#3394D7` (press.bunq.com/media_kits); Lydia `#0180FF` (lydia-app.com press); Apple Pay `#000000` (developer.apple.com/apple-pay/marketing); Google Pay `#4285F4` (pay.google.com/about); Nubank `#820AD1`; Stripe `#635BFF`; Coinbase `#0052FF`; Tide `#4050FB`; Zelle `#6D1ED4`; Adyen `#0ABF53`; Afterpay `#B2FCE4`; Square `#3E4348`; Actual Budget `#6B46C1`; Barclays `#00AEEF`; HSBC `#DB0011`; Deutsche Bank `#0018A8`; Commerzbank `#FFCC33`; Mastercard `#EB001B`; Visa `#1A1F71`; American Express `#2E77BC` | FACT (that these are the values recorded by simple-icons on 2026-10-02) | S1 | Single-hex simplification; Monzo's coral is not captured |
+| E7 | Older datasets (2022) record PayPal as `#003087` + `#009CDE` (two blues), "Square Cash" `#28C101`, Stripe `#00AFE1`, Coinbase `#0667D0` | FACT (values in dataset) | S5 | Compared with E6 this documents PayPal → single deep blue `#002991`, Cash App → `#00C244`, Stripe → violet `#635BFF`, Coinbase → `#0052FF` |
+| E8 | Qonto's login button uses `font-family: "PolySans", "Manrope", "Roboto", sans-serif`, background `#1d1d1b` (hover `#383836`/`#40403e`, disabled `#999896`), focus/accent `#d5c8fb`, `border-radius: 6px` | FACT | S4 | Confirms Qonto's near-black typographic identity with a lavender accent |
+| E9 | Revolut developer docs: two brand logo families (Revolut, Revolut Business), each with a Wordmark and an Icon, in PNG and SVG; Revolut Pay button colours are black, white, and white-with-border (black on light backgrounds, white on dark) | FACT | S6 | |
+| E10 | Satispay's online "Pay with Satispay" button asset is `online.satispay.com/images/en-pay-red.svg` and the script must be loaded from satispay.com | FACT | S7 | Red is the button/brand colour; exact hex UNKNOWN |
+| E11 | Klarna payment-method badge asset: `x.klarnacdn.net/payment-method/assets/badges/generic/klarna.svg`; checkout sessions accept merchant colour overrides (`color_border`, `color_text`, `radius_border`) | FACT | S8 | |
+| E12 | Nexi Checkout go-live checklist requires merchants to display the Nexi Group logo on the site | FACT | S9 | |
+| E13 | PayPal JS SDK v6 button colour classes: `paypal-gold` (recommended), `paypal-blue`, `paypal-white`; Venmo button class `venmo-blue`; Pay Later messages can show logo as `MONOGRAM`, `WORDMARK` or `TEXT`, with `MONOCHROME`/`WHITE` text options | FACT | S10 | Monogram as a first-class logo type aligns with the 2024 "PP" monogram identity (ASSUMPTION on the link) |
+| E14 | Google Pay brand guidelines: minimum clear space around the acceptance mark = half the height of the capital "G"; buttons need 8dp clear space, themes dark/light/outline, black or white | FACT | S11 | |
+| E15 | Hue distribution of 53 finance-related brand hexes in simple-icons: blue 22 (42%), green 6, purple/violet 6, black/near-black/grey 5, red 4, yellow 3, lime/yellow-green 2, orange 2, teal/cyan 2, pink 1 | FACT (computed from S1 on 2026-10-02) | S1 | Sample = brands in scope plus major schemes/banks present in the dataset |
+
+---
+
+## 2. Per-brand profiles
+
+Column key: **Mark / app icon** = logo concept described, not reproduced; **Type** = wordmark style and named typeface when known; **Palette** = hex when documented; **Language & tone**; **Positioning, premium↔mass, recognizability in Italy** (recognizability is a HYPOTHESIS unless stated); **Rebrand 2022–26**; **Status / sources**.
+
+### 2A. Challenger banks and e-money accounts
+
+| Brand | Mark / app icon | Type | Palette | Language & tone | Positioning · premium↔mass · IT recognizability | Rebrand 2022–26 | Status / sources |
+|---|---|---|---|---|---|---|---|
+| **Revolut** (UK/LT) | 2023 identity: a bold "R" lettermark with a sharp diagonal cut in the leg; app icon = white R on black rounded square. simple-icons stores the mark as a 2-sub-path monochrome glyph (FACT S1). | All-caps custom geometric sans wordmark (ASSUMPTION). Product UI: Inter; Aeonik Pro (Black Capitalised, Medium) bundled for display/marketing styles (FACT E2). | Core near-black `#191C1F` + white (FACT E1/E2). Product themes: tinted near-black backgrounds (blue 210°, deep-blue 240°, green 170°, teal 190°, orange 22°, purple 280°, "holo") and accent sets (cold-blue `#0666EB`, blue `#4F55F1`, deep-purple `#805CF5`, pink `#FF50A4`, teal `#00A87E`, lime `#CBDD00`) (FACT E3). | Dark, glossy, 3D-rendered cards and objects, "holo" effects, premium product photography, dense feature marketing (ASSUMPTION). Tone: confident, global, "all things money" (ASSUMPTION). | Mass super-app with a premium ladder (Plus/Premium/Metal/Ultra) (ASSUMPTION). IT recognizability: very high (HYPOTHESIS; Italian user count UNKNOWN — verify via Revolut IT press releases). | New logo/identity 2023, reportedly in-house; widely covered by design press (ASSUMPTION; verify at underconsideration.com/brandnew and creativebloq.com). | FACT for colours/fonts (S1, S3, S6); rest ASSUMPTION |
+| **N26** (DE) | Wordmark only ("N26"), no symbol; app icon = wordmark on teal (ASSUMPTION). simple-icons mark has 6 sub-paths = three glyphs (FACT S1). | Clean geometric/grotesk sans; typeface name UNKNOWN. | Teal `#48AC98` (FACT E6, medium: single hex from n26.com). Secondary palette UNKNOWN. | Minimal, white space, product photography of transparent/metal cards, understated (ASSUMPTION). Tone: calm, precise, "bank you'll love" (ASSUMPTION). | Mass digital bank with premium tiers (You/Metal) (ASSUMPTION). IT: high among digital natives (HYPOTHESIS). | No major logo change known 2022–26 (UNKNOWN; verify n26.com/en-eu/press). | S1 + ASSUMPTION |
+| **Monzo** (UK) | Lowercase wordmark; app icon = rounded square with diagonal bands of hot coral, navy and light blue echoing the card (ASSUMPTION). | Rounded geometric sans (ASSUMPTION; custom typeface name UNKNOWN). | simple-icons stores navy `#14233C` (FACT E6). "Hot coral" (~`#FF4F40`, ASSUMPTION) is the signature card colour — **conflict**: the official single hex is navy, but public perception is coral. | Flat illustration, bright colour blocks, plain-English copy, witty (ASSUMPTION). | Mass, friendly (ASSUMPTION). IT: low (UK-only product). | Brand refresh / new campaign platform 2023–25 UNKNOWN (verify monzo.com/press, designweek.co.uk). | S1 + ASSUMPTION |
+| **Starling Bank** (UK) | Star symbol + lowercase wordmark (3 sub-paths, FACT S1). App icon = white star on purple (ASSUMPTION). | Humanist/grotesk sans (ASSUMPTION). | Purple `#6935D3` (FACT E6); teal secondary (ASSUMPTION). Official brand-guidelines PDF URL recorded by S1 (not fetched). | Grown-up, calm, photography + flat; "banking done right" (ASSUMPTION). | Mass, slightly more mature than Monzo (ASSUMPTION). IT: low. | UNKNOWN. | S1 + ASSUMPTION |
+| **bunq** (NL) | Lowercase wordmark; rainbow/multi-colour letterforms; app icon = "b" (ASSUMPTION). simple-icons mark 6 sub-paths (FACT). | Rounded geometric sans (ASSUMPTION). | Blue `#3394D7` recorded (FACT E6, from press media kit); full-spectrum secondary (ASSUMPTION). | Colourful, playful, "bank of The Free", sustainability (trees) motifs (ASSUMPTION). | Mass with paid tiers; IT: low–medium (HYPOTHESIS). | UNKNOWN. | S1 + ASSUMPTION |
+| **Hype** (IT, Banca Sella group) | Uppercase "HYPE" wordmark; app icon dark with wordmark (ASSUMPTION). | Heavy sans (ASSUMPTION). | UNKNOWN (verify hype.it and App Store listing). | Youth, bold, promotional (ASSUMPTION). | Mass, Gen-Z/young adults; IT: high among under-35s (HYPOTHESIS). | A refreshed identity in the 2021–23 window is plausible (ASSUMPTION; verify hype.it/press). | UNKNOWN |
+| **Curve** (UK) | Minimal wordmark; app icon dark/black with white "C" or wordmark (ASSUMPTION). | Geometric sans (ASSUMPTION). | Dark blue/black with a bright blue accent (ASSUMPTION; hex UNKNOWN — verify curve.com press). | Minimal, card-centric photography (ASSUMPTION). | Mass with metal tiers; IT: low–medium. | UNKNOWN. | UNKNOWN |
+| **Lydia / Sumeria** (FR) | Lydia: wordmark in blue; app icon blue with white "L" (ASSUMPTION). Sumeria (2024 spin-off brand for the current account) uses a distinct, warmer identity with a serif-leaning wordmark (ASSUMPTION). | Lydia: geometric sans (ASSUMPTION); Sumeria: serif/humanist display (ASSUMPTION). | Lydia blue `#0180FF` (FACT E6, from the official press page). Sumeria palette UNKNOWN. | Lydia: social/P2P, light; Sumeria: "bank" credibility (ASSUMPTION). | Mass; IT: very low (FR-centric). | Lydia → Lydia + Sumeria split, 2024 (ASSUMPTION; verify sumeria.eu press). | S1 + ASSUMPTION |
+| **Qonto** (FR; business banking) | Wordmark-led black/white typographic identity; app icon = black square with white wordmark/"Q" (ASSUMPTION). | **PolySans** (FACT E8 for the web component; strong evidence it is the brand sans), a grotesk with geometric touches. | Near-black `#1D1D1B`, lavender accent `#D5C8FB`, greys `#383836/#40403E/#999896`, radius 6px (FACT E8). Cream/off-white backgrounds in marketing (ASSUMPTION). | Editorial, typographic, calm, premium-feeling; occasional playful 3D objects (ASSUMPTION). | SME/freelancer, premium-feel at mass pricing (ASSUMPTION). IT: medium among freelancers (HYPOTHESIS). | Identity moved from purple-led to black/white-led around 2021–22 (ASSUMPTION). | S4 + ASSUMPTION |
+| **Trade Republic** (DE) | Wordmark-led; app icon black/dark with a white lettermark (ASSUMPTION). | Modern sans; a serif-leaning refresh is possible but UNKNOWN. | Monochrome black/white/grey with minimal accent (ASSUMPTION; hex UNKNOWN). | Austere, "savings & wealth", product-shot minimalism (ASSUMPTION). | Mass-affluent savers; IT: high among young investors (HYPOTHESIS). | UNKNOWN. | ASSUMPTION |
+
+### 2B. Payments, BNPL and wallets
+
+| Brand | Mark / app icon | Type | Palette | Language & tone | Positioning · premium↔mass · IT recognizability | Rebrand 2022–26 | Status / sources |
+|---|---|---|---|---|---|---|---|
+| **Klarna** (SE) | Wordmark "Klarna" (with a full stop in the lock-up, ASSUMPTION); app icon = pink square with black wordmark/"K" (ASSUMPTION). | Custom geometric sans family (names like "Klarna Headline/Text" — ASSUMPTION). | Klarna Pink `#FFB3C7` (FACT E6, source klarna.design) + black; the only pastel-pink primary in the set (FACT E15). | Saturated pink fields, fashion/pop photography, collage, "smoooth" playfulness (ASSUMPTION). | Mass consumer BNPL + shopping app; IT: high (HYPOTHESIS; Klarna is present at Italian checkouts). | No logo change known; a darker, more "financial-app" product look in 2024–25 is plausible (UNKNOWN). | S1, S8 + ASSUMPTION |
+| **Satispay** (IT) | White glyph on a red rounded square (an abstract "S"-like / double-stroke symbol) + lowercase wordmark (ASSUMPTION). | Lowercase geometric sans (ASSUMPTION). | Red is the official button colour (FACT E10: `en-pay-red.svg`); exact hex UNKNOWN (verify satispay.com/press or App Store icon sampling). | Friendly, Italian, everyday, orange-red warmth; mobile-first; merchant decals everywhere (ASSUMPTION). | Mass, Italian national champion; IT recognizability: very high (HYPOTHESIS). | Visual refresh in 2022–24 plausible (UNKNOWN; verify satispay.com/it-it/press). | S7 + ASSUMPTION |
+| **Scalapay** (IT) | Lowercase wordmark with a pink/magenta accent mark (ASSUMPTION). | Geometric sans (ASSUMPTION). | Pink/magenta family, close to Klarna's lane (ASSUMPTION; hex UNKNOWN — verify scalapay.com brand assets). | Fashion/retail BNPL, pink gradients and product collage (ASSUMPTION). | Mass; IT: high at e-commerce checkouts (HYPOTHESIS). | UNKNOWN. | ASSUMPTION |
+| **Nexi** (IT) | Lowercase "nexi" wordmark, no symbol; deep blue (ASSUMPTION). Merchants must display the Nexi Group logo at checkout (FACT E12). | Geometric sans (ASSUMPTION). | Deep blue family (ASSUMPTION; hex UNKNOWN — verify nexigroup.com media kit). | Corporate, infrastructural, B2B-first (ASSUMPTION). | Infrastructure brand; IT recognizability: high as a POS/card name (HYPOTHESIS). | Group-level identity consolidation after the SIA/Nets merger (ASSUMPTION). | S9 + ASSUMPTION |
+| **Mooney** (IT, ex SisalPay) | Lowercase rounded wordmark (ASSUMPTION). | Rounded sans (ASSUMPTION). | UNKNOWN (verify mooney.it press). | Proximity payments, bills, tobacconist network; warm, popular (ASSUMPTION). | Mass, physical-network led; IT: medium–high (HYPOTHESIS). | Rebranded from SisalPay to Mooney in 2020 (ASSUMPTION). | UNKNOWN |
+| **PayPal** (US) | 2024 identity: simplified "PP" monogram, flat, single blue + black; wordmark in a custom sans (ASSUMPTION; agency Pentagram — ASSUMPTION). SDK exposes `MONOGRAM`/`WORDMARK` logo types (FACT E13). | Custom sans (name UNKNOWN; "PayPal Pro" ASSUMPTION). | Deep blue `#002991` (FACT E6) vs 2022 two-blue scheme `#003087`+`#009CDE` (FACT E7) → consolidation to one darker blue plus black. Button classes gold/blue/white (FACT E13). | Monochrome photography, large type, less gradient (ASSUMPTION). | Mass, universal; IT: very high (HYPOTHESIS). | Full rebrand 2024 (ASSUMPTION; verify pentagram.com and newsroom.paypal-corp.com). | S1, S5, S10 + ASSUMPTION |
+| **Cash App** (US, Block) | "$" glyph on green rounded square (FACT-ish: 2-sub-path mark in S1; ASSUMPTION on the glyph). | Chunky custom sans ("Cash Sans", ASSUMPTION). | Green `#00C244` (FACT E6) vs 2022 "Square Cash" `#28C101` (FACT E7). | Street culture, 3D, bold wordplay, music collaborations (ASSUMPTION). | Mass, US-only; IT: low. | Continuous evolution; no 2022–26 logo change known (UNKNOWN). | S1, S5 + ASSUMPTION |
+| **Venmo** (US, PayPal) | "V" lettermark in rounded square; social feed (ASSUMPTION; 7-sub-path mark in S1 = wordmark). | Geometric sans (ASSUMPTION). | Blue `#008CFF` (FACT E6, official brand page). | Social, casual, emoji-rich (ASSUMPTION). | Mass, US-only; IT: low. | UNKNOWN. | S1 + ASSUMPTION |
+| **Apple Wallet / Apple Card / Apple Pay** | Wallet icon: a stack of coloured cards (blue/green/yellow/red) in a wallet, on a light rounded square; Apple Card: white titanium card with no numbers; Apple Pay mark black (FACT E6 for `#000000`). | SF Pro system type (ASSUMPTION, near-certain). | Black/white system palette; Wallet uses card colours as the only colour (ASSUMPTION). | Product photography, white space, no illustration, calm (ASSUMPTION). | Premium-by-default, mass reach; IT: very high. | No change; Apple Pay marketing guidelines govern third-party use (FACT: page exists, S1 source). | S1 + ASSUMPTION |
+| **Google Wallet / Google Pay** | Wallet icon: stacked colourful cards (Google palette) in a rounded square; Google Pay mark "G Pay" (ASSUMPTION). Clear-space and button rules (FACT E14). | Google Sans / Product Sans (ASSUMPTION). | Google blue `#4285F4` recorded (FACT E6) plus red/yellow/green. | Material You, friendly, flat (ASSUMPTION). | Mass; IT: high on Android. | Google Pay app → Google Wallet relaunch 2022 (ASSUMPTION). | S1, S11 + ASSUMPTION |
+| **Wise** (UK) | Wordmark only (1 sub-path mark in S1 = merged letterforms, FACT); app icon = bright-green "W"/wordmark on forest green (ASSUMPTION). | Display: **Wise Sans** (Heavy), body: **Inter** (FACT E4). Wise Sans is a chunky display face with forms inspired by world scripts (ASSUMPTION). | Forest green `#163300` + bright green `#9FE870`, ink `#0E0F0C`, positive `#054D28`, negative `#CB272F` (FACT E4). Legacy blue `#00B9FF` theme still shipped (FACT E5). | Bold flat illustration, big type, documentary photography, "money without borders" (ASSUMPTION). | Mass, international; IT: medium–high (HYPOTHESIS). | Rebrand March 2023 by Ragged Edge, blue → green (ASSUMPTION on agency/date; palette shift is FACT E4/E5). | S2 + ASSUMPTION |
+
+### 2C. Investing and wealth
+
+| Brand | Mark / app icon | Type | Palette | Language & tone | Positioning · premium↔mass · IT | Rebrand 2022–26 | Status / sources |
+|---|---|---|---|---|---|---|---|
+| **Robinhood** (US) | Feather symbol (3 sub-paths in S1) + wordmark; app icon = feather on dark or lime (ASSUMPTION). | Custom sans ("Capsule Sans", ASSUMPTION). | Neon lime `#CCFF00` (FACT E6, press site) on black; "Gold" metallic sub-brand (ASSUMPTION). | Dark mode, neon, hype energy; later moved toward premium "Gold" aesthetics (ASSUMPTION). | Mass retail investing; IT: low (not available). | Progressive premiumisation 2023–25 (ASSUMPTION). | S1 + ASSUMPTION |
+| **Trade Republic** | See 2A. | | | | | | |
+| **Moneyfarm** (IT/UK) | Lowercase wordmark with an "m" mark (ASSUMPTION). | Sans (ASSUMPTION). | UNKNOWN (verify moneyfarm.com press). | Advisory, reassuring, mid-affluent (ASSUMPTION). | Mass-affluent robo-advice; IT: medium (HYPOTHESIS). | UNKNOWN. | UNKNOWN |
+| **Fineco** (IT) | "FinecoBank" wordmark (8 sub-paths in S1) in corporate blue; no abstract symbol (ASSUMPTION). | Classic corporate sans (ASSUMPTION). | Blue `#00549F` (FACT E6). | Trading-platform density, conservative, data-heavy (ASSUMPTION). | Mass-affluent trading/bank; IT: high (HYPOTHESIS). | No change known (UNKNOWN). | S1 + ASSUMPTION |
+
+### 2D. Italian incumbents (and their digital sub-brands)
+
+| Brand | Mark / app icon | Type | Palette | Language & tone | Positioning · IT recognizability | Rebrand 2022–26 | Status / sources |
+|---|---|---|---|---|---|---|---|
+| **Intesa Sanpaolo** | Symbol of nested arches/semicircles beside a two-word wordmark; green (ASSUMPTION). Digital sub-brand **isybank** (launched 2023) with a younger, brighter identity (ASSUMPTION). | Corporate serif/sans mix (ASSUMPTION). | Dark green family (ASSUMPTION; hex UNKNOWN — verify group.intesasanpaolo.com brand page). | Institutional, cultural sponsorship, "trust" (ASSUMPTION). | Incumbent #1; IT recognizability: universal. | isybank launch 2023 (ASSUMPTION). | UNKNOWN |
+| **UniCredit** | Red sphere/"1"-shaped symbol with a white diagonal, beside a wordmark; digital sub-brand **buddybank** with a black/white typographic identity (ASSUMPTION). | Corporate sans (ASSUMPTION). | Red family (ASSUMPTION; hex UNKNOWN — verify unicreditgroup.eu media). | Institutional, pan-European (ASSUMPTION). | Incumbent #2; IT: universal. | Group brand harmonisation 2023–25 plausible (UNKNOWN). | UNKNOWN |
+| **Postepay** (context) | Yellow/blue card brand of Poste Italiane (ASSUMPTION). | — | Yellow + blue (ASSUMPTION). | Popular, state-adjacent (ASSUMPTION). | Universal recognizability. | — | ASSUMPTION |
+
+### 2E. Personal-finance (PFM) and budgeting apps
+
+| Brand | Mark / app icon | Type | Palette | Language & tone | Positioning · premium↔mass · IT | Rebrand 2022–26 | Status / sources |
+|---|---|---|---|---|---|---|---|
+| **Emma** (UK) | Lowercase wordmark; app icon purple with a white "e"/wordmark (ASSUMPTION). | Rounded sans (ASSUMPTION). | Purple/lilac family (ASSUMPTION; hex UNKNOWN — verify emma-app.com press). | Chatty, Gen-Z, "best friend" voice, confetti/emoji (ASSUMPTION). | Mass freemium; IT: low–medium (English-only app, HYPOTHESIS). | UNKNOWN. | ASSUMPTION |
+| **Snoop** (UK) | Mascot-led: a cartoon character "Snoop" (ASSUMPTION). | Rounded sans (ASSUMPTION). | Pink/coral + dark purple (ASSUMPTION; hex UNKNOWN). | Cheeky, money-saving tips, mascot animation (ASSUMPTION). | Mass; acquired by Vanquis Banking Group (2023, ASSUMPTION). IT: very low. | UNKNOWN. | ASSUMPTION |
+| **Plum** (UK) | Historically a fruit-character mascot; later a cleaner "P"/plum glyph (ASSUMPTION). | Rounded sans (ASSUMPTION). | Plum purple + bright green accents (ASSUMPTION). | Friendly automation ("set aside money automatically"), light humour (ASSUMPTION). | Mass freemium with tiers; IT: low. | UNKNOWN. | ASSUMPTION |
+| **Monarch** (US) | Abstract "M"/butterfly-crown mark on a dark indigo square (ASSUMPTION). | Humanist sans (ASSUMPTION). | Deep indigo/navy + warm accent (ASSUMPTION; a warmer refresh in 2025 is plausible — UNKNOWN; verify monarchmoney.com). | Calm, couples/household finance, premium subscription (ASSUMPTION). | Premium-mass (paid-only); IT: low (US banks). | Identity refresh 2025 (UNKNOWN). | ASSUMPTION |
+| **Copilot** (US) | Dark app icon with a small bright glyph (ASSUMPTION). | SF-based, iOS-native (ASSUMPTION). | Dark UI with vivid category colours (ASSUMPTION). | Design-led, delightful, "iOS-native" craft, playful 3D illustration (ASSUMPTION). | Premium subscription; IT: low (US-only). | Continuous; macOS/iOS redesigns 2023–25 (ASSUMPTION). | ASSUMPTION |
+| **YNAB** (US) | "YNAB" wordmark with a blue field; app icon blue with white lettermark (ASSUMPTION). | Friendly bold sans (ASSUMPTION). | Blue family (ASSUMPTION; hex UNKNOWN — verify ynab.com press). | Method-first ("give every dollar a job"), educational, warm (ASSUMPTION). | Premium subscription, method-driven; IT: low–medium (manual-friendly). | Brand refresh around 2021–23 (ASSUMPTION). | ASSUMPTION |
+| **Rocket Money** (US, ex-Truebill) | Rocket symbol on dark; inherits Rocket Companies' red (ASSUMPTION). | Sans (ASSUMPTION). | Red + black/white (ASSUMPTION). | Utility, "cancel subscriptions", savings claims (ASSUMPTION). | Mass freemium; IT: low. | Truebill → Rocket Money rename 2022 (ASSUMPTION). | ASSUMPTION |
+| **Cleo** (UK/US) | Wordmark-led; AI persona brand; app icon blue (ASSUMPTION). | Quirky display + sans (ASSUMPTION). | Electric blue + pale accents (ASSUMPTION). | Gen-Z, meme-literate, "roast mode", sarcastic (ASSUMPTION). | Mass freemium; IT: low. | Identity refresh 2022 (ASSUMPTION). | ASSUMPTION |
+| **Spendee** (CZ) | "S" mark, teal/green gradient (ASSUMPTION). | Sans (ASSUMPTION). | Teal/green gradient (ASSUMPTION). | Generic, colourful categories (ASSUMPTION). | Mass freemium; IT: low–medium. | UNKNOWN. | ASSUMPTION |
+| **Wallet by BudgetBakers** (CZ) | Literal wallet glyph; blue icon (ASSUMPTION). | Sans (ASSUMPTION). | Blue (ASSUMPTION). | Functional, bank-sync utility (ASSUMPTION). | Mass freemium; IT: medium among PFM users (HYPOTHESIS). | UNKNOWN. | ASSUMPTION |
+| **Splitwise** (US) | Lowercase wordmark + "S" in a rounded square; teal-green (ASSUMPTION; commonly cited ~`#5BC5A7`, unverified). | Rounded sans (ASSUMPTION). | Teal-green (ASSUMPTION). | Social, practical, friendly (ASSUMPTION). | Mass freemium; IT: medium–high among students/flatmates (HYPOTHESIS). | UNKNOWN. | ASSUMPTION |
+| **Actual Budget** (open source; context) | Purple `#6B46C1` (FACT E6). | — | Purple. | Developer-led. | Niche. | — | S1 |
+
+---
+
+## 3. Palette landscape map (which hues are crowded)
+
+Data layer = E15 (53 brand hexes from simple-icons). Perception layer = recollection (ASSUMPTION), added where the single-hex dataset under-represents a brand's real signature colour.
+
+| Hue band | Verified occupants (hex) | Recollection-layer occupants | Crowding | Reading for Lilleri |
+|---|---|---|---|---|
+| **Blue** (200°–250°) | Venmo `#008CFF`, Lydia `#0180FF`, bunq `#3394D7`, Fineco `#00549F`, PayPal `#002991`, Google Pay `#4285F4`, Coinbase `#0052FF`, Tide `#4050FB`, Stripe `#635BFF`, Visa, Amex, Chase, BofA, Deutsche Bank, JCB, Diners, Samsung Pay, Alipay, Paytm, Razorpay, Monzo navy `#14233C` (22 of 53) | Nexi, Curve, YNAB, Cleo, Wallet by BudgetBakers, Monarch indigo, Postepay blue, Mediolanum, BPER | **Saturated** (42% of sample) | "Trust blue" is the default of incumbents and US fintech alike; a blue Lilleri would be invisible. Avoid as primary. |
+| **Green** (100°–170°) | Cash App `#00C244`, Adyen `#0ABF53`, WeChat, Afterpay mint `#B2FCE4`, N26 teal-green `#48AC98`, Pix | Intesa Sanpaolo green, Spendee, Splitwise teal-green, Hype (possible) | **High**, and semantically loaded ("money", "positive") | Classic "money green" is taken; muted olive/sage is *not* (see §7). |
+| **Lime / yellow-green** (70°–100°) | Wise `#9FE870`, Robinhood `#CCFF00` | Revolut lime accent token | Medium but highly distinctive owners | Two loud owners; neon lime reads "trading/crypto". Avoid. |
+| **Purple / violet** (250°–290°) | Starling `#6935D3`, Nubank `#820AD1`, Zelle `#6D1ED4`, Paysafe, PhonePe, Actual Budget `#6B46C1` | Emma, Plum, Snoop (dark purple), Qonto lavender accent `#D5C8FB` (FACT), Revolut purple theme | **High** in the "modern fintech / PFM" lane specifically | Purple became the PFM/neobank "we're not a bank" cliché (2016–2023). Use at most as an accent. |
+| **Red** (345°–15°) | HSBC, Mastercard, Wells Fargo, MoneyGram | Satispay (FACT it is red; hex UNKNOWN), UniCredit, Rocket Money, Revolut deep-pink | Medium; strong Italian occupant (Satispay) | Bright red is Satispay's in Italy. A deep wine/amaranth is free but carries "loss/alert" risk in finance UI. |
+| **Pink / magenta** (290°–345°) | Klarna `#FFB3C7` (only one in sample) | Scalapay, Snoop, Revolut pink accents, Monzo coral (borderline orange-red) | Low count but a dominant owner (Klarna) | Pink = BNPL/shopping in Europe. Avoid. |
+| **Orange / coral** (15°–40°) | Payoneer `#FF4800`, Discover `#FF6000` | Monzo hot coral (~`#FF4F40`), Mooney (possible), Revolut orange theme | Low–medium | Hot coral is Monzo's; **earthy terracotta is unoccupied** (see §7). |
+| **Yellow / ochre** (40°–70°) | Commerzbank `#FFCC33`, Binance `#F0B90B`, Western Union `#FFDD00` | Postepay yellow (IT), PayPal "gold" button (FACT E13), Wise legacy amber | Low in fintech apps; strong Italian association with Postepay | Muted ochre/sand is free; bright yellow is Postepay's. |
+| **Teal / cyan** (170°–200°) | Barclays `#00AEEF`, Mercado Pago `#00B1EA`, N26 (borderline) | Splitwise, Spendee, Revolut teal theme | Medium | Mid-crowded; a desaturated verdigris is possible but less distinctive than olive/terracotta. |
+| **Black / near-black / white** | Revolut `#191C1F`, Apple Pay `#000000`, Square `#3E4348`, Trezor, TradingView | Qonto `#1D1D1B` (FACT), Trade Republic, Copilot dark, Curve, buddybank, PayPal 2024 black | **Rising fast** (2023–25 "premium monochrome" wave) | Monochrome is now the *premium* code (Revolut, Qonto, Trade Republic, Apple). A warm paper-and-ink neutral base is still open because all of these are *cold* blacks on pure white. |
+
+**Summary (FACT for the data layer, HYPOTHESIS for the reading):** blue is saturated; green, purple and pink are owned by category leaders; lime and neon are "trading" codes; cold monochrome is the new premium default. The *warm* and *earthy* parts of the wheel (terracotta, olive/sage, ochre/sand, wine) plus a *warm* paper neutral are effectively unoccupied by any fintech/PFM brand in the sample.
+
+---
+
+## 4. Logo-shape landscape
+
+| Shape family | Occupants (verified sub-path structure from S1 where noted) | Reading |
+|---|---|---|
+| **Wordmark only, no symbol** | Wise (1 merged path), N26 (3 glyphs), Klarna, Monzo, Fineco, Nexi (ASSUMPTION), Qonto, Trade Republic, bunq, Curve (ASSUMPTION) | The dominant European neobank pattern 2016–2023: the *name* is the logo; the app icon is the initial or the wordmark on a colour field. |
+| **Single letter in a rounded square (app-icon-first marks)** | Revolut "R" (2-path mark), Venmo "V", Cash App "$", Lydia "L", Copilot glyph, Emma "e" (ASSUMPTION for the last three) | Optimised for the home screen; recognizable at 60 px; risk of sameness (every icon = letter on colour). |
+| **Abstract symbols** | Starling star, Robinhood feather, PayPal "PP" monogram, Monarch butterfly/M, Intesa arches, UniCredit sphere, Satispay glyph (ASSUMPTION for several) | Rare among 2020s challengers; mostly incumbents or US brands. A quiet abstract symbol is therefore a differentiation lever if it is *not* a coin/chart. |
+| **Literal objects** | Wallet by BudgetBakers (wallet), Apple/Google Wallet (card stack), Rocket Money (rocket), Spendee "S"-coin-ish | Literal = category-generic; avoid. |
+| **Mascots / characters** | Snoop (character), Plum (fruit, historically), Cleo (persona, not drawn) | Mascots read UK-Gen-Z-budgeting; incompatible with calm-premium. |
+| **Multi-colour letterforms** | bunq rainbow, Google Pay/Wallet | Playful/consumer-tech; not premium. |
+
+**Reading for Lilleri (HYPOTHESIS):** the unoccupied combination is *wordmark + a small, quiet, non-literal symbol that encodes "things falling into order"*, with an app icon that is **not** a letter on a flat colour field (see §8).
+
+---
+
+## 5. Typography trends
+
+| Trend | Evidence | Status |
+|---|---|---|
+| **Custom display face + Inter for UI** | Wise: `Wise Sans` display + `Inter` body (FACT E4). Revolut: `Aeonik Pro` bundled for display/marketing styles + `Inter` brand/system font variable (FACT E2). | FACT for the two largest European challengers |
+| **Grotesk with geometric touches for "serious but modern"** | Qonto: PolySans (FACT E8). | FACT (single component) |
+| **Geometric sans wordmarks** | Klarna, N26, Nexi, Satispay, Scalapay, Lydia, Venmo (ASSUMPTION) | ASSUMPTION |
+| **Heavy, "chunky" display for warmth and scale** | Wise Sans Heavy (FACT: file `WiseSans-Heavy.woff2`), Cash App's chunky sans (ASSUMPTION) | Mixed |
+| **System type (SF Pro / Google Sans) as the whole identity** | Apple Wallet/Card, Google Wallet, Copilot (ASSUMPTION) | ASSUMPTION |
+| **Serif revival for "wealth / maturity"** | Sumeria, Trade Republic marketing, Monarch (all ASSUMPTION) | HYPOTHESIS — verify before relying on it |
+| **Capitalised display cuts** | Revolut ships `AeonikPro-Black-Capitalised` (FACT E2) — all-caps display is part of its 2023 voice | FACT |
+
+**Reading:** Inter is the de-facto neutral body face of European fintech; differentiation lives in the display face. A *humanist* or *Italian-flavoured* display (e.g. a soft grotesk or a transitional serif used sparingly for numbers and headlines) would stand apart from the geometric/grotesk monoculture. Numerals deserve a dedicated decision (tabular figures, a distinctive "1" and "7") because a PFM shows numbers more than words.
+
+---
+
+## 6. Iconography and illustration trends
+
+| Pattern | Who (status) | Note |
+|---|---|---|
+| **3D-rendered objects, glossy cards, "holo" effects on near-black** | Revolut (FACT that "holo" theme and dark canvases exist, E3; render style ASSUMPTION), Robinhood (ASSUMPTION), crypto brands | The "premium tech" cliché of 2021–25 |
+| **Flat, bold, editorial illustration with oversized type** | Wise (ASSUMPTION), Monzo (ASSUMPTION), Klarna collage (ASSUMPTION) | Loud, campaign-led |
+| **Documentary / product photography, white space** | N26, Apple, Qonto, Trade Republic (ASSUMPTION) | The "calm" register; mostly cold neutrals |
+| **Merchant logos in circles as the primary visual texture of the feed** | Revolut, Monzo, Emma, Copilot, Monarch (ASSUMPTION); supported by the logo-API market described in the sibling AI/ML research doc (FACT that Brandfetch Logo API exists) | In a PFM, merchant logos *are* the iconography; the brand must coexist with hundreds of third-party colours |
+| **Emoji / coloured-circle category icons** | Copilot, Monarch, Emma, YNAB (ASSUMPTION) | Playful; conflicts with premium calm unless restrained |
+| **Line icons, 1.5–2 px, rounded joins** | Wise (`@transferwise/icons` exists as a JS package — FACT; stroke style UNKNOWN), Revolut (`@revolut/icons` v2.8.0 exists — FACT; style UNKNOWN) | Icon style could not be inspected (packages ship JS, not SVG) |
+| **Mascots / characters** | Snoop, Plum, Cleo persona (ASSUMPTION) | UK budgeting code |
+
+**Reading (HYPOTHESIS):** a calm-premium PFM should treat *merchant logos and numbers* as the hero and keep brand illustration to a minimum: paper-like surfaces, restrained line icons, and one signature "ordering" motion (e.g. items aligning) rather than static illustration sets.
+
+---
+
+## 7. Clichés to avoid (with who uses them)
+
+| Cliché | Seen at (status) | Why avoid |
+|---|---|---|
+| Neon/lime on black, gradients, "holo" | Revolut themes (FACT E3), Robinhood lime (FACT E6), crypto | Reads "trading/speculation", not "organised" |
+| Coins, coin stacks, "$/€" glyphs | Cash App "$" (ASSUMPTION), countless PFM icons | Generic and currency-bound (Lilleri goes to Europe: € today, other currencies later) |
+| Rising charts / arrows | Trading apps, robo-advisers (ASSUMPTION) | Promises growth; Lilleri promises order |
+| Piggy banks | Savings apps (ASSUMPTION) | Childish; UK-budgeting code |
+| Literal wallets | Wallet by BudgetBakers, Apple/Google Wallet (ASSUMPTION) | Category-generic; Apple/Google own it |
+| Rockets, "boost", "smart", "AI-powered" | Rocket Money (ASSUMPTION), many | Hype vocabulary contradicts calm |
+| Purple as "we're the friendly non-bank" | Starling, Nubank, Zelle (FACT hexes), Emma/Plum (ASSUMPTION) | Over-used lane |
+| Hot coral / pastel pink | Monzo, Klarna `#FFB3C7`, Scalapay (mixed) | Owned by others; pink = BNPL in Europe |
+| Mascots and chat-bot personas | Snoop, Plum, Cleo (ASSUMPTION) | Incompatible with premium |
+| Letter-on-flat-colour app icon | Revolut, Venmo, Cash App, Lydia (mixed) | Sameness on the home screen |
+| Cold black on pure white | Revolut `#191C1F`, Qonto `#1D1D1B`, Apple (FACT) | Now the "premium default"; a *warm* neutral is the way to be premium *and* different |
+| Shields/locks for "security" | Bank apps (ASSUMPTION) | Lilleri should signal security through calm and clarity, not icons |
+
+---
+
+## 8. White-space opportunities for Lilleri
+
+### 8.1 Candidate colour territories
+
+Contrast ratios computed on 2026-10-02 (WCAG 2.x relative luminance; AA normal text ≥ 4.5, AA large text/UI components ≥ 3.0, AAA ≥ 7.0). Hex values are *starting points* for exploration, not decisions.
+
+| # | Territory (Italian name) | Candidate hexes | Rationale & psychology | Accessibility (computed) | Nearest competitors | Status |
+|---|---|---|---|---|---|---|
+| 1 | **Carta & Inchiostro** (warm paper + warm ink) as the *base* | Paper `#F6F1E7`, ivory `#FBF8F2`, ink `#1F1B17`, mid-text `#5C564E` | The ledger, the notebook, the receipt that is finally filed. Warm neutrals signal calm, craft, editorial seriousness; "finished, in order". Distinct from the cold black/white of Revolut, Qonto, Apple. | Ink on paper **15.2:1**, on ivory **16.1:1** (AAA); mid-text on paper **6.4:1** (AA, close to AAA). | Qonto (cold black/white/cream, ASSUMPTION), Trade Republic, PayPal 2024 monochrome, Apple Card white | Recommended base (HYPOTHESIS) |
+| 2 | **Terracotta / Cotto** as the *signature accent* | `#C4583A`; deep `#A8462C` | Mediterranean, earth, home, warmth without alarm; Italian-born without flags or tricolore. Terracotta is unoccupied by any fintech in the sample (FACT E15 + perception layer). Not "money green", not "trust blue". | White on `#C4583A` **4.37:1** (AA large/UI, fails AA normal text) → use the deep variant for text: white on `#A8462C` **5.87:1** (AA); `#A8462C` on paper **5.2:1** (AA). Never encode negative amounts in terracotta (red-adjacent); use ink for negatives and a separate cool tone or just typography for positives. Deuteranopia: terracotta vs olive remain distinguishable by lightness if olive stays dark. | Monzo hot coral (hotter, pinker), Payoneer/Discover orange, Rocket red, Satispay red (brighter, cooler red) | Strong candidate (HYPOTHESIS) |
+| 3 | **Oliva & Salvia** (olive + sage) as *signature* or *secondary* | Olive `#4F5D3A`, sage `#8FA37E` | Growth and calm without "cash green"; Tuscan hills, olive oil, the countryside; pairs with paper. Muted greens are absent from the fintech sample (Wise forest green `#163300` is darker/cooler; N26 teal is bluer). | Olive on paper **6.3:1** (AA), white on olive **7.1:1** (AAA); sage on paper **2.4:1** → sage only as a fill with ink text (**6.3:1**). Red–green colour-blindness: avoid using olive *and* terracotta to mean opposite things. | Wise, Intesa Sanpaolo, N26, Splitwise/Spendee | Strong candidate; risk = "organic/eco" codes (HYPOTHESIS) |
+| 4 | **Notte & Glicine** (night indigo + wisteria) | Indigo `#2B2F4A`, wisteria `#B9A7D9` | Calm night, premium, Italian "glicine" (wisteria) softness. | Indigo on paper **11.6:1**, white on indigo **13.1:1** (AAA); wisteria on indigo **6.0:1** (AA); ink on wisteria **7.8:1**. | Starling, Nubank, Zelle, Emma, Plum, Monarch indigo, Qonto lavender `#D5C8FB` (FACT) | Only as accent: purple lane is crowded (HYPOTHESIS) |
+| 5 | **Amaranto / Bordeaux** (deep wine) | `#6E1F3B` | Wine, velvet, Italian luxury; grown-up. | On paper **9.7:1**, white on it **10.9:1** (AAA). Risk: red-adjacent = "loss/alert" in finance UI; must never be the negative-amount colour. | Satispay red, UniCredit red, HSBC/Mastercard (all brighter) | Viable premium alternative to terracotta (HYPOTHESIS) |
+| 6 | **Ocra & Sabbia** (ochre + sand) | Ochre `#C9962B`, sand (lighter paper) | Sun, wheat, harvest; warm optimism. | Ochre on paper **2.4:1** (fails text) → fill only, with ink text (**6.4:1**). | Postepay yellow (strong Italian association), Commerzbank, Binance, PayPal gold button (FACT E13) | Accent only; Postepay risk (HYPOTHESIS) |
+| 7 | **Verdigris / Acqua** (muted teal) | `#2F8F83` (darken to ~`#22736A` for text) | Venetian water, bronze patina. | `#2F8F83` on paper **3.5:1** (large text only); needs a darker text variant. | N26, Splitwise, Spendee, Barclays, Mercado Pago | Possible but less distinctive than 2/3 (HYPOTHESIS) |
+
+**Recommended exploration set (HYPOTHESIS to be tested in Phase 2):** Territory 1 as base + Territory 2 *or* 3 as the single signature colour, with Territory 4 or 6 reserved for secondary/semantic use. The combination "warm paper + ink + one earthy signature" is not used by any brand in the sample and maps directly to "calm, premium, Italian-born, finances organise themselves".
+
+### 8.2 Candidate mark concepts (described, not drawn)
+
+| # | Concept | What it encodes | Fit with the promise | Risks |
+|---|---|---|---|---|
+| M1 | **Two strokes settling into one** — two short lines (a transfer out and a transfer in) that meet and become a single horizontal line | Reconciliation: duplicates and transfers collapsing into one truth | Direct metaphor of the core feature; abstract; animates naturally (lines slide and merge) | Could resemble an equals sign or a "minus" |
+| M2 | **The "ll" ligature** — the double-l of *Lilleri* drawn as two tall, parallel, slightly rounded strokes with a shared baseline bar | Tally marks, order, the name itself | Ownable (the name has three l's), works as a 1-colour app icon on paper or terracotta | Must not read as "II" (Roman numeral) or pause symbol |
+| M3 | **The pebble / sasso** — a soft, slightly asymmetric rounded shape (river stone) | Smoothness, calm, "settled" | Very calm, premium, non-financial; good as an icon container | Low semantic link to finance; risk of looking like a wellness app |
+| M4 | **The shelf** — a horizontal line with three small marks that snap into alignment above it | Things putting themselves in order; the review inbox emptying | Strong "organises itself" story; motion-ready | Can look like a chart (avoid rising order; keep marks level) |
+| M5 | **Folded receipt / piega** — a single folded corner on a rounded square | Paper, receipts, filing | Pairs with the Carta & Inchiostro base | Literal; paper = "old" for some users |
+| M6 | **The knot / fiocco** — a single soft loop that closes | "Tied up", resolved, done | Gentle, Italian craft feel | Can read as gift/ribbon (retail) |
+
+Avoid list for marks: coins, €/$, charts/arrows, wallets, piggy banks, shields, rockets, sparkles ("AI"), speech bubbles ("chat-bot").
+
+**App-icon test (HYPOTHESIS):** at 60 px on a home screen next to Revolut (white R on black), Satispay (white glyph on red), N26 (teal), PayPal (blue), Klarna (pink), the icon that stands out is **a warm paper field with an ink mark** or **a terracotta field with a paper mark** — both unoccupied.
+
+### 8.3 Naming and verbal territory notes
+
+| Topic | Note | Status |
+|---|---|---|
+| Meaning of "lilleri" | Tuscan/colloquial Italian word for money ("i lilleri" = cash, coins); idiom "non avere un lillero" ≈ "not to have a penny". Playful, musical (three l's, rolling "r"), easy to pronounce in English and German. | ASSUMPTION on dialect provenance; verify in Treccani/Zingarelli and test comprehension with non-Tuscan Italians |
+| Double edge | The idiom associates the word with *being broke*; the brand must flip it into *having your lilleri in order*. | HYPOTHESIS — test with 10–20 Italian users in Phase 1 |
+| Tone of voice | "Calm competence": short declaratives, present tense, no exclamation marks, no "smart/AI/boost/super" vocabulary; Italian-first copy that avoids anglicisms except product nouns; numbers always precise, never rounded for effect. Closest existing tones: Apple (calm), Qonto (editorial), N26 (precise); opposite of Cleo/Snoop/Emma (chatty) and Revolut (hype). | HYPOTHESIS |
+| Verbal territory | "In ordine" (in order), "si sistema da sé" (sorts itself out), "chiaro" (clear), "tranquillo/a" (at ease), "fatto" (done), "niente da fare" (nothing to do — the empty review inbox as the hero moment). | HYPOTHESIS |
+| Tagline drafts (to test) | "I tuoi soldi, in ordine. Da soli." · "Collega una volta. Poi niente." · "Soldi chiari, senza fare niente." · EN: "Money, sorted. By itself." | Drafts, untested |
+| Name hygiene | Check EUIPO/UIBM classes 9, 36, 42 for "Lilleri" and near-homophones; check app-store name collisions and `.it/.eu/.com` domains; the idiom "lillero" may already be used by Italian consumer brands (UNKNOWN). | UNKNOWN — verify at euipo.europa.eu eSearch and uibm.mise.gov.it |
+| Wordmark | Lowercase "lilleri" exploits the rhythm l-i-l-l-e-r-i (ascenders alternating with x-height letters) — a naturally "tidy" silhouette; test a humanist sans and a soft serif; consider a custom "ll" ligature (M2). | HYPOTHESIS |
+
+---
+
+## 9. Design-industry commentary (unverified pointers)
+
+The following commentary is **believed to exist** (ASSUMPTION) but could not be fetched (egress blocked) or searched (budget exhausted). Each row gives the route to verify.
+
+| Topic | Likely source | Verify at | Status |
+|---|---|---|---|
+| Revolut 2023 identity review | Brand New (UnderConsideration), "New Logo and Identity for Revolut", 2023 | underconsideration.com/brandnew (search "Revolut") | ASSUMPTION |
+| Wise 2023 rebrand by Ragged Edge; "Wise Sans" | Brand New review; It's Nice That feature; Ragged Edge case study | underconsideration.com/brandnew; itsnicethat.com; raggededge.com/work | ASSUMPTION (palette/fonts are FACT via S2) |
+| PayPal 2024 rebrand by Pentagram (monogram, single blue + black, custom type) | Pentagram case study; Brand New; It's Nice That | pentagram.com/work; underconsideration.com/brandnew | ASSUMPTION (hex shift is FACT via S1/S5) |
+| Monzo / Starling / Klarna brand work | Design Week, Creative Review, Behance case studies | designweek.co.uk; creativereview.co.uk; behance.net (search "fintech branding") | ASSUMPTION |
+| Qonto black/white identity | Agency case study (UNKNOWN agency) | qonto.com/en/press; behance.net | ASSUMPTION (PolySans and colours are FACT via S4) |
+| Lydia → Sumeria | French design press (Étapes, Grapheine) | sumeria.eu; grapheine.com | ASSUMPTION |
+
+---
+
+## 10. Open questions and verification plan
+
+1. Exact official hex values for Satispay red, Scalapay pink, Nexi blue, Intesa Sanpaolo green, UniCredit red, Hype, Mooney, Moneyfarm, Trade Republic, Curve, Emma, Snoop, Plum, Monarch, Copilot, YNAB, Rocket Money, Cleo, Spendee, Wallet, Splitwise, Sumeria — verify from each brand's press/brand page or by sampling the App Store icon (document the sampling method).
+2. Named typefaces for Klarna, N26, Monzo, Satispay, Robinhood, Cash App, PayPal 2024 — verify via the brands' CSS (`@font-face` names on their sites) once egress is available, or via Fonts In Use.
+3. Dates and agencies for Revolut 2023, Wise 2023, PayPal 2024, Qonto 2021–22, Lydia/Sumeria 2024, Monarch 2025 — verify via Brand New, It's Nice That, agency sites.
+4. Whether Revolut uses Aeonik Pro only in marketing or also in-app (ui-kit bundles it but maps `--rui-font-brand` to Inter).
+5. Italian recognizability ranking (Satispay, PayPal, Revolut, Intesa, UniCredit, Fineco, Hype, Klarna, Scalapay, Nexi, Postepay) — run a 200-respondent aided-awareness survey in Phase 1.
+6. "Lilleri" comprehension and sentiment outside Tuscany; trademark and domain availability.
+7. Colour-blind simulation of the shortlisted terracotta/olive/ink/paper system and the semantic colours for positive/negative amounts (never rely on red/green alone; pair with sign, typography and position).
+
+---
+
+## Sources
+
+| ID | Source | URL / locator | Verified | Published | Reliability | Doubts |
+|---|---|---|---|---|---|---|
+| S1 | `simple-icons` npm package v16.33.0 — `data/simple-icons.json`, `icons/*.svg` (brand hex + maintainer-cited official source URLs) | https://registry.npmjs.org/simple-icons/-/simple-icons-16.33.0.tgz ; underlying source URLs listed in E6 (e.g. https://wise.design/foundations/logo, https://klarna.design, https://venmo.com/about/brand, https://press.robinhood.com, https://cash.app/press, https://monzo.com/press/, https://www.starlingbank.com/media/, https://www.starlingbank.com/docs/brand/starling-bank-brand-guidelines.pdf, https://developer.revolut.com/docs/resources/marketing-assets-guidelines/marketing-guidelines, https://press.bunq.com/media_kits, https://lydia-app.com/en/info/press.html, https://developer.apple.com/apple-pay/marketing, https://pay.google.com/intl/en_us/about/, https://newsroom.paypal-corp.com/media-resources, https://finecobank.com, https://n26.com) | 2026-10-02 | 2026-09-27 | medium–high | One hex per brand; the brand pages themselves were not fetched |
+| S2 | Wise design tokens `@transferwise/neptune-tokens` v8.26.0 (`tokens.css`, `colors-base.css`, `themes/personal/tokens.css`, `themes/navy/tokens.css`) and `@transferwise/neptune-css` v14.29.4 (`dist/css/neptune-core.css`, font files) | https://registry.npmjs.org/@transferwise/neptune-tokens ; https://registry.npmjs.org/@transferwise/neptune-css ; repo cited in package: github.com/transferwise/neptune-web | 2026-10-02 | 2026-06-19 / 2026-09-11 | high (primary) | Product tokens, not the brand book |
+| S3 | Revolut `@revolut/ui-kit` v14.16.2 (`styles.css`, `cjs/constants/theme-backgrounds.js`, `cjs/tokens/unified/*.js`, `types/dist/constants/fonts.d.ts`, bundled `AeonikPro-*.woff2`); v15.0.0 (2025-02-25) is a "public shim of @revolut-internal/ui-kit" | https://registry.npmjs.org/@revolut/ui-kit | 2026-10-02 | 2025-02-24 | high (primary, Apache-2.0) | Snapshot predates any 2025–26 changes |
+| S4 | Qonto `@qonto/login-button` v0.5.1 (`dist/qonto-login-button.es.js`) | https://registry.npmjs.org/@qonto/login-button | 2026-10-02 | 2025-02-24 | high (primary) | Single component |
+| S5 | `brand-colors` npm v2.1.1 (reimertz) — `dist/latest/scss/brand-colors.latest.scss` | https://registry.npmjs.org/brand-colors | 2026-10-02 | last modified 2022-06-13 | low–medium (community, stale) | Used only for "before" values |
+| S6 | Revolut Developer docs — "Revolut logos" (open-banking-logo-guidelines), "Revolut Pay button guidelines" (Buttons > Colour), "Marketing guidelines" | https://developer.revolut.com/docs/resources/open-banking-logo-guidelines ; https://developer.revolut.com/docs/resources/revolut-pay-button-guidelines ; https://developer.revolut.com/docs/resources/marketing-guidelines (via Context7 `/websites/developer_revolut`) | 2026-10-02 | undated | high | Snapshot via Context7, not a live fetch |
+| S7 | Satispay Business docs — Web-button pages | https://developers.satispay.com/docs/web-button-pay ; https://developers.satispay.com/docs/web-button-auth (via Context7 `/websites/developers_satispay`) | 2026-10-02 | undated | high | Only the asset name proves "red" |
+| S8 | Klarna API docs — payments session (badge asset URL, colour options) | https://docs.klarna.com/api/payments (via Context7 `/websites/klarna_api`) | 2026-10-02 | undated | high | No brand-book content |
+| S9 | Nexi Checkout docs — go-live checklist (logo requirement), styling | https://developer.nexigroup.com/nexi-checkout/en-EU/docs/go-live-checklist (via Context7) | 2026-10-02 | undated | high | — |
+| S10 | PayPal developer docs — JS SDK v6 reference (`paypal-button` classes, `venmo-button`), Pay Later messaging (logo types) | https://docs.paypal.ai/reference/sdk/js/v6/reference ; https://docs.paypal.ai/payments/methods/pay-later/get-started (via Context7 `/websites/paypal_ai`) | 2026-10-02 | undated | high | — |
+| S11 | Google Pay API — Brand guidelines (mark clear space, button clear space, themes) | https://developers.google.com/pay/api/web/guides/brand-guidelines (via Context7) | 2026-10-02 | undated | high | — |
+| S12 | Wise Platform docs — embedded flows styling | https://docs.wise.com/guides/product/embedded-flows (via Context7 `/websites/wise`) | 2026-10-02 | undated | high | Minor |
+| S13 | Sibling raw research in this repo (competitor feature analyses; logo-API market) | `/home/user/Lilleri/docs/research/raw/competitors-eu-uk.md`, `competitors-us.md`, `competitors-italy-and-ai-first.md`, `ai-ml-transaction-intelligence.md` | 2026-10-02 | 2026-10-02 | medium | Not brand-specific |
+| U1 | Blocked / unverified design-press pointers: Brand New (underconsideration.com/brandnew), It's Nice That, Dezeen, Design Week, Creative Bloq, Behance, Pentagram, Ragged Edge, Koto | see §9 | attempted 2026-10-02, EGRESS_BLOCKED | — | unverified | All commentary attributed to these is ASSUMPTION |
+| U2 | Blocked brand pages attempted directly: revolut.com/brand, wise.design, klarna.com press, n26.com press, monzo.com/press, satispay.com press, brandcolors.net, brandfetch.com, en.wikipedia.org | — | attempted 2026-10-02, EGRESS_BLOCKED | — | — | Re-fetch when egress allows |
