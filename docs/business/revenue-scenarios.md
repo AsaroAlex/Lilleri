@@ -1,188 +1,133 @@
-# Lilleri revenue scenarios — 1k / 10k / 100k / 1M users, mixes, margins, fixed costs, team, Gate C
+# Lilleri revenue scenarios — launch Plus-only, 1k / 10k / 100k / 1M MAU
 
-**Project:** LILLERI (consumer PFM, Italy-first then Europe)
-**Document date / verification date of carried-over claims:** 2026-10-02
-**Inputs:** the inputs table and formulas of `unit-economics.md` (U1–U35), the decisions of `business-model.md` and `pricing-analysis.md`, fixed-cost ranges from `cost-architecture.md`, and the raw research (R-BC, R-OBA, R-OBB, R-US, R-EU, R-IT, R-PP, R-AI, R-BB).
-**Method:** four parameter sets (Pessimistic / Base / Target / Optimistic) run through the same formulas at four scales. "Users" below means **MAU** (monthly active users); registered users are typically 2–4× MAU (ASSUMPTION; finance-app D30 retention 4–9 %, R-BC §12). All outputs are HYPOTHESES derived from ASSUMPTION inputs; the only FACTs are the unit prices behind them.
-**Label key:** FACT · ASSUMPTION · HYPOTHESIS · DECISION · OPEN QUESTION · UNKNOWN.
+**Review date:** 2026-10-02. **Evidence:** external claims and URLs below are inherited from the research; this review rechecks document consistency and arithmetic, not live vendor terms or legal clearance. Source verification dates belong to the cited research. FACT labels there retain the original limitations. All prices, conversion, usage, costs and projections proposed here are ASSUMPTIONS or HYPOTHESES; DECISION means a reversible internal planning choice.
 
----
+**Delivery boundary (DECISION):** local mock → official sandbox → legally cleared, contracted, consented real-data beta → store launch → later capabilities. Requirements and budgets do not prove implementation. No real-bank keys, bank credentials, purchase, contract, counsel opinion or store billing are obtained by these documents.
 
-## 0. Summary and Gate C verdict in one paragraph
+## 0. Gate C verdict
 
-At **Base** inputs (AIS €0.30 per account-month, 120 paid subscriptions per 1,000 MAU, consented offers €0.10 per MAU) Lilleri earns €0.54 per MAU per month and keeps €0.09 after COGS; it loses money at every scale against the stage fixed costs (−€39 k/month at 10 k MAU, −€111 k at 100 k, −€408 k at 1 M). At **Target** inputs (AIS €0.20, 180 subscriptions per 1,000 MAU, offers €0.15 per MAU, lean fixed costs) it keeps €0.50 per MAU, breaks even at ≈ 240 k MAU with a €120 k/month team and runs at ≈ €10 M annual revenue and break-even to modest profit at 1 M MAU. The **Optimistic** case is profitable from ≈ 100 k MAU; the **Pessimistic** case (AIS €0.45, 60 subscriptions per 1,000 MAU) is unrecoverable at any scale and must trigger the free-tier fallback. **Gate C verdict: CONDITIONAL PASS** — the business is potentially sustainable only inside the corridor defined in §6, and the three gating inputs (AIS price, paid share, offers rail) are UNKNOWN today. Proceed to Phase 2 with the RFP and the beta designed to measure them, and with the kill criteria in §6 written into the plan.
+**DECISION — CONDITIONAL for further research and local/sandbox work; economically unvalidated for launch.** Base launch GP is negative. Target has positive marginal contribution but remains loss-making at each Base fixed-cost stage. Only the Optimistic subscription-only case is profitable at 1M MAU in these static tables. Neither free beta, a legal offer hypothesis nor a spreadsheet passes a production gate.
 
----
+The earlier €0.54 Base ARPU, ~€0.50 Target GP/MAU, ~240k-MAU break-even and €1.5–2.5M seed estimate are withdrawn because they assumed an unavailable Pro/Famiglia/offer mix and an unspecified cash path. Launch recognised ARPU is **€0.342 Base / €0.519 Target**. The plan must be able to state its funding need without promising later commercial uses of bank data.
 
-## 1. Scenario definitions
+## 1. Parameter sets (ASSUMPTIONS; prices Plus €4.99 / €39.99 incl. VAT)
 
-| Input (ID in `unit-economics.md`) | Pessimistic | Base | **Target (plan of record)** | Optimistic | Source of range |
-|---|---|---|---|---|---|
-| AIS price per account-month (U9) | €0.45 | €0.30 | **€0.20** | €0.15 | R-BC §3 (UNKNOWN → ASSUMPTION) |
-| AIS monthly minimum (U10) | €2,000 | €500 | €500 | €0 | R-BC §3 |
-| Paid subscriptions per 1,000 MAU (U27) | 60 | 120 | **180** | 200 | ASSUMPTION; UNKNOWN for all competitors |
-| Paid mix Plus/Pro/Family (U6) | 80/10/10 | 65/15/20 | **60/15/25** | 50/20/30 | ASSUMPTION |
-| Members per Family (U7) | 3.0 | 2.3 | 2.3 | 2.0 | ASSUMPTION |
-| Annual share (U4) | 80 % | 60 % | 60 % | 40 % | R-BC §12 |
-| Take rate (U8) | 16 % | 13 % | **12 %** | 8 % | FACT rates / ASSUMPTION mix |
-| Free MAU connected (U13) × accounts (U12) | 65 % × 2.0 | 50 % × 1.6 | **45 % × 1.5** | 40 % × 1.3 | ASSUMPTION |
-| Paid accounts per member (U11) | 4.0 | 3.0 | 3.0 | 2.5 | R-IT (3–5 relationships) |
-| AI per free / Plus / Pro member (U16–U18) | €0.04 / 0.08 / 0.25 | €0.02 / 0.04 / 0.10 | €0.02 / 0.04 / 0.10 | €0.01 / 0.02 / 0.05 | R-AI §7.2 |
-| Infra + SaaS per MAU (U19+U20) | €0.157 | €0.044 | €0.038 | €0.014 | R-BC §6–§10 |
-| Support contacts /1,000 MAU, deflection, cost (U22–U24) | 40, 40 %, €8 | 15, 60 %, €6 | 12, 65 %, €6 | 5, 70 %, €4 | R-BC §11 |
-| Consented offers per MAU (U31) | €0.02 | €0.10 | **€0.15** | €0.25 | R-BC §13 (halved for opt-in) |
-| Fixed-cost set (U35) | High | Base | Base (lean variant also shown) | Low | `cost-architecture.md` |
-| Net ARPPU (output) | €2.93 | €3.68 | €3.87 | €4.64 | — |
-| Contribution per subscription (output) | −€0.19 | €2.30 | €2.84 | €4.06 | — |
-| GP per 1,000 MAU (output) | −€873 | €92 | **€499** | €983 | — |
-
----
-
-## 2. User mixes at each scale (Free / Paid / Family)
-
-Paid subscriptions = subs per 1,000 MAU × scale; Family subscriptions = mix × subs; paid members include Family members; free MAU = MAU − paid members; connected free = free × U13.
-
-| Scale (MAU) | Case | Paid subs | of which Plus / Pro / Family | Paid members | Free MAU | Free connected | Free unconnected |
-|---|---|---|---|---|---|---|---|
-| 1,000 | Pessimistic | 60 | 48 / 6 / 6 | 72 | 928 | 603 | 325 |
-| 1,000 | Base | 120 | 78 / 18 / 24 | 151 | 849 | 424 | 424 |
-| 1,000 | Target | 180 | 108 / 27 / 45 | 238 | 762 | 343 | 419 |
-| 1,000 | Optimistic | 200 | 100 / 40 / 60 | 260 | 740 | 296 | 444 |
-| 10,000 | Pessimistic | 600 | 480 / 60 / 60 | 720 | 9,280 | 6,032 | 3,248 |
-| 10,000 | Base | 1,200 | 780 / 180 / 240 | 1,512 | 8,488 | 4,244 | 4,244 |
-| 10,000 | Target | 1,800 | 1,080 / 270 / 450 | 2,376 | 7,624 | 3,431 | 4,193 |
-| 10,000 | Optimistic | 2,000 | 1,000 / 400 / 600 | 2,600 | 7,400 | 2,960 | 4,440 |
-| 100,000 | Pessimistic | 6,000 | 4,800 / 600 / 600 | 7,200 | 92,800 | 60,320 | 32,480 |
-| 100,000 | Base | 12,000 | 7,800 / 1,800 / 2,400 | 15,120 | 84,880 | 42,440 | 42,440 |
-| 100,000 | Target | 18,000 | 10,800 / 2,700 / 4,500 | 23,760 | 76,240 | 34,308 | 41,932 |
-| 100,000 | Optimistic | 20,000 | 10,000 / 4,000 / 6,000 | 26,000 | 74,000 | 29,600 | 44,400 |
-| 1,000,000 | Pessimistic | 60,000 | 48,000 / 6,000 / 6,000 | 72,000 | 928,000 | 603,200 | 324,800 |
-| 1,000,000 | Base | 120,000 | 78,000 / 18,000 / 24,000 | 151,200 | 848,800 | 424,400 | 424,400 |
-| 1,000,000 | Target | 180,000 | 108,000 / 27,000 / 45,000 | 237,600 | 762,400 | 343,080 | 419,320 |
-| 1,000,000 | Optimistic | 200,000 | 100,000 / 40,000 / 60,000 | 260,000 | 740,000 | 296,000 | 444,000 |
-
-Registered-user equivalents (ASSUMPTION: MAU ≈ 35 % of registered at Base, 25 % Pessimistic, 45 % Optimistic): 100 k MAU ≈ 220–400 k registered; 1 M MAU ≈ 2.2–4 M registered — i.e., the 1 M-MAU scenario is a Finanzguru-sized Italian product (> 3 M users, FACT R-EU S-68) and not plausible in Italy alone before a European rollout (HYPOTHESIS).
-
----
-
-## 3. Monthly revenue, COGS, gross margin, fixed costs, net — by scale
-
-Revenue = subscriptions (net of VAT and rails) + consented offers. COGS includes the AIS minimum invoice as a step (U10). Fixed costs per `cost-architecture.md` §2 (Pessimistic = High set, Base/Target = Base set, Optimistic = Low set; Target "lean" = Low set).
-
-### 3.1 At 1,000 MAU (closed beta)
-
-| Case | Revenue | of which offers | COGS | Gross profit | GM | Fixed | Net | Team (FTE) |
-|---|---|---|---|---|---|---|---|---|
-| Pessimistic | €196 | €20 | €2,396 (AIS min €2,000) | −€2,200 | n/m | €30,000 | **−€32,200** | 4 |
-| Base | €542 | €100 | €610 (AIS min €500) | −€68 | −13 % | €15,000 | **−€15,068** | 3 (+ contractors) |
-| Target | €846 | €150 | €602 | €245 | 29 % | €15,000 | **−€14,755** | 3 |
-| Optimistic | €1,178 | €250 | €195 | €983 | 83 % | €8,000 | **−€7,017** | 2–3 |
-
-### 3.2 At 10,000 MAU (open beta → launch)
-
-| Case | Revenue | of which offers | COGS | Gross profit | GM | Fixed | Net | Team (FTE) |
-|---|---|---|---|---|---|---|---|---|
-| Pessimistic | €1,959 | €200 | €10,685 | −€8,727 | −446 % | €70,000 | **−€78,727** | 7 |
-| Base | €5,418 | €1,000 | €4,494 | €924 | 17 % | €40,000 | **−€39,076** | 5 |
-| Target | €8,463 | €1,500 | €3,475 | €4,989 | 59 % | €40,000 (lean €20,000) | **−€35,011** (lean −€15,011) | 5 (lean 3–4) |
-| Optimistic | €11,781 | €2,500 | €1,947 | €9,834 | 83 % | €20,000 | **−€10,166** | 3–4 |
-
-### 3.3 At 100,000 MAU (Italy at scale)
-
-| Case | Revenue | of which offers | COGS | Gross profit | GM | Fixed | Net | Team (FTE) |
-|---|---|---|---|---|---|---|---|---|
-| Pessimistic | €19,588 | €2,000 | €106,854 | −€87,266 | −446 % | €200,000 | **−€287,266** | 18 |
-| Base | €54,182 | €10,000 | €44,938 | €9,244 | 17 % | €120,000 | **−€110,756** | 12 |
-| Target | €84,631 | €15,000 | €34,746 | €49,885 | 59 % | €120,000 (lean €70,000) | **−€70,115** (lean −€20,115) | 12 (lean 7–8) |
-| Optimistic | €117,809 | €25,000 | €19,468 | €98,342 | 83 % | €70,000 | **+€28,342** | 7–8 |
-
-Annualised revenue at 100 k MAU: Pessimistic €0.24 M, Base €0.65 M, Target €1.0 M, Optimistic €1.4 M.
-
-### 3.4 At 1,000,000 MAU (Italy + first European markets)
-
-| Case | Revenue | of which offers | COGS | Gross profit | GM | Fixed | Net | Team (FTE) |
-|---|---|---|---|---|---|---|---|---|
-| Pessimistic | €195,877 | €20,000 | €1,068,539 | −€872,662 | −446 % | €900,000 | **−€1,772,662** | 65 |
-| Base | €541,817 | €100,000 | €449,378 | €92,439 | 17 % | €500,000 | **−€407,561** | 40 |
-| Target | €846,311 | €150,000 | €347,458 | €498,853 | 59 % | €500,000 (lean €300,000) | **−€1,147 ≈ break-even** (lean +€198,853) | 40 (lean 25–30) |
-| Optimistic | €1,178,094 | €250,000 | €194,678 | €983,416 | 83 % | €300,000 | **+€683,416** | 25–30 |
-
-Annualised revenue at 1 M MAU: Pessimistic €2.4 M, Base €6.5 M, Target €10.2 M, Optimistic €14.1 M. For scale: Finanzguru ≈ €40 M on > 3 M users (FACT medium, R-EU S-68); Plum £34 M ARR on 2 M customers / 5 M downloads (FACT medium, R-EU S-67); Monarch $100 M ARR on > 1 M paying-centric members (FACT, R-US W12).
-
----
-
-## 4. Fixed-cost ranges and implied team by stage (ASSUMPTION; detail in `cost-architecture.md` §2)
-
-| Stage (MAU) | Low | Base | High | Base composition (monthly) | Team implied (Low / Base / High) |
-|---|---|---|---|---|---|
-| 1 k (closed beta) | €8 k | €15 k | €30 k | 3 founders at minimal pay €6 k; legal/DPO/compliance €2.5 k; AIS minimum €0.5 k; infra €0.3 k; tooling/stores €0.4 k; insurance/accounting €0.8 k; contractors/design €4.5 k | 2–3 / 3 / 4 |
-| 10 k (launch) | €20 k | €40 k | €70 k | team of 5 €28 k; compliance/DPO €3 k; AIS minimum €0.5–2 k; infra €1 k; tooling €1 k; part-time support €1.5 k; marketing €3 k; G&A €2 k | 3–4 / 5 / 7 |
-| 100 k | €70 k | €120 k | €200 k | team of 12 €85 k (7 eng, 2 product/design, 2 support, 1 growth); compliance/legal/audit €6 k; infra €4 k; tooling €3 k; marketing €10 k; insurance (PII if own AISP) €3 k; own-AISP registration amortised €3 k; G&A €6 k | 7–8 / 12 / 18 |
-| 1 M | €300 k | €500 k | €900 k | team of 40 €330 k; marketing €60 k; compliance/regulatory €25 k; infra €30 k; tooling €15 k; G&A €40 k | 25–30 / 40 / 65 |
-
-Italian fully-loaded cost per person: €5–7 k/month mid-level, €8–11 k senior (ASSUMPTION; RAL €40–75 k plus ≈ 35–40 % contributions and overhead). Marketing is treated as fixed here; `go-to-market.md` sets the variable CAC envelope.
-
----
-
-## 5. What drives the difference between cases (decomposition, per 1,000 MAU, Base → Target)
-
-| Step | GP per 1,000 MAU | Δ | Driver |
-|---|---|---|---|
-| Base | €92 | — | — |
-| + AIS €0.30 → €0.20 | €206 | +€113 | RFP outcome / per-user pricing / sync pause |
-| + subscriptions 120 → 180 | €385 | +€180 | Free tier as a funnel; 30-day trial; multi-institution upgrade |
-| + offers €0.10 → €0.15 | €435 | +€50 | Phase-2 offers rail (opt-in) |
-| + mix 65/15/20 → 60/15/25, take 13 → 12 % | €461 | +€26 | Family adoption; web rail share |
-| + free connected 50 % × 1.6 → 45 % × 1.5; support 15 → 12 contacts at 65 % deflection; infra/SaaS | €499 | +€37 | Sync pause, consent-expiry UX, support deflection |
-| **Target** | **€499** | | |
-
-(Steps are sequential and computed with the `unit-economics.md` formulas; order changes the attribution slightly. HYPOTHESIS.)
-
----
-
-## 6. Gate C — "Is the business potentially sustainable?" (DECISION)
-
-**Verdict: CONDITIONAL PASS.** The unit economics of a paying subscriber are sound (Plus 62 % contribution margin at Base, Pro 75 %), and the Target case produces a software-grade 59 % blended gross margin with break-even around 240 k MAU on a 12-person team. But the Base case — which uses the midpoint of every unknown — does not break even at any scale, and the Pessimistic case loses more than it earns on every user. Sustainability therefore depends on three inputs that cannot be known before the RFP and the beta.
-
-| Condition | Threshold for PASS | Status today | How/when measured | If missed |
+| Input | Pessimistic | Base | Target | Optimistic |
 |---|---|---|---|---|
-| C1 AIS price per connected account-month (or per-user equivalent) | ≤ €0.20 at 25 k accounts (≤ €0.25 acceptable with per-user/lite pricing for free users) | UNKNOWN (range €0.10–0.60) | RFP answers, 2–4 weeks | Switch free tier to F′ "Free Classic" (90-day full sync then import-only); re-run scenarios; at > €0.35 consider trial-gated G |
-| C2 Paid subscriptions per 1,000 MAU | ≥ 180 by month 9 of open beta (≥ 120 by month 6) | UNKNOWN (60–200) | Beta cohorts, monthly | Tighten free envelope (1 account), raise trial conversion work, test €5.99 |
-| C3 Consented offers revenue per MAU | ≥ €0.15 by 100 k MAU (opt-in rate ≥ 25 %, no NPS penalty) | UNKNOWN (€0.02–0.25) | Phase-2 experiments with 2 bank partners + 1 comparator | Plan for subscription-only economics: requires C1 ≤ €0.15 and C2 ≥ 220 |
-| C4 Fixed cost discipline | ≤ €40 k/month until 10 k MAU; ≤ €120 k until 250 k MAU | DECISION | Monthly | Hiring freeze rule in `cost-architecture.md` |
-| C5 Blended CAC per registered user | ≤ €2 (organic/referral-led); loaded payback ≤ 18 months | ASSUMPTION €3 Base | `go-to-market.md` dashboard | No paid UA beyond tests |
-| C6 Legal basis for the licence route and the offers rail (PSD2 art. 67(2)(f); Banca d'Italia position on recipient model) | Counsel memo clears both | UNKNOWN (P0 in R-OBA §6 #3, R-OBB §15) | Counsel, before production | Route B (agent) or own-AISP registration budget (€40–150 k one-off) enters fixed costs |
+| AIS price / minimum invoice | €0.45 / €2,000 | €0.30 / €500 | €0.20 / €500 | €0.15 / €0 |
+| Paid Plus subscriptions / 1k MAU | 60 | 120 | 180 | 200 |
+| Paid mix / members per subscription | 100% Plus / 1 | 100% Plus / 1 | 100% Plus / 1 | 100% Plus / 1 |
+| Annual share / effective take | 80% / 16% | 60% / 13% | 60% / 12% | 40% / 8% |
+| Connected Gratis share × accounts | 65% × 2.0 | 50% × 1.6 | 45% × 1.5 | 40% × 1.3 |
+| Paid accounts/member | 4.0 | 3.0 | 3.0 | 2.5 |
+| AI per Gratis / Plus member | €0.04 / €0.08 | €0.02 / €0.04 | €0.02 / €0.04 | €0.01 / €0.02 |
+| Marginal infra/SaaS/other per MAU | €0.100/0.057/0.020 | €0.034/0.010/0.010 | €0.030/0.008/0.010 | €0.013/0.001/0.005 |
+| Contacts per 1k / deflection / human cost / paid multiplier | 40 / 40% / €8 / 3 | 15 / 60% / €6 / 2 | 12 / 65% / €6 / 2 | 5 / 70% / €4 / 1.5 |
+| Offers revenue / Famiglia seats / Pro subscribers | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 | 0 / 0 / 0 |
+| Fixed budget set | High | Base | Base | Low |
 
-Funding implication (HYPOTHESIS; sum of monthly nets along a growth path of 1 k → 10 k MAU in 6 months and 10 k → 100 k in 18 months, fixed costs interpolated between stages): cumulative net loss to reach 100 k MAU is ≈ **€0.55 M** in the Target case with lean fixed costs, ≈ **€1.3 M** in the Target case with Base fixed costs, ≈ **€1.6 M** in the Base case (which then keeps losing ≈ €110 k/month at 100 k MAU), and ≈ €0.2 M in the Optimistic case. Add working capital, the provider minimum invoices, a possible own-AISP registration (€40–150 k) and a 30 % contingency: a seed round of **€1.5–2.5 M** covers the Target path to 100 k MAU with a lean team; the Pessimistic case should not be funded past the beta. These are order-of-magnitude figures for Phase 2 planning, not a financial plan.
+Ranges derive from R-BC/R-OBA/R-OBB and the labelled inputs of `unit-economics.md` §2. Fees and prices remain unconfirmed. Account limits are product hypotheses; coverage is per bank/account type and stage, not a number implied by a price.
 
----
+## 2. User cohorts by scale
+
+Plus paid members = subscriptions; Gratis = MAU − paid members. The closed beta actually charges nobody; the 1k rows simulate a future monetised cohort of that size. Unconnected Gratis includes manual/import/paused users. Family-sharing seats are deliberately absent until implemented.
+
+| MAU | Case | Plus subscriptions/members | Gratis MAU | Gratis connected | Gratis unconnected |
+|---|---|---|---|---|---|
+| 1,000 | Pessimistic | 60 | 940 | 611 | 329 |
+| 1,000 | Base | 120 | 880 | 440 | 440 |
+| 1,000 | Target | 180 | 820 | 369 | 451 |
+| 1,000 | Optimistic | 200 | 800 | 320 | 480 |
+| 10,000 | Pessimistic | 600 | 9,400 | 6,110 | 3,290 |
+| 10,000 | Base | 1,200 | 8,800 | 4,400 | 4,400 |
+| 10,000 | Target | 1,800 | 8,200 | 3,690 | 4,510 |
+| 10,000 | Optimistic | 2,000 | 8,000 | 3,200 | 4,800 |
+| 100,000 | Pessimistic | 6,000 | 94,000 | 61,100 | 32,900 |
+| 100,000 | Base | 12,000 | 88,000 | 44,000 | 44,000 |
+| 100,000 | Target | 18,000 | 82,000 | 36,900 | 45,100 |
+| 100,000 | Optimistic | 20,000 | 80,000 | 32,000 | 48,000 |
+| 1,000,000 | Pessimistic | 60,000 | 940,000 | 611,000 | 329,000 |
+| 1,000,000 | Base | 120,000 | 880,000 | 440,000 | 440,000 |
+| 1,000,000 | Target | 180,000 | 820,000 | 369,000 | 451,000 |
+| 1,000,000 | Optimistic | 200,000 | 800,000 | 320,000 | 480,000 |
+
+## 3. Monthly static P&L (HYPOTHESES, EUR)
+
+Revenue excludes VAT and fees. COGS adds `max(0, minimumInvoice − variableAIS)` exactly once. Fixed budgets exclude AIS minimum and marginal delivery cost; they include people and fixed reserved capacity. Profits exclude incremental growth spend, new-cohort preview/backfill costs, unknown dormant account bills and financing. These omissions must be funded before launch.
+
+| MAU | Case | Net revenue | Direct COGS | Gross profit | GM | Fixed budget | Operating result |
+|---|---|---|---|---|---|---|---|
+| 1,000 | Pessimistic | €151 | €2,393 | −€2,242 | -1480.9% | €30,000 | −€32,242 |
+| 1,000 | Base | €342 | €602 | −€260 | -76.1% | €15,000 | −€15,260 |
+| 1,000 | Target | €519 | €589 | −€70 | -13.5% | €15,000 | −€15,070 |
+| 1,000 | Optimistic | €653 | €170 | €483 | 74.0% | €8,000 | −€7,517 |
+| 10,000 | Pessimistic | €1,514 | €10,509 | −€8,995 | -594.3% | €70,000 | −€78,995 |
+| 10,000 | Base | €3,419 | €4,214 | −€795 | -23.2% | €40,000 | −€40,795 |
+| 10,000 | Target | €5,188 | €3,076 | €2,112 | 40.7% | €40,000 | −€37,888 |
+| 10,000 | Optimistic | €6,526 | €1,700 | €4,826 | 74.0% | €20,000 | −€15,174 |
+| 100,000 | Pessimistic | €15,137 | €105,089 | −€89,952 | -594.3% | €200,000 | −€289,952 |
+| 100,000 | Base | €34,191 | €42,140 | −€7,949 | -23.2% | €120,000 | −€127,949 |
+| 100,000 | Target | €51,876 | €30,759 | €21,117 | 40.7% | €120,000 | −€98,883 |
+| 100,000 | Optimistic | €65,260 | €16,996 | €48,264 | 74.0% | €70,000 | −€21,736 |
+| 1,000,000 | Pessimistic | €151,365 | €1,050,886 | −€899,521 | -594.3% | €900,000 | −€1,799,521 |
+| 1,000,000 | Base | €341,910 | €421,400 | −€79,490 | -23.2% | €500,000 | −€579,490 |
+| 1,000,000 | Target | €518,760 | €307,588 | €211,172 | 40.7% | €500,000 | −€288,828 |
+| 1,000,000 | Optimistic | €652,597 | €169,960 | €482,637 | 74.0% | €300,000 | €182,637 |
+
+## 4. Fixed budgets and implied team (ASSUMPTIONS)
+
+| Stage | Low / Base / High monthly | Team envelope |
+|---|---|---|
+| 1k MAU | €8k / €15k / €30k | 2–4 founders/contractors; roles may be combined |
+| 10k | €20k / €40k / €70k | ~3–7 people; compliance and support cannot be unpaid assumptions |
+| 100k | €70k / €120k / €200k | ~7–18 people; no automatic hire because MAU crossed a threshold |
+| 1M | €300k / €500k / €900k | ~25–65 people, market support/translation/legal needs uncertain |
+
+Budgets are envelopes, not vendor quotes or reconciled accounting totals. A ~€120k fixed team needs ~568k MAU at Target static GP before acquisition; a ~€500k team needs ~2.37M. Holding budgets flat while scaling is illustrative only. One-million MAU is a scale sensitivity; Italian attainable demand and the need for European expansion are UNKNOWN, not implied by competitor registered-user counts.
+
+## 5. Later sensitivities and funding discipline
+
+- A lawful offers rail with **incremental net** €0.15/MAU would add €15k/month at 100k MAU and €150k at 1M, before any unallocated rail costs. Target would still lose ~€83.9k and ~€138.8k respectively against Base fixed budgets. This is not permission or proof of an available product.
+- Famiglia at hypothetical €9.99/€79.99 nets ~€5.70/month at Base. At Plus core delivery cost €1.066/person, two / 2.3 / five fully active members cost €2.13 / €2.45 / €5.33 before sharing overhead. A five-seat claim gives little cushion (~€0.37) and cannot be priced from average occupancy alone. Test a two-adult household first; no committed seat count.
+- A higher Plus price or bounded/time-boxed Gratis sync may change GP; re-run joint conversion, coverage and churn sensitivity. A price increase is not revenue at unchanged demand.
+- Funding remains UNKNOWN. Build a monthly cash model with starting cash, growth, spend, cohort conversion, minimum fees, trial costs, VAT settlement, annual receipts/refunds, legal/insurance, hiring and contingency; do not reuse the retired seed estimate.
+
+## 6. Gate C conditions (DECISION; internal research gate, no approval substitute)
+
+| Condition | Evidence required | State / action if missed |
+|---|---|---|
+| C1 Contracted AIS economics | Written billing unit, dormant rules, platform minimum/fee, volume ladder and actual coverage; €0.20/account is a Target hypothesis | UNKNOWN; keep mock/sandbox; re-run F/F′ before promising Gratis live sync |
+| C2 Retained paid demand | Post-billing cohort paid share, renewal and contribution; 180 paid subscriptions/1k MAU is a Target hypothesis | UNKNOWN; beta willingness is distinct from collected revenue |
+| C3 Launch subsidy | Free AIS/active paid subscription ≤ €0.95 with non-zero paid denominator; full blended GP > 0 and a funded operating path | Base ratio €1.76 fails; two measured misses trigger new-cohort F′ review; existing promises require notice and funding |
+| C4 Fixed/cash discipline | Monthly forecast funds stage costs, support, acquisition and contingencies; no duplicated minimum/cost lines | UNKNOWN; no hires or scale launch inferred from scenario size |
+| C5 Acquisition | Measured contribution-LTV/CAC sustainable and loaded payback target ≤18 months | Base ~56 / Target ~24 months fail; organic discovery and bounded research tests only |
+| C6 Legal production route | Written counsel route/taxonomy opinions, accepted licence/contract route, DPIA, verified consent and security gates | OPEN; user opt-in alone does not resolve a licensing or prohibited-purpose issue |
+
+Offers are Later and excluded from C1–C5. Opening them requires a separate legal, commercial, product and trust gate; a checkbox cannot legalise otherwise prohibited processing. Gate C will be re-evaluated when provider quotes and actual eligible paid cohorts exist.
 
 ## 7. Decisions / Recommendations
 
 | ID | Decision / recommendation |
 |---|---|
-| D-RS-1 | Gate C = CONDITIONAL PASS; proceed to Phase 2 with conditions C1–C6 as explicit gates; the plan of record is the Target case; pitches must show Base alongside Target |
-| D-RS-2 | The scenario parameter sets in §1 are frozen as `scenarios.json` in the finance model package; any change is a reviewed commit |
-| D-RS-3 | Stage budgets: fixed ≤ €15 k (closed beta), ≤ €40 k (launch), ≤ €120 k (to 250 k MAU); hiring beyond this requires C1 and C2 to be measured and inside thresholds |
-| D-RS-4 | The 1 M-MAU scenario assumes European expansion; do not plan Italian-only growth beyond ≈ 300 k MAU without evidence (Italy adult population ≈ 50 M; multi-account early adopters UNKNOWN) |
-| R-RS-1 | Build the beta dashboard around the three gating KPIs (AIS cost per paid subscription, paid subscriptions per 1,000 MAU, offers revenue per MAU) plus the funnel (`go-to-market.md` §8) |
-| R-RS-2 | Run the RFP before Phase 3 architecture decisions that depend on provider billing granularity (per account vs per user vs per call) |
-
----
+| D-RS-1 | Gate C conditional/unvalidated; use Plus-only, €0-offers launch scenarios; show Base and downside whenever showing Target |
+| D-RS-2 | Freeze a versioned finance model only when implemented and reconciled to this arithmetic; no `scenarios.json` implementation is claimed |
+| D-RS-3 | Stage fixed budgets are assumptions; commitments require funded cash projections and real usage quotes |
+| D-RS-4 | 1M MAU is a sensitivity, not validated Italy/Europe market size |
+| R-RS-1 | Replace assumptions with invoice, paid cohort and support evidence; before billing, report shadow economics explicitly |
+| R-RS-2 | Ask counsel and providers before accessing real beta data; keep licence, data, security and business gates separate |
 
 ## 8. Open questions
 
-| # | Question | Why | How to verify |
-|---|---|---|---|
-| Q1 | AIS price ladder and billing granularity | C1 | RFP (5 providers), identical volume ladder |
-| Q2 | Paid share of MAU for a 1-institution free tier in Italy | C2 | Beta (≥ 2,000 MAU, 3 months) |
-| Q3 | Opt-in rate and CPA for Italian bank/broker referrals and switching | C3 | Partner talks; Awin/Tradedoubler IT |
-| Q4 | Registered→MAU ratio for an Italian PFM (used to translate MAU scenarios into registered users and downloads) | Sizing, marketing | Beta telemetry; AppsFlyer/Adjust finance retention benchmarks (R-BC §12, unverified) |
-| Q5 | Ceiling of the Italian multi-account segment (how many adults hold ≥ 3 relationships and want them reconciled) | 100 k vs 1 M plausibility | Banca d'Italia IBF, PoliMi Osservatorio Fintech consumer report, waitlist survey |
-| Q6 | Own-AISP registration timing and cost (€40–150 k one-off; running UNKNOWN) and whether it lowers AIS cost via direct CBI Globe access | Fixed vs variable trade-off at scale | Law-firm quotes; CBI Globe fee schedule (R-OBB §13, §15.2) |
-| Q7 | Whether Family subscriptions average 2.0 or 3.0 members (COGS per subscription ±€0.8) | Family margin | Beta |
+Written AIS fee ladder and coverage; actual dormant-unit billing; Italian paid demand and retention; marginal vs fixed cloud allocation; household seats and cost; legal route and referral restrictions; cash runway; addressable demand. Verify through quotes, appropriately consented and cleared beta cohorts, and counsel/tax advice. No outreach or spend is executed by this review.
 
----
+## Review log
+
+| Reviewer | Finding | Resolution |
+|---|---|---|
+| Investor/CFO (blocker) | Conditional pass relied on Pro/Famiglia/offer revenue not present in MVP | Replaced all scale tables with Plus-only subscription revenue; Gate C now conditional and economically unvalidated |
+| CFO (major) | Provider minimum was listed in fixed composition and direct COGS | Budget grain now excludes provider minimum; top-up appears once in direct costs |
+| Investor (major) | €1.5–2.5M seed round and ~240k-MAU break-even had no audited monthly cash path | Withdrawn; constant-cost break-even labelled illustrative; funding UNKNOWN |
+| PM (major) | Five-seat household priced from average seats and presented for launch | Famiglia Later; two/2.3/five-seat stress case and uncommitted occupancy added |
 
 ## 9. Sources
 

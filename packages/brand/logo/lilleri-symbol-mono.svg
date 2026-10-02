@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Lilleri, Lilleri consolidated identity "li": the stem that settles (l, foot with one round terminal) and the stem that asks (i, the signature dot). 8-unit grid: stem 144, foot 136, inner radius 40, run 24, terminal r 68, gap 176, i height 464, dot r 88, top-corner radius 16. -->
+  <path d="M280 144 A16 16 0 0 1 296 128 H408 A16 16 0 0 1 424 144 V720 A40 40 0 0 0 464 760 H488 A68 68 0 0 1 488 896 H456 A176 176 0 0 1 280 720 Z" fill="#000000"/><path d="M600 448 A16 16 0 0 1 616 432 H728 A16 16 0 0 1 744 448 V896 H600 Z" fill="#000000"/><path d="M584 216 A88 88 0 1 0 760 216 A88 88 0 1 0 584 216 Z" fill="#000000"/>
+</svg>

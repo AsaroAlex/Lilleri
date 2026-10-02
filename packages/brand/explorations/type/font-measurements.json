@@ -1,0 +1,392 @@
+[
+  {
+    "family": "Geist",
+    "source": "tools/brand-render/fonts/Geist-Variable.ttf",
+    "version": "Version 1.800",
+    "bytes": 169056,
+    "axes": {
+      "wght": [
+        100.0,
+        400.0,
+        900.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "case",
+      "ccmp",
+      "dlig",
+      "dnom",
+      "frac",
+      "kern",
+      "liga",
+      "locl",
+      "mark",
+      "mkmk",
+      "numr",
+      "ordn",
+      "pnum",
+      "sinf",
+      "ss01",
+      "ss02",
+      "ss03",
+      "ss04",
+      "ss05",
+      "ss06",
+      "ss07",
+      "ss08",
+      "ss09",
+      "ss10",
+      "ss11",
+      "subs",
+      "sups",
+      "tnum"
+    ],
+    "tnum_digit_widths": [
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600
+    ],
+    "unitsPerEm": 1000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  },
+  {
+    "family": "Inter",
+    "source": "packages/brand/explorations/type/source-fonts/Inter-Variable.ttf",
+    "version": "Version 4.001;git-66647c0bb",
+    "bytes": 876576,
+    "axes": {
+      "opsz": [
+        14.0,
+        14.0,
+        32.0
+      ],
+      "wght": [
+        100.0,
+        400.0,
+        900.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "calt",
+      "case",
+      "ccmp",
+      "cpsp",
+      "cv01",
+      "cv02",
+      "cv03",
+      "cv04",
+      "cv05",
+      "cv06",
+      "cv07",
+      "cv08",
+      "cv09",
+      "cv10",
+      "cv11",
+      "cv12",
+      "cv13",
+      "cv14",
+      "dlig",
+      "dnom",
+      "frac",
+      "kern",
+      "locl",
+      "mark",
+      "mkmk",
+      "numr",
+      "ordn",
+      "pnum",
+      "salt",
+      "sinf",
+      "ss01",
+      "ss02",
+      "ss03",
+      "ss04",
+      "ss05",
+      "ss06",
+      "ss07",
+      "ss08",
+      "subs",
+      "sups",
+      "tnum",
+      "zero"
+    ],
+    "tnum_digit_widths": [
+      1328,
+      1328,
+      1328,
+      1328,
+      1328,
+      1328,
+      1328,
+      1328,
+      1328,
+      1328
+    ],
+    "unitsPerEm": 2048,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": true
+  },
+  {
+    "family": "Manrope",
+    "source": "packages/brand/explorations/type/source-fonts/Manrope-Variable.ttf",
+    "version": "Version 4.505",
+    "bytes": 164700,
+    "axes": {
+      "wght": [
+        200.0,
+        200.0,
+        800.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "calt",
+      "case",
+      "dnom",
+      "frac",
+      "kern",
+      "liga",
+      "locl",
+      "numr",
+      "ordn",
+      "pnum",
+      "sinf",
+      "subs",
+      "sups",
+      "tnum"
+    ],
+    "tnum_digit_widths": [
+      1240,
+      1240,
+      1240,
+      1240,
+      1240,
+      1240,
+      1240,
+      1240,
+      1240,
+      1240
+    ],
+    "unitsPerEm": 2000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  },
+  {
+    "family": "PlusJakartaSans",
+    "source": "packages/brand/explorations/type/source-fonts/PlusJakartaSans-Variable.ttf",
+    "version": "Version 2.071;gftools[0.9.30]",
+    "bytes": 176288,
+    "axes": {
+      "wght": [
+        200.0,
+        400.0,
+        800.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "calt",
+      "case",
+      "ccmp",
+      "cpsp",
+      "dnom",
+      "frac",
+      "kern",
+      "liga",
+      "locl",
+      "mark",
+      "numr",
+      "ordn",
+      "pnum",
+      "sinf",
+      "ss01",
+      "ss02",
+      "ss03",
+      "subs",
+      "sups",
+      "tnum"
+    ],
+    "tnum_digit_widths": [
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600
+    ],
+    "unitsPerEm": 1000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  },
+  {
+    "family": "InstrumentSans",
+    "source": "packages/brand/explorations/type/source-fonts/InstrumentSans-Variable.ttf",
+    "version": "Version 1.000;gftools[0.9.28]",
+    "bytes": 194336,
+    "axes": {
+      "wdth": [
+        75.0,
+        100.0,
+        100.0
+      ],
+      "wght": [
+        400.0,
+        400.0,
+        700.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "case",
+      "ccmp",
+      "kern",
+      "liga",
+      "locl",
+      "mark",
+      "mkmk",
+      "ordn",
+      "pnum",
+      "ss01",
+      "ss02",
+      "ss03",
+      "ss04",
+      "ss05",
+      "ss06",
+      "ss07",
+      "ss08",
+      "ss09",
+      "ss10",
+      "ss11",
+      "ss12",
+      "tnum"
+    ],
+    "tnum_digit_widths": [
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600
+    ],
+    "unitsPerEm": 1000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  },
+  {
+    "family": "Newsreader",
+    "source": "packages/brand/explorations/type/source-fonts/Newsreader-Variable.ttf",
+    "version": "Version 1.003",
+    "bytes": 451664,
+    "axes": {
+      "wght": [
+        200.0,
+        400.0,
+        800.0
+      ],
+      "opsz": [
+        6.0,
+        18.0,
+        72.0
+      ]
+    },
+    "features": [
+      "case",
+      "kern",
+      "liga",
+      "locl",
+      "mark",
+      "mkmk",
+      "ordn",
+      "pnum",
+      "rvrn",
+      "sups",
+      "tnum"
+    ],
+    "tnum_digit_widths": [
+      1100,
+      1100,
+      1100,
+      1100,
+      1100,
+      1100,
+      1100,
+      1100,
+      1100,
+      1100
+    ],
+    "unitsPerEm": 2000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  },
+  {
+    "family": "GeistMono",
+    "source": "tools/brand-render/fonts/GeistMono-Variable.ttf",
+    "version": "Version 1.700",
+    "bytes": 171200,
+    "axes": {
+      "wght": [
+        100.0,
+        400.0,
+        900.0
+      ]
+    },
+    "features": [
+      "aalt",
+      "case",
+      "ccmp",
+      "dnom",
+      "frac",
+      "locl",
+      "mark",
+      "mkmk",
+      "numr",
+      "ordn",
+      "sinf",
+      "ss01",
+      "ss02",
+      "ss03",
+      "ss04",
+      "ss06",
+      "ss07",
+      "ss08",
+      "ss09",
+      "ss10",
+      "ss11",
+      "subs",
+      "sups"
+    ],
+    "tnum_digit_widths": [
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600,
+      600
+    ],
+    "unitsPerEm": 1000,
+    "missing_test_glyphs": [],
+    "narrow_nbsp_present": false
+  }
+]

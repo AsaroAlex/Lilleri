@@ -5,11 +5,13 @@
 **Author:** Product Manager (consumer fintech) + growth lead + UX researcher, founding team
 **Status:** synthesis of Phase 0 research; companion to `market-analysis.md` and `opportunity-map.md`
 
+**Review provenance (DECISION, 2026-10-02):** this revision checks repository evidence, source consistency and design implications. Source URLs/access dates below are inherited observations, not fresh web verification. FACT means the cited observation is recorded; vendor performance, source independence, market prevalence and current legal/commercial eligibility remain unverified where stated.
+
 ## How to read this document
 
 - **Rows** are products; **columns** are the fields requested in the brief (target, markets, onboarding steps-to-value, bank connection/aggregator, sync, categorisation/AI learning, rules, automation, recurring, merchant normalisation, review flow, splits, transfers, refunds, cash, budget, forecast, net worth, goals, notifications, anomalies, shared, receipts, import/export, web, pricing, free tier, ads/affiliate, strengths, weaknesses, recurring complaints). A 35-column table does not render, so the wide matrix is split into **four blocks that share the same row order**: A (identity and commercial), B (categorisation and reconciliation), C (planning, collaboration and data), D (assessment). Read a product across the four blocks.
 - **Labels inside cells:** `[F]` FACT, `[A]` ASSUMPTION, `[H]` HYPOTHESIS, `[U]` UNKNOWN. Reliability of the underlying source is given where it matters (high/medium/low). **UNKNOWN is used wherever the raw research found nothing**; it is never replaced by a guess.
-- **Sources:** each cell points to the raw research note and section that holds the evidence and its URL: `US-§2.1` = `docs/research/raw/competitors-us.md` section 2.1; `EU-§3.6` = `competitors-eu-uk.md`; `IT-§2.4` = `competitors-italy-and-ai-first.md`; `PP-§A` = `user-pain-points.md`; `BR-§2E` = `brand-competitor-analysis.md`; `NEW-n` = WebSearch run on 2026-10-02 for `market-analysis.md` §12.3. Full URL tables are reproduced in those files; the ones cited directly here are listed in §6.
+- **Sources:** each cell points to the raw research note and section that holds the evidence and its URL: `US-§2.1` = `docs/research/raw/competitors-us.md` section 2.1; `EU-§3.6` = `competitors-eu-uk.md`; `IT-§2.4` = `competitors-italy-and-ai-first.md`; `PP-§A` = `user-pain-points.md`; `BR-§2E` = `brand-competitor-analysis.md`; `NEW-n` = WebSearch run on 2026-10-02 for `market-analysis.md` §12.3. WS source IDs resolve in `docs/research/user-pain-points.md` → Sources. Full URL tables are reproduced in the raw files; the ones cited directly here are listed in §9.
 - Prices are in the currency the vendor shows; all were seen as search snippets on 2026-10-02 and must be re-read on the vendor page before use. The raw notes' adversarial passes resolved several conflicts (e.g. Emma £5.99 = extra-member price; PocketGuard free tier removed; Monarch Plus $199 vs $299 still in CONFLICT).
 - Row groups: 1 US-centric PFMs · 2 UK PFMs · 3 continental-EU PFMs and global trackers · 4 banks and neobanks used in Italy · 5 shared-expense apps · 6 Italian-born PFMs · 7 platforms and open source.
 
@@ -59,6 +61,11 @@
 | 38 | **Oval Money (closed)** (6) | Italian/UK round-up saving + spending insights `[F]` | Italy/UK; **closed** (withdraw by 2023-05-09; OvalX liquidated Jun 2024) `[F med]` IT-§2.2 | n/a | Connected "many current accounts and online banks (but not Revolut)" in 2019 `[F low]` | n/a | n/a | n/a | n/a | Drifted into trading (OvalX) and closed `[H]` |
 | 39 | **ChatGPT personal finance** (7) | ChatGPT Plus/Pro users wanting Q&A over their bank data `[F]` | **US only** (web, iOS, Android); Pro preview 2026-05-15, Plus from ~2026-06-25 `[F high/med]` US-§3 | Connect banks/cards/investments via Plaid (12,000+ institutions) `[F]` | Plaid `[F high]` | `[U]` | Web, iOS, Android `[F med]` | Bundled in ChatGPT Plus/Pro `[F]` | n/a | Platform subscription; Intuit integration planned `[F]` |
 | 40 | **Actual Budget (open source)** (7) | Self-hosters; zero-based budgeters `[F]` | Global; EU via GoCardless (closed to new accounts since Jul 2025) and Enable Banking (experimental, own-account restricted apps) `[F high]` PP-§A, PP-AD-01/02 | Self-host, link accounts in provider console first `[F high]` | GoCardless BAD (legacy), Enable Banking, SimpleFIN (US) `[F high]` | Manual; "periodic automatic sync" requested (118 votes) `[F high]` | Web (reconcile web-only), mobile PWA `[F]` | Free (self-hosted) | n/a | None |
+| 41 | Plannix | Italy; planning/wealth platform `[F observation]` WS-15 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 42 | Switcho | Italy; expense optimisation `[F observation]` WS-16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 43 | EasyPol | Italy; payments plus aggregation `[F observation]` WS-16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 44 | Webank WeConnect | Italy; bank-native aggregation `[F observation]` WS-08 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 45 | EasyBanx | Aggregator advertising categorisation; origin/current markets `[U]` WS-09 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
 
 ---
 
@@ -106,6 +113,11 @@
 | 38 | Oval Money | Closed | — | — | — | — | — | — | — | — | — | — |
 | 39 | ChatGPT personal finance | Q&A grounded in Plaid data; categorisation mechanism `[U]` | n/a | Chat; no bookkeeping automation `[A]` | Subscriptions and upcoming payments shown `[F]` | `[U]` | None | n/a | `[U]` | `[U]` | n/a | `[U]` |
 | 40 | Actual Budget | Rules-based; **AI categorisation requested (11 votes, Mar 2026)** `[F high]` | Yes (payee/notes rules) `[F]` | Low-medium | Schedules (user-defined); flexible yearly schedules requested `[F]` | Imported payee cleanup by rules; "lost detail" complaints `[F high]` | Approve/match flows **requested** (121 votes "merge unmatched"; "identify recently imported") `[F high]` | Yes `[F]` | **Automatic transfer recognition requested (382 votes), fixing by hand "creates a mess of duplicates"**; app sometimes invents a counterpart `[F high]` | Reimbursable tracking requested `[F high]` | Manual accounts `[F]` | ~100 Barclays duplicates; dedup both over- and under-matches (G-76/G-87); future-dated items inflate balances (70 comments) `[F high]` |
+| 41 | Plannix | Historical aggregation/categorisation advertised `[F claim]`; current connections `[U]` (remote retirement lead unresolved); learning/reconciliation `[U]` — `user-pain-points.md` §0.2, WS-08/09/15/16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 42 | Switcho | Historical aggregation/categorisation advertised `[F claim]`; current connections `[U]` (remote retirement lead unresolved); learning/reconciliation `[U]` — `user-pain-points.md` §0.2, WS-08/09/15/16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 43 | EasyPol | Historical aggregation/categorisation advertised `[F claim]`; current connections `[U]` (remote retirement lead unresolved); learning/reconciliation `[U]` — `user-pain-points.md` §0.2, WS-08/09/15/16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 44 | Webank WeConnect | Historical aggregation/categorisation advertised `[F claim]`; current connections `[U]` (remote retirement lead unresolved); learning/reconciliation `[U]` — `user-pain-points.md` §0.2, WS-08/09/15/16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 45 | EasyBanx | Historical aggregation/categorisation advertised `[F claim]`; current connections `[U]` (remote retirement lead unresolved); learning/reconciliation `[U]` — `user-pain-points.md` §0.2, WS-08/09/15/16 | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
 
 ---
 
@@ -153,6 +165,11 @@
 | 38 | Oval Money | — | — | — | — | — | — | — | — | — |
 | 39 | ChatGPT personal finance | Spending dashboard `[F]` | Upcoming payments `[F]` | Net worth and portfolio `[F]` | `[U]` | `[U]` | `[U]` | n/a | `[U]` | `[U]` |
 | 40 | Actual Budget | Zero-based envelopes `[F]` | Running balance with schedules (requested) `[F]` | Net-worth report (transfer/date quirks reported) `[F high]` | Templates `[F]` | n/a | n/a | Multi-user self-hosted `[F]` | n/a | CSV/OFX/QIF import; **de-dup over/under-matches reported** `[F high]` |
+| 41 | Plannix | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 42 | Switcho | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 43 | EasyPol | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 44 | Webank WeConnect | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 45 | EasyBanx | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
 
 ---
 
@@ -200,6 +217,11 @@
 | 38 | Oval Money | Precedent that an Italian-born aggregating PFM existed `[F low]` | Drifted into trading; closed `[F med]` | Forced closures on Altroconsumo's complaint board `[F med]` | — |
 | 39 | ChatGPT personal finance | Platform distribution; Plaid breadth `[F]` | US only; no reconciliation; chat-first `[F / A]` | `[U]` | Platform-bundling threat for Europe `[H]` |
 | 40 | Actual Budget | Transparent, self-hosted, CSV/API; richest readable evidence of EU open-banking failure modes `[F high]` | Hobbyist; GoCardless route closed; Enable Banking experimental `[F high]` | Transfers (382 votes), merge (121), periodic sync (118), duplicates, consent expiry, silent drops `[F high]` | — |
+| 41 | Plannix | Existing alternative in Italy; reported feature claims need installation and current terms | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 42 | Switcho | Existing alternative in Italy; reported feature claims need installation and current terms | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 43 | EasyPol | Existing alternative in Italy; reported feature claims need installation and current terms | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 44 | Webank WeConnect | Existing alternative in Italy; reported feature claims need installation and current terms | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
+| 45 | EasyBanx | Existing alternative in Italy; reported feature claims need installation and current terms | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) | `[U]` (not hands-on verified) |
 
 ---
 
@@ -251,13 +273,13 @@
 
 **UniCredit / Buddybank.** Buddybank is active in September 2026 (bonuses, Buddy Club 100, MyOne card) and runs its own PSD2 sandbox; a creator rates its categorisation as good when corrected by hand (FACT, low, IT-§2.6). UniCredit multibanking is an ASSUMPTION and its credit-card accounts are not exposed over PSD2 (FACT). Verdict: a connector with a caveat (cards missing) and a mass of S1-type under-35 users; not a PFM competitor until its multibanking depth is verified.
 
-**Poste Italiane (BancoPosta/Postepay).** Thirty million Postepay cards, more than ten million Evolution cards with IBAN and 3.4 billion transactions in 2025 (FACT, medium, NEW-5); a unified app since October 2025 with a wallet and an AI assistant (low-medium); a €12.5M Garante fine over its apps (April 2026). Verdict: not a PFM; the prepaid-as-primary population Lilleri must model ("ricarica Postepay" is a transfer), and a connector whose user-experience quality is UNKNOWN.
+**Poste Italiane (BancoPosta/Postepay).** Thirty million cumulatively issued Postepay cards (not active users), more than ten million Evolution cards with IBAN and 3.4 billion transactions in 2025 (FACT, medium, NEW-5); a unified app since October 2025 with a wallet and an AI assistant (low-medium); a €12.5M Garante fine over its apps (April 2026). Verdict: not a PFM; the prepaid-as-primary population Lilleri must model ("ricarica Postepay" is a transfer), and a connector whose user-experience quality is UNKNOWN.
 
-**Fast Budget.** The only Italian-born PFM found, with a Salt Edge partnership announced but no evidence that bank sync is live (one low-reliability table calls it manual-entry only at ≈$3/mo; UNKNOWN). Verdict: install and settle it; likely small; its existence does not change the "no Italian aggregator at scale" thesis.
+**Fast Budget.** An Italian-born PFM among several retained Italian independent products, with a Salt Edge partnership announced but no evidence that bank sync is live (one low-reliability table calls it manual-entry only at ≈$3/mo; UNKNOWN). Verdict: install and settle it; likely small; scale and current sync depth require evidence; Plannix, Switcho and EasyPol are also in the research set.
 
 **Oval Money (closed).** The precedent: an Italian-born app that connected many accounts and online banks (not Revolut) in 2019, pivoted into trading after its 2021 acquisition and closed in 2023 with forced account closures (FACT, IT-§2.2). Verdict: the lesson is a durable revenue rail and an un-drifting identity.
 
-**Quicken Simplifi.** The cheapest full PFM in the US ($3.49–$3.99 promo, $6.99 renewal) with a Spending Plan, watchlists, a Refund Tracker and an AI chat that batch-recategorises with approval (FACT, US-§2.5). Verdict: US/CA only; copy the Refund Tracker and the "safe to spend" plan; avoid the renewal step-up.
+**Quicken Simplifi.** The cheapest full PFM in the US ($3.49–$3.99 promo, $6.99 renewal) with a Spending Plan, watchlists, a Refund Tracker and an AI chat that batch-recategorises with approval (FACT, US-§2.5). Verdict: US/CA only; use the user problem behind Refund Tracker and spending-plan patterns to design original flows; avoid the renewal step-up.
 
 **Toshl.** Reaches Italy through Salt Edge but only on the Medici plan ($4.99/mo or $3.33/mo yearly) required for every automatic bank connection (FACT, high, EU-S-81). Verdict: proof that Italian sync is a paid feature in every generic tracker; otherwise marginal.
 
@@ -269,21 +291,31 @@
 
 **Actual Budget (open source).** Not a competitor but the richest readable evidence base: automatic transfer recognition (382 votes), merge unmatched (121), periodic sync (118), consent expiry as a 400 error, silent drops and overwrites from Enable Banking, future-dated items inflating balances (FACT, high, PP-§A). Verdict: the specification of what "reconciliation done right" must handle, written by the users who tried hardest to do it by hand.
 
+**Plannix.** Retained sources describe an Italian planning/wealth advisory platform with aggregation (WS-15 in `user-pain-points.md`); reported commercial numbers are observations requiring primary re-read. Current connector depth, per-user learning, pairing, review flow and prices are UNKNOWN. Verdict: include in incumbent-depth research rather than asserting an empty Italian category.
+
+**Switcho.** Retained sources historically advertise Italian expense optimisation and automatic categorisation (WS-16). Remote revision `72ec8b6` claims bank connections were retired on 15-Aug-2025, but its NEW-14 URL is missing; current availability remains UNKNOWN (market-analysis §12.4). Switching/commission incentives differ from Lilleri’s proposed subscription value; reconciliation, privacy permissions and current coverage are UNKNOWN. Verdict: a relevant alternative for the recurring-cost job.
+
+**EasyPol.** Retained sources describe payments plus an account aggregator and categorisation (WS-16). Current licence/recipient arrangement, prices, learning and pairing require review. Verdict: compare on Italian payment semantics and connector quality.
+
+**Webank WeConnect.** Retained source WS-08 advertises bank-native aggregation/categorisation. Current institutions, account types, quality and transfer handling are UNKNOWN. Verdict: another incumbent to test alongside XME Banks and Hype.
+
+**EasyBanx.** Retained source WS-09 advertises aggregation/categorisation; origin, current Italy availability and commercial terms are UNKNOWN. Verdict: verify basic eligibility first; do not count it as either a validated Italian rival or proof of absence.
+
 ---
 
 ## 6. What the matrix shows (cross-cutting readings)
 
 | # | Reading | Evidence | Status |
 |---|---|---|---|
-| R1 | **No product in the matrix combines (a) Italian bank coverage, (b) per-user learning, (c) automatic transfer/card-settlement pairing and (d) a review inbox.** Copilot has (b)+(d) in the US; Monarch (d) plus household; Wallet (a) plus a transfer model without automatic cross-institution pairing; XME Banks (a) plus aggregated categories, depth unknown. | Blocks A–B | FACT (absence in sources) / HYPOTHESIS for XME Banks depth |
-| R2 | **Nobody exposes a robust pending→posted and duplicate strategy to users**; the fixes shipped are "clear cache" (Copilot), "check your bank / delete" (Monarch), "ignore" (Rocket), "re-sync" (Empower). Plaid documents the linkage, so the gaps are app-side. | Block B col. 12; US-§4.1, US-V4 | FACT |
+| R1 | **No retained source establishes a fully tested combination of Italian coverage, per-user learning, automatic pairing and a review inbox. Competitor capability depth is UNKNOWN.** Copilot has (b)+(d) in the US; Monarch (d) plus household; Wallet (a) plus a transfer model without automatic cross-institution pairing; XME Banks (a) plus aggregated categories, depth unknown. | Blocks A–B | UNKNOWN (untested absence); HYPOTHESIS (differentiation) |
+| R2 | **The research records pending→posted and duplicate failures**; the fixes shipped are "clear cache" (Copilot), "check your bank / delete" (Monarch), "ignore" (Rocket), "re-sync" (Empower). Plaid documents linkage where supplied; a trace-level check must distinguish bank, provider and application causes. | Block B col. 12; US-§4.1, US-V4 | FACT |
 | R3 | **Learning is either absent, deterministic (YNAB payee memory, Simplifi one rule per payee), gated (Emma Pro, Rocket Premium, Snoop Plus, Linxo Premium) or opaque (Monarch claims, Copilot without a "why").** The complaint "it never learns" follows wherever corrections are paywalled or silent. | Block B cols. 1–2; PP-§A #5 | FACT |
-| R4 | **Recurring/contract detection with next-debit date, notice period and cancellation is the most-loved narrow feature in Europe** (Finanzguru, Dyme, Snoop, Rocket); its failure mode is counting one-offs as regular. Italians have no equivalent. | Block B col. 4; PP-§C | FACT |
+| R4 | **Recurring/contract detection with next-debit date, notice period and cancellation is the most-loved narrow feature in Europe** (Finanzguru, Dyme, Snoop, Rocket); its failure mode is counting one-offs as regular. Adequacy of Italian competitors is UNKNOWN until tested. | Block B col. 4; PP-§C | FACT |
 | R5 | **Household is either best-in-class and included (Monarch, YNAB Together) or absent (Copilot) or manual (Splitwise/Tricount).** Shared wallets on real transactions (Spendee) are praised; Tricount being free removes split-tracking as a paywall lever. | Block C col. 8 | FACT |
 | R6 | **Pricing clusters:** US $95–$109/yr with a 2–3× premium tier; EU Plus €3.99–€5.99 monthly / €30–€48 annual; Italian neobank ladders €2.90–€9.99; generic trackers charge €4–€6 a month for Italian sync. Free tiers that gate basics (categories, rules, export) are resented; generous free cores (Finanzguru, Snoop, Bankin') are loved; crippled or removed free tiers (PocketGuard) read as bait. | Block A cols. 8–9; EU-§8, US-§4.4 | FACT |
-| R7 | **Trust is decided by billing and support, not features**: store ratings 4.5–4.9 vs Trustpilot/BBB 2.0–3.5 for the same products; YNAB (34-day trial without card, clear cancellation) is the exception. | Block D col. 5; US-§4.5 | FACT |
-| R8 | **Consent renewal is nowhere a designed experience**: Emma and Finanzguru help pages say 90 days, BudgetBakers says 1–6 months, aggregator EULAs say 90, the law says 180 since 25 Jul 2023; self-hosters meet it as a 400 error. | Block B; EU-§6; PP-§A #4 | FACT |
-| R9 | **Italian-specific semantics (F24, MAV/RAV, PagoPA/CBILL, bollettini, "ricarica Postepay", prepaid-as-primary, cash top-ups) appear only in bank apps (Hype, Poste), never in a PFM.** | Block B rows 28, 33; IT-§8 | FACT (presence) / HYPOTHESIS (gap) |
+| R7 | **Billing and support are recurring trust themes in the retained sample**: store ratings 4.5–4.9 vs Trustpilot/BBB 2.0–3.5 for the same products; YNAB (34-day trial without card, clear cancellation) is the exception. | Block D col. 5; US-§4.5 | FACT |
+| R8 | **Renewal failures and inconsistent help-page durations are documented**: Emma and Finanzguru help pages say 90 days, BudgetBakers says 1–6 months, aggregator EULAs say 90, the SCA exemption changed to 180-day conditions from 25 Jul 2023, distinct from consent validity; self-hosters meet it as a 400 error. | Block B; EU-§6; PP-§A #4 | FACT |
+| R9 | **Italian-specific semantics (F24, MAV/RAV, PagoPA/CBILL, bollettini, "ricarica Postepay", prepaid-as-primary, cash top-ups) are documented in bank apps (Hype, Poste); PFM interpretation depth is UNKNOWN.** | Block B rows 28, 33; IT-§8 | FACT (presence) / HYPOTHESIS (gap) |
 | R10 | **Exits and captivity cluster around subscription-only D2C without a second rail** (Moneyhub, Spiir, Yolt, Grip, Oval; Bankin', Linxo captive; Fintonic pivot), while the survivors pair subscriptions with commissions, cashback, AUM or a parent. | Block A col. 10; EU-§5, §9 | FACT |
 
 ---
@@ -325,11 +357,11 @@ All verified on 2026-10-02 as search-engine snippets, indexed documentation or G
 
 | Prefix | File | Scope |
 |---|---|---|
-| US- | `/home/user/Lilleri/docs/research/raw/competitors-us.md` | YNAB, Monarch, Copilot, Rocket Money, Simplifi, Empower, PocketGuard, Origin, AI-first entrants, Mint; sources S1–S201, V1–V5, W1–W33 |
-| EU- | `/home/user/Lilleri/docs/research/raw/competitors-eu-uk.md` | Emma, Snoop, Plum, Moneyhub, Spendee, Wallet, MoneyWiz, Money Pro, Toshl, Finanzguru, Outbank, Bankin', Linxo, Fintonic, Buddy, Monefy, Cleo, Dyme and others; sources S-01–S-87 |
-| IT- | `/home/user/Lilleri/docs/research/raw/competitors-italy-and-ai-first.md` | Italian landscape, Revolut/N26/Hype/Satispay/bunq/Intesa/UniCredit/Fineco/Poste, Splitwise/Tricount/Settle Up, AI-first newcomers; sources D-01–D-03, Y-01–Y-34, V-01–V-28, W-01–W-15 |
-| PP- | `/home/user/Lilleri/docs/research/raw/user-pain-points.md` | Pain points, Actual/Firefly issue evidence; sources G-01–G-87, AD-01/02, GC-01, SE-01, CS-01 |
-| BR- | `/home/user/Lilleri/docs/research/raw/brand-competitor-analysis.md` | Brand identities (used only for tone references) |
+| US- | `docs/research/raw/competitors-us.md` | YNAB, Monarch, Copilot, Rocket Money, Simplifi, Empower, PocketGuard, Origin, AI-first entrants, Mint; sources S1–S201, V1–V5, W1–W33 |
+| EU- | `docs/research/raw/competitors-eu-uk.md` | Emma, Snoop, Plum, Moneyhub, Spendee, Wallet, MoneyWiz, Money Pro, Toshl, Finanzguru, Outbank, Bankin', Linxo, Fintonic, Buddy, Monefy, Cleo, Dyme and others; sources S-01–S-87 |
+| IT- | `docs/research/raw/competitors-italy-and-ai-first.md` | Italian landscape, Revolut/N26/Hype/Satispay/bunq/Intesa/UniCredit/Fineco/Poste, Splitwise/Tricount/Settle Up, AI-first newcomers; sources D-01–D-03, Y-01–Y-34, V-01–V-28, W-01–W-15 |
+| PP- | `docs/research/raw/user-pain-points.md` | Pain points, Actual/Firefly issue evidence; sources G-01–G-87, AD-01/02, GC-01, SE-01, CS-01 |
+| BR- | `docs/research/raw/brand-competitor-analysis.md` | Brand identities (used only for tone references) |
 | NEW- | `docs/research/market-analysis.md` §12.3 | WebSearch queries run 2026-10-02 (NEW-5 Postepay, NEW-6 Revolut Italy, NEW-7 XME Banks) |
 
 ### 9.2 Primary and secondary sources cited directly in this document
@@ -372,3 +404,16 @@ All verified on 2026-10-02 as search-engine snippets, indexed documentation or G
 | NEW-5 / NEW-6 / NEW-7 | TG Poste (Postepay 2025 figures); Teleborsa / Milano Finanza (Revolut >5M in Italy); Intesa Sanpaolo newsroom and "Collega le tue banche" (XME Banks) | https://tgposte.poste.it/2026/04/11/nel-2025-postepay-regina-dei-pagamenti-digitali-con-3-4-miliardi-di-transazioni/ ; https://www.teleborsa.it/News/2026/05/28/revolut-supera-i-5-milioni-di-clienti-in-italia-con-uso-sempre-piu-quotidiano-3.html ; https://group.intesasanpaolo.com/it/newsroom/comunicati-stampa/2020/02/intesa-sanpaolo-presenta-xme-banks-per-la-gestione-di-conti-corr ; https://www.intesasanpaolo.com/it/persone-e-famiglie/tutti-i-giorni/identita-digitale/collega-le-tue-banche.html | 2026-04-11 / 2026-05-28 / 2020-02 | medium / medium-high / medium-high |
 
 End of document.
+
+## Review log
+
+Repository evidence review — 2026-10-02; retained URLs and source dates preserved, no current product installations performed.
+
+| Critique | Resolution | Remaining evidence / owner |
+|---|---|---|
+| MAJOR — Fast Budget called the only Italian PFM, omitting known alternatives | Added Plannix, Switcho, EasyPol, Webank WeConnect and EasyBanx to all four blocks and per-product verdicts; undocumented fields remain UNKNOWN | Product: installation/current eligibility and depth checks; EasyBanx origin/Italy availability |
+| MAJOR — absence in marketing was labelled FACT of missing capability | Cross-cutting exclusivity/renewal/pending claims are observations or UNKNOWN/HYPOTHESIS; neither a moat nor universal competitor failure is demonstrated | Product: documented test scenarios for transfers, refunds, pending, rules and renewal |
+| MAJOR — Plaid linkage implied every failure is app-side | Bank/provider/application attribution now requires trace-level diagnosis | Engineering: per-bank payload and complete interval evidence |
+| MAJOR — Postepay issuance and exit patterns overstated active users/causality | Cumulative issuance explicit; verdicts are hypotheses for evaluation, not population or cause-of-failure proof | Research: primary sources and denominator/type validation |
+
+**Gate contribution:** supports hypothesis generation for A; does not validate commercial differentiation. **Human blockers:** current primary prices/terms and authorised hands-on Italian account tests. No paid plan purchase is authorised by this review.

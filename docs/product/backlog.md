@@ -7,6 +7,16 @@
 **Companions:** `prd.md` (requirements and story IDs), `mvp.md` (scope rule, milestones, exit criteria), `vision.md` (principles, modes).
 **Language:** documentation in English; product copy in Italian with English glosses.
 
+## Delivery and evidence boundary (review decision, 2026-10-02)
+
+This is a requirements document, not a list of delivered features. Local work uses synthetic fixtures and a mock provider. Official sandbox work needs provider-issued non-production access. Any real-data pilot needs a written acceptable licence route, provider permission/contract, DPIA/privacy controls, security isolation and informed participant consent before access. Bank credentials are never collected by Lilleri. Mock or sandbox success does not verify Italian production coverage, user demand, retention, classification calibration, store approval or legal clearance.
+
+The full P0 list describes a future cleared beta, not the initial repository scaffold. Implement a small synthetic vertical slice first: exact money → mock ingest → idempotency → deterministic reconciliation/classification with explicit rules → evidence/review/undo → honest synthetic summary. Record actual commands/results in repository status; do not claim every planned fixture or UI flow is already implemented.
+
+Canonical commercial policy: **Lilleri Gratis / Lilleri Plus** at launch; Plus **€4.99/month / €39.99/year is a hypothesis**. **Lilleri Famiglia Later** after consent/sharing/isolation tests; **Pro reserved** for future professional workflows. Closed beta is free. A proposed **30-day non-renewing Plus preview** requires implemented entitlements; it never charges. Store billing, real purchases and renewal metrics are P1 and require explicit checkout and release gates. Correctness, corrections/learning/rules, privacy/security/consent safety, retained-data access, export and deletion stay free in every plan and after downgrade.
+
+Evidence dates/FACT labels below are inherited from source research, including its snippets and uncertainty; this review does not freshly verify vendor terms or law. Numerical success criteria are HYPOTHESES. Fixture correctness cannot establish production precision. Report audited error numerator/denominator, sample selection, decision type, bank/period, label agreement and confidence intervals; audit and user corrections must not double-count errors. A zero-error small sample is not proof of zero error. All A–G letters refer to the brief: A market, B data feasibility, C business, D architecture, E security, F core-loop UX, G brand. Beta/public-launch/expansion releases are separate decisions.
+
 ## How to read this document
 
 | Item | Convention |
@@ -62,7 +72,7 @@
 | E34 | Financial chat over deterministic tools | UNDERSTAND | Later | L | E09, E15, E16 | 4.22 |
 | E35 | Receipt OCR & e-mail ingestion | UNDERSTAND | Later | L | E31, DPIA update | 4.23 |
 | E36 | Android notification-access experiment | SYNC | Later | M | Play policy read | `DSF` §6 |
-| E37 | Offers rail (Phase 2 business) | X | Later | L | counsel (art. 67(2)(f)), trust metrics | `BM` §5–§6 |
+| E37 | Offers rail (Later monetisation stage) | X | Later | L | counsel (art. 67(2)(f)), trust metrics | `BM` §5–§6 |
 | E38 | Partita IVA scope | X | Later | L | HH-0 scope attribute | `PE` §6 |
 | E39 | Investments / crypto import | SYNC | Later | M | E05 | `DSF` §2 |
 
@@ -93,10 +103,10 @@
 
 | ID | Story | Acceptance criteria (abbrev.) | Priority | Size | Depends | PRD |
 |---|---|---|---|---|---|---|
-| E02.1 | `AggregationProvider` port with canonical Berlin-Group-shaped schema, contract tests and raw payload retention | Port covers institutions list, consent create/renew/revoke, accounts, balances, transactions (booked/pending) with paging; contract test suite runs against a mock adapter | P0 | L | E00 | CO-6 |
-| E02.2 | Enable Banking adapter (restricted production for founders' accounts; terms-consent widget) | Real Italian data flows for founders' accounts; `expires_at`, `history_from` read from the provider | P0 | M | E02.1 | CO-1, CO-6; `OBP` D2 |
+| E02.1 | `FinancialDataProvider` port with provider-agnostic canonical schema, mock contract tests and minimised evidence retention | Port covers institutions list, consent create/renew/revoke, accounts, balances, transactions (booked/pending) with paging; contract test suite runs against a mock adapter | P0 | L | E00 | CO-6 |
+| E02.2 | Official sandbox adapter first; selected live adapter only after clearance | Mock/sandbox schemas tested; real-data fields measured only in cleared opt-in pilot; `valid_until`/`expires_at`, history read from provider | P0 | M | E02.1 | CO-1, CO-6; `OBP` D2 |
 | E02.3 | Primary provider adapter (Yapily sandbox → production on contract) | Hosted Pages consent in a webview; per-institution configuration (Intesa 14-day paging); consent `expiresAt` | P0 | L | E02.1, RFP gates G1–G4 | CO-1; `OBP` D1 |
-| E02.4 | Pre-redirect explainer screen naming the provider's EU entity and supervisor, read-only, 180 days | Copy per `CM` §3 step 3; provider UI review submitted | P0 | S | E02.2/E02.3 | CO-1 |
+| E02.4 | Pre-redirect explainer screen naming the provider's EU entity and supervisor, read-only, provider-derived expiry and verified coverage | Copy per `CM` §3 step 3; provider UI review submitted | P0 | S | E02.2/E02.3 | CO-1 |
 | E02.5 | Institution picker with per-institution, per-account-type coverage status and manual fallback | Statuses from configuration; "Non ancora collegabile — aggiungi il saldo a mano" path to E05.4 | P0 | M | E02.1, E26.1 | CO-2 |
 | E02.6 | Consent service: `consent_event` append-only store, `connection` state machine (active / expiring / expired / revoked_* / error_* / paused), source-of-truth per type | Invariants per `CM` §4.4; every feature gate reads the service | P0 | M | E00.3 | CO-3; `CM` §4 |
 | E02.7 | "Collegamenti" screen: status, expiry and days left, last update, accounts masked, actions Rinnova / Aggiorna ora / Metti in pausa / Scollega with data choice | Every action writes a consent event; provider-side revocation reflected within one refresh | P0 | M | E02.6 | CO-3 |
@@ -173,7 +183,7 @@
 | E09.2 | T0 system rules for structural kinds (fees, interest, stamp duty, ATM, card settlement, F24/PagoPA, internal transfer) | Deterministic category + kind; fixtures | P0 | S | E07.2 | AC-1 (7) |
 | E09.3 | T1 per-user merchant map (learned deterministic preference) and global merchant→category dictionary | Conflicting corrections demote to model tiers | P0 | S | E07.3, E10.1 | AC-1 (2), (4) |
 | E09.4 | T2/T3: per-user naive Bayes (≥ 20 labels across ≥ 2 categories; abstain on unknown vocabulary), global char n-gram linear model per locale, embeddings + kNN (global + per-user namespaces in pgvector) | Calibrated via E11.1; shadow-tested | P0 | L | E25.1, E11.1 | AC-1 (3), (4) |
-| E09.5 | T4 small LLM behind P-AI: batched 25–50 items, closed-enum JSON schema of canonical ids, cached taxonomy prefix (padded to the model's minimum), hints + top-3 candidates, pseudonymised payload, injection hardening, vendor port with two switchable vendors (EU residency, zero retention) | Injection suite asserts label stability; same string sent once per country (cache) | P0 | L | E09.4, E18.4 (P-AI toggle) | AC-2, AC-3 |
+| E09.5 | T4 small LLM behind P-AI: batched 25–50 items, closed-enum JSON schema of canonical ids, cached stable taxonomy prefix only when endpoint/size/reuse makes it economical; never pad merely to hit a cache floor, hints + top-3 candidates, pseudonymised payload, injection hardening, vendor port with two switchable vendors (EU residency, zero retention) | Injection suite asserts label stability; financial strings and learned labels cached tenant/profile scoped; public merchant metadata may share a country cache | P0 | L | E09.4, E18.4 (P-AI toggle) | AC-2, AC-3 |
 | E09.6 | "Why" rendering for every category from provenance, confidence in words, "Categoria suggerita dall'AI" label for model-sourced rows | No LLM needed to render; Art. 50 posture | P0 | S | E09.1 | AC-4 |
 | E09.7 | T5 frontier model routing for the residual (abstain or disagreement + material amount; ≤ 5% of rows) | Routing share alert | P1 | S | E09.5 | AC-1 (5) |
 | E09.8 | Onboarding backfill through Batch APIs with 1-hour cache; LLM-call decay tracked per cohort | Alert at > 300 calls per 1,000 tx | P0 | S | E09.5 | AC-3, AC-5 |
@@ -202,7 +212,7 @@
 
 | ID | Story | Acceptance criteria (abbrev.) | Priority | Size | Depends | PRD |
 |---|---|---|---|---|---|---|
-| E12.1 | Inbox item model and routing (item types per RI-1; ordering by money at stake then recency; nothing above threshold enters; no upsell) | ≤ 3 items after first sync on founders' accounts | P0 | M | E09.1, E13, E11.2 | RI-1 |
+| E12.1 | Inbox item model and routing (item types per RI-1; ordering by money at stake then recency; nothing above threshold enters; no upsell) | ≤3 is a prototype UX hypothesis, never hide ambiguity to meet it | P0 | M | E09.1, E13, E11.2 | RI-1 |
 | E12.2 | Card UI with belief, confidence in words, evidence sentence, top alternatives; actions ✓ / categoria / trasferimento / dividi / duplicato / rimborso / ignora; swipe gestures; session undo stack | 90% of resolutions in ≤ 2 interactions (HYPOTHESIS, measured) | P0 | L | E12.1, E10.1 | RI-2 |
 | E12.3 | "Applica a tutti i simili" for ≥ 2 pending items sharing a merchant | Creates one rule, resolves all | P0 | S | E12.2, E10.2 | RI-2 |
 | E12.4 | Empty state "Niente da fare. Tutto è al suo posto." with freshness line; home badge | No animations | P0 | S | E12.2 | RI-3 |
@@ -258,7 +268,7 @@
 | E18.2 | Export ZIP (transactions.csv, links.csv, accounts.json, rules.json, categories.json, consents.json, events.jsonl, JSON Schema) in minutes, in-app and expiring link, every tier | Schema documented | P0 | M | E06.1 | PR-2 |
 | E18.3 | Per-connection and per-source deletion with "Conserva lo storico" / "Elimina tutto"; account deletion backend (crypto-shredding, vendor confirmations, carve-outs, deletion certificate, deletion-log replay on restore) | Per `DR` §5 | P0 | L | E24.2, E02.6 | PR-3 |
 | E18.4 | "Permessi e privacy": P-AI, N-SERVICE, C-ANALYTICS, (C-MARKETING, C-EMAIL later) toggles with text versions; hide categories; "Transazione privata"; "Disattiva categorizzazione automatica" (rules-only mode); 6-month re-ask suppression | Every toggle writes a consent event | P0 | M | E02.6, E08.4 | PR-4 |
-| E18.5 | Retention jobs as configuration (raw payloads 13 months, AI content logs 30 days, analytics 13 months, security logs 12 months, dormant accounts 18/22/24 months) with "expired vs deleted" metrics | Jobs scheduled; owners named | P0 | M | E00.3, E24.2 | PR-5 |
+| E18.5 | Retention jobs as configuration (class-specific durations from current `docs/compliance/data-retention.md`; no raw-to-cold workaround or duplicated policy literal) with "expired vs deleted" metrics | Jobs scheduled; owners named | P0 | M | E00.3, E24.2 | PR-5 |
 | E18.6 | Third-party-AI permission screen (P-AI) in first-run after the first connection, symmetric buttons, consequence stated; "Non ora" keeps the product fully usable | Apple 5.1.2(i) / Play User Data copy | P0 | S | E18.4, E09.5 | AC-2 |
 
 ### E19 Settings — P0, M
@@ -294,10 +304,11 @@
 
 | ID | Story | Acceptance criteria (abbrev.) | Priority | Size | Depends | PRD |
 |---|---|---|---|---|---|---|
-| E23.1 | Entitlements engine (capabilities, plan → entitlement config, 2–4 tiers), never-gated list enforced by tests, store-native billing integration with server-side receipt validation and grace period | Beta runs on a "beta" plan with no charges | P0 | L | E01, pricing ADR (names) | PW-1 |
-| E23.2 | Trial lifecycle (30 days; 34-day variant flag for A/B), day-27 reminder, 3-day pre-renewal reminder, post-trial "in pausa" handling | No charge without reminder | P1 | M | E23.1, E17.1 | PW-2 |
-| E23.3 | Contextual paywall at gates only (never inbox/failure/consent/distress), gross EUR with annual saving, Cod. Cons. art. 49 information, two-tap cancel, 14-day web refunds, grandfathering | Dark-pattern checklist passed | P1 | M | E23.1 | PW-3 |
-| E23.4 | Free-tier AIS cost per paid subscription metric and fallback-shape switch for new cohorts | Dashboard A2 live | P1 | S | E23.1, E00.4 | PW-4 |
+| E23.1 | Pure capability entitlements, stable IDs and Gratis/Plus mappings; never-gated list tested incl. expiry | Beta entitlement with no charges; Later features off; no billing SDK needed | P0 | M | E01, commercial policy | PW-1 |
+| E23.2 | Proposed 30-day non-renewing Plus preview (30 vs 34 test), start/end notices and post-preview source choice | No card/purchase or autocharge; retained data accessible/exportable; all-free beta not paid trial | P1 | M | E23.1, E17.1 | PW-2 |
+| E23.3 | Contextual paywall only at delivered benefits; VAT total/period/annual charge, consumer info, channel-specific cancellation/restore/refund | No inbox/error/consent/export/deletion/distress prompts; no lifetime price promise | P1 | M | E23.1, counsel/store terms | PW-3 |
+| E23.4 | Free AIS/active paid subscription ≤€0.95; explicit zero-denominator and shadow beta cost; funded new-cohort F′ review after two misses | No invented paid conversion or automatic unfunded grandfathering | P1 | S | E23.1, E00.4, actual invoices | PW-4 |
+| E23.5 | Explicit purchase checkout, receipt/webhook validation, restore/grace/cancel/refund/renewal with platform/tax/legal gates | Duplicate/out-of-order receipt events tested; downgrade preserves safety/data rights | P1 before any charge | L | E23.1, provider/store terms | PW-5 |
 
 ### E24 Security hardening — P0, L
 
@@ -421,9 +432,9 @@ Covered by E14.3 and E15.3; listed as an epic for sequencing.
 | Wave | Goal | Epics / stories | Exit |
 |---|---|---|---|
 | **W0 Foundations** | Build once, correctly | E00 (all), E01.1–E01.3, E24.1–E24.2, E24.4, E21.1, E25.2, E06.1 | Schema with RLS and DEKs; CI with fixtures; config service |
-| **W1 Walking skeleton (M0 dogfood)** | Founders' real data end to end | E02.1–E02.2, E02.4–E02.7, E03.1–E03.7, E04.1–E04.2, E06.2–E06.5, E07.1–E07.4, E08.1–E08.2, E09.1–E09.4, E09.6, E11.1–E11.3, E11.5, E13.1–E13.7, E10.1–E10.3, E12.1–E12.4, E18.2 (export), E26.1 | Fill-rate report; 25 fixtures green; no silent skips for 2 weeks on founders' accounts |
-| **W2 Closed beta A (M1)** | All P0 | E02.3 (primary adapter), E02.8–E02.9, E05.1–E05.5, E08.3–E08.4, E09.5, E09.8, E10.4, E14.1–E14.2, E15.1–E15.2, E16.1, E17.1, E18.1, E18.3–E18.6, E19, E20.1, E22.1, E23.1, E24.3, E25.1, E25.3–E25.5, E01.4 | ≤ 50 users; WOW and inbox load measured; DPIA and counsel opinions |
-| **W3 Closed beta B (M2) → launch gates (M3)** | P1 that telemetry demands, then launch gates | E28.1–E28.4 (as inbox telemetry demands), E14.3, E15.3, E16.2, E11.4, E10.5, E12.5, E20.2, E23.2–E23.4, E17.2, E22.2, E24.5, E26.2, E27.1–E27.2, E05.6–E05.8, E07.5, E30.1 | `mvp.md` §6 exit criteria |
+| **W1 Local walking skeleton** | Synthetic exact-money/mock core loop | Money, mock adapter, validation/idempotency, deterministic classification/rules and conservative reconciliation, evidence/review/undo; extend fixtures only with implemented behaviour | Actual local commands and cases pass; no live coverage/auth/mobile/store/security pass inferred |
+| **W2 Official sandbox → cleared pilot/beta** | Selected provider contract tests, then future P0 hardening | Provider credentials/permission, written licence route, contract, DPIA/privacy/security isolation and informed participants before real access; start ≤50, then≤200 | Official sandbox contracts plus real-data audit/coverage evidence after gates; not free-beta purchase conversion |
+| **W3 Cleared beta hardening → release review** | P1 as measured need requires, then launch criteria | `mvp.md` future beta P0 and release criteria, measured correctness/support/UX; E23.2–E23.5 before purchases | Public launch only after legal/provider/security/stores/consumer/funded-economics review; no calendar promise |
 | **W4 First expansion** | P2 | E31, E32, E30.2, E07.6 | Post-launch |
 | **Later** | Roadmap | E33–E39, E21.3 | Separate decisions |
 
@@ -456,7 +467,7 @@ Critical path (HYPOTHESIS): provider adapter → identity/ingestion → reconcil
 | 19 | Frontier LLM on every row; vendor enrichment on full volume | Not now | Cost and privacy; own cascade resolves 75–85% (`AI` §7.2 ASSUMPTION) | Residual measured |
 | 20 | Android notification listener | Later (experiment) | Policy risk; Play 2026 bundles unread (`DSF` §6) | After launch |
 | 21 | Own AISP registration / direct CBI Globe | Phase 2+ | 6–12 months; fixed cost; decided on AIS spend ≈ €15k/month (`CA` D-CA-5) | Gate C |
-| 22 | Offers rail, cashback, switching | Later (Phase 2 business) | Only after trust metrics; counsel on art. 67(2)(f) (`BM` D-BM-4) | Beta trust metrics |
+| 22 | Offers rail, cashback, switching | Later (Later monetisation stage) | Only after trust metrics; counsel on art. 67(2)(f) (`BM` D-BM-4) | Beta trust metrics |
 | 23 | Accuracy claims in marketing | Never before measurement | `BS` D6 | Measured S6/S7 at Base |
 | 24 | AUTOPILOT as default | Not now | Needs measured override rates (`vision.md` §7) | ≥ 200 users with ≥ 30 reviews |
 | 25 | Logos via third-party hot-linking | Never | Brandfetch per-customer cap; privacy | — (cache instead) |
@@ -472,7 +483,7 @@ Critical path (HYPOTHESIS): provider adapter → identity/ingestion → reconcil
 | BL-3 | XL epics (E02, E03, E09, E13) are split into their stories before entering a sprint; no XL story is scheduled whole | DECISION | No |
 | BL-4 | The "not now" list is binding; additions to the MVP require a written exception citing `mvp.md` §1 | DECISION | No |
 | BL-5 | External dependencies (provider gates G1–G4, counsel on route A and taxonomy, DPIA) are tracked as blocking items on W1/W2 with named owners | DECISION | No |
-| BL-R1 | Start E02.2 (Enable Banking restricted production) and E25.2 (fixtures) in the first week; they de-risk identity and reconciliation parameters more than anything else | RECOMMENDATION | — |
+| BL-R1 | Build synthetic mock and relevant fixtures first; official sandbox next; never activate restricted production without legal/provider/privacy/security clearance | RECOMMENDATION | — |
 | BL-R2 | Re-estimate E13.3 (transfer pairing) and E09.4 (per-user models) after the M0 fill-rate report; both depend on what Italian banks actually return | RECOMMENDATION | — |
 
 ## Open questions
@@ -482,7 +493,7 @@ Critical path (HYPOTHESIS): provider adapter → identity/ingestion → reconcil
 | 1 | Which adapter is primary at M1 (Yapily on contract vs Enable Banking promoted)? | E02.3, E27 | RFP gates G1–G4 | P0 |
 | 2 | Per-bank fill-rates and pending availability | E03.2, E13.1, E13.3 sizing | M0 pilot | P0 |
 | 3 | Counsel sign-off on the taxonomy labels (Art. 9) | E08.1 | Counsel + DPIA | P0 |
-| 4 | Plan names and tier count for E23.1 configuration | E23 | Pricing ADR | P0 |
+| 4 | Observed WTP and capability mapping for canonical Gratis/Plus; Famiglia Later, Pro reserved | E23 | Price/bundle research; names resolved | P1 |
 | 5 | Is a web import/export client needed before launch (E30.1 P1 vs P2)? | E30 | Interviews | P1 |
 | 6 | Do refunds/cash/splits need to move into M2 (inbox telemetry > 5% of items)? | E28 | M1 telemetry | P1 |
 | 7 | Trial length 30 vs 34 days | E23.2 | A/B | P1 |
@@ -490,22 +501,31 @@ Critical path (HYPOTHESIS): provider adapter → identity/ingestion → reconcil
 | 9 | Settlement conventions per card issuer for E28.4 | E28.4 | Design-partner statements | P1 |
 | 10 | Engineering capacity and team size for W1–W3 (sizes assume a 3–5 engineer team) | Sequencing | Hiring plan vs `CA` fixed-cost ceilings | P1 |
 
+## Review log
+
+| Reviewer | Concrete issue | Resolution |
+|---|---|---|
+| PM/CTO (major) | First walking skeleton required founders’ real data and almost all epics at once | Added explicit local synthetic slice, official sandbox, cleared pilot progression |
+| Fintech/legal (blocker) | Adapter tasks assumed restricted-production permission and universal 180-day consent | Real adapter is gated; provider-derived expiry and verified coverage |
+| PM/CFO (major) | P0 E23.1 included store billing while beta was free | Domain entitlements P0; purchase integration separate P1 E23.5; non-renewing preview |
+| Brand/consumer (major) | Tier count, lifetime grandfathering and trial charge rules stayed unresolved | Gratis/Plus mapping and transparent channel-specific rights; no lifetime/store autocharge promise |
+
 ## Sources
 
 All verified on 2026-10-02 by the input documents named; URLs carried over verbatim.
 
 | ID | Source | URL / path | Used for |
 |---|---|---|---|
-| PRD / MVP / VISION | `/home/user/Lilleri/docs/product/prd.md`; `mvp.md`; `vision.md` | repo | Story definitions, scope rule, principles |
-| RC | `/home/user/Lilleri/docs/research/raw/reconciliation-and-data-model-patterns.md` | repo | Identity strategy, match types, fixtures (§9), RLS (§6), money/dates (§3) |
-| AI | `/home/user/Lilleri/docs/research/raw/ai-ml-transaction-intelligence.md` | repo | Cascade tiers, calibration, locks, injection posture, eval set, Italian patterns |
-| OBP | `/home/user/Lilleri/docs/research/open-banking-providers.md` | repo | Provider decision and gates; restricted production; coverage |
-| DSF | `/home/user/Lilleri/docs/research/data-sources-feasibility.md` | repo | Import formats; never list; e-mail/receipt/notification sequencing |
-| OM / PP / MA | `/home/user/Lilleri/docs/research/opportunity-map.md`; `user-pain-points.md`; `market-analysis.md` | repo | Not-now reasons; pain-point anchors |
-| PE / JTBD | `/home/user/Lilleri/docs/product/personas.md`; `jobs-to-be-done.md` | repo | Persona priorities; loop stages |
-| REG / PM / CM / DR | `/home/user/Lilleri/docs/compliance/*.md` | repo | Consent events, retention jobs, deletion flow, store rules, DPIA |
-| BM / UE / CA | `/home/user/Lilleri/docs/business/*.md` | repo | Entitlements, free envelope, cost alerts, fixed-cost ceilings |
-| BS | `/home/user/Lilleri/docs/brand/brand-strategy.md` | repo | Copy rules, anti-patterns, no claims before measurement |
+| PRD / MVP / VISION | `docs/product/prd.md`; `mvp.md`; `vision.md` | repo | Story definitions, scope rule, principles |
+| RC | `docs/research/raw/reconciliation-and-data-model-patterns.md` | repo | Identity strategy, match types, fixtures (§9), RLS (§6), money/dates (§3) |
+| AI | `docs/research/raw/ai-ml-transaction-intelligence.md` | repo | Cascade tiers, calibration, locks, injection posture, eval set, Italian patterns |
+| OBP | `docs/research/open-banking-providers.md` | repo | Provider decision and gates; restricted production; coverage |
+| DSF | `docs/research/data-sources-feasibility.md` | repo | Import formats; never list; e-mail/receipt/notification sequencing |
+| OM / PP / MA | `docs/research/opportunity-map.md`; `user-pain-points.md`; `market-analysis.md` | repo | Not-now reasons; pain-point anchors |
+| PE / JTBD | `docs/product/personas.md`; `jobs-to-be-done.md` | repo | Persona priorities; loop stages |
+| REG / PM / CM / DR | `docs/compliance/*.md` | repo | Consent events, retention jobs, deletion flow, store rules, DPIA |
+| BM / UE / CA | `docs/business/*.md` | repo | Entitlements, free envelope, cost alerts, fixed-cost ceilings |
+| BS | `docs/brand/brand-strategy.md` | repo | Copy rules, anti-patterns, no claims before measurement |
 | Actual Budget sources | `sync.ts`, `find-schedules.ts`, `rules.ts`; issues #1628, #669 | https://raw.githubusercontent.com/actualbudget/actual/master/packages/loot-core/src/server/accounts/sync.ts ; https://raw.githubusercontent.com/actualbudget/actual/master/packages/loot-core/src/server/schedules/find-schedules.ts ; https://raw.githubusercontent.com/actualbudget/actual/master/packages/loot-core/src/shared/rules.ts ; https://github.com/actualbudget/actual/issues/1628 ; https://github.com/actualbudget/actual/issues/669 | Reconciliation and rules precedents; wedge evidence |
 | Sure / Maybe | `bayes_categorizer.rb`, `auto_categorizer.rb`, locked attributes; `RejectedTransfer` | https://github.com/we-promise/sure ; https://github.com/maybe-finance/maybe | Learning and negative-memory precedents (AGPL: study only) |
 | Banana / CBI | Italian import fixtures; CBI causali | https://github.com/BananaAccounting/Italia ; https://github.com/fab128k/da-pdf-a-csv | Fixtures and dictionary seeds |

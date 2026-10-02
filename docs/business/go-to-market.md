@@ -1,57 +1,34 @@
-# Lilleri go-to-market — Italian launch strategy
+# Lilleri go-to-market — Italy-first discovery and gated launch
 
-**Project:** LILLERI (consumer PFM, Italy-first then Europe)
-**Document date / verification date of carried-over claims:** 2026-10-02
-**Inputs:** raw research (R-BC, R-OBA, R-OBB, R-US, R-EU, R-IT, R-PP, R-AI, R-BB), decisions in `business-model.md`, `pricing-analysis.md`, `unit-economics.md`, `revenue-scenarios.md`; two WebSearch checks on 2026-10-02 (Apple Ads 2026 benchmarks W-8; RevenueCat 2026 W-1).
-**Language note:** documentation in English; product copy, taglines and voice examples in Italian with English glosses.
-**Label key:** FACT · ASSUMPTION · HYPOTHESIS · DECISION · OPEN QUESTION · UNKNOWN.
+**Review date:** 2026-10-02. **Evidence:** external claims and URLs below are inherited from the research; this review rechecks document consistency and arithmetic, not live vendor terms or legal clearance. Source verification dates belong to the cited research. FACT labels there retain the original limitations. All prices, conversion, usage, costs and projections proposed here are ASSUMPTIONS or HYPOTHESES; DECISION means a reversible internal planning choice.
 
----
+**Delivery boundary (DECISION):** local mock → official sandbox → legally cleared, contracted, consented real-data beta → store launch → later capabilities. Requirements and budgets do not prove implementation. No real-bank keys, bank credentials, purchase, contract, counsel opinion or store billing are obtained by these documents.
 
-## 0. Summary
+## 0. Commercial conclusion
 
-- **Positioning (DECISION):** Lilleri is the app that *understands* what happens to your money across all your Italian accounts, not another place to *see* them. "See all your accounts" is table stakes in Italy (Intesa XME Banks, Hype paid plans — FACT medium, R-IT §3.10); reconciliation quality, learning categorisation and the Review Inbox are the differentiators (R-PP §H).
-- **Growth model (DECISION):** organic and referral-led. The unit economics (`unit-economics.md` §7) do not support paid acquisition at Base: loaded payback 43 months at €3 per registered user. Targets: blended CAC ≤ €2 per registered user at launch, ≤ €1.50 by month 12; CAC per paid subscription ≤ €40; paid UA limited to Apple Search Ads tests in Italy (CPI benchmark ≈ $1.32 for Italy as a tier-3 market, finance category global CPI ≈ $8.44 — FACT medium, W-8).
-- **Channels in priority order:** ASO in Italian; content/SEO on Italian money topics that global apps ignore (F24, MAV/RAV, bollette, conto cointestato, partita IVA); personal-finance creators and communities (YouTube, Reddit r/ItaliaPersonalFinance, Telegram); a referral programme paid in Plus months (not cash) at launch; partnerships (comparators, banks/brokers, Fabrick ecosystem) only after trust metrics; Italian fintech press.
-- **Sequencing:** waitlist (M0) → closed beta of 500 → 2,000 users on the top-10 Italian banks (M2–M5) → open beta (M6) → public launch iOS/Android (M8) → offers-rail experiments (M9+) → 12-month review with Gate C KPIs (M12) → first European market selection (M15+).
-- **Metrics:** activation (registered → connected ≥ 50 %), sync success ≥ 97 %/day, auto-categorisation auto-error ≤ 2 %, Review Inbox "zero" within 7 days ≥ 60 %, D30 ≥ 10 % (finance benchmark 4–9 %), trial→paid ≥ 25 %, paid subscriptions per 1,000 MAU ≥ 120 by month 6 and ≥ 180 by month 9, NPS ≥ 40, CAC as above.
+Differentiate with a demonstrable reduction in cross-source mistakes and repeated corrections. Multi-bank aggregation already exists in bank apps; incumbent reconciliation depth remains UNKNOWN. The investor test is whether users can see why a transfer/card settlement is counted once, understand a correction, and regain trust when a connection fails. Accurate demo fixtures can demonstrate the concept; actual bank coverage, demand, paid retention and operational reliability need separate evidence.
 
----
+Launch plans **Gratis / Plus**, with Plus prices **€4.99/mo / €39.99/yr as hypotheses**. **Famiglia Later**, **Pro professional reserved**. Beta is free; eventual 30-day non-renewing Plus preview is a proposal after entitlement implementation. Actual billing requires explicit purchase and store/legal/security gates. Launch offer income is €0. Base loaded payback ~56 months and Target ~24 exceed the ≤18-month acquisition target: paid acquisition scale is not justified.
 
-## 1. Who we launch for (ICP) and why Italy first
+## 1. Who the product hypothesis serves
 
-| Segment | Evidence | Status | Role in launch |
-|---|---|---|---|
-| **Multi-account Italians, 25–45**, 3–5 relationships (Fineco/BBVA/Buddybank/Revolut IT/Satispay/Postepay), who reconcile by hand in a sheet at month-end | Creator transcripts Y-02/Y-03 (R-IT §1.3, §7) | FACT (low-medium) | Primary ICP; the free tier's 1-institution cap is designed to convert exactly them |
-| Couples with personal accounts + a joint account | Italian couples norm (R-IT §4.5) | FACT (low-medium) | Family plan; second wave |
-| Partita IVA freelancers who separate business/personal and park tax money | Y-03 (R-IT §7) | FACT (low) | Pro now, Business Later |
-| Finance-content audiences (175 k-subscriber creators teaching ChatGPT-on-Revolut-exports budgeting) | Y-02 (R-IT §5.4) | FACT (low-medium) | Demand proof for "AI budget output with zero effort" |
-| Self-hosters / GoCardless refugees (Actual Budget, Firefly) | R-PP §F, G-79 | FACT (high as a segment, small) | Early critics and advocates; export/API matter |
-| Not launch ICP: single-bank users whose bank app already categorises; users of lending-led apps | R-IT §3 | — | They are the free tier's long tail |
+Primary: Italians with several supported accounts who reconcile transfers, cards and cash at month end; creator anecdotes about 3–5 relationships are not population evidence. Recruit a balanced set including prepaid/current-account users, missing-wallet/card fallbacks, modest-income users and users who need accessible UI. Couples participate as individuals until sharing ships. Partita IVA workflows remain Later; do not market current Pro/business scope. Age eligibility, data/consent and outreach handling follow compliance guidance.
 
-Why Italy first (HYPOTHESIS, well supported): no Italian-born aggregator PFM at scale (Oval Money closed; Fast Budget status UNKNOWN); the apps that serve Italy are generic Salt Edge trackers with linking complaints (R-EU §1; R-IT §1); YNAB runs Plaid in Italy but bank-level quality is UNKNOWN; Italian payment types (F24, MAV/RAV, PagoPA, bollettini, Postepay top-ups, SDD) are mis-categorised by global taxonomies (R-IT §8); Italian creators carry referral codes for 5–10 banks each, so a referral culture exists (R-IT Y-01/Y-06/Y-07).
+Segmentation is a research hypothesis, not a claim that every 25–45-year-old or multi-bank user will pay. Validate incremental value against their own bank app and current spreadsheet/tracker.
 
----
+## 2. Messaging and claim discipline
 
-## 2. Positioning and messaging
+| Surface | Italian draft / qualification |
+|---|---|
+| Concept | “Collega i conti supportati. Controlla solo quello che serve.” Actual renewals, supported account types and update times remain visible |
+| Local demo | “Demo con dati sintetici. Non collega conti reali.” |
+| Trust | “Niente banner. Non vendiamo i tuoi dati.” Read-only licensed-provider name/authority only after that route is contracted and verified |
+| Correctness | Show source/evidence and the effect of a transfer/card payment; no accuracy percentage or universal “Lilleri sa cosa sono” claim before evaluation |
+| Renewal | “Il collegamento con [banca] scade il [data dal provider]. Ricollega.” No universal 180 days or one-minute completion promise |
+| Outage | Use confirmed cause only; otherwise “[Banca] non risponde. Ultimo aggiornamento [ora].” Retry time only from a scheduled retry |
+| Price prototype | “Lilleri Plus — prezzo ipotetico: €4,99 al mese o €39,99 all’anno.” Actual checkout copy follows a reviewed priced offer |
 
-**Positioning statement (DECISION):** For Italians with more than one account who are tired of checking three apps and a spreadsheet, Lilleri is the personal-finance app that connects your accounts once and then understands what happens to your money by itself — pairing transfers, settling card payments, catching duplicates and refunds, learning your categories — so that you only review what matters. Unlike bank apps and generic trackers, it is correct across institutions, learns from you, never shows ads and never sells data.
-
-| Element | Italian copy | English gloss | Note |
-|---|---|---|---|
-| Tagline | **"Collega i tuoi conti una volta. Al resto pensa Lilleri."** | Connect your accounts once. Lilleri takes care of the rest. | Mirrors the promise |
-| Secondary | "Capisce da sola cosa succede ai tuoi soldi." | It understands by itself what happens to your money. | Automation, not budgeting method |
-| Review Inbox | "Inbox zero per le tue finanze." | Inbox zero for your finances. | Core mechanic |
-| Trust line | "Sola lettura, tramite un intermediario autorizzato. Niente pubblicità. Mai. I tuoi dati non si vendono." | Read-only, through an authorised intermediary. No ads. Ever. Your data is not for sale. | R-PP §E: named regulated aggregator, read-only, no data selling |
-| Italian specifics | "F24, MAV, bollettini, ricariche Postepay: Lilleri sa cosa sono." | F24, MAV, payment slips, Postepay top-ups: Lilleri knows what they are. | R-IT §8 |
-| Consent expiry | "Tra 12 giorni la tua banca chiederà di confermare l'accesso. Ci pensiamo insieme, ci vuole un minuto." | In 12 days your bank will ask you to confirm access. We'll do it together, it takes a minute. | The failure mode nobody markets (R-EU §6) |
-| Failure honesty | "Intesa non risponde da stamattina (manutenzione). Riproviamo alle 14:30." | Intesa has not responded since this morning (maintenance). We'll retry at 14:30. | Never "sync offline" (R-PP §H #4) |
-| Paywall moment | "Aggiungi Fineco e Revolut con Lilleri Plus — €4,99 al mese o €39,99 all'anno." | Add Fineco and Revolut with Lilleri Plus — €4.99/month or €39.99/year. | Contextual, concrete |
-| What we are not | "Lilleri non ti presta soldi e non ti dà consigli finanziari." | Lilleri does not lend you money and does not give financial advice. | Distance from Cleo-style lending (R-EU §12 #5) |
-
-Voice (DECISION): calm, precise, second person singular, no exclamation marks, numbers always with the euro sign and two decimals, bank names spelled as the bank spells them.
-
----
+The brand owner's final tagline replaces these drafts. No creator, store listing or coverage page may turn a mock into a live-bank demo.
 
 ## 3. Channels
 
@@ -63,114 +40,73 @@ CAC figures are ASSUMPTIONS unless marked; "CAC" = cost per registered user.
 | **Content / SEO on Italian money topics** | Evergreen Italian articles and tools: "Cos'è l'F24 e come categorizzarlo", "MAV e RAV spiegati", "Conto cointestato o app per la coppia?", "Partita IVA: separare spese personali e lavoro", "Quanto costa Revolut/N26/Hype nel 2026" (honest comparisons), "Come esportare i movimenti da Fineco/Intesa/Poste"; a free "calcolatore abbonamenti" | €0.50–1.50 | 15–25 % | Creators' own content proves demand for these exact questions (R-IT §7); global apps cannot write them |
 | **YouTube creators (personal finance, Italy)** | 10–20 creators in the 20 k–200 k range; sponsored segments with honest demos; creator-specific referral links paying Plus months; no fabricated reviews | €1–3 (sponsored); €0.50–1 (organic mentions) | 15–25 % | Every Italian finance video carries referral codes (FACT low, R-IT Y-01/Y-06/Y-07); Wallet became the default via creators (Y-02/Y-03) |
 | **Reddit r/ItaliaPersonalFinance, Telegram finance groups, FinanzaOnline** | Founder-led presence, AMAs, a public changelog, honest coverage page ("quali banche funzionano oggi"); no astroturfing | €0.20–0.80 | 5–10 % | Sentiment there is UNKNOWN (R-PP I-12) — verify before launch; self-hoster communities (Actual/Firefly) are reachable via the GoCardless-refugee threads (R-PP G-79) |
-| **Referral programme** | Both sides get 1 month of Plus per activated referral (referred user connects ≥ 1 institution); Pro trial +15 days; no cash at launch | €1–2 (cost of Plus months at COGS) | 10–20 % | Italian neobanks pay €5–50 cash (FACT low-medium); Lilleri cannot win a cash war; Rocket pays affiliates $4–10 per install (FACT medium, R-US S83) |
-| **Partnerships** | (a) comparators (Facile.it/SOStariffe/Segugio) for the Phase-2 switching rail; (b) 2–3 banks/brokers for referral payouts (Buddybank, Tinaba, Moneyfarm-type); (c) Fabrick/CBI ecosystem contacts for later B2B2C; (d) an education partner (Tinaba's "Investiamo" model) | €0–1 | 0–5 % in year 1 | Only after trust metrics; never in the Review Inbox (`business-model.md` §6) |
-| **Press / PR** | Italian fintech and consumer press: Aziendabanca, Economyup, Il Sole 24 Ore (Plus24), Corriere Economia, Wired IT, Il Post; angle: "the first Italian app that reconciles transfers across banks" + the no-ads promise | ≈ €0 marginal | 5 % | Press covers Italian fintech launches (Satispay, Hype coverage in R-IT W-08) |
+| **Referral programme** | Both sides get 1 month of Plus per activated referral (referred user connects ≥ 1 institution); preview extension only after clear cost/abuse policy; no cash at launch | €1–2 (cost of Plus months at COGS) | 10–20 % | Italian neobanks pay €5–50 cash (FACT low-medium); Lilleri cannot win a cash war; Rocket pays affiliates $4–10 per install (FACT medium, R-US S83) |
+| **Partnerships (Later, no signed agreements implied)** | (a) comparators (Facile.it/SOStariffe/Segugio) for the Later switching concept; (b) 2–3 banks/brokers for referral payouts (Buddybank, Tinaba, Moneyfarm-type); (c) Fabrick/CBI ecosystem contacts for later B2B2C; (d) an education partner (Tinaba's "Investiamo" model) | €0–1 | 0–5 % in year 1 | Only after trust metrics; never in the Review Inbox (`business-model.md` §6) |
+| **Press / PR** | Italian fintech and consumer press: Aziendabanca, Economyup, Il Sole 24 Ore (Plus24), Corriere Economia, Wired IT, Il Post; angle: "the Italian reconciliation workflow demonstrated on supported sources" + the no-banner/no-data-sale promise | ≈ €0 marginal | 5 % | Press covers Italian fintech launches (Satispay, Hype coverage in R-IT W-08) |
 | **Paid UA (tests only)** | Apple Search Ads Italy on brand and category keywords; small Meta test; stop if CAC per registered > €3 | €1.50–3.50 per install (ASSUMPTION; W-8: Italy CPI ≈ $1.32, tier-3 CPT $0.50–1.50; finance global CPI $8.44) | 0–10 % | Budget cap €5 k/month during launch; paid UA only scales if C5 (`revenue-scenarios.md`) holds |
 
 Blended CAC target: Low €1.50 / Base €2.00 / High €3.00 per registered user in the launch year (vs research Base €6 for a paid-heavy mix, R-BC §12). Registered → connected ≥ 50 % keeps CAC per connected user ≤ €4.
 
 ---
 
-## 4. Waitlist and closed beta
 
-| Stage | Goal | Mechanics | Size / exit criteria |
-|---|---|---|---|
-| **Waitlist (M0–M2)** | Demand signal, price research, bank coverage priorities | Italian landing page with the tagline, a "quali banche usi?" survey (multi-select of 30 institutions), a Van Westendorp price block, and the trust line; invite codes; creator pre-announcements | 5,000–10,000 sign-ups (Low 2 k / High 20 k, ASSUMPTION); exit when the provider contract is signed and the top-10 banks pass sandbox + restricted-production tests |
-| **Closed beta wave 1 (M2–M3)** | Prove reconciliation on real Italian data; measure fill-rates per bank; build the eval set | 500 users chosen for coverage of Intesa Sanpaolo, UniCredit, Poste/Postepay, Fineco, BPER, Banco BPM, MPS, Crédit Agricole Italia, Credem, BCC Iccrea + Revolut IT; Hype/N26/Satispay/Mediolanum as "coverage unknown" cohort | Exit: sync success ≥ 95 % daily on top-10; auto-error ≤ 3 %; transfer-pair precision ≥ 95 % on labelled pairs; consent-renewal flow tested at day 90 for at least one bank |
-| **Closed beta wave 2 (M4–M5)** | Conversion mechanics and support load | 2,000 users; 30-day Pro trial live; paywall copy A/B; support via email + in-app; weekly "cosa abbiamo sistemato" changelog | Exit: trial→paid ≥ 20 %; support contacts ≤ 25 per 1,000 MAU; NPS ≥ 30; free AIS cost per paid subscription measured |
-| **Open beta (M6–M7)** | Scale to 10 k MAU, ASO, creators | Public TestFlight/Play open testing; store listings live; first creator wave; referral programme on | Exit: D30 ≥ 8 %; paid subscriptions ≥ 100 per 1,000 MAU; no P1 data-correctness incident open > 7 days |
-| **Launch (M8)** | Public iOS/Android launch in Italy | Press, creators wave 2, App Store featuring pitch (Italy editorial), Product Hunt optional | — |
+## 4. Recruiting and release sequence (event gates; no calendar promise)
 
-Beta recruiting copy: "Cerchiamo 500 persone con almeno tre conti diversi che vogliono smettere di riconciliare a mano." (We are looking for 500 people with at least three different accounts who want to stop reconciling by hand.)
-
----
-
-## 5. Launch sequencing and gates
-
-| Month | Milestone | Gate to pass before next step |
+| Stage | Evidence to create | Exit / limitation |
 |---|---|---|
-| M0 | Waitlist live; RFP sent to 5 providers; counsel engaged on licence route and offers rail | Provider shortlist with prices (C1 in `revenue-scenarios.md`) |
-| M1 | Provider contract (non-exclusive, ≤ 12 months); DPIA; DPO; sandbox + restricted production on top-10 banks | Legal basis confirmed in writing (route A or B) |
-| M2–M3 | Closed beta wave 1 (500) | Reconciliation quality gates (§4) |
-| M4–M5 | Closed beta wave 2 (2,000); pricing tests | Trial→paid ≥ 20 %; AIS cost per paid subscription measured; decision F vs F′ taken |
-| M6–M7 | Open beta; ASO; creators wave 1; referral | D30 ≥ 8 %; paid subscriptions ≥ 100/1,000 MAU |
-| M8 | Public launch (iOS + Android), press | — |
-| M9–M11 | Family and Pro feature completion; offers-rail experiment with 2 partners (opt-in cohort only) | Opt-in ≥ 25 % in the experiment cohort with no NPS penalty |
-| M12 | 12-month review against Gate C conditions C1–C6 | Continue / tighten free tier / switch to trial-gated |
-| M15+ | First European market selection | Criteria in §9 Q6 |
+| Concept / waitlist research | Interviews against bank-app alternatives, price intent, supported-bank priorities; transparent contact/privacy handling | No outreach sent or budget authorised by this document; waitlist size is not paid demand |
+| Local mock / clickable prototype | Synthetic core loop, correctness fixtures, failure/undo/export concepts, copy comprehension | Clearly labelled synthetic; performance/accuracy on fixtures is not field reliability |
+| Official provider sandbox | Adapter/schema/consent/paging/error contract tests, coverage-document questions | Provider permission and non-production credentials needed; sandbox does not validate actual account coverage |
+| Cleared real-data pilot | Written acceptable licence route, provider permission/contract, DPIA, security isolation, informed participants, minimised dataset | Human/provider/counsel gates first; never collect bank credentials; no before-contract production access assumed |
+| Free closed beta | Start small (≤200) then expand only after correctness/support evidence; protocol stratified across supported banks/types | No collected paid conversion; paid demand remains an intention measure |
+| Purchase experiment | Implement and review receipts/checkout/cancel/renew/refund, non-renewing preview and downgrade notices | Explicit eligible purchase; measure matured purchase/renewal cohorts, no fake billing in beta |
+| Public Italian launch | Passed A–G as defined in brief plus release checklist: legal/provider, correctness, security/privacy, UX/brand, stores/support and funded business path | Actual supported bank/type list, no unmeasured claims; reduce scope or hold if missing |
+| Later expansion | Famiglia after sharing/isolation gates; offers after distinct legal/trust gates; Europe per-country coverage/legal/localisation | No automatic M8/M12 dates, signed partners, Pro completion or funding inferred |
 
----
+## 5. Growth constraints and CAC
 
-## 6. CAC targets and launch budget (ASSUMPTION; DECISION on caps)
+Organic discovery, transparent original content and permitted community participation are hypotheses; organic work has staff/production cost. Referral rewards require implemented entitlement/fraud policy and a budget; one Plus-month reward is a delivery cost and possible opportunity cost, not “free”. Paid tests remain a proposal, not spend authorisation. A measured growth decision uses CAC to an active paying cohort plus preview/backfill/support subsidy and renewal survival; neither CPI nor registered-user CAC substitutes for it.
 
-| Item | Low | Base | High | Notes |
-|---|---|---|---|---|
-| Launch-year marketing budget (M0–M12) | €15 k | €40 k | €90 k | Creators €15–40 k, content €5–15 k, paid tests €5–20 k, PR/events €2–10 k, referral COGS €3–10 k |
-| Registered users in launch year | 40 k | 80 k | 150 k | Implied by budget ÷ CAC plus organic |
-| Blended CAC per registered | €1.50 | €2.00 | €3.00 | Organic/referral ≥ 70 % of registrations |
-| CAC per connected user | €3 | €4 | €6 | Activation 50 % Base |
-| CAC per paid subscription | €21 | €40 | €75 | Registered→paid 7 / 5 / 4 % |
-| Payback (contribution €2.30–2.84) | 5–9 mo | 14–18 mo | 26–33 mo | `unit-economics.md` §7 |
-| Rule | Paid UA stops if CAC per registered > €3 for two consecutive weeks or if loaded payback > 18 months at measured conversion | DECISION | — |
+Hypothesis ranges retained for planning: registered CAC €1.50–€3 organic-heavy, lifetime registered→paid 2–7%, Plus paid direct contribution Base €1.78/Target €2.14. These do not justify the former CAC≤€40 or 14–18-month-payback claim. Actual cohort confidence and contribution payback decide scope. Staff content and creator disclosure belong in the same cash model as acquisition spend.
 
----
+## 6. Metrics and paired guardrails
 
-## 7. Trust-building actions that double as marketing (DECISION)
-
-| Action | Why it converts in Italy |
-|---|---|
-| Public, live "Copertura banche" page: per institution — works / partial (no card accounts) / not available — with last-checked date | Spendee's Italian reviews punish advertised-but-broken banks (R-EU §12 #8); honesty on UniCredit/Mediolanum/Crédit Agricole card accounts (FACT, R-OBB §1) |
-| "Chi vede i tuoi dati" page naming the licensed AISP, hosting region (EU), AI processors, retention, export and deletion | Revolut Sep-2026 disclosure incident made "who sees my data" a live question (R-IT §3.1); Finanzguru/Fintonic advertise their regulator and servers (R-PP §E) |
-| Consent-expiry countdown and plain-language renewal | The most complained-about failure mode across all apps (R-PP §A #4) — nobody markets a fix |
-| Export and delete in two taps from day 1 | Oval Money, Moneyhub, Mint shutdown memories (R-PP §E) |
-| No ads, no data selling, no lending — written on the store listing | R-PP §E; Cleo/Rocket cautionary tales |
-| Public changelog and incident page in Italian | Postepay app migration and isybank episodes primed users for "apps disappear" (R-IT §7) |
-
----
-
-## 8. Metrics dashboard (DECISION)
-
-| Area | Metric | Target (launch year) | Benchmark / source |
-|---|---|---|---|
-| Acquisition | Registered users; CAC per registered (blended, by channel) | ≤ €2.00 blended | §6 |
-| Activation | Registered → first institution connected (≤ 24 h) | ≥ 50 % (Low 30 / High 70) | R-BC §14 input 11 |
-| Time to first value | Registered → first reconciled insight ("ecco cosa è successo ai tuoi soldi") | ≤ 10 minutes median | Zero-setup promise |
-| Data correctness | Daily sync success per institution; silent-drop rate; duplicate rate; transfer-pair precision/recall; pending→booked replacement precision | ≥ 97 % / 0 tolerated / < 0.5 % / ≥ 95 % / ≥ 98 % | R-PP §A #1–#8; R-AI §6.2 |
-| AI quality | Auto-rate; auto-error-rate; review-rate; abstain accuracy | ≥ 75 % / ≤ 2 % / ≤ 20 % / ≥ 90 % | R-AI §6.2 |
-| Engagement | Review Inbox items per user-week; "inbox zero" reached within 7 days of a sync; sessions per MAU | ≤ 10 / ≥ 60 % / ≥ 12 | Product hypothesis |
-| Retention | D1 / D7 / D30; M3 MAU retention | ≥ 35 / 20 / 10 %; ≥ 40 % | Finance apps D30 4–9 % (ASSUMPTION, R-BC §12) |
-| Monetisation | Trial→paid; paid subscriptions per 1,000 MAU; annual share; Family share | ≥ 25 %; ≥ 120 (M6) → ≥ 180 (M9); ≥ 60 %; ≥ 20 % | W-1 (17–32-day trials median 42.5 % cross-category); `unit-economics.md` |
-| Business KPIs | Free AIS cost per paid subscription; offers revenue per MAU (from M9); gross margin per 1,000 MAU | ≤ €1.20; ≥ €0.15 by 100 k MAU; ≥ 50 % | `business-model.md` D-BM-1; `revenue-scenarios.md` §6 |
-| Trust | NPS; Trustpilot vs App Store gap; support contacts per 1,000 MAU; refund/chargeback rate; consent-renewal completion | ≥ 40; gap ≤ 1.0 star; ≤ 15; ≤ 0.5 %; ≥ 80 % within 7 days of expiry | R-US §4.5 (4.5–4.9 store vs 2.0–3.5 Trustpilot) |
-| Referral | Share of registrations from referral; K-factor | ≥ 15 %; ≥ 0.3 | — |
-
----
-
-## 9. Decisions / Recommendations
-
-| ID | Decision |
-|---|---|
-| D-GTM-1 | Italy-only launch; organic/referral-led growth; paid UA capped at €5 k/month for tests with the stop rule in §6 |
-| D-GTM-2 | Positioning on reconciliation and understanding, not on aggregation; the tagline "Collega i tuoi conti una volta. Al resto pensa Lilleri." |
-| D-GTM-3 | Waitlist → closed beta (500 → 2,000) → open beta → launch at M8 with the gates in §5 |
-| D-GTM-4 | Referral rewards in Plus months, not cash, at launch; cash bonuses only if a bank partner funds them (Phase 2) |
-| D-GTM-5 | Public coverage page, "who sees your data" page, consent-expiry UX and two-tap export/delete are launch requirements, not nice-to-haves |
-| D-GTM-6 | Creator deals are sponsorships with disclosure and honest demos; no paid "reviews"; no SEO attack content |
-
-## 10. Open questions
-
-| # | Question | How to verify |
+| Outcome | Definition / hypothesis | Counter-metric |
 |---|---|---|
-| Q1 | Italian sentiment on PFM apps in r/ItaliaPersonalFinance, Telegram groups and FinanzaOnline (not reachable in research) | Read threads; 20 user interviews from the waitlist |
-| Q2 | Live coverage and quality for Hype, N26, Satispay, Mediolanum, Widiba, BBVA Italia, Postepay Evolution through the chosen provider | Sandbox + restricted production; provider ASPSP CSV (R-OBA §6 #2) |
-| Q3 | Creator CPMs/CPAs in Italian personal finance and whether creators accept Plus-month referral rewards instead of cash | Outreach to 10 creators |
-| Q4 | Actual CPI/CPT for finance keywords in Italy on Apple Search Ads (benchmarks are cross-category) | €2 k test campaign |
-| Q5 | Whether the 30-day trial that connects all accounts and then drops to one institution creates reviews like "my accounts stopped updating" | Beta wave 2 copy test |
-| Q6 | First European market: criteria = provider coverage quality, incumbent strength (DE: Finanzguru; FR: Bankin'/Linxo; ES: Fintonic pivoted; PT/GR/NL: Plum present), language cost, consent behaviour | Decide at M12 with provider data; candidates Spain and Portugal (HYPOTHESIS) |
-| Q7 | App Store editorial featuring process for Italy | Apple partnership contacts after launch |
+| Activation | First correct understandable picture, connection attempt→completion by eligible bank/type; separate abandonment/provider failures | Unsupported sources and privacy/consent abandonment |
+| Correctness | Audited classification/reconciliation precision and abstention by decision type, bank, account type | Silent drops, duplicates, override/undo and false structural matches |
+| Low effort | Inbox correction completion/friction and correctly fresh retained picture | No sessions/MAU or screen-time growth target; empty inbox by abandonment is not success |
+| Retention | Cohort D7/D30 and useful fresh-data return, with eligibility/denominator stated | Privacy opt-out, deletion, support burden and unsatisfied coverage |
+| Paid demand | Observed collected net purchase/renewal among eligible priced-preview cohorts; 120–180 paid subs/1k MAU hypothesis only | Refunds, cancellation friction, unsupported-bank conversion and churn |
+| Economics | Invoice/billed unit, subsidy ≤€0.95/active paid subscription, full cohort contribution | During free beta use absolute/shadow costs; zero denominator cannot pass |
+| Trust | Qualitative understanding, complaint/incident resolution and export/deletion completion | No unreminded purchases/renewals, distress prompts, privacy failures or fake evidence |
 
----
+All target values in `metrics.md` are hypotheses, not achieved KPIs. Event analytics stay semantic and minimal; no descriptors, amounts, IBANs, screenshots or financial categories go to third-party analytics. Offers metrics activate only if that Later rail is separately cleared.
+
+## 7. Decisions / Recommendations
+
+| ID | Decision / recommendation |
+|---|---|
+| D-GTM-1 | Italy-first research and organic discovery; no acquisition scale until measured cohort economics justify it |
+| D-GTM-2 | Demonstrate correctness and reduced effort against bank apps, with supported-source/renewal caveats |
+| D-GTM-3 | Mock → official sandbox → cleared small real beta → gated purchase experiment → funded release, no calendar guarantee |
+| D-GTM-4 | Referral proposal Later after fraud/cost/entitlement controls; no rewards or outreach executed |
+| D-GTM-5 | Source/type coverage, data ownership, service failure and free portability are launch requirements |
+| D-GTM-6 | Honest disclosed creator demos; no invented reviews, paid “independent” evidence or absolute no-ad promise while a Later sponsored rail is considered |
+
+## 8. Open questions
+
+Incumbent depth; bank/type actual coverage; reachable demand vs creator audiences; Italian purchase/renewal; fully loaded content/creator CAC; preview-end complaints; platform launch requirements; referral unit cost; first European market support. Resolve with transparent research and cleared cohorts. No channel contact, creator negotiation, advertising buy or publication is executed by this document.
+
+## Review log
+
+| Reviewer | Finding | Resolution |
+|---|---|---|
+| Investor (major) | Why install instead of bank app remained a claim, not observed user value | Explicit incumbent comparison and correctness/effort demonstration; demand unvalidated |
+| PM/fintech (blocker) | Timed real-data waves assumed production access and charging before implementation | Event gates, mock/sandbox first, legal/contract/security/DPIA before real beta, explicit purchase experiment |
+| CFO (major) | €40 CAC and 14–18-month payback borrowed unavailable plan mix | Revised launch economics; Target loaded payback ~24 months, no acquisition scale justified |
+| Product (major) | Sessions/MAU≥12 contradicted low-effort North Star | Removed engagement farming; correctness/freshness, retention and friction paired |
+| Brand (major) | No-ads and coverage/type mastery claims were unconditional | No-banner/no-data-sale copy, synthetic labels, provider-derived expiry and measured supported types |
 
 ## 11. Sources
 

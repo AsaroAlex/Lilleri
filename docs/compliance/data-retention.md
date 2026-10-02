@@ -1,212 +1,151 @@
-# Data retention — how long Lilleri keeps each class of data, how it deletes it, and what backups and legal holds change
+# Data retention — purpose-bound schedule, deletion and recovery
 
-**Project:** LILLERI (consumer PFM, Italy-first then Europe; unlicensed data recipient under a provider's AISP licence)
-**Date / verification date for every claim:** 2026-10-02
-**Author:** Privacy/GDPR specialist + fintech compliance analyst, founding team
-**Status of this document:** synthesis of Phase 0 research; the authoritative retention schedule referenced by `compliance/privacy-model.md` §3 and by the Art. 30 records; input to `architecture/` (storage, keys, backups, jobs) and `security/`. **Not legal advice**; the civil-code anchors and the "no statutory retention" conclusions must be confirmed by counsel (`compliance/legal-open-questions.md` Q3).
+**Project:** Lilleri, Italy-first PFM; proposed recipient route subject to counsel/provider approval.
+**Review date:** 2026-10-02. **Retained evidence dates:** 2026-10-02; publication/access metadata in §11 preserved.
+**Status:** proposed schedule and acceptance tests. No operational erasure or key-management capability is established by this document.
 
 ## How to read this document
 
-- Labels: **FACT**, **ASSUMPTION**, **HYPOTHESIS**, **DECISION**, **OPEN QUESTION / UNKNOWN** (see `docs/README.md`). Every period below is a **DECISION (proposed)** unless it is anchored in a cited rule; the anchors themselves are FACT or ASSUMPTION as recorded in the raw notes (primary texts were not fetched — hosts blocked).
-- Evidence base: `docs/research/raw/regulatory-landscape.md` (**RL-§x**, sources **RL S-nn**), `non-bank-sources-and-os-limits.md` (**NB-§x**), `open-banking-providers-a.md` (**PA-§x**), `open-banking-providers-b.md` (**PB-§x**); WebSearch gap closures as **NEW-n** (table in `regulatory-landscape.md` §8.2).
-- Data classes, encryption classes (E1–E4) and access roles are defined in `privacy-model.md` §3; consent types in `consent-model.md` §2.
-
----
+**DECISION** identifies proposed periods/controls; **FACT** only claims supported at the retained source level; **ASSUMPTION/HYPOTHESIS** unconfirmed inputs/interpretations; **UNKNOWN** unresolved matters. Sources are raw RL/NB/PA/PB and earlier NEW entries in `regulatory-landscape.md` §8. No fresh legal or vendor verification occurred. Encryption classes are in `privacy-model.md` §3.1, consent types in `consent-model.md` §2.
 
 ## 1. Executive summary
 
-1. **No sector law forces Lilleri to keep bank data.** PSD2 imposes no retention on an unlicensed recipient; AML 10-year retention does not apply (Lilleri is not an obliged entity); the only hard anchors are **accounting records (10 years, art. 2220 c.c.)** and the **ordinary limitation period for claims (10 years, art. 2946 c.c.)** for a restricted archive of contract/consent/billing evidence. FACT (scope) / ASSUMPTION (civil-code anchors not re-read) (RL-§6.4, §9).
-2. Therefore the schedule is driven by **GDPR storage limitation (Art. 5(1)(e))** and by the product promise: live financial data lives **as long as the account lives**; raw provider payloads **13 months**; receipt images **90 days**; raw forwarded e-mails **30 days**; AI prompt/response logs **30 days**; analytics events **13 months**; security logs **12 months**; dormant accounts deleted after **24 months of inactivity** with warnings. DECISION.
-3. **Deletion is cryptographic**: every user has a data-encryption key (DEK); account deletion destroys the DEK, which makes the user's E2/E3 data unreadable in the database **and in every backup** without rewriting backups; a deletion log is replayed after any restore. DECISION.
-4. **Account deletion runs end to end in ≤ 30 days** (7-day cool-off, then revocation at the provider, token destruction, crypto-shredding, cache/index purge, vendor confirmations, restricted-archive carve-out, confirmation to the user) and is available **in-app and via a web link**, as Apple 5.1.1(v) and Play require. FACT (store rules) / DECISION (flow).
-5. **Backups** are EU-only, encrypted, retained **30 days** (daily) with a quarterly restore test; they never extend the life of personal data beyond the schedule because of the DEK design; logs and analytics (not under per-user DEKs) are pseudonymised and short-lived. DECISION.
-6. **Legal holds** suspend deletion timers for a named scope only (user, period, data class), require DPO approval, are reviewed every 90 days, and never override the user's erasure right unless Art. 17(3)(e) (legal claims) applies. DECISION.
-7. **What the provider keeps is not Lilleri's to decide**: the licensed AISP is a separate controller with its own retention; the RFP must ask for it and the privacy notice must say it. FACT (roles) / OPEN QUESTION (provider periods).
+- **DECISION:** no real financial data in the current environment. All production periods need an owner, necessity justification, lawful basis, timer/deletion job and DPIA review before collection.
+- **HYPOTHESIS:** a pure PFM recipient has no sector-wide duty to retain customer bank data; actual licensing/agency/AML status and applicable laws are not established (RL-§6.4, §9). Do not inherit a provider's retention obligations or assume no obligations categorically.
+- **DECISION:** normalised requested ledger/rules can live while the account and purpose remain active; raw successful provider payloads **30 days**, exceptional justified ceiling **90 days**; failed/quarantined copies **7 days**. The former 13-month raw default was disproportionate without evidence of necessity.
+- **DECISION:** no routine AI prompt/output content logs. Content-free version/cost/latency/outcome metrics suffice by default; justified isolated incident sample ≤ 7 days. A PLD reference does not require routine financial-content logging.
+- **UNKNOWN:** instant crypto-erasure from all backups. Deleting a live DEK does not erase a wrapped DEK in a recoverable database/key backup. Use bounded isolated backups, protected deletion tombstones and restore replay; claim cryptographic erasure only after no usable copy can be recovered and tested.
+- **DECISION:** stop processing/revoke on request promptly; perform active deletion without a mandatory 7-day waiting period; target≤ 30 days end-to-end with honest backup/processor exceptions. GDPR Art. 12 response window is **one calendar month**, not a universal30-day erasure licence.
 
----
+## 2. Principles
 
-## 2. Principles (DECISION; FACT where cited)
-
-| # | Principle | Anchor |
-|---|---|---|
-| P1 | **Purpose-bound retention**: each class has one trigger (account life, connection life, event time) and one period; nothing is "kept just in case". | GDPR Art. 5(1)(e), Art. 25 (FACT) |
-| P2 | **Live service data = life of the account**; the user controls earlier deletion per source. | Contract basis (`privacy-model.md` §2.2) |
-| P3 | **Short life for the richest copies**: raw payloads, images, raw e-mails, prompts. | Minimisation (`privacy-model.md` §4) |
-| P4 | **Legal anchors only where they exist**: accounting 10 years (art. 2220 c.c.); claims evidence up to 10 years (art. 2946 c.c.) in a restricted archive; consent proofs for the same window. No PSD2 retention; no AML retention. | RL-§6.4, RL-§9 (ASSUMPTION on articles; FACT on AML scope) |
-| P5 | **Deletion means unrecoverable**: crypto-shredding for E2/E3; hard delete for E1; vendor confirmation for processors. | GDPR Art. 17, Art. 28(3)(g) (FACT) |
-| P6 | **Backups do not resurrect data**: deletion log replay on restore; per-user DEKs. | Art. 17 + Art. 32 (FACT) |
-| P7 | **Evidence of deletion** is itself retained (audit class, no content). | Art. 5(2) accountability (FACT) |
-| P8 | **Annual review** of the schedule, and review on every new data source or vendor (DPIA trigger). | DPIA outline (`privacy-model.md` §8) |
-
----
-
-## 3. Retention schedule per data class
-
-Period starts at the **trigger**. "Archive" = restricted, encrypted, access by DPO/legal only, excluded from product and analytics.
-
-| # | Data class | Trigger | Retention | Rationale | Anchor / label | Deletion method | Backup behaviour |
-|---|---|---|---|---|---|---|---|
-| 1 | **Raw provider payloads** (JSON per fetch, HTTP metadata) | Fetch time | **13 months rolling**, then delete; deleted immediately with the connection if the user chooses "Elimina tutto da questa banca" | Re-run a year of reconciliation after mapping fixes; provider-switch without lock-in (PA-§7); dispute evidence | DECISION | Object lifecycle rule + DEK (E3) | Under DEK; 30-day backup window |
-| 2 | **Normalised transactions, balances, accounts** | Account/connection life | Life of account; per-connection deletion on "Scollega → Elimina"; per-transaction "Elimina" for imported/manual items | The product | Contract (FACT) / DECISION | DEK shred (account) or row delete + tombstone (partial) | Under DEK |
-| 3 | **Derived data** (categories, reconciliation links, merchant normalisation, recurring entities, insights, budgets) | Account life | Life of account; regenerated when sources change; special-category-feature labels deleted on consent withdrawal (C-SPECIAL) | The promise | DECISION | DEK shred / targeted delete | Under DEK |
-| 4 | **User rules, corrections, Review-Inbox decisions, per-user model state** | Account life | Life of account; included in export | Rules win over AI; explainability | DECISION | DEK shred | Under DEK |
-| 5 | **Receipt images** | Successful extraction | **90 days**, unless the user pins the image ("Conserva lo scontrino", e.g., for warranties) → life of account; failed extraction: 7 days | Images carry other people's data; itemisation needs only line items (NB-§6.3) | DECISION | Object lifecycle + DEK | Under DEK |
-| 6 | **Receipt extracted data** (merchant, date, totals, line items, link to transaction) | Account life | Life of account | Product | DECISION | DEK shred | Under DEK |
-| 7 | **E-mail ingestion — raw messages/attachments** (forward-to-inbox) | Arrival | Non-receipt mail: **discarded on arrival** (never stored beyond the parsing buffer, ≤ 24 h); receipts/invoices: **30 days** then delete raw; PDF invoices the user pins: life of account | Minimisation; Google Limited Use if OAuth is ever used (NB-§5) | DECISION | Lifecycle + DEK; inbound-mail vendor must not retain beyond delivery (contract) | Under DEK |
-| 8 | **E-mail extracted data** | Account life | Life of account; deleted with C-EMAIL withdrawal if the user chooses | Product | DECISION | DEK shred / targeted | Under DEK |
-| 9 | **Imported files** (CSV/XLSX/PDF) | Import | **30 days** then delete file; parsed transactions follow row 2; column mappings life of account | Fallback/history backfill (NB-§7) | DECISION | Lifecycle + DEK | Under DEK |
-| 10 | **AI processing logs — content** (pseudonymised prompt, output, confidence, model id) | Call time | **30 days** | Quality, incident investigation, explainability; PLD evidence window balanced against minimisation (RL-§14) | DECISION | Lifecycle + DEK (E3) | Under DEK |
-| 11 | **AI metrics — no content** (model id/version, latency, cost, acceptance rate, correction rate per category group) | Call time | **13 months** | Model governance; AI-Act deployer documentation | DECISION | Hard delete | Standard |
-| 12 | **Consent and permission records** (`consent_event`, `connection` state history) | Event time | Life of account, then **archive 10 years** (proof of consent / defence of claims) | GDPR Art. 7(1) proof; art. 2946 c.c. | DECISION / ASSUMPTION (10-year anchor) | Immutable store; archive copy excluded from DEK shred (no transaction content inside) | Archive backed up separately, same 10 years |
-| 13 | **Product analytics events** (semantic only) | Event time | **13 months** raw; aggregates indefinitely (no identifiers) | Garante 2021 guidelines; seasonality needs 13 months | DECISION | Hard delete by partition; pseudonymous id rotated on consent withdrawal | Standard (pseudonymised) |
-| 14 | **Diagnostics / crash logs** (PII-scrubbed) | Event time | **90 days** | Reliability | DECISION | Hard delete | Standard |
-| 15 | **Security logs** (auth events, API access; IP truncated after 7 days) | Event time | **12 months** | Security monitoring, incident forensics | DECISION (ASSUMPTION that 12 months is proportionate; Garante has accepted 6–12 months in practice — not verified) | Hard delete | Standard |
-| 16 | **Audit log of privileged actions, exports, deletions, breaches** | Event time | **10 years**, no personal content beyond user id and action | Accountability (Art. 5(2), Art. 33(5)) | DECISION / ASSUMPTION | Immutable | Archive |
-| 17 | **Identity & account** (e-mail, name, credentials, MFA, age attestation) | Account deletion | Deleted at the end of the deletion flow; **e-mail hash kept 12 months** in a "deleted accounts" list to prevent abuse of free trials and to honour "do not re-contact" | Contract; LI (abuse) | DECISION | DEK shred; hashed e-mail hard-deleted after 12 months | Under DEK / standard |
-| 18 | **Sessions & devices** (push tokens, session ids) | Last use | Sessions **90 days** after last use; push tokens until logout/revocation; device records with the account | Security | DECISION | Hard delete | Standard |
-| 19 | **Provider tokens & secrets** (E4) | Revocation/expiry | Destroyed immediately on revocation, expiry, connection deletion, account deletion; rotated per provider policy | Security | DECISION | Secret-manager delete + provider-side revoke | Secret store backups ≤ 7 days |
-| 20 | **Support tickets** | Closure | **24 months**; attachments with personal data 90 days unless needed for the ticket | Help; patterns | DECISION | Hard delete; anonymise if the account is deleted earlier | Standard |
-| 21 | **Billing & accounting** (store transaction ids, invoices, tax records) | Fiscal year end | **10 years** in archive; subscription state deleted with the account | art. 2220 c.c.; tax law | ASSUMPTION (anchor) / DECISION | Archive; hard delete at expiry | Archive |
-| 22 | **Marketing lists & suppression** | Withdrawal | Opt-in data deleted at withdrawal; **suppression hash kept indefinitely** (to honour the opt-out) | art. 130 Codice privacy | DECISION | Hash only | Standard |
-| 23 | **Vendor register, DPAs, TIAs, DPIA, Art. 30 records** | End of relationship | Relationship + **5 years** | Accountability; DORA readiness if status changes (RL-§4.3) | DECISION | Archive | Archive |
-| 24 | **Legal-hold archive** | Hold release | Until release + 30 days | Legal claims (Art. 17(3)(e)) | DECISION | Hard delete at release | Separate, access-logged |
-| 25 | **Dormant accounts** | Last activity (login or successful refresh) | Warning at **18 months**, second at **22 months**, deletion at **24 months** (full account-deletion flow) | Storage limitation; stale financial data is a liability | DECISION | Account-deletion flow | — |
-
-Notes: (i) rows 1–11 are under the user's DEK → unreadable everywhere once the DEK is destroyed; (ii) rows 12, 16, 21, 23 deliberately contain **no transaction content** so that they can outlive the account; (iii) the provider's own retention of the data it fetched as a controller is **UNKNOWN per provider** (RFP question; see §9).
-
----
-
-## 4. Triggers and timers (DECISION)
-
-| Trigger | Effect |
+| Principle | Resolution / label |
 |---|---|
-| **Account deletion request** | §5.1 flow; all DEK-protected classes become unreadable at T+7 days (end of cool-off); non-DEK classes follow their own short periods or are hard-deleted at T+7 |
-| **Connection revoked / deleted by the user** | Tokens destroyed immediately; provider consent revoked; raw payloads for that connection deleted immediately if "Elimina tutto" or at 13 months if "Conserva lo storico"; normalised data per the user's choice |
-| **Connection revoked at the bank or provider** (webhook/polling) | Tokens destroyed; data kept (user still owns the ledger) until the user decides; connection shown as revoked in "Collegamenti" |
-| **Consent withdrawal** (C-EMAIL, C-SPECIAL, C-ANALYTICS, P-AI) | Source-specific deletion per `consent-model.md` §2 (raw e-mails now; derived special-category labels now; pseudonymous analytics id rotated; AI logs continue to expire at 30 days — no new calls) |
-| **Expired connection** (no renewal) | No deletion by itself; dormant-account timer continues from last activity |
-| **Inactivity** | 18/22/24-month notices then deletion (row 25) |
-| **Scheduled lifecycle jobs** | Daily: rows 1, 5, 7, 9, 10, 14, 18; monthly: rows 11, 13, 15, 20; yearly: rows 16, 21, 23 |
-| **Legal hold placed** | Timers suspended for the hold scope only (§7) |
+| Purpose-bound, minimal copies | **DECISION:** periods are maximums, not entitlements; expired purposes or lawful withdrawal can trigger earlier deletion |
+| Raw≠canonical≠derived | **DECISION:** deleting a source invalidates provenance-linked labels, indexes, caches, user model state and reconciliation; exact scope tested |
+| Restricted archives | **DECISION:** separated from product/analytics, narrow evidence, no routine transaction content; independent lawful purpose/key/access/expiry |
+| Ten-year periods | **ASSUMPTION:** accounting Art. 2220 and ordinary limitation Art. 2946 in retained notes need counsel. A limitation period does not mandate retaining every consent/audit event for ten years |
+| Personal means personal | **FACT (retained GDPR interpretation):** user IDs, email/suppression hashes and pseudonymous events remain personal data; no “content-free means anonymous” claim |
+| Erasure/deletion record | **DECISION:** minimised job/tombstone proof kept only as needed to prevent recovery and demonstrate execution; do not indefinitely recreate deleted profiles |
+| Key/backup integrity | **DECISION:** delete/purge usable key copies if feasible; otherwise isolate deleted records and enforce verified restore replay until bounded expiry |
+| Controller accountability | **DECISION:** controller/legal owns justified holds/retention; DPO advises independently; legitimate holds neither cover all data nor automatically override erasure |
 
----
+## 3. Proposed schedule per class
 
-## 5. Deletion workflows
+Periods start at the stated trigger. All numbers are **DECISION (proposed)** except statutory anchors explicitly labelled **ASSUMPTION**. They must not be advertised as implemented SLAs yet. Archives and provider periods do not silently inherit account-life retention.
 
-### 5.1 Account deletion (user-initiated; in-app "Elimina account" and web link) — DECISION; store rules FACT (Apple 5.1.1(v); Play User Data)
-
-| Step | When | What happens | Evidence |
-|---|---|---|---|
-| 1 | T0 | User re-authenticates; sees what will be deleted and what is kept (billing records, consent proofs, audit entries; wording in plain Italian) and the 7-day cancel window; confirms | `consent_event` (K-CONTRACT withdrawn, pending) |
-| 2 | T0 | Account enters `pending_deletion`: refresh stops, no new AI calls, push stops, analytics id rotated, app shows "Account in eliminazione — annulla entro il …" | Audit |
-| 3 | T0 … T+7 d | User may cancel from the app or the confirmation e-mail link | Audit |
-| 4 | T+7 d | **Revoke every provider consent** (provider API) and request bank-side revocation where supported; **destroy provider tokens** (E4) | Provider API responses logged |
-| 5 | T+7 d | **Crypto-shred**: destroy the user's DEK(s) in the KMS; write a `deletion_log` entry (user id, timestamp, classes, DEK ids) | Audit + deletion log |
-| 6 | T+7 d | Hard-delete E1 rows (sessions, device records, marketing opt-ins → suppression hash), purge caches, search indexes, queues, CDN objects; anonymise support tickets | Job report |
-| 7 | T+7 … T+14 d | **Processor deletions**: inbound-mail vendor (messages), OCR/LLM (should hold nothing — zero retention; request confirmation), push vendor (token), analytics (pseudonym unlink), cloud object stores (lifecycle); collect confirmations | Vendor confirmations filed |
-| 8 | T+7 d | **Carve-outs** moved/kept in archive: billing (10 y), consent proofs (10 y), audit (10 y), e-mail hash (12 m), suppression hash | Archive index |
-| 9 | ≤ T+30 d | Confirmation e-mail to the user ("I tuoi dati sono stati eliminati il …; conserviamo solo …") | Sent-mail log (hash only) |
-| 10 | Any restore after T+7 | `deletion_log` replayed: DEK ids remain destroyed; any resurrected E1 rows re-deleted | Restore runbook |
-
-Target: 7 days typical, ≤ 30 days hard limit; the GDPR "one month" (Art. 12(3)) is never approached.
-
-### 5.2 Connection deletion ("Scollega")
-
-Revoke at provider → destroy tokens → user choice: **"Conserva lo storico"** (transactions stay as a closed account; raw payloads expire at 13 months) or **"Elimina tutto ciò che viene da questa banca"** (transactions, balances, raw payloads, derived data from that connection deleted now; reconciliation links to other accounts rewritten; a tombstone keeps the audit trail). Confirmation in-app. FACT that providers require a revoke surface (PA-§2.6).
-
-### 5.3 Partial deletions
-
-Receipt (image + extracted data, link removed); e-mail source (raw + extracted + alias); imported file (file now; transactions optional); chat history (now; AI logs expire at 30 days); single manual/imported transaction. Each writes a tombstone; API-sourced transactions cannot be "deleted" while the connection is live (they would re-sync) — they can be marked **"Privata"** or the connection deleted (`privacy-model.md` §5.2 S3).
-
-### 5.4 Provider-side data (FACT on roles; UNKNOWN on periods)
-
-The licensed AISP holds the data it fetched as a **separate controller**; Lilleri's deletion does not delete the provider's copy. Actions: (a) revoke consent at the provider on every deletion; (b) ask the provider for its retention and deletion policy and for a user-facing path (RFP, `legal-open-questions.md` Q4); (c) say it in the privacy notice: *"[Provider] conserva i dati che ha raccolto per conto tuo secondo la propria informativa: [link]"*.
-
-### 5.5 Vendor-side data (DECISION)
-
-Contracts require: zero retention for LLM/OCR (or documented abuse-monitoring minimum), inbound-mail provider retention ≤ 7 days, push vendor only tokens + templated text, analytics vendor (if any) pseudonymised with deletion API; **deletion within 30 days of our instruction** with written confirmation (Art. 28(3)(g)). Annual attestation; vendor register entry per `privacy-model.md` §3.3 row 21.
-
-### 5.6 Dormant accounts (DECISION)
-
-Inactivity = no login and no successful refresh. E-mail at 18 months ("Il tuo account Lilleri verrà eliminato tra 6 mesi se non accedi"), at 22 months, then the §5.1 flow at 24 months without cool-off cancellation after the final notice period. ASSUMPTION: 24 months is proportionate for financial data of a free user; counsel may prefer a shorter period for free tiers.
-
-### 5.7 Employee / admin data (brief)
-
-Access and break-glass logs 10 years (audit); staff accounts removed within 24 h of off-boarding; no personal data of users on endpoints (policy in `security/`).
-
----
-
-## 6. Backup implications (DECISION)
-
-| Topic | Policy | Why |
+| Data class | Trigger / maximum proposed period | Purpose / deletion and recovery rule |
 |---|---|---|
-| Location | EU regions only; same provider/region family as production | `privacy-model.md` §12 |
-| Encryption | Backups encrypted with platform keys **and** contain only DEK-encrypted user data for E2/E3 classes; DEKs are wrapped by KMS keys that are backed up separately (HSM-backed, 7-day retention) | Crypto-shredding works only if the DEK cannot come back from a backup |
-| Retention window | Daily snapshots **30 days**; no long-term monthly archives of the production database (archives in §3 are separate, content-free) | Keeps "deleted" meaning deleted within the 30-day promise even for E1 rows |
-| Deletion log replay | Every restore runs the `deletion_log` replay (DEK ids destroyed, E1 deletions re-applied, lifecycle jobs re-run) before the restored system serves traffic | Art. 17 + Art. 32 |
-| Logs and analytics | Not under per-user DEKs → must already be pseudonymised and short-lived (§3 rows 13–15) so that backups add no risk | Minimisation |
-| Restore testing | Quarterly restore drill including a deletion-replay check; results in the audit log | Art. 32(1)(d) |
-| Retention of backups after a legal hold | Hold scope exported to the legal-hold archive; backups themselves are not extended | §7 |
-| Provider/vendor backups | Addressed by contract: deletion within 30 days must cover vendor backups or state the bounded backup window (≤ 35 days) | Art. 28 |
+| Raw provider JSON/metadata | Successful normalisation: **30 days**; documented DPIA/incident exception ≤ 90 days; malformed/quarantine 7 days from ingest | Necessary debugging only; field allowlist; earlier source/account deletion; content objects and all derived references purged |
+| Normalised transactions, balances, accounts | Account/purpose life; earlier source/account erasure | Requested ledger; retain history only under independent reviewed ongoing purpose; deletion tombstones prevent re-ingest |
+| Derived labels, recurrence, insights, links | Account/source life; invalidate promptly on source deletion/withdrawal | Provenance tracked; delete/recompute caches/indexes/model state; Article 9 condition must persist where relevant |
+| Rules, corrections, personal model | Account life | Personal service/export; no personal cross-user training; erase targeted feedback and model artefacts |
+| Receipt images | Successful extraction: 90 days; failure 7 days; user explicitly pins until unpin/source/account deletion | Minimise originals; pinned material periodically review; Article 9/other-subject assessment |
+| Receipt extracted items | Account/source/purpose life | Erase with source/withdrawal where no valid ongoing basis; raw image expiry does not erase extracted sensitivity |
+| Raw email/attachments | Non-receipts discarded after parsing, buffer ≤24 h; receipt raw 30 days; pinned invoice only by user choice/review | Inbound vendor retention separately approved; no inbox-wide collection in MVP |
+| Email extracted items | Account/source life while lawful purpose remains | Withdrawal stops ingestion; retaining consent-based extracted material needs valid independent basis, not just a “keep” toggle |
+| Import files/mappings | File 30 days from import; mappings account life | Parsed rows follow ledger/source schedule; earlier erase source on request |
+| AI prompt/output content | **Disabled by default**; justified incident sample ≤ 7 days from capture | Scope/redaction/approval; no quiet-set or counterparty disclosure; erase vendor/sample copies when purpose ends |
+| AI operational metrics | 13 months from event if justified | Model/version/cost/latency/outcome only; no user/category/merchant content; verify aggregation/re-identification risk |
+| Consent/permission/connection evidence | Minimised evidence during account life; post-close maximum **3 years proposed**, only for documented claims/accountability need; longer only class-specific counsel-approved requirement/hold | Separate identifiers/text-version proof from product content; 3 years not statutory fact; no blanket 10-year archive |
+| Product analytics | 13 months from event only if justified and permitted; earlier consent withdrawal/erasure applies | Pseudonymous remains personal; withdrawal stops identifier use and deletes consent-only events; indefinite aggregate only if demonstrated irreversibly anonymous |
+| Crash diagnostics | 90 days from event | Scrub content before upload; erase relevant identifiers/copies on rights request where applicable |
+| Security logs |**6 months** from event; justified documented exception ≤ 12 months; full IP default ≤ 7 days | LIA and incident necessity; no claim that Garante universally accepts these periods |
+| Routine access/export/delete audit |12 months from event proposed; deletion tombstones until all restorable copies expired +90 days | Minimal IDs/actions; exceptional claim evidence separately scoped; incident/breach records have a documented reviewed period, not automatic 10 years |
+| Identity/auth factors |Active account life; active deletion prompt after validated request | Deletion certificate may retain minimal confirmation route transiently; trial-abuse email hash not retained by default; any later abuse list needs LIA/purpose/expiry |
+| Sessions/devices/push |Sessions ≤ 90 days last use; revoke on logout/account request; push token remove promptly | Restored sessions/tokens remain revoked; device rows erased with account |
+| Provider tokens/secrets |Revoke/delete immediately on disconnect/deletion or unusable expiry; rotation per contract | Provider revocation and secret-store key/version destruction separately tracked; unusable retained secret backups bounded ≤ 7 days only if proven |
+| Support messages | 24 months after closure maximum; attachments90 days; earlier account erasure unless scoped necessity | Redact other subjects, no blanket “anonymise” where identity/content recoverable |
+| Billing/accounting |Record-specific **10 years proposed (ASSUMPTION on legal anchor)**; trigger/start confirmed by counsel/tax adviser | Only necessary invoice/tax/accounting records; subscription entitlement erased with account; no full ledger retained |
+| Marketing/suppression |Marketing opt-in until withdrawal; minimal suppression token while necessary to honour applicable opt-out, annual review | Hash remains personal; document scope and deletion trigger; no automatic indefinite retention |
+| Vendor/DPIA/ROPA/contracts |Relationship + 5 years proposed | Accountability/legal evidence without customer financial content; review actual obligations |
+| Legal-hold material |Until reviewed hold release; delete within 30 days after release absent valid renewed basis | Narrow scope/copy, restricted archive, controller/legal decision with DPO advice |
+| Dormant accounts |No meaningful user action for 24 months proposed; warn 18/22 months; stop/delete after final notice | Background refresh does **not** reset user inactivity forever; paid contractual service and pending claims assessed individually |
+| Backups/PITR |**30 days maximum** from snapshot/log capture; no unapproved monthly archive | Isolated, no routine product use; tombstone replay before serving restored system; key copies tracked; explain residual window honestly |
 
----
+**DECISION:** the proposed 3-year evidence archive and 6-month security default replace unsupported blanket 10-year and 12-month choices; both require justified signed review. Accounting may need a different trigger or tax period. No period authorises collecting data that lacks a lawful basis.
 
-## 7. Legal holds (DECISION; FACT on the GDPR exception)
+## 4. Triggers and partial erasure
 
-| Element | Rule |
+| Trigger | Action / DECISION |
 |---|---|
-| Triggers | Litigation or credible threat; Garante/AGCM/Banca d'Italia inquiry; provider or app-store dispute; fraud/abuse investigation; law-enforcement request with a valid legal basis (Italian law; never on informal request) |
-| Scope | Narrowest possible: named users/period/data classes; recorded in the **hold register** (owner, trigger, scope, start, review date, legal basis) |
-| Effect | Lifecycle timers suspended for the scope; the data is **copied to the legal-hold archive** (DEK-independent copy, access-logged, DPO/legal only) so that the production deletion flow can still run for everything else |
-| User rights | Erasure requests inside a hold are honoured for everything outside the scope; inside the scope erasure is refused only under **Art. 17(3)(e)** (establishment, exercise or defence of legal claims) with a written reasoning and the user informed (Art. 12(4)) |
-| Approval & review | DPO + founder approval to place; review every **90 days**; release recorded; archive deleted 30 days after release |
-| Transparency | Privacy notice states that data may be retained for legal claims; hold register available to the Garante on request |
+| Account erasure |Stop background jobs/external AI/push promptly; revoke sessions/provider access; active erase and processor instructions; bounded backup isolation; permitted archives explained |
+| AIS disconnect |Stop access/revoke/destroy tokens; offer distinct retain-history (reviewed ongoing ledger basis) or delete-source choice. GDPR erasure is separate |
+| Provider/bank revocation or expiry |Stop unusable access; do not destroy requested history automatically; explain status and retained purpose; inspect provider signals, not universal180-day assumptions |
+| GDPR withdrawal |Stop consent purpose; remove raw/derived/processor data unless another independently valid basis already applies; no silent basis switch |
+| P-AI withdrawal |No new external calls; queued jobs cancelled; vendor artefact/sample deletion assessed; existing lawful categories may remain under reviewed core purpose |
+| Delete source/transaction |Purge originals/derivatives/indexes/caches/reconciliation links; manage live re-sync via scope/exclusion/disconnection. A “private” flag is not erasure |
+| Shared/household change |Remove departing person's access immediately; assess which common records each participant may lawfully retain; exports never disclose unauthorised other-subject data |
+| Hold/inactivity |Scoped hold reviewed independently; inactivity based on meaningful user action, not perpetual provider refresh |
 
----
+## 5. Account deletion workflow (DECISION; not implemented proof)
 
-## 8. Operational controls (DECISION)
+1. Verify identity proportionately, explain affected data/permitted archive/backup windows and separate app-store subscription cancellation. Provide in-app and web request entry; no compulsory7-day cool-off. An optional brief cancellation mechanism must not delay legitimate erasure unduly.
+2. At validated request, disable jobs/sessions/external AI/push and initiate provider revocation/token invalidation. Retry failed provider calls without keeping local access active; preserve only minimal response evidence.
+3. Purge active user data, objects, indexes, queues, caches, model state and authorised household references. Where key deletion is used, inventory every recoverable key version/copy and verify irreversibility; also hard-delete application rows where needed.
+4. Issue processor deletion instructions and collect concrete responses including abuse-monitoring and backup limits. Provider independent-controller copies require a separate request path and notice; Lilleri cannot certify their erasure from its own job.
+5. Preserve only documented class-specific lawful carve-outs under separate keys/access/expiry. Unresolved breach/litigation holds are narrowly scoped, reviewed and explained where lawful.
+6. Write minimised deletion tombstones/certificate; protect them from rollback. Target active deletion promptly, end-to-end≤ 30 days; respond within **one calendar month** per Art. 12(3). Complexity may permit an explained response extension, not routine delay; rights and without-undue-delay erasure remain separate.
+7. Inform the user accurately what completed, which legally justified records remain, and when isolated backup/vendor copies expire. Do not say “unreadable in every backup” unless verified. If a deadline cannot be met, escalate and send the legally required status/reason promptly.
 
-- Retention periods are **configuration**, not code constants; each class has an owner, a job, a last-run metric and a "rows expired vs deleted" reconciliation.
-- A **deletion certificate** (internal) is generated per account deletion listing classes, timestamps and vendor confirmations.
-- The schedule is linked to the Art. 30 records and the DPIA; changes require DPO sign-off and a changelog entry.
-- Annual review each **December** with the compliance review (`regulatory-landscape.md` §5), and on triggers: new data source (mailbox OAuth, notification listener), new vendor, new country, AISP registration (DORA would then add register-of-information retention and incident-record rules — RL-§4).
+### 5.1 Provider and vendor deletion
 
----
+**HYPOTHESIS:** provider usually acts as independent controller for AIS; actual roles/periods **UNKNOWN** until Q4 closes. Revoke access and expose its rights contact/notice. For processors, Art. 28 terms must cover deletion/return, subprocessors, locations, restricted retention and backup expiry. “Zero retention or abuse-monitoring minimum” are different configurations; actual exception must be approved/disclosed. Proposed processor active deletion≤ 7 days after instruction and bounded isolated backups≤ 30 days, unless counsel-approved justified exception; these are negotiated targets, not statutory numbers.
+
+## 6. Backup and key implications
+
+| Issue | Proposed control | Acceptance evidence |
+|---|---|---|
+| Recoverable wrapped keys |Track live DB, key vault/version, PITR, object replicas, snapshots, exports and key wrapping material; a restored wrapped DEK may still decrypt under a live KMS key | Key lifecycle design and deletion/restore test; instant crypto-erasure claim forbidden until proven |
+| Bounded residual copies |30-day backup/PITR window; segregated inaccessible routine copies; no reuse for analytics/debugging | Actual configured policy and expired-object verification |
+| Tombstones/replay |Separately protected minimised deletion log survives restore; purge/revoke expired records and keys before traffic/jobs resume | Restore drill deletes account/source/shared records and cannot resurrect sessions/tokens |
+| Partial deletion |Per-user key destruction cannot erase one transaction while preserving all others; purge source/row derivatives and enforce tombstones on restore | Partial/source-erasure test, live re-ingest suppression |
+| Non-DEK logs/archives |Pseudonymisation alone is insufficient; bounded periods and targeted erasure/rights assessment | Identifier/index inventory, job reports |
+| Restore drills |Quarterly and after key/backup/deletion changes | Job timings, failed-copy detection, rollback safe incident procedure |
+| Vendor backups |Written actual backup expiry/isolated-use/no-recovery-to-service terms and deletion evidence | Contract/configuration/attestation; unknown periods block promise |
+
+**DECISION:** if cryptographic irreversibility cannot be proven, use honest bounded-backup deletion rather than assert instant erasure. Even proven crypto-erasure does not erase separate plaintext logs, exports, other-subject copies, provider records or processors automatically.
+
+## 7. Legal holds
+
+**DECISION:** controller/legal authorises narrow scope after legal-basis/necessity assessment with independent DPO advice. Record basis, records/users/period, access, start, owner and90-day review. Art. 17(3)(e) may cover necessary establishment/exercise/defence of claims; other applicable Art. 17 exceptions/legal duties need specific identification. An informal request, fraud suspicion or store disagreement does not automatically suspend all erasure. Honour out-of-scope erasure and explain refusal/rights under Art. 12(4) where required. Copy justified held material to separate controlled archive, not indefinite extension of all production backups; release purge≤ 30 days.
+
+## 8. Operating controls and review
+
+**DECISION:** configuration-owned periods; daily expiry jobs with counts/errors/oldest-record alerts; deletion ownership/retries; actual certificates listing remaining copies; protected tombstones and restore gate; purpose/Art. 30/DPIA links. Review annually and at new source/vendor/country/household/licensing/AI changes. Thresholds and retention jobs in docs are proposed acceptance criteria, not a test result.
+
+## Review log
+
+**Date:** 2026-10-02. **Method:** retained raw-source critique; no fresh statutes/DPAs.
+
+| Critique | Resolution | Remaining human production blocker |
+|---|---|---|
+|13-month raw payloads and 30-day prompts kept richest copies for speculative claims/reprocessing |30-day raw/max 90-day exception; no routine prompt content; isolated7-day justified sample | Necessity/DPIA approval and tested field/lifecycle controls |
+| Ten-year limitation was treated as blanket retention duty | Separate accounting anchors from optional narrowly justified evidence; proposed 3-year ceiling with review, normal audit12 months | Counsel/tax record-class/trigger/claims assessment |
+| Live DEK deletion guaranteed unreadable backups while recoverable keys were backed up | Key-copy inventory, bounded30-day isolation, tombstone replay and tested restore; no instant claim | Demonstrated key and backup lifecycle, processor evidence |
+| Mandatory7-day delay and 30-day GDPR rule conflated response and erasure | Prompt stop/erase; no forced cool-off; one-calendar-month response and lawful exception/extension analysis | Rights workflow, policy copy and staffing |
+| Refresh reset dormancy; hashes/“content-free” records treated anonymous | Meaningful-user inactivity; hashes/IDs remain personal; annual suppression review | Dormancy necessity/user notice and LIA/suppression policy |
+| Provider role and legal holds were automatic/DPO-owned | Actual-role assessment; controller/legal scoped hold decision, DPO advice | Provider terms, legal-hold/incident procedures |
+
+**Gate verdict:** **PASS WITH CONDITIONS for synthetic design; real-data deletion/retention acceptance BLOCKED** pending legal necessity and engineering/vendor evidence.
 
 ## 9. Decisions / Recommendations
 
-| # | Decision / recommendation | Label |
-|---|---|---|
-| D1 | Adopt the schedule in §3 as the authoritative retention table; periods are configuration with DPO-owned change control. | DECISION |
-| D2 | Per-user DEKs (E2/E3) and crypto-shredding as the deletion primitive; deletion log replayed on every restore; 30-day backup window; EU-only backups. | DECISION |
-| D3 | Account deletion in-app and via web link, 7-day cool-off, ≤ 30 days end to end, provider consent revocation and token destruction as mandatory steps, carve-outs limited to content-free archives (billing, consent proofs, audit). | DECISION |
-| D4 | Raw provider payloads 13 months; receipt images 90 days; raw e-mails 30 days (non-receipts discarded on arrival); imported files 30 days; AI content logs 30 days; analytics 13 months; security logs 12 months; dormant accounts 24 months. | DECISION (proposed values) |
-| D5 | Legal holds are scoped, archived separately, DPO-approved, reviewed every 90 days; erasure refused only under Art. 17(3)(e). | DECISION |
-| D6 | Every processor contract: deletion ≤ 30 days with confirmation, bounded backup window, zero retention for AI/OCR. | DECISION |
-| R1 | Counsel to confirm the civil-code anchors (art. 2220, 2946), the dormant-account period for free users, and whether any Italian rule requires longer retention of consent proofs or of the app's transaction data (none identified). | RECOMMENDATION |
-| R2 | RFP question to every provider: retention and deletion policy for data fetched under the user's consent; user-facing deletion path; backup window; data location. | RECOMMENDATION |
-| R3 | Implement the retention jobs and the deletion certificate in the first vertical slice so that "delete my account" works on day one of beta. | RECOMMENDATION |
-
----
+Adopt this proposed schedule over the earlier 13-month raw default; verify scope and necessity before real data. Implement active and partial deletion, source/model provenance, processor requests, isolated bounded backups and rollback-safe tombstones before beta. Publish actual completion/retention facts only. No automatic 10-year consent/audit archive, indefinite hash retention, or crypto-erasure guarantee.
 
 ## 10. Open questions
 
-| # | Question | Why it matters | How to resolve |
-|---|---|---|---|
-| OQ1 | Are art. 2220 (10-year accounting) and art. 2946 (10-year limitation) the right anchors, and does any Italian or EU rule impose retention of PFM transaction data or consent proofs beyond them? (None found; PSD2 and AML do not apply to Lilleri — RL-§6.4, §9.) | Archive design | Counsel (`legal-open-questions.md` Q3) |
-| OQ2 | What retention does each shortlisted provider apply to data fetched as AISP, and can a user request deletion there? | Notice accuracy; user trust | RFP; provider privacy notices (TrueLayer stores "primarily in EEA/UK" — PA-§3.2; Salt Edge EU-only — PA-§3.4; others UNKNOWN) |
-| OQ3 | Is a 13-month raw-payload window defensible under minimisation, or should it be 90 days plus on-demand re-fetch (user-present sessions are unlimited under the RTS)? | Storage of the richest copy | DPIA; engineering trade-off |
-| OQ4 | Dormant-account period for free users: 24 months vs shorter | Proportionality | DPO/counsel |
-| OQ5 | Security-log retention 12 months vs 6 months in the Garante's practice for a consumer app | Proportionality | DPO; Garante decisions review |
-| OQ6 | Do AI content logs of 30 days give enough evidence under the Product Liability Directive (transposition by 9 Dec 2026) for defective-insight claims, or should metrics-only logs plus model versioning suffice? | PLD exposure (RL-§14) | Counsel after the Italian transposition is published |
-| OQ7 | Vendor backup windows: can LLM/OCR/inbound-mail vendors contractually confirm ≤ 35-day backup retention and zero retention of content? (Vendor pages were blocked — RL-§6.5.) | Deletion promise | Read current DPAs; written confirmation |
-| OQ8 | Law-enforcement requests: Italian procedure (decreto, richiesta ex art. 132 Codice privacy for traffic data does not apply to Lilleri — ASSUMPTION) and who in the company may respond | Legal-hold triggers | Counsel; written procedure |
-
----
+| Question | Closure owner/evidence |
+|---|---|
+| Which accounting/claims/consent periods and legal duties actually apply? | Counsel/tax adviser; per-record purpose/basis/trigger memo (Q3/Q5) |
+| Can30-day raw retention/max90 exception and3-year evidence ceiling be justified? | Controller + DPO DPIA/necessity assessment |
+| Can every decryptable key/backup/export/derivative copy be controlled and partial deletion preserved after restore? | Engineering/security key inventory + restore acceptance evidence |
+| What do provider/processor/subprocessor copies retain, and who answers rights requests? | Actual contracts/notices/configuration and deletion responses (Q4) |
+| Which withdrawal/household/live-sync cases require deletion vs restriction vs independent ongoing purpose? | Counsel + domain/privacy tested workflow |
 
 ## 11. Sources
 
-Verification date for every row: **2026-10-02**. Full raw-note source table in `regulatory-landscape.md` §8.
+Retained research date for these rows: **2026-10-02**; publication dates and access limitations are preserved. The present review did not re-fetch these sources. Full raw-note source table in `regulatory-landscape.md` §8.
 
 | ID | Source | URL | Pub. date | Reliability | Used for |
 |---|---|---|---|---|---|
@@ -215,7 +154,7 @@ Verification date for every row: **2026-10-02**. Full raw-note source table in `
 | RL-§6.4, RL S-26 | GDPR Art. 5(1)(e), 7(1), 12(3), 17, 17(3)(e), 28(3)(g), 32, 33(5); EDPB 06/2020 (provider as separate controller) | https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-062020-interplay-second-payment-services-directive_en | 2016 / 2020 | high (not fetched) | Principles; legal holds; provider-side data |
 | RL S-27 | Garante cookie guidelines 2021 (anonymised analytics; retention expectations) | https://www.garanteprivacy.it/web/guest/home/docweb/-/docweb-display/docweb/9677876 | 2021-06-10 | high (not fetched) | Analytics retention |
 | RL S-32, S-74 / NB S-04 | Apple App Review Guideline 5.1.1(v) — in-app account deletion (first-hand, verbatim) | https://developer.apple.com/app-store/review/guidelines/ | 2026-06-08 | high | §5.1 |
-| RL S-41; NEW-1 | Google Play Data safety; User Data policy (account deletion in-app + web; third-party AI clarification 15 Jul 2026) | https://developer.android.com/guide/topics/data/collect-share ; https://support.google.com/googleplay/android-developer/answer/10144311?hl=en | 2026 | high / medium-high (snippet) | §5.1; vendor deletion |
+| RL S-41; NEW-1 | Google Play Data safety; User Data policy (account deletion in-app + web; third-party AI clarification claimed by earlier synthesis; exact change/date UNKNOWN) | https://developer.android.com/guide/topics/data/collect-share ; https://support.google.com/googleplay/android-developer/answer/10144311?hl=en | 2026 | high / medium-high (snippet) | §5.1; vendor deletion |
 | PA-§2.6, §3.2, §3.4, §7 | Provider revoke surfaces; TrueLayer stores "primarily within Europe (EEA) and the UK"; Salt Edge "EU/EEA users' data stored only in the EU"; store raw payloads in a canonical schema to avoid lock-in | https://truelayer.com/legal/privacy/ ; https://www.saltedge.com/legal/privacy_policy ; https://docs.truelayer.com/docs/collect-user-consent | n/d | high | §3 row 1 rationale; §5.4; OQ2 |
 | PA #43 | Tink consent reconfirmation — late renewal re-fetches only 90 days | https://docs.tink.com/resources/transactions/consent-reconfirmation | n/d | high (mirror) | Why user-present re-fetch is limited (OQ3) |
 | RL S-04 / PA #3 | EBA Q&A 2019_4631 — user-present requests unlimited | https://www.eba.europa.eu/single-rule-book-qa/qna/view/publicId/2019_4631 | n/d | high | OQ3 |

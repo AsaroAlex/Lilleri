@@ -7,6 +7,16 @@
 **Companions:** `vision.md` (thesis, principles, loop, WOW/TRUST, automation modes), `mvp.md` (strict scope, success criteria, exit criteria), `backlog.md` (epics, stories, sizing, dependencies), `personas.md`, `jobs-to-be-done.md`.
 **Language:** documentation in English; product copy in Italian with English glosses.
 
+## Delivery and evidence boundary (review decision, 2026-10-02)
+
+This is a requirements document, not a list of delivered features. Local work uses synthetic fixtures and a mock provider. Official sandbox work needs provider-issued non-production access. Any real-data pilot needs a written acceptable licence route, provider permission/contract, DPIA/privacy controls, security isolation and informed participant consent before access. Bank credentials are never collected by Lilleri. Mock or sandbox success does not verify Italian production coverage, user demand, retention, classification calibration, store approval or legal clearance.
+
+The full P0 list describes a future cleared beta, not the initial repository scaffold. Implement a small synthetic vertical slice first: exact money → mock ingest → idempotency → deterministic reconciliation/classification with explicit rules → evidence/review/undo → honest synthetic summary. Record actual commands/results in repository status; do not claim every planned fixture or UI flow is already implemented.
+
+Canonical commercial policy: **Lilleri Gratis / Lilleri Plus** at launch; Plus **€4.99/month / €39.99/year is a hypothesis**. **Lilleri Famiglia Later** after consent/sharing/isolation tests; **Pro reserved** for future professional workflows. Closed beta is free. A proposed **30-day non-renewing Plus preview** requires implemented entitlements; it never charges. Store billing, real purchases and renewal metrics are P1 and require explicit checkout and release gates. Correctness, corrections/learning/rules, privacy/security/consent safety, retained-data access, export and deletion stay free in every plan and after downgrade.
+
+Evidence dates/FACT labels below are inherited from source research, including its snippets and uncertainty; this review does not freshly verify vendor terms or law. Numerical success criteria are HYPOTHESES. Fixture correctness cannot establish production precision. Report audited error numerator/denominator, sample selection, decision type, bank/period, label agreement and confidence intervals; audit and user corrections must not double-count errors. A zero-error small sample is not proof of zero error. All A–G letters refer to the brief: A market, B data feasibility, C business, D architecture, E security, F core-loop UX, G brand. Beta/public-launch/expansion releases are separate decisions.
+
 ## 0. Document control and how to read it
 
 | Item | Value |
@@ -53,7 +63,7 @@ No money movement; no lending, credit scoring, insurance or investment advice; n
 | **P4 Paola** — family money manager (45, Verona) | MVP secondary | Joint Intesa, UniCredit (husband), BancoPosta/Postepay (children), Nexi, Satispay | Bimonthly/quarterly/semiannual recurrence; bills calendar; card settlement; catch-up syncs chunked (Intesa 14-day windows) | `PE` §5 |
 | **P5 Luca** — partita IVA (38, Turin) | Later | Fineco, N26, broker, PayPal | Data model reserves a personal/business scope; no feature | `PE` §6, PD-2 |
 
-Context facts that bind every requirement (FACT unless marked): SCA at the bank ≥ every 180 days, some banks shorter — read `expires_at` per connection (`OBP` §1.1); ≤ 4 unattended refreshes per 24 h per consent, user-present refresh unlimited (`REG` §4.1); ~90 days of history at first consent (`OBP` §1.1); Intesa Sanpaolo serves transactions in 14-day windows and answers HTTP 429 `ACCESS_EXCEEDED` (`OBP` §1.2); pending transactions available per bank UNKNOWN (Fineco's published spec did not support them — `RC` §1.3); credit cards of UniCredit, Mediolanum, Crédit Agricole not exposed; Nexi prepaid only; Amex IT, Satispay, Hype UNKNOWN (`OBP` §1.4); 18+ only at launch (`REG` D4).
+Context facts that bind every requirement (FACT unless marked): Regulatory SCA/renewal rules are carried source claims; read actual `valid_until`/`expires_at`, provider state and bank requirements per connection, never promise a universal 180-day lifetime (`OBP` §1.1); ≤ 4 unattended refreshes per 24 h per consent, user-present refresh still subject to actual bank/provider quotas and anti-abuse controls (`REG` §4.1); ~90 days of history at first consent (`OBP` §1.1); Intesa Sanpaolo serves transactions in 14-day windows and answers HTTP 429 `ACCESS_EXCEEDED` (`OBP` §1.2); pending transactions available per bank UNKNOWN (Fineco's published spec did not support them — `RC` §1.3); credit cards of UniCredit, Mediolanum, Crédit Agricole not exposed; Nexi prepaid only; Amex IT, Satispay, Hype UNKNOWN (`OBP` §1.4); 18+ only at launch (`REG` D4).
 
 ---
 
@@ -112,7 +122,7 @@ Principles: C5 honest coverage; TRUST events; P1.
 | CO-3 | As any user, I want a "Collegamenti" screen that shows every connection with its status, expiry and actions, so that I control access | (1) Per connection: institution, provider named, accounts (masked `IT60 •••• 1234`), granted date, **expiry date and days left**, last successful update, status in plain words, what Lilleri can see; (2) actions: Rinnova, Aggiorna ora (user-present refresh), Metti in pausa, Scollega with data choice ("Conserva lo storico" / "Elimina tutto ciò che viene da questa banca"); (3) every action writes a `consent_event`; (4) provider-side revocation reflected within one refresh cycle | P0 | `CM` §6.1 (DECISION); providers require a revoke surface (FACT, `PA-§2.6`) |
 | CO-4 | As P1, I want to be warned before a consent expires and renew it in one tap, so that my sync never stops by surprise | (1) Cadence from `sca_last_at`: day 150 inbox item (low priority), day 170 service push + promoted item, day 178 banner, day `expires_at` → state "in pausa — dati aggiornati al …", never a red error; (2) "Rinnova tutti" renews every connection expiring in the same fortnight in one session; (3) renewal uses the provider's renewal link; (4) late renewal (> 90 days) detects the history gap and offers CSV import ("Mancano i movimenti dal … al …: puoi importarli da un file della banca"); (5) reminders stop on renewal or "Scollega" | P0 | `CM` §5.2 (DECISION); `PP` #3 (FACT) |
 | CO-5 | As any user, I want the free tier's connection envelope enforced at connect time, so that I am never surprised by a paused account | (1) Free: 1 institution, ≤ 2 synced accounts; the cap is shown before the second institution ("Aggiungi una seconda banca con Lilleri Plus"); (2) manual and imported accounts unlimited on every tier; (3) after a trial ends, accounts beyond the envelope are shown as "in pausa", with history kept and exportable, never deleted | P0 | `BM` D-BM-1, D-BM-3 (DECISION); `BM` Q8 OPEN QUESTION on complaints |
-| CO-6 | As the product team, I want a provider-agnostic connector with two adapters, so that a second provider can serve institutions the first covers badly | (1) `AggregationProvider` port with canonical Berlin-Group-shaped schema; (2) raw payload retained per fetch (`RC` §3.2); (3) adapter per institution selectable by configuration; (4) second adapter may stay dormant in the MVP but passes the same contract tests; (5) consent re-collection plan documented for dual-provider periods | P0 (port + 1 live adapter), P1 (second live) | `OBP` D7 (DECISION); `CA` rule 4 |
+| CO-6 | As the product team, I want a provider-agnostic connector with two adapters, so that a second provider can serve institutions the first covers badly | (1) `FinancialDataProvider` port with canonical Berlin-Group-shaped schema; (2) raw payload retained per fetch (`RC` §3.2); (3) adapter per institution selectable by configuration; (4) second adapter may stay dormant in the MVP but passes the same contract tests; (5) consent re-collection plan documented for dual-provider periods | P0 (port + 1 live adapter), P1 (second live) | `OBP` D7 (DECISION); `CA` rule 4 |
 
 ### 4.3 Sync, degraded modes, file import, manual accounts — P0
 
@@ -269,7 +279,7 @@ Principles: C3; TRUST preconditions; `PM` D9.
 | PR-2 | As any user, I want to export everything in one tap, on every tier and platform, so that I am never locked in | (1) ZIP with `transactions.csv` (one row per posting: ISO dates, minor units and decimal, account, merchant, raw description, category, kind, status, links), `links.csv`, `accounts.json`, `rules.json`, `categories.json`, `consents.json`, `events.jsonl`, plus a JSON Schema; (2) delivered in-app and by expiring link within minutes; (3) available on Free | P0 | `RC` §7 (DECISION); GDPR Art. 20 (FACT) |
 | PR-3 | As any user, I want to delete a connection, a source or my account with a clear statement of what is erased, so that deletion is real | (1) Per-connection: "Conserva lo storico" / "Elimina tutto ciò che viene da questa banca"; (2) per-source: imported file, receipt, e-mail alias, chat history; (3) account: §4.1 AU-4 flow, crypto-shredding, vendor confirmations, deletion certificate; (4) provider-side retention stated honestly ("[Provider] conserva i dati che ha raccolto per conto tuo secondo la propria informativa") | P0 | `DR` §5 (DECISION) |
 | PR-4 | As any user, I want every consent and permission in one list with a toggle, so that withdrawal is as easy as giving | (1) "Permessi e privacy": P-AI, N-SERVICE, C-MARKETING, C-ANALYTICS, C-EMAIL (later), with state, date, text version link; (2) "Categorie riservate" (hide), "Transazioni private", "Disattiva categorizzazione automatica" (Art. 21 objection, rules-only mode), AI vendor list version, chat disclosure (later); (3) `denied` suppresses re-asks for 6 months | P0 | `CM` §6.2 (DECISION) |
-| PR-5 | As the company, I want retention jobs and the deletion certificate in the first slice, so that "delete my account" works on beta day one | (1) Retention schedule from `DR` §3 implemented as configuration with per-class jobs, owners and "rows expired vs deleted" metrics; (2) raw payloads 13 months; AI content logs 30 days; analytics 13 months; (3) deletion log replayed on restore | P0 | `DR` R3, D1–D4 (DECISION) |
+| PR-5 | As the company, I want retention jobs and the deletion certificate in the first slice, so that "delete my account" works on beta day one | (1) Retention schedule from `DR` §3 implemented as configuration with per-class jobs, owners and "rows expired vs deleted" metrics; (2) class-specific durations from current `DR` §3; no competing policy literals; (3) deletion log replayed on restore | P0 | `DR` R3, D1–D4 (DECISION) |
 
 ### 4.17 Settings — P0
 
@@ -298,18 +308,19 @@ Principles: C1; TRUST events.
 |---|---|---|---|---|
 | A11Y-1 | As any user, I want the app to meet WCAG 2.1 AA regardless of the micro-enterprise exemption, so that money is readable by everyone | (1) Dynamic type up to 200% without truncating amounts; (2) contrast ≥ 4.5:1 text, ≥ 3:1 UI; (3) every status conveyed by text and icon, never colour alone (consent states, pending badges, charts); (4) screen-reader labels for every amount including sign and currency ("meno trentatré euro e venti"); (5) touch targets ≥ 44 pt; focus order and visible focus on web; (6) reduced-motion respected; (7) accessibility statement and feedback channel; audit before public launch | P0 (build), P1 (audit) | `REG` D9 (DECISION); `CM` §6.4 |
 
-### 4.21 Subscription and paywall infrastructure — P0 (entitlements), P1 (trial lifecycle)
+### 4.21 Subscription and paywall infrastructure — P0 entitlements, P1 preview/purchase
 
-Principles: C3; G9; `BM` D-BM-2/3.
+Principles: correctness/learning/rules, security/privacy/consent, retained-data access, export/deletion always free (`BM` D-BM-2/3). Beta is free; names/prices do not create a delivered capability.
 
 | ID | Story | Acceptance criteria | Priority | Evidence / label |
 |---|---|---|---|---|
-| PW-1 | As the product, I want an entitlements engine independent of plan names, so that the ladder can change without code changes | (1) Entitlements as capabilities (institutions_max, synced_accounts_max, background_refresh_per_day, report_history_months, members_max, feature flags for digest/forecast/receipt_ocr/chat); (2) plan → entitlement mapping is configuration; (3) **never-gated list enforced in tests**: categorisation and learning, rules, inbox, all reconciliation, consent management, security features, privacy controls, export, deletion; (4) store-native billing (Apple IAP under the Small Business Program, Google Play Billing) via a subscription SDK; web checkout later; receipts validated server-side; grace period on billing failure | P0 | `BM` §4 (DECISION); `REG` D7; `CA` rule 15 |
-| PW-2 | As a new user, I want a no-card trial of the full product with a reminder before any charge, so that paying is a choice | (1) 30-day trial of the top consumer tier for every new account, no card on web; store introductory offer on mobile (DECISION per `BM` D-BM-1; `OM` recommends ≥ 34 days to cover two sync cycles and a month-end — OPEN QUESTION to A/B); (2) reminder at day 27 and 3 days before every renewal; (3) at trial end, accounts beyond the free envelope go "in pausa" with history kept and exportable; (4) no auto-conversion without a reminder; no renewal step-up; launch price grandfathered for life | P1 | `BM` D-BM-1, D-BM-3 (DECISION); `PP` #8 (FACT) |
-| PW-3 | As any user, I want upgrade prompts only when I touch a gated capability, so that the product never nags | (1) Contextual prompt at the gate ("Aggiungi una seconda banca con Lilleri Plus"), gross EUR price incl. VAT, monthly and annual side by side with the annual saving in euro; (2) never inside the Review Inbox, on sync-failure screens, in the consent flow, or triggered by distress signals (low balance, failed SDD); (3) cancellation in two taps from Settings; refunds for accidental renewals within 14 days on web; (4) pre-contractual information per Cod. Cons. art. 49 on the paywall | P1 | `BM` D-BM-3; `REG` §4.5 (FACT rules) |
-| PW-4 | As the company, I want the free-tier cost guardrail measured, so that the free envelope is a decision, not a drift | (1) Monthly metric: free-tier AIS cost ÷ paid subscriptions ≤ €1.20 (warning €1.00); (2) two consecutive misses trigger the pre-agreed fallback for new cohorts (90-day full sync, then import-only), existing free users grandfathered 12 months | P1 | `BM` D-BM-1; `CA` A2 |
+| PW-1 | As the product, I want capability entitlements independent of plan labels | (1) Stable capability IDs and versioned mappings; launch Gratis/Plus, beta entitlement with no charge; (2) correctness/learning/rules/inbox/reconciliation/undo/consent safety/security/privacy/retained-history access/export/deletion cannot be gated, including expiry; (3) tested supported-source envelope, no fictitious unlimited coverage; (4) Later capability flags default off; no store SDK or real charge required for this pure domain layer | P0 | DECISION; `BM` §4 |
+| PW-2 | As a new user, I want an optional non-renewing Plus preview so paying is a separate choice | (1) Proposed 30-day duration with recorded start/end and notices day 23/day 27; (2) no card, store purchase or autocharge to start; (3) only implemented supported capabilities; (4) user selects Gratis sources before surplus sync pauses; history remains accessible/correctable/exportable; (5) no conversion metric in all-free beta | P1 | HYPOTHESIS duration / DECISION safeguards |
+| PW-3 | As any user, I want contextual transparent upgrade and cancellation | (1) Prompt only at requested implemented benefit; VAT-inclusive total, period, one-off annual charge and saving; prototype prices marked hypothetical; (2) never inside inbox, error/consent, export/deletion, distress or privacy controls; (3) clear channel-appropriate cancellation/restore and consumer information; no promise Lilleri controls store refunds; (4) no lifetime prices or undisclosed renewal price change | P1 | `BM` D-BM-3; consumer/counsel gate |
+| PW-4 | As the company, I want actual free-tier cost and a non-zero paid denominator | (1) Invoice-attributed free AIS / active paid subscription ≤€0.95 (warning€0.80), include annual entitlements; (2) beta reports absolute/shadow cost, ratio unavailable with zero paid; (3) two measured misses trigger new-cohort F′ review, visible limits/funded transition; no automatic unfunded 12-month promise | P1 | `BM` D-BM-1; `UE` formulas |
+| PW-5 | As a purchaser, I want a verified store/web lifecycle before I am charged | (1) Explicit checkout separate from preview; verified applicable provider/store/tax terms and receipt/webhook authentication; (2) duplicate/out-of-order events, restore, grace, expiry, renewal/cancel/refund tested server-side; (3) platform approvals and legal consumer information before enabling purchases; (4) access downgrade never removes data rights or safety support | P1 before any charge | DECISION; no billing implementation claimed |
 
-**Plan naming — CONFLICT to resolve (OPEN QUESTION):** `business-model.md` D-BM-6 defines Free / Plus (€4.99 or €39.99/yr) / Pro (€7.99 or €64.99/yr) / Family (€9.99 or €79.99/yr); `brand-strategy.md` D7 forbids "Pro" for a consumer tier and sets "Lilleri / Lilleri Plus / Lilleri Famiglia". The PRD therefore requires a 2–4-tier-capable entitlements engine and leaves names and the number of consumer tiers to the pricing ADR. Prices are DECISION values to be tested (`BM` R-BM-1).
+**Plan decision:** **Lilleri Gratis / Lilleri Plus**; Plus €4.99/mo / €39.99/yr is a HYPOTHESIS (test ranges in pricing analysis). **Lilleri Famiglia Later** after safe sharing; **Lilleri Pro reserved** for future professional use, no consumer SKU/price. This resolves the former brand/business conflict. Do not engineer speculative four-tier complexity to accommodate a rejected launch ladder.
 
 ### 4.22 Financial chat — Later
 
@@ -376,22 +387,22 @@ Targets are proportionate to stage. "MVP" = closed beta (≤ 1k MAU, founders' a
 | **Privacy** | Hosting and inference | EU regions; EU-resident or ZDR inference; SCC + TIA for any US sub-processor | Same | Same | `PM` D11 (DECISION) |
 | | Retention and deletion | Schedule per `DR` §3; deletion ≤ 30 days end to end; export in minutes | Same | Same | `DR` D1–D4 |
 | **Scalability** | Design load | 1k MAU; ~3k consents; ~0.5M transactions | 10k MAU; ~30k consents; ~5M tx; 120k refresh jobs/day | 100k–1M MAU; 300k–3M consents; 50M–500M tx; 1.2M–12M refresh jobs/day in 4 windows (peak ×10 average) | ASSUMPTION (3 accounts/paid member, 150 tx/account-month) |
-| | Partitioning | Transactions partitioned by household; raw payloads > 13 months pruned/cold | Same | Sharding plan documented before 1M MAU | `CA` rule 13 |
+| | Partitioning | Transactions partitioned by household; raw payloads deleted on current retention policy; cold storage is not deletion | Same | Sharding plan documented before 1M MAU | `CA` rule 13 |
 | **Cost** | AI per paid member per month | ≤ €0.10 | ≤ €0.10 | ≤ €0.10 | `UE` D-UE-3 (DECISION) |
 | | AI per 1,000 transactions (blended) | ≤ $0.10 | ≤ $0.10 | ≤ $0.05 | `AI` §7.2 (ASSUMPTION ranges; prices FACT) |
 | | Infra per MAU | ≤ €0.10 | ≤ €0.034 | ≤ €0.03 | `UE` U19 (ASSUMPTION) |
-| | Free-tier AIS cost per paid subscription | measured | ≤ €1.20 | ≤ €1.20 | `BM` D-BM-1 |
+| | Free-tier AIS cost per paid subscription | measured | ≤ €0.95 | ≤ €0.95 | `BM` D-BM-1 |
 | | LLM calls per 1,000 transactions; frontier share | ≤ 300; ≤ 5% | ≤ 250; ≤ 5% | ≤ 200; ≤ 3% | `CA` A3–A4 |
 | **Observability** | Every sync run has a stored report; every automated decision has an evidence record | 100% | 100% | 100% | DECISION |
 | | Tracing / logs | 10% trace sampling; PII-scrubbed logs; semantic analytics only | Same | Same | `CA` rule 12; `PM` §6 |
 | **Accessibility** | WCAG 2.1 AA | Built to; self-audit | External audit before launch | Re-audit per major release | `REG` D9 |
-| **Compliance gates** | DPIA; counsel on route A and taxonomy; provider contract with gates G1–G4; store approvals | Before beta (DPIA, counsel), before launch (contract, stores) | Done | Annual review each December | `REG` D10; `OBP` §5.5 |
+| **Compliance gates** | DPIA; counsel on route A and taxonomy; provider contract with gates G1–G4; store approvals | Before any real-data pilot/beta (DPIA, counsel, provider permission/contract and security), before launch (stores and billing where offered) | Required; no completion claimed | Annual review each December | `REG` D10; `OBP` §5.5 |
 
 ---
 
 ## 7. Instrumentation (semantic events, P0)
 
-Events carry no amounts, descriptions, merchant names, IBANs or single-transaction categories (`PM` §6). Minimum set: `account_created`, `consent_started{institution}`, `consent_completed{institution}`, `consent_failed{institution, cause_class}`, `first_picture_shown{institutions_count_bucket, seconds_bucket}`, `wow_session{bool}`, `sync_run{status, skipped_count_bucket}`, `balance_mismatch_raised`, `inbox_opened`, `inbox_item_resolved{kind, interactions}`, `inbox_zero_reached`, `category_corrected{from_group, to_group, source_tier}`, `rule_created{origin}`, `rule_deleted`, `automation_mode_changed{from, to}`, `auto_decision_overridden{decision_type, tier}`, `consent_renewed{days_before_expiry_bucket}`, `connection_expired`, `export_requested`, `deletion_requested`, `paywall_shown{gate}`, `trial_started`, `trial_reminder_sent`, `subscription_started{plan}`, `subscription_cancelled`. The schema is reviewed by the DPO and a lint rejects forbidden property names.
+Events carry no amounts, descriptions, merchant names, IBANs or single-transaction categories (`PM` §6). Minimum set: `account_created`, `consent_started{institution}`, `consent_completed{institution}`, `consent_failed{institution, cause_class}`, `first_picture_shown{institutions_count_bucket, seconds_bucket}`, `wow_session{bool}`, `sync_run{status, skipped_count_bucket}`, `balance_mismatch_raised`, `inbox_opened`, `inbox_item_resolved{kind, interactions}`, `inbox_zero_reached`, `category_corrected{source_tier, decision_kind}`, `rule_created{origin}`, `rule_deleted`, `automation_mode_changed{from, to}`, `auto_decision_overridden{decision_type, tier}`, `consent_renewed{days_before_expiry_bucket}`, `connection_expired`, `export_requested`, `deletion_requested`, `paywall_shown{gate}`, `trial_started`, `trial_reminder_sent`, `subscription_started{plan}`, `subscription_cancelled`. The schema is reviewed by the DPO and a lint rejects forbidden property names.
 
 ---
 
@@ -414,10 +425,10 @@ All P0 stories accepted; the 25 reconciliation fixtures and the injection suite 
 | PRD-7 | Recurring types SUBSCRIPTION / RECURRING BILL / SALARY / RECURRING TRANSFER / INSTALLMENT with Italian periodicities; ≥ 3 occurrences (2 for semiannual/annual with amount or mandate match) before calling anything recurring | DECISION | No |
 | PRD-8 | Insights carry inputs, calculation, confidence, `is_estimate`; forecasts are never shown as facts; quiet set excluded | DECISION | No |
 | PRD-9 | Degraded-mode copy set with the freshness line "Ultimo aggiornamento 09:42" and banned strings | DECISION | No |
-| PRD-10 | Entitlements engine independent of plan names; never-gated list enforced by tests; plan naming CONFLICT routed to the pricing ADR | DECISION / OPEN QUESTION | Yes (pricing/plan ADR) |
+| PRD-10 | Entitlements engine independent of plan names; never-gated list enforced by tests; canonical launch Gratis/Plus; Famiglia Later; Pro professional reserved, prices hypotheses | DECISION / OPEN QUESTION | Yes (pricing/plan ADR) |
 | PRD-11 | Financial chat only Later and only over deterministic tools; receipts photo P2, OCR/e-mail Later; household Later with tenancy reserved P0 | DECISION | Household tenancy: yes (domain model ADR) |
 | PRD-12 | NFR targets by stage per §6; provider-caused failures reported separately | DECISION (targets HYPOTHESIS) | Observability/SLO ADR |
-| PRD-R1 | Run the Enable Banking restricted-production pilot on founders' accounts now to measure field fill-rates, pending availability and consent `valid_until` before freezing §4.11 parameters | RECOMMENDATION | — |
+| PRD-R1 | Start with mock fixtures and official sandbox; obtain counsel/provider/contract/privacy/security clearance before any opt-in real-data pilot for fields, pending and `valid_until` | RECOMMENDATION | — |
 | PRD-R2 | Usability-test the pre-redirect explainer, the first "Cosa ho capito" screen, the inbox card and the renewal item with 8–10 Italian users before design freeze | RECOMMENDATION | — |
 
 ## Open questions
@@ -427,9 +438,9 @@ All P0 stories accepted; the 25 reconciliation fixtures and the injection suite 
 | 1 | Per-bank field fill-rates (`entryReference`, `endToEndId`, `bankTransactionCode`, counterparty IBAN), pending availability and id stability for the top-10 Italian banks | 4.3, 4.11 | Enable Banking restricted-production pilot; 30-day id-churn log | P0 |
 | 2 | Banca d'Italia's position on route A and mandatory consent-flow content | 4.2 | Counsel (`REG` OQ1) | P0 |
 | 3 | Whether "Farmacia" / "Spese mediche" are acceptable neutral labels without Art. 9 consent | 4.6 | Counsel + DPIA (`PM` OQ1) | P0 |
-| 4 | Plan ladder and names (Plus/Pro/Famiglia vs Plus/Famiglia) and prices | 4.21 | Pricing ADR; Van Westendorp survey (`BM` R-BM-1) | P0 |
+| 4 | Observed Italian Plus WTP and supported benefits; canonical names resolved, price hypotheses remain | 4.21 | Pricing ADR; Van Westendorp survey (`BM` R-BM-1) | P0 |
 | 5 | Default automation mode (BALANCED vs CONTROL) for first-week users; acceptance of auto-pairing with undo | 4.9, 4.11 | 20–30 moderated sessions | P0 |
-| 6 | Trial length 30 vs 34 days | 4.21 | A/B in beta | P1 |
+| 6 | Non-renewing preview length 30 vs 34 days after implementation | 4.21 | A/B in beta | P1 |
 | 7 | Which Italian descriptors cover 80% of S1 transactions (seed list size for MN-2) | 4.5 | Consented beta frequency analysis | P1 |
 | 8 | Italian card settlement conventions (Nexi, Amex, Intesa, UniCredit, Fineco) and settlement day | 4.11 RE-4 | Real statements from design partners | P1 |
 | 9 | Pending→booked and transfer windows per provider/bank (defaults 10/45 days and 4/7 days) | 4.11 | Pilot data; calibration | P1 |
@@ -439,6 +450,16 @@ All P0 stories accepted; the 25 reconciliation fixtures and the injection suite 
 | 13 | Recurring-detection precision on Italian SDD/PagoPA histories with bimonthly/quarterly/semiannual periods | 4.12 | Offline evaluation on consented data | P1 |
 | 14 | Whether the per-sync report density helps or worries non-technical users | 4.3, 4.18 | A/B test | P2 |
 
+## Review log
+
+| Reviewer | Concrete issue | Resolution |
+|---|---|---|
+| Brand/PM (major) | §4.21 left an unresolved Plus/Pro/Family conflict | Resolved Gratis / Plus, Famiglia Later, Pro professional reserved; hypothesis prices only |
+| PM/CFO (major) | P0 entitlement engine AC included real store billing despite free beta | Pure entitlements P0; verified receipt/checkout/renewal lifecycle separate P1 PW-5 |
+| Consumer/legal (blocker) | No-card trial simultaneously promised a store introductory autocharge, lifetime prices and universal refunds | Non-renewing preview, explicit purchase, reviewed channel-specific cancellation/refund rights; no lifetime commitment |
+| Fintech (major) | Universal renewal/history/coverage and real pilot assumed before clearance | Capability staging and provider-derived expiry/quotas, actual coverage verification |
+| Privacy/data (major) | Semantic category correction event leaked from/to categories; field precision could double-count audit errors | Event property reduction; audit numerator/denominator/interval requirements and no synthetic accuracy claim |
+
 ## Sources
 
 All verified on 2026-10-02 by the input documents named; URLs carried over verbatim; reliability as graded there.
@@ -447,21 +468,21 @@ All verified on 2026-10-02 by the input documents named; URLs carried over verba
 
 | ID | Document |
 |---|---|
-| MA | `/home/user/Lilleri/docs/research/market-analysis.md` |
-| OM | `/home/user/Lilleri/docs/research/opportunity-map.md` |
-| PP | `/home/user/Lilleri/docs/research/user-pain-points.md` |
-| PE | `/home/user/Lilleri/docs/product/personas.md` |
-| JTBD | `/home/user/Lilleri/docs/product/jobs-to-be-done.md` |
-| OBP | `/home/user/Lilleri/docs/research/open-banking-providers.md` |
-| DSF | `/home/user/Lilleri/docs/research/data-sources-feasibility.md` |
-| REG | `/home/user/Lilleri/docs/compliance/regulatory-landscape.md` |
-| BM | `/home/user/Lilleri/docs/business/business-model.md` |
-| UE | `/home/user/Lilleri/docs/business/unit-economics.md` |
-| BS | `/home/user/Lilleri/docs/brand/brand-strategy.md` |
-| AI | `/home/user/Lilleri/docs/research/raw/ai-ml-transaction-intelligence.md` |
-| RC | `/home/user/Lilleri/docs/research/raw/reconciliation-and-data-model-patterns.md` |
-| PM / CM / DR | `/home/user/Lilleri/docs/compliance/privacy-model.md`; `consent-model.md`; `data-retention.md` |
-| CA | `/home/user/Lilleri/docs/business/cost-architecture.md` |
+| MA | `docs/research/market-analysis.md` |
+| OM | `docs/research/opportunity-map.md` |
+| PP | `docs/research/user-pain-points.md` |
+| PE | `docs/product/personas.md` |
+| JTBD | `docs/product/jobs-to-be-done.md` |
+| OBP | `docs/research/open-banking-providers.md` |
+| DSF | `docs/research/data-sources-feasibility.md` |
+| REG | `docs/compliance/regulatory-landscape.md` |
+| BM | `docs/business/business-model.md` |
+| UE | `docs/business/unit-economics.md` |
+| BS | `docs/brand/brand-strategy.md` |
+| AI | `docs/research/raw/ai-ml-transaction-intelligence.md` |
+| RC | `docs/research/raw/reconciliation-and-data-model-patterns.md` |
+| PM / CM / DR | `docs/compliance/privacy-model.md`; `consent-model.md`; `data-retention.md` |
+| CA | `docs/business/cost-architecture.md` |
 
 ### Primary and secondary sources carried over (load-bearing for the requirements)
 

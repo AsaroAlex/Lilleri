@@ -7,12 +7,22 @@
 **Companions:** `vision.md` (thesis, principles, loop, WOW/TRUST, automation modes), `prd.md` (full requirements; story IDs such as `CO-4`, `RE-3` are defined there), `backlog.md` (epics and stories), `personas.md`, `jobs-to-be-done.md`.
 **Language:** documentation in English; product copy in Italian with English glosses.
 
+## Delivery and evidence boundary (review decision, 2026-10-02)
+
+This is a requirements document, not a list of delivered features. Local work uses synthetic fixtures and a mock provider. Official sandbox work needs provider-issued non-production access. Any real-data pilot needs a written acceptable licence route, provider permission/contract, DPIA/privacy controls, security isolation and informed participant consent before access. Bank credentials are never collected by Lilleri. Mock or sandbox success does not verify Italian production coverage, user demand, retention, classification calibration, store approval or legal clearance.
+
+The full P0 list describes a future cleared beta, not the initial repository scaffold. Implement a small synthetic vertical slice first: exact money → mock ingest → idempotency → deterministic reconciliation/classification with explicit rules → evidence/review/undo → honest synthetic summary. Record actual commands/results in repository status; do not claim every planned fixture or UI flow is already implemented.
+
+Canonical commercial policy: **Lilleri Gratis / Lilleri Plus** at launch; Plus **€4.99/month / €39.99/year is a hypothesis**. **Lilleri Famiglia Later** after consent/sharing/isolation tests; **Pro reserved** for future professional workflows. Closed beta is free. A proposed **30-day non-renewing Plus preview** requires implemented entitlements; it never charges. Store billing, real purchases and renewal metrics are P1 and require explicit checkout and release gates. Correctness, corrections/learning/rules, privacy/security/consent safety, retained-data access, export and deletion stay free in every plan and after downgrade.
+
+Evidence dates/FACT labels below are inherited from source research, including its snippets and uncertainty; this review does not freshly verify vendor terms or law. Numerical success criteria are HYPOTHESES. Fixture correctness cannot establish production precision. Report audited error numerator/denominator, sample selection, decision type, bank/period, label agreement and confidence intervals; audit and user corrections must not double-count errors. A zero-error small sample is not proof of zero error. All A–G letters refer to the brief: A market, B data feasibility, C business, D architecture, E security, F core-loop UX, G brand. Beta/public-launch/expansion releases are separate decisions.
+
 ## How to read this document
 
 - Labels: **FACT** (cited source seen on 2026-10-02 by the input document named), **ASSUMPTION**, **HYPOTHESIS**, **DECISION** (proposed; final when recorded in an ADR), **OPEN QUESTION / UNKNOWN**.
 - Evidence prefixes as in `prd.md` §0 (`MA`, `OM`, `PP`, `PE`, `JTBD`, `OBP`, `DSF`, `REG`, `BM`, `UE`, `BS`, `AI`, `RC`, `PM`, `CM`, `DR`, `CA`).
 - **Every target number in §5 is a HYPOTHESIS to validate**, not a forecast. Ranges are Low / Base / High. No number here may appear in external claims before it is measured (`BS` D6).
-- The MVP is a *closed beta* product: founders' own accounts first, then ≤ 200 invited users, then ≤ 1,000 (Phase 5 gates). "Launch" is what follows the exit criteria in §6.
+- The MVP is a *closed beta* product: mock and official sandbox first; then a cleared opt-in real-data pilot (≤50), ≤200 invited users and expansion only after measured support/correctness gates. "Launch" is what follows the exit criteria in §6.
 
 ---
 
@@ -24,7 +34,7 @@ The MVP exists to prove one thing: **the core loop produces a correct cross-inst
 
 1. The first session can end in a WOW session (`vision.md` §5.3).
 2. The first failure (consent expiry, outage, ambiguity, mismatch) is handled as a TRUST event (`vision.md` §6.2).
-3. A correction is never needed twice for the same merchant.
+3. An explicit or accepted contextual rule applies consistently to subsequent transactions matching its conditions; changed context can require review.
 4. The user can leave with everything (export) or delete everything, on day one.
 5. Nothing moves money, nothing is paywalled that makes data correct, nothing is claimed that is not measured.
 
@@ -39,9 +49,9 @@ Everything else is P1, P2 or Later, however loved elsewhere. Feature count is th
 | # | Capability | Why it is in (evidence) | PRD stories | Principle |
 |---|---|---|---|---|
 | 1 | Account with passkey, 18+ gate, biometric lock, in-app deletion | Store rules (Apple 5.1.1(v)); security is priority 3 | AU-1…AU-4 | C3, C6 |
-| 2 | Bank connection through one licensed provider (route A), consent as a first-class object, "Collegamenti" screen, renewal cadence 150/170/178, history-gap handling | Connection breakage and consent expiry are pain points #1 and #3 (`PP`); no competitor markets renewal UX (`EU-§6`) | CO-1, CO-3, CO-4 | TRUST |
+| 2 | Bank connection through one licensed provider (route A), consent as a first-class object, "Collegamenti" screen, renewal reminders relative to provider `valid_until`, never universal day numbers, history-gap handling | Connection breakage and consent expiry are pain points #1 and #3 (`PP`); no competitor markets renewal UX (`EU-§6`) | CO-1, CO-3, CO-4 | TRUST |
 | 3 | Honest coverage per institution and account type with a ten-second manual fallback | Spendee-style broken promises are a churn driver; cards/wallets partly unreachable (`OBP` §1.4) | CO-2 | C5 |
-| 4 | Provider-agnostic connector port with one live adapter and contract tests for a second | Provider choice is strategic; GoCardless closed; Yapily primary conditional on gates G1–G4, Enable Banking fallback (`OBP` D1–D2, D7) | CO-6 | P3 |
+| 4 | Provider-agnostic connector port with mock adapter first, one cleared live adapter later and contract tests for a second | Provider choice is strategic; GoCardless closed; Yapily primary conditional on gates G1–G4, Enable Banking fallback (`OBP` D1–D2, D7) | CO-6 | P3 |
 | 5 | Sync engine: 4×/24 h budget, user-present refresh, 14-day paging parameter, immutable provider records, layered identity, trailing-window re-fetch, idempotent runs, per-run report, balance check | Duplicates (#2), silent drops (#6), balance mismatch (#10) (`PP`); the identity evidence in `RC` §0–§2 | SY-1…SY-5 | C1, P6 |
 | 6 | CSV/XLSX import (Intesa, UniCredit, Fineco, Revolut, N26, PayPal + generic mapper) and manual accounts (cash, wallet, card statement) | 90-day history limit; uncovered institutions; cash >60% of POS transactions by number (`DSF` §3, §8; `MA` NEW-3) | SY-6, SY-7 | C4, C5 |
 | 7 | Transactions list, detail with raw descriptor and "why", search; exact money and date representation | "Combined list" and "show imported payee" requests (`PP-G-68`, `G-53`); `RC` §3 | TX-1…TX-4 | P3, P6 |
@@ -89,8 +99,8 @@ Everything else is P1, P2 or Later, however loved elsewhere. Feature count is th
 | Android notification listener | Later (opt-in experiment) | Policy risk moderate; iOS impossible (`DSF` §6) |
 | Investments/crypto import, PDF parsing of brokers | Later | FIDA not in force; manual/CSV only |
 | Partita IVA scope features | Later | Data model reserved; adjacent to business banking |
-| Offers rail, cashback, switching | Later (Phase 2 business) | Only after trust metrics; counsel on art. 67(2)(f) (`BM` D-BM-4) |
-| Money movement, lending, advice, ads, data sale, scraping, SMS/accessibility reading, mascots, lifetime deals, sliders, daily caps, 7-day or card-up-front trials, accuracy claims before measurement | Never | `vision.md` §8 |
+| Offers rail, cashback, switching | Later (monetisation stage, not technical Phase 2) | Only after trust metrics; counsel on art. 67(2)(f) (`BM` D-BM-4) |
+| Money movement, lending, advice, display/contextual banners, data sale, scraping, SMS/accessibility reading, mascots, lifetime deals, sliders, daily caps, 7-day or card-up-front trials, accuracy claims before measurement | Never | `vision.md` §8 |
 
 ---
 
@@ -98,16 +108,16 @@ Everything else is P1, P2 or Later, however loved elsewhere. Feature count is th
 
 ### 3.1 Narrative (P1 Giulia, HYPOTHESIS; FACT anchors in `PE` §2)
 
-Monday morning. Giulia installs Lilleri, creates an account with a passkey, confirms she is over 18. She reads one screen that names the provider and its supervisor, says read-only, says 180 days. She connects Intesa (SCA in the Intesa app), Fineco, Revolut. Amex and Satispay are shown as "non ancora collegabili" with a ten-second manual balance. Three minutes after the last consent she sees **"Cosa ho capito"**: 14 new movements, the €200 bonifico Intesa → Revolut recognised as one movement, Saturday's Satispay refill typed as a top-up, the Amex statement debit typed as a card payment and excluded from spend, two pending items flagged, every balance equal to the bank's, Netflix/Spotify/palestra/RC auto listed with next dates, and **"Puoi ancora spendere 612 € fino al 31"** with the formula one tap away. The inbox has two cards: *SUMUP *BAR CENTRALE — Caffè e bar?* (she taps ✓, accepts the rule) and *Bonifico da Chiara R. 45 € — è un rimborso?* (she links it). Inbox: *Niente da fare.* Five months later a push says Intesa expires in ten days; she renews in thirty seconds from the Intesa app. One day Fineco is under maintenance; the home screen says so, with the last good update time and the next retry. She exports a ZIP once, to check that she can.
+Monday morning. Giulia installs Lilleri, creates an account with a passkey, confirms she is over 18. She reads one screen that names the provider and its supervisor, says read-only, shows the provider-derived expiry. She connects Intesa (SCA in the Intesa app), Fineco, Revolut. Amex and Satispay are shown as "non ancora collegabili" with a ten-second manual balance. In this synthetic illustrative scene, three minutes after the last consent she sees **"Cosa ho capito"**: 14 new movements, the €200 bonifico Intesa → Revolut recognised as one movement, Saturday's Satispay refill typed as a top-up, the Amex statement debit typed as a card payment and excluded from spend, two pending items flagged, every balance equal to the bank's, Netflix/Spotify/palestra/RC auto listed with next dates, and **"Puoi ancora spendere 612 € fino al 31"** with the formula one tap away. The inbox has two cards: *SUMUP *BAR CENTRALE — Caffè e bar?* (she taps ✓, accepts the rule) and *Bonifico da Chiara R. 45 € — è un rimborso?* (she links it). Inbox: *Niente da fare.* Five months later a push says Intesa expires in ten days; she renews in thirty seconds from the Intesa app. One day Fineco is under maintenance; the home screen says so, with the last good update time and the next retry. She exports a ZIP once, to check that she can.
 
-### 3.2 The walking skeleton (components the slice must exercise end to end)
+### 3.2 The planned walking skeleton (components the slice must exercise end to end)
 
 | Stage | Component | Minimum implementation in the slice | Proof artefact |
 |---|---|---|---|
-| CONNECT | Consent service; one provider adapter; institution picker with coverage statuses; Collegamenti screen | Enable Banking restricted-production (founders' own accounts; real Italian data before any contract) **and** the primary provider's sandbox; production keys on contract (`OBP` D1–D2) | Consent events; `expires_at` read per bank; coverage statuses for the eight "works in Italy" institutions |
-| SYNC | Scheduler (4×/24 h budget, user-present refresh); `provider_record`; identity strategy; pending→booked; duplicate stages; transfer pairing; card-settlement typing; balance check; `sync_run` report | All running against real founders' accounts and the 25 fixture scenarios in CI | Zero silent skips; balance equality or inbox item; sync report in Italian |
+| CONNECT | Consent service; one provider adapter; institution picker with coverage statuses; Collegamenti screen | Local synthetic mock first, then the selected provider’s official sandbox; real-data pilot only after counsel/provider/contract/privacy/security clearance. Restricted production is an unverified option, not permission to bypass those gates | Consent events; `expires_at` read per bank; coverage statuses for the eight "works in Italy" institutions |
+| SYNC | Scheduler (4×/24 h budget, user-present refresh); `provider_record`; identity strategy; pending→booked; duplicate stages; transfer pairing; card-settlement typing; balance check; `sync_run` report | Initial local subset exercised with synthetic fixtures; full 25-scenario target and cleared real-data evaluation follow before beta release | Zero silent skips; balance equality or inbox item; sync report in Italian |
 | UNDERSTAND | Normaliser + Italian dictionary; canonical/user taxonomy; tiers T0–T3 in-house; T4 small LLM behind P-AI with pseudonymised batched calls; recurring engine; monthly summary; safe-to-spend | T5 frontier residual deferred to P1 | Per-tier resolution share; auto-error on the eval set; "why" on every row |
-| CORRECT | Review Inbox with the seven actions; swipe; undo | Mobile (iOS + Android) | ≤ 3 items after first sync on founders' accounts; ≤ 2 interactions |
+| CORRECT | Review Inbox with the seven actions; swipe; undo | Mobile (iOS + Android) | ≤3 items is a UX hypothesis for selected examples; ambiguity is never hidden to meet it; ≤ 2 interactions |
 | LEARN | Feedback → events, locks, rule proposal, merchant map, per-user index, eval set (pseudonymised) | Rules list in Settings | Repeat-correction rate on the same merchant |
 | AUTOMATE | Calibration + versioned automation policy (CONTROL, BALANCED); renewal cadence; mismatch item; service push | Shadow mode for any new threshold version | Threshold version on every decision; renewal before expiry measured |
 | Cross-cutting | Encryption classes, per-user DEK, export ZIP, account deletion with crypto-shredding, retention jobs, semantic analytics, degraded-mode copy, it-IT formatting, WCAG build | Day-one | "Delete my account" works on beta day one (`DR` R3) |
@@ -118,9 +128,9 @@ Platforms: iOS and Android via a shared React Native/Expo codebase; backend Node
 
 | Milestone | Scope | Users | Gate to pass |
 |---|---|---|---|
-| **M0 Dogfood** | Walking skeleton on founders' accounts (Intesa, UniCredit, Poste/Postepay, BPM, Fineco, Revolut, N26 as available) via Enable Banking restricted production | 3–6 internal | Field fill-rate study reported (`OBP` Q4); 25 fixtures green; identity churn measured; no silent skips for 2 weeks |
+| **M0 Dogfood** | Local mock core loop using synthetic Italian examples; official sandbox after provider access; bank names are fixture labels, not verified coverage | 3–6 internal | Implemented local cases pass with actual command evidence; no bank field-fill, live identity churn or real coverage result claimed; cleared pilot is a later milestone |
 | **M1 Closed beta A** | All P0 stories; primary provider on contract or Enable Banking promoted (`OBP` G1–G4) | ≤ 50 invited (S1/S2) | WOW-session rate and inbox load measured; counsel opinions on route A and taxonomy in hand; DPIA complete |
-| **M2 Closed beta B** | P0 hardening; P1 items that telemetry demands (refunds/cash if > 5% of inbox questions); trial and paywall built but not charged | ≤ 200 | Success criteria at Base for 4 consecutive weeks (§5); zero trust-killer incidents |
+| **M2 Closed beta B** | P0 hardening; P1 items that telemetry demands (refunds/cash if > 5% of inbox questions); non-renewing preview and paywall prototypes built but not charged; no paid-conversion result | ≤ 200 | Success criteria at Base for 4 consecutive weeks (§5); zero trust-killer incidents |
 | **M3 Open beta** | P1 launch gates (second adapter, alerts, AUTOPILOT, health page, audit, pen test) | ≤ 1,000 | Exit criteria (§6) → public launch |
 
 ### 3.4 How the slice proves each loop stage
@@ -153,7 +163,7 @@ All targets are HYPOTHESES (`JTBD` J-9). "Base" is the value that must hold for 
 | S3 | **Zero silent skips / overwrites** | Rows the provider returned that are absent from the ledger without a report entry; booked rows overwritten by unrelated rows | Weekly reconciliation of provider payloads vs ledger (automated) | 0 | 0 | 0 | DECISION (hard rule; `PP-G-83/G-84`) |
 | S4 | **Balance equality** | Synced accounts whose booked balance equals the provider's after each sync, or an inbox item exists | Automated per sync | 100% | 100% | 100% | DECISION |
 | S5 | **Normalisation rate** | Transactions resolved to a canonical merchant **or** a typed payment kind (F24, SDD creditor, ATM, settlement, transfer) without user input | Pipeline provenance; weekly 200-row double-annotated audit | 70% | 80% | 90% | `AI` §7.1 (T0 resolves kind for most rows, FACT on fixtures) |
-| S6 | **Auto-categorisation precision** | Among auto-applied labels (BALANCED), share that the user never corrects within 30 days **and** that the audit confirms | Audit sample + `category_corrected{source_tier}` | 92% | 95% | 97% | Copilot third-party "95%" unverified (`US-S65`); Emma 3-edit rule |
+| S6 | **Auto-categorisation precision** | Correct auto-applied labels / representative audited auto-applied labels in BALANCED, with weights/interval by stratum; observed30-day correction rate separate; never treat silence as correctness | Audit sample + `category_corrected{source_tier}` | 92% | 95% | 97% | Copilot third-party "95%" unverified (`US-S65`); Emma 3-edit rule |
 | S6b | Auto-rate | Share of new transactions auto-applied (not sent to review) in BALANCED | Pipeline | 70% | 80% | 90% | ASSUMPTION |
 | S6c | Auto-error rate | Wrong among auto-applied (1 − S6) | Audit | ≤ 8% | ≤ 5% | ≤ 3% | Target for calibration ε = 2% at steady state; beta tolerance wider |
 | S7 | **Reconciliation precision** | Transfer pairs: precision at auto threshold / recall; pending→booked replacement precision; duplicate false-merge rate; card-settlement typing precision | Labelled audit of all auto links; eval set; user "sono diversi" / unpair feedback | 97% / 80% ; 95% ; ≤ 0.5% ; 90% | 99% / 85% ; 98% ; ≤ 0.1% ; 95% | 99.5% / 92% ; 99% ; 0 ; 98% | `JTBD` §7 F2–F4 |
@@ -190,8 +200,8 @@ All targets are HYPOTHESES (`JTBD` J-9). "Base" is the value that must hold for 
 | X6 | Stores: Apple and Google compliance checklist complete (third-party-AI permission step, in-app deletion, privacy labels / Data safety from the real SDK list, Financial-features declaration with licence pack, no ATT); app approved in both stores | Review notes; approvals (`REG` §4.7) |
 | X7 | Security: external penetration test with critical/high findings closed; MASVS L1 verified; break-glass and key rotation runbooks tested; restore drill with deletion-log replay passed | Pen-test report; drill log |
 | X8 | Accessibility: WCAG 2.1 AA external audit with no blocking issues | Audit report (`REG` D9) |
-| X9 | Billing: trial, reminders, two-tap cancel, grandfathering implemented; paywall never shown in inbox/failure/consent flows (tested); cost guardrail metric live | Test evidence; dashboard (`BM` D-BM-3; `CA` A2) |
-| X10 | Launch promises limited to what is measured: current accounts, prepaid IBAN accounts, Revolut/N26; ~90 days initial history; "a few refreshes a day plus on open"; no credit-card/Satispay/Hype promise; CSV import of the six formats | Marketing copy review against `OBP` D8 and `BS` D6 |
+| X9 | Billing before purchase: non-renewing preview, separate explicit checkout, receipt validation, restore/grace/refund/expiry, reminders and channel-appropriate cancellation implemented; no lifetime price promise; paywall absent from correction/failure/consent/export/deletion flows; shadow cost during free beta and actual paid-cohort guardrail after billing | Test evidence; dashboard (`BM` D-BM-3; `CA` A2) |
+| X10 | Launch promises limited to measured bank/account-type coverage, actual consent expiry, history and quotas; only tested import formats named; unsupported wallet/card gaps disclosed. Forecasts such as safe-to-spend remain estimates with incomplete-source caveats | Marketing copy review against `OBP` D8 and `BS` D6 |
 
 ### 6.2 Launch-ready but not blocking (should-have)
 
@@ -202,11 +212,11 @@ Second adapter live with failover; recurring alerts; AUTOPILOT with digest; refu
 | Signal | Threshold | Action |
 |---|---|---|
 | Connection success on the eight institutions after mitigation (second adapter tested) | < 60% (below Low) for 4 weeks | Re-open the provider decision (Tink/Fabrick lines); consider import-first onboarding for affected banks; do not launch with a promise that fails 4 in 10 times |
-| Auto-categorisation precision | < 90% at auto-rate ≥ 70% | Default mode becomes CONTROL; widen the eval set; delay launch rather than lower the bar |
+| Auto-categorisation precision | < 90% at auto-rate ≥ 70% with adequate representative sample/interval | Default mode becomes CONTROL; widen the eval set; delay launch rather than lower the bar |
 | Transfer-pair precision | < 97% at the auto threshold | Pairing proposes only (inbox) until calibrated; the WOW is redefined around subscriptions + safe-to-spend until fixed |
 | WOW-session rate | < 35% among multi-institution users for 4 weeks | Re-run first-session usability tests; revisit the "Cosa ho capito" design before adding anything |
 | D30 (connected users) | < 10% for two cohorts | Stop feature work; investigate trust events, sync reliability and value framing with interviews |
-| Free AIS cost per paid subscription (once billing exists) | > €1.20 for two consecutive months | Switch new cohorts to the pre-agreed fallback shape (`BM` D-BM-1) |
+| Free AIS cost per paid subscription (once billing exists) | > €0.95 for two consecutive months | Review the new-cohort fallback with verified economics, visible limits and a funded transition (`BM` D-BM-1) |
 | Any trust-killer incident | 1 | Fix and re-run the 4-week clock |
 
 ---
@@ -231,12 +241,12 @@ Second adapter live with failover; recurring alerts; AUTOPILOT with digest; refu
 | ID | Decision / recommendation | Label | Needs ADR? |
 |---|---|---|---|
 | MVP-1 | Scope rule of §1 and the IN/OUT/NEVER tables of §2 define the MVP; additions require a written exception citing the rule | DECISION | No |
-| MVP-2 | The vertical slice of §3 (walking skeleton on founders' accounts via Enable Banking restricted production plus the primary provider's sandbox) is built before any feature outside it | DECISION | Yes (architecture slice ADR) |
+| MVP-2 | The vertical slice of §3 (walking skeleton with mock fixtures, then official sandbox; real-data pilot only after the required clearances) is built before any feature outside it | DECISION | Yes (architecture slice ADR) |
 | MVP-3 | Milestones M0–M3 with the gates in §3.3; beta users ≤ 50 / ≤ 200 / ≤ 1,000 | DECISION | No |
 | MVP-4 | Success criteria S1–S18 with Low/Base/High; Base held for 4 consecutive weeks on ≥ 200 connected users across ≥ 5 institutions is the measured condition for launch | DECISION (targets HYPOTHESIS) | No |
 | MVP-5 | Exit criteria X1–X10 and kill/pivot rules §6.3 are the launch gate; feature count never substitutes for a failed gate | DECISION | No |
 | MVP-6 | Mobile-first (iOS + Android) for the slice; web only for import/export later pending the open question | DECISION | Platform ADR |
-| MVP-R1 | Start the Enable Banking restricted-production pilot this week on founders' accounts; report fill-rates, pending support, `valid_until`, card exposure in 3 weeks | RECOMMENDATION | — |
+| MVP-R1 | Build and test the mock vertical slice; prepare official sandbox questions. Propose a small real-data pilot only after legal/provider/privacy/security clearance; report fields and coverage only from that pilot | RECOMMENDATION | — |
 | MVP-R2 | Recruit 20–30 S1/S2 users for M1 through two Italian finance creators; run first-session tests with real consents | RECOMMENDATION | — |
 | MVP-R3 | Build the labelled eval set from Banana fixtures, the CBI table and consented M0/M1 data before M1; freeze a test split | RECOMMENDATION | — |
 
@@ -253,24 +263,33 @@ Second adapter live with failover; recurring alerts; AUTOPILOT with digest; refu
 | 7 | What audit sample size keeps auto-error estimates within ±1 point? | S6c precision | Statistical plan with the eval set | P1 |
 | 8 | Which trust-killer incidents are detectable automatically vs need the support tag? | X3 | Incident taxonomy | P2 |
 
+## Review log
+
+| Reviewer | Concrete issue | Resolution |
+|---|---|---|
+| Fintech/legal (blocker) | M0 restricted production on personal accounts before any contract assumed legal/provider permission | Mock first, official sandbox next; real pilot explicitly cleared and gated |
+| PM (major) | Broad P0 catalogue appeared to be the first scaffold and promised a correction never needed twice | Small synthetic slice separated from future beta; same-condition rules rather than universal merchant correctness |
+| CFO (major) | Billing exit included lifetime grandfathering and €1.20 ratio during a free beta | Preview/purchase separated; subsidy €0.95 only with actual paid denominator; shadow cost in beta |
+| Data (major) | Twenty-five synthetic fixtures and four weeks treated as proof of field precision | Add statistical audit/interval/stratum evidence; release copy follows measured bank/type coverage |
+
 ## Sources
 
 All verified on 2026-10-02 by the input documents named; URLs carried over verbatim.
 
 | ID | Source | URL / path | Used for |
 |---|---|---|---|
-| PE | `/home/user/Lilleri/docs/product/personas.md` | repo | Persona priority; Giulia's stack and day-in-the-life |
-| JTBD | `/home/user/Lilleri/docs/product/jobs-to-be-done.md` | repo | WOW/TRUST definitions; success signals and targets |
-| OM | `/home/user/Lilleri/docs/research/opportunity-map.md` | repo | MVP core vs not-now list |
-| PP | `/home/user/Lilleri/docs/research/user-pain-points.md` | repo | Pain-point ranking; decisions D1–D13 |
-| MA | `/home/user/Lilleri/docs/research/market-analysis.md` | repo | Gate A conditions; CRIF baseline; cash share |
-| OBP | `/home/user/Lilleri/docs/research/open-banking-providers.md` | repo | Provider decision; gates G1–G4; pilot; MVP promises |
-| DSF | `/home/user/Lilleri/docs/research/data-sources-feasibility.md` | repo | Sources in the MVP; never list |
-| REG / PM / CM / DR | `/home/user/Lilleri/docs/compliance/regulatory-landscape.md`; `privacy-model.md`; `consent-model.md`; `data-retention.md` | repo | Launch compliance gates; DPIA; deletion on day one |
-| BM / UE / CA | `/home/user/Lilleri/docs/business/business-model.md`; `unit-economics.md`; `cost-architecture.md` | repo | Free envelope; guardrail; cost alerts |
-| BS | `/home/user/Lilleri/docs/brand/brand-strategy.md` | repo | No claims before measurement (D6) |
-| AI | `/home/user/Lilleri/docs/research/raw/ai-ml-transaction-intelligence.md` | repo | Eval-set design; cost per 1,000 transactions; cascade |
-| RC | `/home/user/Lilleri/docs/research/raw/reconciliation-and-data-model-patterns.md` | repo | 25 fixture scenarios; identity strategy; RLS |
+| PE | `docs/product/personas.md` | repo | Persona priority; Giulia's stack and day-in-the-life |
+| JTBD | `docs/product/jobs-to-be-done.md` | repo | WOW/TRUST definitions; success signals and targets |
+| OM | `docs/research/opportunity-map.md` | repo | MVP core vs not-now list |
+| PP | `docs/research/user-pain-points.md` | repo | Pain-point ranking; decisions D1–D13 |
+| MA | `docs/research/market-analysis.md` | repo | Gate A conditions; CRIF baseline; cash share |
+| OBP | `docs/research/open-banking-providers.md` | repo | Provider decision; gates G1–G4; pilot; MVP promises |
+| DSF | `docs/research/data-sources-feasibility.md` | repo | Sources in the MVP; never list |
+| REG / PM / CM / DR | `docs/compliance/regulatory-landscape.md`; `privacy-model.md`; `consent-model.md`; `data-retention.md` | repo | Launch compliance gates; DPIA; deletion on day one |
+| BM / UE / CA | `docs/business/business-model.md`; `unit-economics.md`; `cost-architecture.md` | repo | Free envelope; guardrail; cost alerts |
+| BS | `docs/brand/brand-strategy.md` | repo | No claims before measurement (D6) |
+| AI | `docs/research/raw/ai-ml-transaction-intelligence.md` | repo | Eval-set design; cost per 1,000 transactions; cascade |
+| RC | `docs/research/raw/reconciliation-and-data-model-patterns.md` | repo | 25 fixture scenarios; identity strategy; RLS |
 | NEW-4 | CRIF open-banking outlook (57.4% connection success H1 2025) | https://www.pagamentidigitali.it/digital-banking/open-banking-cresce-la-fiducia-in-italia-nel-2025-oltre-la-meta-dei-conti-viene-collegata-con-successo/ | S1 anchor (medium; credit flows) |
 | NEW-3 | ECB SPACE 2024 (cash >60% of POS transactions by number) | https://www.ecb.europa.eu/stats/ecb_surveys/space/html/ecb.space2024~19d46f0f17.en.html | Cash in scope |
 | PP-G-01 / G-43 / G-83 / G-84 | Actual Budget issues (transfer pairing 382 votes; merge 121 votes; silent overwrite; silent skip) | https://github.com/actualbudget/actual/issues/1628 ; https://github.com/actualbudget/actual/issues/669 ; https://github.com/actualbudget/actual/issues/8701 ; https://github.com/actualbudget/actual/issues/9063 | Wedge; S3 |

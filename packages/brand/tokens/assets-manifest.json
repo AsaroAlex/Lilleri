@@ -1,0 +1,344 @@
+{
+  "generatedAt": "2026-10-02",
+  "files": [
+    {
+      "path": "logo/lilleri-lockup-horizontal-on-dark.svg",
+      "bytes": 3681,
+      "sha256": "d676f2bb5975c744531e651ffec1bd3a4869751c3e0f716fb72c8c882d7b606d"
+    },
+    {
+      "path": "logo/lilleri-lockup-horizontal.svg",
+      "bytes": 3681,
+      "sha256": "51ff7d5bd532d5886a1465bea01ebcf6ed7484949e460c8aec0a294c1b944084"
+    },
+    {
+      "path": "logo/lilleri-lockup-vertical-on-dark.svg",
+      "bytes": 3666,
+      "sha256": "8f6f11de1f999a154d2f4461fb687d9bd45736a69dfbf1b799e784e8759c5bf1"
+    },
+    {
+      "path": "logo/lilleri-lockup-vertical.svg",
+      "bytes": 3666,
+      "sha256": "46ccb1ee27727f60f6f4f62123c0ed2f4e1ca3219c747019333b68799c29cfab"
+    },
+    {
+      "path": "logo/lilleri-monogram.svg",
+      "bytes": 699,
+      "sha256": "3e174735f3550f1297a839dc17b9483895c828f85660a2e4fa2c71c1a5fd913d"
+    },
+    {
+      "path": "logo/lilleri-symbol-mono.svg",
+      "bytes": 699,
+      "sha256": "74b7ff7646d980f280c9cc333944489a52b746f076bdc56d5a402a81abfaa8de"
+    },
+    {
+      "path": "logo/lilleri-symbol-on-dark.svg",
+      "bytes": 699,
+      "sha256": "558e98e5880b013b18bc2074c8c07e5da7388cd412d71abc647722ce2603e8c2"
+    },
+    {
+      "path": "logo/lilleri-symbol-small-mono.svg",
+      "bytes": 764,
+      "sha256": "07e4c2f5cba5d48a5a3d83af006d95a626f4de25239ac5244d729eacb430e401"
+    },
+    {
+      "path": "logo/lilleri-symbol-small-on-dark.svg",
+      "bytes": 764,
+      "sha256": "42c3dadb2cea4d3cb0b3cd185af0da69a142c7f2b53cd5614a97bfb3bf20403d"
+    },
+    {
+      "path": "logo/lilleri-symbol-small.svg",
+      "bytes": 764,
+      "sha256": "c805e8a254e8af8a20f61f4fc0acb95c3de9e316d9130bdedef2c2450373824d"
+    },
+    {
+      "path": "logo/lilleri-symbol.svg",
+      "bytes": 699,
+      "sha256": "3e174735f3550f1297a839dc17b9483895c828f85660a2e4fa2c71c1a5fd913d"
+    },
+    {
+      "path": "logo/lilleri-wordmark-on-dark.svg",
+      "bytes": 3426,
+      "sha256": "5f9fa720b0b3cb13f142924a15eb6ab24c591efc3e709aa3aad6cd15599b01d7"
+    },
+    {
+      "path": "logo/lilleri-wordmark-signature.svg",
+      "bytes": 3426,
+      "sha256": "56a7cf538c3a63251d294ea16629781c0f81900456bf3a11a265dad06454eb0b"
+    },
+    {
+      "path": "logo/lilleri-wordmark.svg",
+      "bytes": 3426,
+      "sha256": "d993039abb9da9fb001f5c82ff1056868aadeec07422fa4e2576783add7a9362"
+    },
+    {
+      "path": "icon/app-icon-android-background.svg",
+      "bytes": 120,
+      "sha256": "4569bd0f897b85b2d59a058b242220f09041c41bf101503b684f50b6cf656455"
+    },
+    {
+      "path": "icon/app-icon-android-foreground.svg",
+      "bytes": 760,
+      "sha256": "0fb324fc888e09121ce164d96ae74e7bff5dddf4074957ecb786b44d5193e607"
+    },
+    {
+      "path": "icon/app-icon-android-monochrome.svg",
+      "bytes": 760,
+      "sha256": "66b3bf9d753a6e4d6311737ff2d21c4c06f7200d76704ccffbaf077d4b76aa03"
+    },
+    {
+      "path": "icon/app-icon-ios-1024.svg",
+      "bytes": 809,
+      "sha256": "c1ea7f4509de2fd0ca5af6e3686eaed1e0de26f53af36e60eda1547baf52f71b"
+    },
+    {
+      "path": "icon/app-icon-ios-dark-1024.svg",
+      "bytes": 809,
+      "sha256": "b92c71f70c85c4f4697dbfa93a6904541af355b110b6ee03d999137cd337a33c"
+    },
+    {
+      "path": "icon/favicon-on-dark.svg",
+      "bytes": 764,
+      "sha256": "42c3dadb2cea4d3cb0b3cd185af0da69a142c7f2b53cd5614a97bfb3bf20403d"
+    },
+    {
+      "path": "icon/favicon.svg",
+      "bytes": 764,
+      "sha256": "c805e8a254e8af8a20f61f4fc0acb95c3de9e316d9130bdedef2c2450373824d"
+    },
+    {
+      "path": "icon/pwa-maskable-512.svg",
+      "bytes": 809,
+      "sha256": "c1ea7f4509de2fd0ca5af6e3686eaed1e0de26f53af36e60eda1547baf52f71b"
+    },
+    {
+      "path": "icon/social-avatar.svg",
+      "bytes": 809,
+      "sha256": "c1ea7f4509de2fd0ca5af6e3686eaed1e0de26f53af36e60eda1547baf52f71b"
+    },
+    {
+      "path": "png/app-icon-1024.png",
+      "bytes": 16586,
+      "sha256": "2bc0610c001ecabd264aa17f82119292ff26cf6795f4eed9d65dfef9e154c053",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "path": "png/app-icon-dark-1024.png",
+      "bytes": 16410,
+      "sha256": "66e26bb84d1e216d6775da7e2da682b4e69b04133b2072172b8e1dd974e1806d",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "path": "png/color-vision-proof.png",
+      "bytes": 136913,
+      "sha256": "20dbad149ec94baa03f6454277c9fc13cd3098077add368a88caa030de5b71be",
+      "width": 1440,
+      "height": 1450
+    },
+    {
+      "path": "png/color-vision-proof.svg",
+      "bytes": 13402,
+      "sha256": "807c052cbd55f3bb5473e5eb7031e7dcf60183baf8d03f6ff098a4405a95ddb0"
+    },
+    {
+      "path": "png/favicon-sheet.png",
+      "bytes": 69265,
+      "sha256": "823e2fd07ff46f21f27b8d84e889273429cba714ba5123fd6d4a990c787e2256",
+      "width": 1240,
+      "height": 1392
+    },
+    {
+      "path": "png/icon-sheet.png",
+      "bytes": 65337,
+      "sha256": "92183bfb7d2c1733c78454395bec90b9cd2298e1a45ef8102b2134de415c9358",
+      "width": 1240,
+      "height": 1392
+    },
+    {
+      "path": "png/identity-board.png",
+      "bytes": 178348,
+      "sha256": "393295370899c7d56670a135d975ed8896d5339856e1be158345be2e74c79da0",
+      "width": 1440,
+      "height": 1380
+    },
+    {
+      "path": "png/identity-board.svg",
+      "bytes": 79311,
+      "sha256": "c62eb48f0bb47f352df38fdc5b1ef2ab06a4c6c6c03a009edb1d2f86da38be7b"
+    },
+    {
+      "path": "png/light-dark-mono-proof.png",
+      "bytes": 41270,
+      "sha256": "149d909f5cb3a0b78b5d24b16ec1e77e5da89968eddbdf7e4cce75bcd94d30f9",
+      "width": 1200,
+      "height": 710
+    },
+    {
+      "path": "png/lockup-dark.png",
+      "bytes": 23157,
+      "sha256": "99917e63a04d92e6946ca35770e6502ff07d176a9f8c50e16739fbdcea9c69cb",
+      "width": 1400,
+      "height": 409
+    },
+    {
+      "path": "png/lockup-light.png",
+      "bytes": 23540,
+      "sha256": "a02a80a65522616314e06f4560e5a86c8c9bcf2d83c938513092f6a036be90bf",
+      "width": 1400,
+      "height": 409
+    },
+    {
+      "path": "png/shelf-seed11.png",
+      "bytes": 109811,
+      "sha256": "fcf4135a7c7aa390fa7dd13b8af9edc4165881497599a9bb226d207e28ff35a3",
+      "width": 1200,
+      "height": 1352
+    },
+    {
+      "path": "png/shelf-seed3.png",
+      "bytes": 109769,
+      "sha256": "782332ddca2db41696950fa762b84c9f6083f09bd1a203615c148dd27952a64b",
+      "width": 1200,
+      "height": 1352
+    },
+    {
+      "path": "png/symbol-1024.png",
+      "bytes": 18771,
+      "sha256": "176821dd5af0aeb86f181c917596bfc047f052c31e72c331cac2d0c33f7f7cf7",
+      "width": 1024,
+      "height": 1024
+    },
+    {
+      "path": "png/symbol-16.png",
+      "bytes": 306,
+      "sha256": "8ceaf8d4f8147c2ca2f39af784578546a3577807c4645bc8e8d80ba7bfc1a936",
+      "width": 16,
+      "height": 16
+    },
+    {
+      "path": "png/symbol-24.png",
+      "bytes": 395,
+      "sha256": "940c1679b4be015e9fb9eaba6a9d99d8288d6161c8c59e45a2b4bd4e1fb6efe0",
+      "width": 24,
+      "height": 24
+    },
+    {
+      "path": "png/symbol-32.png",
+      "bytes": 407,
+      "sha256": "ca35c602626f8cce76e4bd5a4d2de2c805950d7c041fd6df7791b468dff47236",
+      "width": 32,
+      "height": 32
+    },
+    {
+      "path": "png/symbol-64.png",
+      "bytes": 691,
+      "sha256": "3e3d74b62e9c3b56959bab8f2904f1c551a965e75e4d10089e2f6af7264465c3",
+      "width": 64,
+      "height": 64
+    },
+    {
+      "path": "png/wordmark.png",
+      "bytes": 15787,
+      "sha256": "d1446da14c777ddacb00ec7ab573fa5ccf29e439068a66ed391026305ed87930",
+      "width": 1000,
+      "height": 349
+    },
+    {
+      "path": "tokens/colors.json",
+      "bytes": 1368,
+      "sha256": "1a9747e3a08b6981724729c82e101cc8db8ef903da7797b51c50cf254c6e4388"
+    },
+    {
+      "path": "tokens/contrast-report.json",
+      "bytes": 12752,
+      "sha256": "6f775057828c3760d589d01fc882dbe5a9c9797f89539d0263d44d7677d3a358"
+    },
+    {
+      "path": "tokens/contrast-report.txt",
+      "bytes": 4524,
+      "sha256": "eb7f5cf8807233eb73c81ebcc4c31d1db1c28e8e83aafbcda1264ab4370eb238"
+    },
+    {
+      "path": "tokens/palette-source.json",
+      "bytes": 1609,
+      "sha256": "7b1c232d47b093b373058d039fb96f8f696874d1de32fd82e49591f065b2b53b"
+    },
+    {
+      "path": "tokens/tokens.css",
+      "bytes": 4131,
+      "sha256": "0182380209d7f5bc1a2560a869d171bd0ef07bb9da603420e92452505e8d0079"
+    },
+    {
+      "path": "tokens/tokens.json",
+      "bytes": 9419,
+      "sha256": "d4eeee4992effb47feca01f7a88d3588028df5a894ef05c0c487306bacb96b39"
+    },
+    {
+      "path": "tokens/tokens.ts",
+      "bytes": 5470,
+      "sha256": "2e483d5047b9b193ef98bcecccdc0c93e76d0b8ad2599b75e9ebdcd9918ee53b"
+    },
+    {
+      "path": "fonts/Geist-Medium.ttf",
+      "bytes": 90356,
+      "sha256": "d1838aed6e3e915790619d1f47dc7c7f5e62a57734c754ce53bb1d9a13291c97"
+    },
+    {
+      "path": "fonts/Geist-Regular.ttf",
+      "bytes": 90344,
+      "sha256": "42db917e2dae0ed4bb3f76c1f16cb2a6986ead64dbde173f99f82290d360be2b"
+    },
+    {
+      "path": "fonts/Geist-Semibold.ttf",
+      "bytes": 90436,
+      "sha256": "199b303592ec3f4195bb973a0dfdd7f4fe1f7c44a865dfdfdadb58f9274fa1c9"
+    },
+    {
+      "path": "fonts/Geist-Variable.ttf",
+      "bytes": 169056,
+      "sha256": "cdcc4815cbf5f9882fa74e48f8ab410a0495781a58ff7316570f664e7e987753"
+    },
+    {
+      "path": "fonts/Geist-Variable.woff2",
+      "bytes": 69752,
+      "sha256": "69f78e0bf097136dda26c11d9f89906bbd9634066e84d30b85444bb610c40508"
+    },
+    {
+      "path": "fonts/GeistMono-Variable.ttf",
+      "bytes": 171200,
+      "sha256": "0e1af3f507a1c8dfbb03d13ffad585834cd45ed7ccb78c756c7ce7873d180d30"
+    },
+    {
+      "path": "fonts/GeistMono-Variable.woff2",
+      "bytes": 71180,
+      "sha256": "33d5f8f8c2dcf5fd2c1990a9afd724469de6304ccd7df7929d24712e6755314f"
+    },
+    {
+      "path": "fonts/LICENSE-Geist-OFL.txt",
+      "bytes": 4368,
+      "sha256": "930853ee1daa68554d9e35c8a9175affb74f699fad9a5da6ee5ebe76379d9137"
+    },
+    {
+      "path": "fonts/LICENSE-GeistMono-OFL.txt",
+      "bytes": 4368,
+      "sha256": "930853ee1daa68554d9e35c8a9175affb74f699fad9a5da6ee5ebe76379d9137"
+    },
+    {
+      "path": "fonts/LICENSE-Newsreader-OFL.txt",
+      "bytes": 4520,
+      "sha256": "26028ec4e13b650065fa525a09532176f8a668b76ff849ea01c564a7480f91e7"
+    },
+    {
+      "path": "fonts/Newsreader-Variable.ttf",
+      "bytes": 451664,
+      "sha256": "8a08d13f8a6c0d51be379a60af84f945f65369a67e509ee3c3bdcc421254d7c1"
+    },
+    {
+      "path": "fonts/Newsreader-Variable.woff2",
+      "bytes": 215204,
+      "sha256": "117dae23ad6d24afd841d5da023d7d6d81d4589550668b02cb871403dc032d20"
+    }
+  ]
+}

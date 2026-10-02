@@ -1,0 +1,52 @@
+{
+  "$description": "Final immutable selection snapshot. Remote exploration metadata id is not a colour role and was excluded. All chart fills require labels/outlines.",
+  "source": {
+    "path": "packages/brand/explorations/colour/t3.json",
+    "commit": "72ec8b6544eb18fa4f884c3e998d89f70e9c1734",
+    "selectedAt": "2026-10-02"
+  },
+  "name": "T3 \u2014 Carta & Vinaccia (warm paper & wine)",
+  "font": "Geist",
+  "light": {
+    "background": "#F7EFE7",
+    "surface": "#FDF8F4",
+    "surfaceElevated": "#FEFEFD",
+    "textPrimary": "#221918",
+    "textSecondary": "#5B4F4D",
+    "textTertiary": "#756966",
+    "border": "#E4DAD3",
+    "borderStrong": "#958884",
+    "primary": "#782443",
+    "onPrimary": "#FDF8F4",
+    "secondary": "#495766",
+    "accent": "#5B1933",
+    "success": "#2C6C47",
+    "warning": "#85621D",
+    "danger": "#AB441B",
+    "info": "#345F95",
+    "positive": "#1E685B",
+    "negative": "#A7491F",
+    "chart": ["#933153", "#A07506", "#03999F", "#9B471B", "#1C5D98", "#588E44"]
+  },
+  "dark": {
+    "background": "#140F0E",
+    "surface": "#1D1816",
+    "surfaceElevated": "#27211F",
+    "textPrimary": "#F3EBE4",
+    "textSecondary": "#C7BBB5",
+    "textTertiary": "#A89C96",
+    "border": "#362E2C",
+    "borderStrong": "#746A66",
+    "primary": "#D497A7",
+    "onPrimary": "#241216",
+    "secondary": "#A3B3C4",
+    "accent": "#E4B6BF",
+    "success": "#7BC495",
+    "warning": "#E1B767",
+    "danger": "#EA906D",
+    "info": "#8FB4E4",
+    "positive": "#7DC9B7",
+    "negative": "#E89772",
+    "chart": ["#AF4A6B", "#B88C2E", "#079298", "#AF592F", "#3675B2", "#669D53"]
+  }
+}

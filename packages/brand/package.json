@@ -1,0 +1,36 @@
+{
+  "name": "@lilleri/brand",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Original Lilleri identity, dependency-free semantic tokens and licensed font assets.",
+  "type": "module",
+  "sideEffects": [
+    "./tokens/tokens.css"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./tokens/tokens.css",
+    "./tokens.json": "./tokens/tokens.json",
+    "./colors.json": "./tokens/colors.json",
+    "./assets/*": "./*"
+  },
+  "files": [
+    "dist",
+    "tokens",
+    "logo",
+    "icon",
+    "png",
+    "fonts"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

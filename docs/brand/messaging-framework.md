@@ -8,6 +8,12 @@
 
 **Labels.** FACT, ASSUMPTION, HYPOTHESIS, DECISION, OPEN QUESTION / UNKNOWN as in the rest of the repository. All tagline scores are the brand team's professional judgement and are therefore **HYPOTHESIS until tested with users**. Every line that describes a product behaviour is subject to the rule in `brand-strategy.md` §7: no public claim before the behaviour is shipped and measured.
 
+**Current copy gate — DECISION, 2026-10-02:** this is a message-development archive, not permission to publish all future capabilities. Current prototype hero may say “Tu spendi. Lilleri sistema.” paired with “Esplora una demo con dati sintetici. Nessun conto reale collegato.” Main CTA “Esplora la demo”. Do not say that the demo connects real banks, holds licensed access, has customers or charges subscriptions. Tagline tone/comprehension remains untested.
+
+**Canonical future promise:** “Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.” A separate trust line explains real coverage and provider-specific renewal. Candidate lines below that say “una volta”/“da soli” are retained as scored drafts, not claims of permanent authorisation or flawless automation. The current architecture is launch Gratis/Plus, Famiglia Later, Pro reserved. Plus €4,99/month or €39,99/year is a planning hypothesis. A 30-day non-renewing Plus preview without payment details is a proposal, not an automatic-charge trial. Optional labelled offers later require a separate trust/legal gate; use “Niente banner. Non vendiamo i tuoi dati.” rather than “Niente pubblicità. Mai.”
+
+**Measured current store-copy candidates:** app name “Lilleri — conti in ordine” (25 characters), subtitle “Tu spendi. Lilleri sistema.” (27). Store publication is not authorised by these drafts; current platform rules and implemented behaviour must be checked. Future explanatory line “Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.” is 83 characters and therefore exceeds an80-character short-description field: do not paste it there unchanged. Historical store-copy rows below are message-development candidates only.
+
 ---
 
 ## 0. Voice in five rules (the constraints every line below obeys)
@@ -134,7 +140,7 @@ Criteria and weights (DECISION): **Trust 20 %** (does it make a claim Lilleri ca
 |---|---|---|
 | #1 Tu spendi. Lilleri sistema. | Brand tagline | Wordmark lock-up, campaign end-frames, App Store subtitle, e-mail footers |
 | #3 I tuoi soldi, in ordine. Da soli. | Hero headline (alternative A) | Landing page hero when the tagline sits elsewhere on the page |
-| #4 Collega i conti una volta. Al resto pensa Lilleri. | Promise / "how it works" line | Hero sub-headline, onboarding first screen, press boilerplate |
+| Corrected #4 Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve. | Future promise / how it works | Real-service hero/onboarding/press only after tested implementation, with renewal and coverage disclosure |
 | #14 La tranquillità di sapere. | Emotional campaign line | Brand film, out-of-home, onboarding completion screen |
 | #18 Decidi tu le regole. Lilleri le applica. | Trust and control line | Pricing page, principles page, rules screen, FAQ |
 
@@ -149,7 +155,7 @@ All copy Italian; glosses in brackets. Lines marked † describe product behavio
 | Block | Copy (IT) | Gloss | Notes |
 |---|---|---|---|
 | **Hero — headline** | I tuoi soldi, in ordine. Da soli. | Your money, in order. By itself. | Alternative: the tagline itself |
-| **Hero — sub-headline** | Collega i conti una volta. Lilleri abbina bonifici, pagamenti con carta e rimborsi, impara le tue categorie e ti chiede solo quando ha un dubbio.† | Connect your accounts once. Lilleri matches transfers, card payments and refunds, learns your categories and asks you only when it is unsure. | Carries the honesty clause |
+| **Hero — sub-headline** | Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.† | Connect your accounts. Lilleri organises transactions and asks when needed. | Future-service claim only; current demo uses the disclosure above; detailed capabilities require shipped evidence |
 | **Hero — CTA** | Inizia con i tuoi conti | Start with your accounts | Never "Scarica gratis!" |
 | **Hero — trust strip** | Solo lettura · Accesso tramite [AISP], autorizzato · Nessuna vendita di dati · Esporti e cancelli quando vuoi | Read-only · Access via [AISP], licensed · No data selling · Export and delete whenever you want | Four facts, no icons of shields |
 | **Value prop 1 — Reconciliation** | *Un movimento, una volta sola.* Un bonifico tra due tuoi conti è un bonifico, non una spesa e un'entrata. Il pagamento della carta non conta due volte. Il rimborso torna da dove era partito.† | *One transaction, once.* A transfer between two of your accounts is a transfer, not an expense and an income. The card payment is not counted twice. The refund goes back where it came from. | Answers pain points #2, #3, #8, #17 |
@@ -212,13 +218,13 @@ Notes: "riconcilia" in Option A is slightly technical; it is kept because it is 
 
 ## 7. Messaging per plan
 
-Plan structure and names follow `brand-strategy.md` §8 (DECISION). **Prices are not decided**; the research bands are reproduced as planning ranges only.
+Plan structure and names follow `brand-strategy.md` D7 and `brand-architecture.md` (DECISION). **Prices are HYPOTHESES, not live offers**. Earlier ranges are superseded by the Plus-only consumer paid ladder; legacy multi-tier economics remains a comparator.
 
 | Plan | Positioning line (IT / gloss) | What the copy may promise | What the copy must never say | Price context (ASSUMPTION) |
 |---|---|---|---|---|
-| **Lilleri** (free core) | *Tutto quello che serve per avere i conti in ordine.* (Everything you need to have your accounts in order.) | All accounts, full reconciliation, learning categories, rules, the inbox, subscriptions, export, deletion — correctness is never gated | "Gratis per sempre" (a promise that shutdown history shows cannot be guaranteed); "limitato"; "prova" (it is not a trial) | €0 |
-| **Lilleri Plus** | *Più profondità. La stessa correttezza.* (More depth. The same correctness.) | Longer history, forecasts and "quanto posso spendere" (safe-to-spend), reports, priority support with a stated response time, early access | "Sblocca" (unlock) for anything that affects correctness; "Premium"; countdown offers; any renewal step-up without a reminder | Monthly Low €2.99 / Base €3.99 / High €4.99; annual Low €24.99 / Base €29.99 / High €39.99 — mid-pack versus the 2026 EU "Plus" band of €3.99–€5.99 monthly and Italian neobank tiers of €2.90–€9.99 (`user-pain-points.md` §F; `competitors-eu-uk.md` §8) |
-| **Lilleri Famiglia** | *I conti di casa, in ordine insieme.* (The household accounts, in order together.) | Shared view with separate logins, per-person attribution, joint-account semantics *and* split-tagging on personal accounts (both Italian couple models) | "Membri extra a €X" gating; copying Splitwise's manual-entry model | Price UNKNOWN; must not be structured as a per-member surcharge (Emma's "extra member" pricing is a documented confusion point) |
+| **Lilleri Gratis** | *I tuoi conti, una vista chiara.* (Your accounts, one clear view.) | Implemented core within published connection/history limits; privacy/export/deletion and financial correctness stay available | “Gratis per sempre”, “conti illimitati” without evidence, artificial accuracy limits, calling Gratis a timed trial | €0 |
+| **Lilleri Plus** | *Più profondità. La stessa correttezza.* (More depth. The same correctness.) | Only implemented history/customisation/analysis entitlements; forecasts/priority support are not promised merely because a plan is paid | Accuracy upsell, Premium/status claims, countdown offers, charging after non-renewing preview | €4,99/month or €39,99/year (HYPOTHESIS; validate willingness to pay, VAT/store costs and entitlements) |
+| **Lilleri Famiglia — Later** | *I conti di casa, in ordine insieme.* (The household accounts, in order together.) | Shared view only after separate identities/member permissions and consent are implemented | Selling a household SKU before sharing exists; hidden member surcharge | €9,99/month or €79,99/year (HYPOTHESIS, Later; not on launch paywall) |
 | **Lilleri Pro** (future, not at launch) | *Personale e partita IVA, senza mischiare.* (Personal and freelance, without mixing.) | Business/personal separation, tax set-aside tracking, exports for the commercialista | Any tax-advice claim; any "commercialista" substitution claim | OPEN QUESTION |
 
 **Billing copy rules (DECISION, from the trust priority):** a reminder e-mail and notification before any trial converts or any annual plan renews; the cancel path is in the app, one screen; price changes are announced with the old and new price side by side; "Perché pagare" (why pay) is a page in the brand voice that says plainly that subscriptions are how Lilleri stays independent of data sales and lending.

@@ -255,6 +255,10 @@ Contrast ratios computed on 2026-10-02 (WCAG 2.x; AA normal text ≥ 4.5:1, AA l
 
 ## Decisions / Recommendations
 
+**Consolidation note — 2026-10-02:** final implementation selects logo B (li monogram) and generated colour **T3 Carta & Vinaccia**. The generator's T1=cotto/T2=olive differs from this research's early T1=olive/T2=cotto numbering; names and JSON values are authoritative. See `docs/brand/brand-jury.md` for expert evaluation and `brand-identity.md` for construction. The procedural 30-icon shelf is a composition simulation using generic stand-ins, not current competitor artwork and not a timed/confusion user experiment. Older exploration prose suggesting “found instantly” does not establish measured recognition. No trademark clearance or recruited consumer-panel result is claimed. New full-font outlined specimens supersede older comparisons that rendered Latin-ext-only subset fonts without ASCII.
+
+Research rules D4/D8 are now treated as directional recommendations rather than proof that an abstract symbol is inherently better: the name-linked li symbol wins because of custom wordmark coherence and small-format behaviour. Gate G is conceptually satisfied for implementation; professionally cleared named-competitor/name-confusion and accessibility/user tests remain release gates. Existing source reliability grades are unchanged; newly generated proofs do not improve earlier unverified competitor attributions.
+
 | # | Decision or recommendation | Type | Rationale |
 |---|---|---|---|
 | D1 | Do not use blue, teal, saturated green, purple, pink, neon lime or vivid orange-red as Lilleri's signature colour | DECISION | §3: every band is owned; orange-red became Satispay's in May 2024 (C1) |

@@ -1,13 +1,14 @@
 # Consent model — what Lilleri asks, on which legal footing, how it records it, and how it renews it
 
-**Project:** LILLERI (consumer PFM, Italy-first then Europe; unlicensed data recipient under a provider's AISP licence)
-**Date / verification date for every claim:** 2026-10-02
+**Project:** LILLERI (consumer PFM, Italy-first then Europe; proposed recipient of licensed-provider AIS data; route not yet approved)
+**Review date:** 2026-10-02. **Retained source date:** 2026-10-02; no new legal/policy/provider verification in this review.
 **Author:** Privacy/GDPR specialist + fintech compliance analyst, founding team
 **Status of this document:** synthesis of Phase 0 research; input to onboarding design (`design/user-flows.md`), the consent service in `architecture/`, the privacy notice and the provider RFP. Companion documents: `compliance/regulatory-landscape.md`, `compliance/privacy-model.md`, `compliance/data-retention.md`, `compliance/legal-open-questions.md`. **Not legal advice.**
 
 ## How to read this document
 
 - Labels: **FACT**, **ASSUMPTION**, **HYPOTHESIS**, **DECISION**, **OPEN QUESTION / UNKNOWN** (see `docs/README.md`).
+- Evidence limits: current consolidated law/policy, provider contract and actual Italian bank lifecycle remain UNKNOWN at production assurance level. FACT labels below describe retained evidence, not fresh verification. Contract necessity and roles are proposed assessments, not automatic legal conclusions.
 - Evidence base: `docs/research/raw/regulatory-landscape.md` (**RL-§x**), `non-bank-sources-and-os-limits.md` (**NB-§x**), `open-banking-providers-a.md` (**PA-§x**), `open-banking-providers-b.md` (**PB-§x**); WebSearch gap closures cited as **NEW-n** (table in `regulatory-landscape.md` §8.2).
 - "Consent" is used in three legally different senses in this product; the taxonomy in §2 keeps them apart: (i) the **PSD2 explicit consent** the user gives to the licensed provider to access the bank (contractual, per EDPB 06/2020); (ii) **GDPR Art. 6(1)(a) / Art. 9(2)(a) consent** for optional processing; (iii) **permissions** required by the OS or the app stores (camera, notifications, third-party AI sharing) that are not GDPR bases but must be captured and logged anyway.
 - Product copy examples are Italian; documentation is English.
@@ -16,43 +17,42 @@
 
 ## 1. Executive summary
 
-1. **The core service needs no GDPR consent**: it runs on contract (Art. 6(1)(b)); the bank-access consent is PSD2 "explicit consent" captured on the licensed provider's screen, in the provider's mandated wording, naming the provider as the AISP and Lilleri as the recipient. FACT (RL-§6.1; PA-§2.6).
-2. **Zero-setup still means three unavoidable asks** in onboarding: accept the contract (T&Cs + privacy notice acknowledgment), connect a bank (provider consent + bank SCA), and decide on third-party AI sharing (store-mandated explicit permission). Everything else (notifications, e-mail ingestion, receipts/camera, analytics id, marketing, special-category features) is asked **in context, later, and is optional**. DECISION.
-3. **Consent must be as easy to withdraw as to give**, logged with the exact text version shown, and never bundled; no pre-ticked boxes, no "scrolling = consent", no cookie/consent walls; re-prompting not before 6 months. FACT (Garante 2021 guidelines; GDPR Art. 7) → consent records schema in §4.
-4. **The 180-day rule shapes the connection lifecycle**: SCA at the bank at least every 180 days (Delegated Reg. 2022/2360, applied since 25 Jul 2023), 4 unattended refreshes per day, ~90 days of history; late renewal (>90 days after expiry) leaves a gap. FACT (RL-§1.1; PA-§2.1; PA #43). The renewal UX in §5 starts at day 150 and treats expiry as a Review-Inbox item, not an error.
-5. **The user must see every connection and every permission in one place** ("Collegamenti" and "Permessi"), with status, dates, what is shared, and one-tap revoke; the provider's end-user dashboard requirement (Salt Edge mandates one; PSR will add bank-side dashboards ≈2028) is satisfied by Lilleri's own screen plus the provider's. FACT (PA-§2.6, §7) / DECISION.
-6. **Copy principle**: plain Italian, one idea per screen, the consequence stated before the button, the provider named truthfully, no legalese — because trust is priority #1 and because AGCM treats dark patterns as unfair practices. DECISION / FACT (RL-§8.1).
-
+1. **HYPOTHESIS:** objectively necessary core PFM purposes may use Art. 6(1)(b); counsel must approve the per-purpose map and raw Article 9/10 conditions before real data. PSD2 explicit consent to the provider is distinct from GDPR basis, SCA and store/OS permission (RL-§6.1).
+2. **DECISION:** onboarding records T&Cs acceptance and privacy-notice delivery separately. A bank connection uses provider AIS consent and bank/provider authentication. Optional external-AI permission is requested only before the first relevant external call; denial continues with rules/in-house mode. Import/manual use does not require a bank consent.
+3. **FACT (retained GDPR description):** consent withdrawal must be as easy as giving, specific, informed, freely given and evidenced. **DECISION:** no bundled/pre-ticked permissions or coercive paywalls. A six-month no-reprompt discipline is a project policy inspired by cookie guidance, not a universal statutory rule for every in-app permission.
+4. **DECISION:** separate AIS consent scope/validity, SCA requirement, session/token expiry and actual history/refresh allowance. Reported180-day SCA mechanics are not a guaranteed connection term. Four unattended accesses and90-day exemption/provider windows are not success/history guarantees; metadata and actual coverage determine renewal/gaps.
+5. **DECISION:** one connection/privacy/data dashboard exposes actual provider/entity, scope, status, freshness, expiry if known and revoke/delete actions. An own screen does not prove provider/platform dashboard compliance or satisfy future PSR obligations.
+6. **DECISION:** plain Italian, accurate dates and provider-approved words. Provider licence does not authorise Lilleri automatically; Route A and submission claims require Q1/Q4/Q20 closure.
 ---
 
 ## 2. Consent and permission taxonomy
 
 | ID | Name | Legal nature | Required for the core service? | Who collects / where | Recorded by Lilleri? | Withdrawal effect | Renewal |
 |---|---|---|---|---|---|---|---|
-| **K-CONTRACT** | Acceptance of T&Cs and acknowledgment of the privacy notice | Contract formation (Art. 6(1)(b)); Cod. Cons. artt. 49, 51; tacit-renewal clauses need specific approval (art. 1341 c.c.) | **Yes** | Lilleri, onboarding screen 1; versioned | Yes (version, timestamp, build) | Account closure | On material T&C change: notice + re-acceptance |
-| **K-AIS** | PSD2 account-access consent | PSD2 Art. 67(2)(a) / Art. 94(2) **explicit consent** — contractual, not GDPR consent (EDPB 06/2020); given to the **licensed provider** (AISP of record), with Lilleri named as recipient and the purpose stated (Art. 67(2)(f)) | **Yes** (at least one connection) | Provider's hosted page or mandated copy inside Lilleri (TrueLayer mandatory copy + UI review; Yapily Connect screen naming Yapily Connect Ltd/UAB; Tink T&Cs/Privacy links; Enable Banking terms widget) → then bank SCA | Yes (provider consent id, scope, granted/expiry, institution); provider is source of truth for expiry | "Scollega" → revoke at provider (and bank where supported), stop refresh, token deletion; data kept or deleted per user choice | **SCA at the bank ≥ every 180 days** (EEA); some banks shorter — read `expires_at` |
-| **P-AI** | Permission to share personal data with a third-party AI provider | Store-mandated explicit permission (Apple 5.1.2(i) verbatim; Play User Data policy, clarified 15 Jul 2026 — NEW-1); GDPR transparency (Art. 13); not itself the lawful basis (contract is) | **No** — Premium and core must work without it (Apple 5.1.1(ii)); rules + in-house classifier fallback | Lilleri, first-run after the first connection; settings toggle | Yes (text version, vendor list version) | Stop sending to external AI; in-house/rule mode; existing categories kept | On vendor change (new vendor = new disclosure) |
-| **C-ANALYTICS** | Product-analytics identifier | ePrivacy Dir. Art. 5(3) → Codice privacy art. 122 consent (Garante cookie guidelines 2021); anonymised analytics allowed without consent | No | Lilleri, settings or a single non-blocking in-context prompt; off by default | Yes | Switch to anonymised mode; rotate/delete pseudonymous id | Re-prompt not before 6 months |
+| **K-CONTRACT** | T&Cs acceptance; privacy-notice delivery/acknowledgment separately | Contract formation (Art. 6(1)(b)); Cod. Cons. artt. 49, 51; tacit-renewal clauses need specific approval (art. 1341 c.c.) | **Yes** | Lilleri, onboarding screen 1; versioned | Yes (version, timestamp, build) | Account closure | On material T&C change: notice + re-acceptance |
+| **K-AIS** | PSD2 account-access consent | PSD2 Art. 67(2)(a) / Art. 94(2) **explicit consent** — contractual, not GDPR consent (EDPB 06/2020); given to the **licensed provider** (AISP of record), with Lilleri named as recipient and the purpose stated (Art. 67(2)(f)) | **Only for bank-connected mode**; imports/manual mode require no AIS consent | Provider's hosted page or mandated copy inside Lilleri (TrueLayer mandatory copy + UI review; Yapily Connect screen naming Yapily Connect Ltd/UAB; Tink T&Cs/Privacy links; Enable Banking terms widget) → then bank SCA | Yes (provider consent id, scope, granted/expiry, institution); provider is source of truth for expiry | "Scollega" → revoke at provider (and bank where supported), stop refresh, token deletion; data kept or deleted per user choice | SCA requirement and consent validity are separate; read actual provider/bank scope, expiry and required renewal action |
+| **P-AI** | Permission to share personal data with a third-party AI provider | Store-mandated explicit permission (Apple 5.1.2(i) verbatim; Play general User Data obligations; exact 15 Jul 2026 AI-specific clarification UNKNOWN — NEW-1 conflicts with raw RL AV3); GDPR transparency (Art. 13); not itself a GDPR lawful basis; per-purpose necessity/basis and Article 9 condition remain to be reviewed | **No** — Premium and core must work without it (Apple 5.1.1(ii)); rules + in-house classifier fallback | Lilleri, immediately before first external personal-data AI call; settings toggle | Yes (text version, vendor list version) | Stop sending to external AI; in-house/rule mode; existing categories kept | On vendor change (new vendor = new disclosure) |
+| **C-ANALYTICS** | Product-analytics identifier | ePrivacy Dir. Art. 5(3) → Codice privacy art. 122 consent (Garante cookie guidelines 2021); consent exemption/anonymity only if actual conditions are established; pseudonymisation alone insufficient | No | Lilleri, settings or a single non-blocking in-context prompt; off by default | Yes | Stop consent-based analytics and delete consent-only linked events; assess genuinely anonymous aggregates separately | Re-prompt not before 6 months |
 | **N-SERVICE** | OS notification permission for service messages | OS permission only (iOS/Android); no marketing consent needed for service push (art. 130 scope — ASSUMPTION on push classification) | No (but strongly useful: renewal reminders, Review-Inbox items) | OS prompt, asked in context ("ti avvisiamo quando c'è qualcosa da rivedere") | OS state mirrored | OS settings | OS-driven |
 | **C-MARKETING** | Marketing push / e-mail / in-app promotional messages | Codice privacy art. 130 consent; soft opt-in art. 130(4) only for own similar services by e-mail collected at sale, with opt-out in every message | No | Lilleri, settings; separate toggle from N-SERVICE; unchecked by default | Yes | Immediate stop; suppression list | — |
 | **C-OFFERS** | Personalised offers / partner products (future) | Art. 6(1)(a) consent (profiling for marketing) + art. 130; may trigger OAM/IVASS questions (`regulatory-landscape.md` §4.6) | No — **not in v1** | — | — | — | — |
-| **C-EMAIL** | E-mail receipt ingestion | GDPR Art. 6(1)(a) consent per mailbox/forwarding address; Google Limited Use if OAuth; purpose limited to receipts/invoices | No | Lilleri, feature entry point; forward-to-inbox first (NB-§5.3) | Yes (mailbox/alias id, scope) | Stop ingestion; delete raw mail; keep/delete extracted items per choice | — |
+| **C-EMAIL** | E-mail receipt ingestion | GDPR Art. 6(1)(a) consent per mailbox/forwarding address; Google Limited Use if OAuth; purpose limited to receipts/invoices | No | Lilleri, feature entry point; forward-to-inbox first (NB-§5.3) | Yes (mailbox/alias id, scope) | Stop ingestion; delete raw/extracted consent-based material unless an independently valid basis applies; no silent basis switch | — |
 | **P-CAMERA** | Camera / photo picker for receipts | OS permission; Apple 5.1.1(iii) prefers picker/share sheet | No | OS prompt at first "Aggiungi scontrino" | OS state mirrored | OS settings | — |
 | **P-NOTIF-ACCESS** | Android notification access (post-MVP experiment) | OS special access + GDPR consent; Play prominent disclosure + runtime consent; on-device parsing only (NB-§4.2) | No | Lilleri prominent-disclosure screen → system settings | Yes | Disable listener; delete parsed items per choice | — |
 | **C-SPECIAL** | Explicit consent for a feature that infers special-category data (e.g., deductible donations, union fees) — **not in v1** | GDPR Art. 9(2)(a) explicit consent, specific, separate, logged; withdrawal deletes derived labels | No | Dedicated screen, never bundled | Yes (separate record) | Delete derived labels; feature off | — |
 | **C-RESEARCH** | Opt-in to user research / beta programmes | Consent | No | Settings / invitation | Yes | Stop | — |
-| **K-AGE** | Age attestation (18+) | Legal capacity; L. 132/2025 and art. 2-quinquies avoided by excluding minors | Yes | Onboarding (self-declaration; provider KYC does not verify age of users — the provider performs KYB on Lilleri, not CDD on users, RL-§9) | Yes | — | — |
+| **K-AGE** | Age attestation (18+) | Legal capacity; 18+ product boundary (DECISION); self-attestation alone does not prove legal age safeguards | Yes | Onboarding (self-declaration; provider KYC does not verify age of users — the provider performs KYB on Lilleri, not CDD on users, RL-§9) | Yes | — | — |
 
-Labels: the legal nature column is FACT where it cites PSD2/GDPR/Codice privacy/store rules as recorded in RL; the "who collects" column is FACT for provider mechanics (PA-§2.6, PB-§4) and DECISION for Lilleri screens.
+Labels: legal interpretations in the table are HYPOTHESIS pending counsel; retained sources describe PSD2/GDPR/Codice privacy/store rules as recorded in RL; the "who collects" column is FACT for provider mechanics (PA-§2.6, PB-§4) and DECISION for Lilleri screens.
 
-### 2.1 Contract-necessary vs consent-based — feature matrix (DECISION; FACT on the legal reading from RL-§6.1)
+### 2.1 Contract-necessary vs consent-based — feature matrix (DECISION; HYPOTHESIS on contract necessity; subject to Article 9/10 and counsel review)
 
 | Feature | Basis | Ask? | Notes |
 |---|---|---|---|
 | Account creation, login, security | Contract | T&Cs acceptance only | — |
-| Connect a bank, fetch balances/transactions, keep them in sync | Contract + K-AIS (provider) | Provider consent + bank SCA | The *only* data consent in the core path |
+| Connect a bank, fetch balances/transactions, keep them in sync | Contract + K-AIS (provider) | Provider consent + bank SCA | Separate provider consent/authentication; Article 9 condition may also be needed for actual data |
 | Automatic reconciliation (pending→booked, duplicates, transfers, card settlements, refunds) | Contract | None | Necessary to deliver the promise |
-| Categorisation by rules and in-house classifier | Contract | None | Profiling without legal effects; objection available |
+| Categorisation by rules and in-house classifier | Contract | None | Assess actual effects/Art. 22; voluntary rules-only setting; Art. 21 depends on lawful basis |
 | Categorisation using an external LLM | Contract (basis) + **P-AI** (permission) | Yes, explicit | Fallback mode without it |
 | Review Inbox, subscriptions detection, insights, budgets | Contract | None | Quiet-set exclusions apply (`privacy-model.md` §5) |
 | AI chat over the user's data | Contract + P-AI (if external) + Art. 50 disclosure | Yes (P-AI) | "Stai parlando con un assistente AI" |
@@ -61,7 +61,7 @@ Labels: the legal nature column is FACT where it cites PSD2/GDPR/Codice privacy/
 | E-mail receipts | C-EMAIL | Yes, per mailbox | Forward-to-inbox first |
 | Receipt photos | Contract + P-CAMERA (+ P-AI if the OCR is a third-party AI) | Yes (OS) | Picker preferred |
 | CSV/XLSX/PDF import | Contract | None | User-initiated |
-| Analytics with identifier | C-ANALYTICS | Yes (optional) | Anonymised otherwise |
+| Analytics with identifier | C-ANALYTICS | Yes (optional) | Optional identifier processing stops without consent; necessary telemetry/anonymous aggregates assessed separately |
 | Export, deletion, revocation | Rights | None | Always available |
 | Any special-category feature | C-SPECIAL | Yes, explicit, separate | Not in v1 |
 | Partner offers / affiliate | C-OFFERS + regulatory clearance | Yes | Not in v1 |
@@ -74,10 +74,10 @@ Labels: the legal nature column is FACT where it cites PSD2/GDPR/Codice privacy/
 |---|---|---|---|---|
 | 1 | Welcome | None | — | "Collega i tuoi conti una volta. Lilleri capisce da sola cosa succede ai tuoi soldi — e ti fa vedere sempre perché." |
 | 2 | Account | E-mail/passkey; age 18+ | K-CONTRACT, K-AGE | "Creando l'account accetti i Termini e prendi visione dell'Informativa privacy." (links; no checkbox needed for the notice; one explicit action for the T&Cs) |
-| 3 | "Come funziona il collegamento" (pre-redirect explainer, **before** the provider's screen) | Information only | PSD2 transparency; provider-mandated disclosure | "Per leggere i tuoi movimenti, Lilleri usa **[Provider]**, un intermediario autorizzato e vigilato da **[Autorità]**. Nella prossima schermata darai il consenso a [Provider] e poi confermerai nella tua banca. Lilleri vede solo saldi e movimenti: **non può muovere denaro**. Il collegamento dura **180 giorni**, poi ti chiederemo di rinnovarlo." |
+| 3 | "Come funziona il collegamento" (pre-redirect explainer, **before** the provider's screen) | Information only | PSD2 transparency; provider-mandated disclosure | "Per leggere i tuoi movimenti, Lilleri usa **[Provider]**, un intermediario autorizzato e vigilato da **[Autorità]**. Nella prossima schermata darai il consenso a [Provider] e poi confermerai nella tua banca. Lilleri vede solo saldi e movimenti: **non può muovere denaro**. Ti avvisiamo quando il collegamento deve essere rinnovato. La durata e i passaggi dipendono dalla banca e dal fornitore." |
 | 4 | Provider consent screen (hosted or mandated copy) | K-AIS | PSD2 Art. 67/94(2); provider T&Cs | Provider wording (e.g., TrueLayer header "{{client name}}'s partner, TrueLayer, would like {{duration}} access to your {{bank name}} account details", PA-§2.6) — **not editable by Lilleri** beyond the allowed variables |
 | 5 | Bank SCA (redirect/app-to-app) | Bank's own | RTS | — |
-| 6 | First sync + "Cosa ho capito" | None | — | Shows the 90-day understanding; sets the expectation on history depth (PA-§7) |
+| 6 | First sync + "Cosa ho capito" | None | — | Shows actual received history and freshness; never promises90 days before verified coverage (PA-§7) |
 | 7 | AI permission | **P-AI** | Apple 5.1.2(i); Play User Data | See `privacy-model.md` §7 copy; buttons "Attiva" / "Non ora"; both paths continue |
 | 8 | Notifications (when the first Review-Inbox item exists) | N-SERVICE | OS | "Ti avvisiamo solo quando c'è qualcosa da rivedere o un collegamento da rinnovare. Niente pubblicità." |
 | later | Receipts, e-mail, analytics id, marketing | P-CAMERA, C-EMAIL, C-ANALYTICS, C-MARKETING | as per §2 | Asked only when the user reaches the feature |
@@ -88,7 +88,7 @@ Rule: **no screen asks for more than one thing**, and the Premium paywall never 
 
 ## 4. Consent records schema (DECISION)
 
-Purpose: prove consent (GDPR Art. 7(1)), reconstruct exactly what the user saw, drive the renewal UX, and answer regulators and app reviewers. Stored in the audit class (immutable, append-only), encryption class E2, retention per `data-retention.md` (life of account + 10 years in restricted archive — ASSUMPTION aligned with the ordinary limitation period).
+Purpose: prove consent (GDPR Art. 7(1)), reconstruct exactly what the user saw, drive the renewal UX, and answer regulators and app reviewers. Stored in the audit class (immutable, append-only), encryption class E2, retention per `data-retention.md` (minimised account-life evidence; proposed restricted3-year post-close ceiling only where claims/accountability necessity is documented; longer only class-specific counsel-approved requirement/hold, not an automatic 10-year archive).
 
 ### 4.1 `consent_event` (append-only; one row per grant/withdraw/renew/expire)
 
@@ -108,7 +108,7 @@ Purpose: prove consent (GDPR Art. 7(1)), reconstruct exactly what the user saw, 
 | `ui_context` | string | screen id (e.g., `onboarding.step7`) — proves "in context", not bundled |
 | `occurred_at` | timestamp (UTC) | — |
 | `evidence` | JSON | minimal: `{method:"tap", control:"btn_attiva"}`; **no IP, no device fingerprint** (minimisation; IP exists in short-lived auth logs only) |
-| `expires_at` | timestamp / null | for K-AIS, mirrored from the provider; for C-ANALYTICS "re-ask not before" |
+| `expires_at` | timestamp / null | actual consent validity if supplied; never inferred from last SCA; `reask_not_before` is a separate field |
 | `source_of_truth` | string | `lilleri` or `provider:<name>` (K-AIS) or `os` (N-SERVICE, P-CAMERA) |
 
 ### 4.2 `connection` (current state; derived from provider data + consent events)
@@ -118,11 +118,11 @@ Purpose: prove consent (GDPR Art. 7(1)), reconstruct exactly what the user saw, 
 | `connection_id`, `user_id` | — |
 | `provider` (`yapily`, `tink`, `enable_banking`, `fabrick`, …) and `provider_entity` (licensed EU entity shown to the user, e.g. "Yapily Connect UAB (Bank of Lithuania)") | Name shown on the bank screen (PA-§2.6) |
 | `provider_consent_id`, `institution_id`, `institution_name`, `accounts[]` (tokenised ids, masked display) | — |
-| `granted_at`, `sca_last_at`, `expires_at` (from provider `expires_at` / `sessionExpiryDate` / `valid_until`) | **Never computed locally as +180 days**; read per bank (PA-§2.1 doubts) |
+| `granted_at`, `consent_valid_until`, `sca_last_at`, `sca_required_at`, `provider_session_expires_at`, `token_expires_at` | **Never compute consent validity as SCA + 180 days**; provider fields have distinct meanings and may be UNKNOWN. Adapter contract maps them; stale/unknown authorization fails closed |
 | `history_from` (first available transaction date) | Sets the "capisce dal …" promise |
-| `status` | `active`, `expiring` (≤30 days), `expired`, `revoked_by_user`, `revoked_at_bank`, `revoked_at_provider`, `error_auth`, `error_provider`, `paused_by_user` |
-| `last_successful_refresh_at`, `next_refresh_at`, `refresh_budget_used_today` (0–4) | 4×/24 h bookkeeping (PA-§7) |
-| `gap_detected` (bool), `gap_from`, `gap_to` | Late renewal > 90 days (PA #43) |
+| `status` | `active`, `expiring` (≤ 30 days), `expired`, `revoked_by_user`, `revoked_at_bank`, `revoked_at_provider`, `error_auth`, `error_provider`, `paused_by_user` |
+| `last_successful_refresh_at`, `next_refresh_at`, `access_budget_scope`, `allowed_background_accesses`, `access_window_start`, `accesses_used` | Conservative configurable unattended request budget; rolling window/scope/paging and contractual limits mapped, no guarantee of successful updates |
+| `gap_detected` (bool), `gap_from`, `gap_to` | Compare received coverage/cursors to last known data; Tink90-day refetch is provider-specific, no universal elapsed-time detector |
 | `data_retention_choice_on_revoke` | `keep`, `delete` |
 
 ### 4.3 Example `consent_event` (P-AI granted)
@@ -150,55 +150,48 @@ Purpose: prove consent (GDPR Art. 7(1)), reconstruct exactly what the user saw, 
 
 ### 4.4 Invariants (DECISION)
 
-- A consent is valid only if the latest event for `(user_id, consent_type, scope)` is `granted` or `renewed` and `expires_at` is null or in the future.
+- A latest grant event is necessary evidence, not sufficient proof of legal validity. Feature gates also check purpose/scope/text, provider authorization/revocation, required SCA, lawful basis/Article 9 condition and vendor status. A null/unknown expiry does not mean indefinite valid bank access.
 - Every feature gate reads the consent service, never a cached boolean in the client.
-- Text versions are immutable; a copy change creates a new version and, where the change is material, a `superseded` event and a re-ask.
+- Text versions are immutable; material new purpose/scope/vendor/data changes require legal assessment and fresh permission where required. A copy edit alone does not reset a refusal/re-prompt window or validate consent.
 - `denied` events suppress re-asking for 6 months (Garante guideline analogy for cookies — ASSUMPTION that applying the same discipline in-app is prudent).
 - Exports (`privacy-model.md` §9) include the user's consent history.
 
 ---
 
-## 5. Renewal UX — the 180-day rule as a product feature
+## 5. Renewal UX — actual connection lifecycle (DECISION)
 
-### 5.1 Legal and provider mechanics (FACT)
+### 5.1 Legal/provider mechanics and uncertainty
 
-- ASPSPs must not apply SCA to AISP access except on first access and **at least every 180 days** thereafter (Delegated Reg. 2022/2360, Art. 10a; applies since 25 Jul 2023). Individual Italian banks may still issue shorter consents; Tink enables 180-day consent market by market and Italy was not seen in the entries read; TrueLayer v1 docs still say "maximum of 90 days"; Yapily documents 180 days EEA → **read the per-connection expiry from the provider** (PA-§2.1, §3.1–3.3).
-- Renewal needs the user: bank SCA via the provider's renewal link (Tink `update-consent`; Yapily re-authorisation; TrueLayer `POST /connections/extend` + reconfirmation UX) (PA-§3.1–3.3).
-- After expiry the provider stops delivering data; renewal more than 90 days late re-fetches only the last 90 days → **history gap** (PA #43).
-- Under the PSR (not in force; ≈2028+), renewal SCA is reported to move to the AISP (the provider), which could make renewal an in-app step controlled by the licensee — keep the step **pluggable** (RL-§2.2).
+**FACT (retained descriptions):** RTS2022/2360 changes the AIS SCA exemption/renewal mechanics to 180 days; exemption scope and conditions (including balance/recent-transaction information and justified security challenges) require consolidated-text reading (RL-§1.1, PA-§2.1). This is not a universal180-day consent duration. Consent validity, SCA due date, provider session and tokens must be mapped separately. Any fresh token/SCA does not prove renewed AIS consent or a GDPR basis.
 
-### 5.2 Timeline (DECISION)
+**FACT (provider-specific evidence):** Tink late reconfirmation can restrict refetch to90 days (PA #43); provider/bank history and shorter sessions differ. **UNKNOWN:** actual Italian institution behaviour and received history until pilot. Neither user-present requests nor an on-open trigger bypass provider limits, lawful scope, bank limits or SCA.
 
-| Day (from `sca_last_at`) | State | Surface | Copy (Italian, draft) |
-|---|---|---|---|
-| 0 | `active` | "Collegamenti" shows "Attivo fino al 31 marzo" | — |
-| 150 | `expiring` | Review-Inbox item (low priority): "Rinnova il collegamento con Intesa entro 30 giorni" | "Ogni 180 giorni la tua banca ti chiede di confermare che Lilleri può continuare a leggere i movimenti. Ci vogliono 30 secondi. [Rinnova ora] [Ricordamelo]" |
-| 170 | `expiring` | Service push (N-SERVICE) + inbox item promoted | "Tra 10 giorni il collegamento con Intesa scade. Rinnovalo per non perdere nessun movimento." |
-| 178 | `expiring` | In-app banner on Home | "Collegamento con Intesa in scadenza tra 2 giorni." |
-| 180 (or `expires_at`) | `expired` | Inbox item becomes a task; Home shows the account as "In pausa — dati aggiornati al 31 marzo"; **no red error state** | "Il collegamento con Intesa è scaduto. I tuoi dati sono al sicuro e restano qui; per continuare ad aggiornarli, rinnova il collegamento. [Rinnova]" |
-| 180–270 | `expired` | Weekly gentle reminder (max 3) | — |
-| > 270 | `expired`, `gap_detected` on renewal | On renewal: gap explanation + CSV import offer | "Abbiamo ripreso gli ultimi 90 giorni. Mancano i movimenti dal 1 aprile al 15 giugno: puoi importarli da un file della banca. [Importa] [Lascia così]" |
-| any | `revoked_at_bank` (user revoked in the bank app / future PSR dashboard) | Inbox item, neutral tone | "Hai revocato l'accesso dalla tua banca. Vuoi ricollegare o rimuovere il conto da Lilleri?" |
+### 5.2 Relative timeline
 
-Design rules: renewal is a **Review-Inbox item** (the product's native unit of work), never a modal that blocks the app; the reminder cadence stops as soon as the user renews or chooses "Scollega"; the user can renew all expiring connections in one session ("Rinnova tutti"); the pre-renewal explainer says the bank's screen will show the provider's name.
+| Trigger | UX / action |
+|---|---|
+| Active actual authorization | Show scope, last successful sync, actual known expiry/required action; unknown dates labelled |
+|30days before actual renewal action due | Low-priority inbox reminder if useful for that term; avoid reminders older than short session validity |
+|10days /2days before actual due date | Optional service reminder under OS permission and reviewed non-marketing basis; neutral actual-date copy |
+| Provider says SCA/consent/session expired or revoked | Stop unusable access; truthful stale timestamp; provider's exact reconnect action; do not erase lawful historical ledger by default |
+| Renewal returns incomplete coverage | Compare actual covered interval/cursors; explain observed gap and offer import; no universal day 270 threshold |
+| User chooses disconnect | Revoke promptly, destroy tokens and offer separate retention/erasure choice; reminders stop |
 
-### 5.3 Technical hooks
+Draft: *“Il collegamento con [Banca] deve essere rinnovato. I dati sono aggiornati al [data]. [Provider] ti guiderà nei passaggi richiesti dalla banca. [Rinnova]”*. Do not claim “30 seconds”, “never lose a movement” or a fixed180-day term without actual verified support.
 
-- Provider signals: Tink insight `AGGREGATION_REFRESH_PSD2_CREDENTIAL` near `sessionExpiryDate`; Yapily consent `expiresAt`; TrueLayer `reconfirmation_of_consent_needed`; Salt Edge `max_consent_days`/reconnect (PA-§3). FACT (mirror docs).
-- Refresh budget: 4 unattended/24 h; user-present refresh on app open is unlimited and should be used to catch up after a gap (PA-§7).
-- Provider switch: the consent service is provider-agnostic; `provider_entity` is a display attribute so the explainer stays truthful after a switch.
+### 5.3 Technical invariants
 
----
+Separate consent/SCA/session states and evidence; provider signals (PA-§3) are mapped to actual semantics, not a single `expires_at`. Use conservative configurable unattended request budgets and respect429/backoff/paging. Do not use background refresh to extend dormancy indefinitely. Provider switches require new entity/scope/notice/consent review; licence identity is more than a display attribute. Future PSR renewal proposals create no current shortcut.
 
 ## 6. Dashboard requirements (DECISION; FACT where cited)
 
 ### 6.1 "Collegamenti" (connections)
 
-For each connection: institution and logo; **provider named** ("tramite Yapily Connect UAB, autorizzato dalla Banca di Lituania" — exact entity per contract); accounts included (masked); consent granted date; **expiry date and days left**; last successful update; status in plain words; what Lilleri can see ("saldi e movimenti; non può operare"); actions: **Rinnova**, **Aggiorna ora** (user-present refresh), **Metti in pausa**, **Scollega** (with the data choice: "Conserva lo storico" / "Elimina tutto ciò che viene da questa banca"), link to the bank's own permission page where it exists (PSR dashboards in the future). Salt Edge mandates an end-user dashboard for consent revocation; TrueLayer/Yapily/Tink require a manage/revoke surface (PA-§2.6, §7) — satisfied here.
+For each connection: institution and logo; **provider named** ("tramite Yapily Connect UAB, autorizzato dalla Banca di Lituania" — exact entity per contract); accounts included (masked); consent granted date; **expiry date and days left**; last successful update; status in plain words; what Lilleri can see ("saldi e movimenti; non può operare"); actions: **Rinnova**, **Aggiorna ora** (user-present refresh), **Metti in pausa**, **Scollega** (with the data choice: "Conserva lo storico" / "Elimina tutto ciò che viene da questa banca"), link to the bank's own permission page where it exists (PSR dashboards in the future). Salt Edge mandates an end-user dashboard for consent revocation; TrueLayer/Yapily/Tink require a manage/revoke surface (PA-§2.6, §7) — provider-specific UI approval remains a production blocker; this design alone is not satisfaction evidence.
 
 ### 6.2 "Permessi e privacy" (permissions)
 
-One list with every item of §2 that is not K-CONTRACT/K-AIS: current state, date granted/denied, what it enables, one-tap toggle; link to the versioned text the user accepted; "Categorie riservate" (hide categories) and "Transazioni private"; "Disattiva categorizzazione automatica" (Art. 21 objection); the AI vendor list version and the chat disclosure.
+One list with every item of §2 that is not K-CONTRACT/K-AIS: current state, date granted/denied, what it enables, one-tap toggle; link to the versioned text the user accepted; "Categorie riservate" (hide categories) and "Transazioni private"; "Disattiva categorizzazione automatica" (voluntary control; applicable Art. 21 requests handled by basis); the AI vendor list version and the chat disclosure.
 
 ### 6.3 "I tuoi dati" (your data)
 
@@ -221,8 +214,8 @@ Export (ZIP), delete account, delete a data source, consent history view, DPO co
 | Name the provider truthfully | "Nella schermata della banca vedrai [Provider], il nostro partner autorizzato." | Hiding the provider or implying Lilleri is the bank's partner | Provider mandatory copy (PA-§2.6); 3.2.1(viii) review honesty |
 | Say what Lilleri cannot do | "Lilleri non può muovere denaro né vedere le tue credenziali." | Vague "accesso sicuro" | Trust; PSD2 scope (read-only AIS) |
 | Symmetric buttons | [Attiva] [Non ora] same size and weight | Grey "Non ora" link under a big green button | AGCM dark-pattern practice; Garante cookie guidelines on equal choices |
-| Numbers, not adjectives | "180 giorni", "30 secondi", "ultimi 90 giorni" | "periodicamente", "presto" | Comprehension |
-| Explain inference policy once, plainly | "Lilleri non deduce nulla di personale dai tuoi movimenti (salute, religione, politica) e puoi nascondere qualsiasi categoria." | Legal text about "categorie particolari ex art. 9" | Art. 9 transparency without jargon |
+| Numbers, not adjectives | Actual date, actual received history and verified duration; uncertainty stated | "periodicamente", "presto" | Comprehension |
+| Explain inference policy once, plainly | "Non usiamo i movimenti per dedurre salute, religione o opinioni politiche. Alcune descrizioni possono rivelare dati delicati: [misure verificate]." | Legal text about "categorie particolari ex art. 9" | Art. 9 transparency without jargon |
 | Withdrawal as easy as consent | A toggle in the same place, instant | "Scrivi a privacy@…" | Art. 7(3) |
 | Layered notice | Layer 1: five lines in Italian; Layer 2: full notice | Full notice as the only option | Art. 12 |
 | No legalese in buttons | "Collega la banca", "Rinnova", "Scollega" | "Acconsento al trattamento" | Plain language |
@@ -232,18 +225,32 @@ Review process: every consent/permission string ships with a text version, a DPO
 
 ---
 
+## Review log
+
+**Date:** 2026-10-02. **Method:** retained-source adversarial review, no fresh legal/policy access.
+
+| Critique | Resolution | Remaining human production blocker |
+|---|---|---|
+| Consent, SCA, token/session expiry and GDPR basis were collapsed | Separate legal/technical concepts, scope and adapter fields; grant event/null expiry insufficient | Counsel basis/Article 9 review and provider actual field semantics |
+|180-day term/four syncs/90-day history and fixed day150/270 UX overpromised | Actual expiry/action metadata, configurable access budgets and observed coverage; no universal sync/history guarantee | Provider/bank pilot and reviewed RTS/contract |
+| Provider licence, privacy notice acknowledgment and AI permission implied legal authorisation/consent | Conditional route; contract/notice distinct; permission≠GDPR basis; imports/manual do not need AIS | Q1/Q3/Q4/Q20 and approved onboarding copy |
+| Six-month rule and ten-year archive treated universal | Six months a project policy; restricted evidence necessity/period per retention doc | DPO/counsel consent proof/re-prompt/claims assessment |
+| Quiet set/withdrawal and store policy certainty exceeded evidence | Raw sensitive data review and derivative deletion; Play AI-specific date unknown | DPIA/vendor/policy evidence; working rights/permission gates |
+
+**Gate verdict:** **PASS WITH CONDITIONS for synthetic UX/design only; real-data/store submission acceptance BLOCKED**. No provider UI, counsel or legal approval is recorded.
+
 ## 8. Decisions / Recommendations
 
 | # | Decision / recommendation | Label |
 |---|---|---|
 | D1 | Three legally distinct families — K (contract), K-AIS (PSD2 via provider), C/P (GDPR consents and OS/store permissions) — modelled in one consent service with append-only events and versioned text. | DECISION |
-| D2 | Core path asks only: T&Cs acceptance, bank connection via the provider, third-party-AI permission; everything else is asked in context and off by default. | DECISION |
+| D2 | Core path records T&Cs/notice separately and provider AIS consent/authentication when bank-connected; optional third-party-AI permission is requested just before first relevant external call; other optional purposes stay off. | DECISION |
 | D3 | P-AI is optional and symmetric; the product works in rules + in-house mode without it; Premium is never gated on any permission. | DECISION |
-| D4 | Expiry is read from the provider per connection; never assumed to be 180 days; the renewal flow is a Review-Inbox item with a 150/170/178-day cadence and a no-blame expired state; gap handling offers CSV import. | DECISION |
+| D4 | Consent/SCA/session/token dates are distinct provider-adapter metadata; relative reminders follow actual due action; observed coverage drives gap detection/import. No fixed 150/170/178-day cadence. | DECISION |
 | D5 | "Collegamenti", "Permessi e privacy" and "I tuoi dati" screens are MVP scope, not post-launch polish. | DECISION |
 | D6 | Copy principles in §7 are a release checklist item; the provider's mandated copy is used verbatim where required and explained in Lilleri's own words on the screen before it. | DECISION |
 | D7 | Consent events exclude IP and device fingerprints; proof rests on text version/hash, build, screen id and timestamp. | DECISION |
-| D8 | `denied` suppresses re-asks for 6 months; material text changes trigger re-ask. | DECISION |
+| D8 | `denied` suppresses routine re-asks for 6 months as project policy; material new scope/purpose requires reviewed fresh permission, not a cosmetic-copy reset. | DECISION |
 | R1 | Submit the onboarding and consent screens to the chosen provider's UI review early (TrueLayer and Yapily require it) and to counsel together with the T&Cs. | RECOMMENDATION |
 | R2 | Usability-test the pre-redirect explainer and the renewal item with Italian users: the two moments where trust is won or lost. | RECOMMENDATION |
 | R3 | Ask each shortlisted provider for the Italian consent duration actually delivered per top-10 bank and for consent webhooks (RFP). | RECOMMENDATION |
@@ -267,7 +274,7 @@ Review process: every consent/permission string ships with a text version, a DPO
 
 ## 10. Sources
 
-Verification date for every row: **2026-10-02**. See `regulatory-landscape.md` §8 for the full raw-note source table; IDs below point to it.
+Retained research date: **2026-10-02**; source publication/access limits preserved, not re-fetched in this review. See `regulatory-landscape.md` §8 for the full raw-note source table; IDs below point to it.
 
 | ID | Source | URL | Pub. date | Reliability | Used for |
 |---|---|---|---|---|---|

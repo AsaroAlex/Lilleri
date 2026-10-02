@@ -3,11 +3,13 @@
 **Project:** LILLERI · **Date / verification date for every claim:** 2026-10-02 · **Author:** open banking + PSD2 specialist + CTO fintech, founding team
 **Status:** Phase 1 synthesis. Raw values come from `docs/research/raw/open-banking-providers-a.md` (A), `open-banking-providers-b.md` (B), `non-bank-sources-and-os-limits.md` (NB), `regulatory-landscape.md` (REG) and 10 WebSearch queries run on 2026-10-02 (`NEW-n`, listed in `open-banking-providers.md`). Narrative evaluation and the decision are in `open-banking-providers.md`; cost scenarios in `provider-cost-model.md`.
 
+**Review provenance (DECISION, 2026-10-02):** this revision checks repository evidence, source consistency and design implications. Source URLs/access dates below are inherited observations, not fresh web verification. FACT means the cited observation is recorded; vendor performance, source independence, market prevalence and current legal/commercial eligibility remain unverified where stated.
+
 ## How to read this matrix
 
-- **Cell format:** `raw value [label] → score (justification)`. Labels: `[F]` FACT, `[A]` ASSUMPTION, `[H]` HYPOTHESIS, `[U]` UNKNOWN. A `?` after a score means the criterion is UNKNOWN for that provider and was **scored 2 by default** (3 for criteria where the Berlin Group baseline makes 3 the safe floor); these cells are the sensitivity levers in §10.
+- **Cell format:** `raw value [label] → score (justification)`. Scores are DECISION judgements, not verified performance or legal eligibility. Labels: `[F]` FACT, `[A]` ASSUMPTION, `[H]` HYPOTHESIS, `[U]` UNKNOWN. A `?` after a score means the criterion is UNKNOWN for that provider and was **scored 2 by default** (3 for criteria where the Berlin Group baseline makes 3 the safe floor); these cells are the sensitivity levers in §10.
 - **Scores:** 1 = poor / blocking, 3 = adequate for the MVP, 5 = best in class for Lilleri's needs. Scores are judgements on the evidence as of 2026-10-02, not measurements; they must be re-scored after the RFP answers.
-- **Weights** (sum = 100) reflect Lilleri's priorities (trust, data correctness, security, simplicity, automation, reliability, privacy, speed, UX, brand, cost, monetisation, feature count) and its build-own strategy for categorisation and reconciliation; they are listed per criterion and summed per block in §9. Weighted totals were computed by script (`Σ weight × score / 100`), not by hand, after the raw notes' manual sums proved wrong.
+- **Weights** (sum = 100) reflect Lilleri's priorities (trust, data correctness, security, simplicity, automation, reliability, privacy, speed, UX, brand, cost, monetisation, feature count) and its build-own strategy for categorisation and reconciliation; they are listed per criterion and summed per block in §9. Weighted totals use `Σ weight × score / 100`; the repository review re-parsed all 41 scored rows and confirmed the weights total 100. The formula and parser are reproduced below; no ephemeral script is required.
 - **Providers:** Tink · Fabrick · TrueLayer · Yapily · Salt Edge · GoCardless Bank Account Data (BAD) · Enable Banking (EB) · Powens · Plaid EU · Neonomics · Mastercard Open Finance Europe (OFE) · CBI Globe direct. GoCardless BAD is **closed to new customers since July 2025** (FACT) and CBI Globe direct **requires an own licence** (FACT); both are scored for completeness and excluded from the recommendation.
 - Reliability of the underlying evidence follows the raw notes (official docs via mirror = high; register entries = high; press = medium; listing sites = low). Full URLs: `open-banking-providers.md` → Sources.
 
@@ -19,7 +21,7 @@
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **A1 Italian banks covered (9)** | Own IT capability page lists ~70 providers incl. Intesa, UniCredit, BPM, Fineco, PostePay, Mooney, TIM, N26, Revolut, Wise, Hello Bank; no PayPal/Satispay/Hype [F via mirror] → **4** (broad, first-party, but wallets missing) | "97 % of Italian banks" (May 2020 claim), "1,700+ EU banks"; named IT list not retrieved [F claim / U list] → **4?** (plausible via CBI Globe; unproven) | "All leading Italian banks" (2020); UniCredit, Intesa, Poste named; many EU providers in beta; current list [U] → **3** | Institution config pages for Intesa, BPM, Poste, MPS, BNL (CBI Globe); "80 %" claim (~2021); BPER/Sella/Valsabbina named [F mixed dates] → **4** | 451–464 IT "connections" (openbankingtracker; BCC branches inflate); Fineco, MPS, Intesa, Credem, CA named (2019–20); Postepay/Revolut listed; some `web` scraping modes [F dated/A] → **4** | Historically broad via CBI Globe; count [U]; closed → **3?** | Own IT page: Intesa, UniCredit, BPM, BCC Iccrea, CA Cariparma, BPER, MPS, Mediolanum, Poste (BancoPosta+Postepay), Revolut; Credem/Mediolanum connectors; N26 (Apr 2026 changelog snippet) [F] → **4** | "90 % AIS/PIS" (undated blog, likely 2021–22); BPM/BNL/Poste PIS; Sella/Credem/Widiba wealth [F dated] → **3?** | 225 IT banks tracked (openbankingtracker); Intesa supported; long tail [U] [F secondary] → **3?** | 252 IT banks (openbankingtracker); own claims inconsistent (2,000/3,500/6,000) [F secondary / conflict] → **2?** | "3,000+ banks across Europe", Nordics-strong; IT list not retrieved [U] → **2?** | "100 % of Italian banks with a single integration" (Nexi/CBI claim); no neobanks (Revolut, N26 are foreign ASPSPs) [F claim] → **4** |
 | **A2 Coverage quality / reliability evidence (6)** | Italy-specific status page with 2026 incidents (UniCredit 19 May, CA 24 Jun, Intesa maintenance 9 Aug) [F pages / medium details] → **4** | No status page or incident data found [U] → **2?** | Public status page (incident.io); Italy-specific data [U]; beta release channels [F] → **3** | Per-institution restrictions documented (Intesa 14-day window, 429) [F]; status page not found [U] → **3** | Status page not found; `web` modes must be filtered [U/A] → **2?** | n/a → **2?** | Monthly changelogs incl. Italian card-account work (Mar 2026) [F]; status page [U] → **3** | Status page [U] → **2?** | status.plaid.com institution-level [A] → **3?** | [U] → **2?** | Release advice pages exist (2025) [F]; IT quality [U] → **2?** | Gateway-level quirks hit everyone; no SLA to Lilleri as non-member [F/A] → **3** |
-| **A3 Credit-card accounts (3)** | CREDITCARD_ACCOUNTS refreshable item; depends on bank exposure [F] → **3** | [U] → **2?** | `/cards` endpoint with card transactions; bank-dependent [F] → **3** | Card accounts where exposed [F] → **3** | `supported_account_natures` incl. card [F] → **3** | [U] → **2?** | Mar 2026: expanded card accounts across CBI Globe banks + dedicated Fineco integration; UniCredit/Mediolanum/CA do not expose cards [F] → **4** (only provider with documented Italian card work) | [U] → **2?** | [U] (checking/savings/credit in US docs) → **2?** | [U] → **2?** | [U] → **2?** | Nexi prepaid only; bank `card-accounts` where implemented [F] → **3** |
+| **A3 Credit-card accounts (3)** | CREDITCARD_ACCOUNTS refreshable item; depends on bank exposure [F] → **3** | [U] → **2?** | `/cards` endpoint with card transactions; bank-dependent [F] → **3** | Card accounts where exposed [F] → **3** | `supported_account_natures` incl. card [F] → **3** | [U] → **2?** | Mar 2026: expanded card accounts across CBI Globe banks + dedicated Fineco integration; UniCredit/Mediolanum/CA absent through EB at that date [F observation; other/current routes U] → **4** (only provider with documented Italian card work) | [U] → **2?** | [U] (checking/savings/credit in US docs) → **2?** | [U] → **2?** | [U] → **2?** | Nexi prepaid only; bank `card-accounts` where implemented [F] → **3** |
 | **A4 Prepaid / e-money (Postepay, Hype) (3)** | PostePay, Mooney on IT list; Hype absent [F via mirror] → **4** | Hype expected (Sella group) [A]; Postepay expected [A] → **3?** | Poste named (2020) [F]; Hype [U] → **3** | Poste Italiane config page [F]; Hype [U] → **4** | Listed as Postepay aggregator (openbankingtracker) [F medium]; Hype [U] → **4** | [U] → **2?** | "BancoPosta and Postepay via CBI Globe" [F]; Hype [U] → **4** | Poste (PIS) [F]; AIS [A] → **3** | [U] → **2?** | [U] → **2?** | [U] → **2?** | Poste on CBI Globe; Nexi prepaid cards [F] → **4** |
 | **A5 Account types beyond payment accounts (2)** | Separate Investments/Loans products; IT availability [U] [F product] → **3** | [U] → **2?** | Accounts + cards only [F] → **2** | Accounts/balances/transactions only [F] → **2** | Account natures incl. savings/bonus [F] → **3** | Payment accounts [F] → **2** | Payment accounts [F] → **2** | Wealth & Loans: securities, savings, loans, life insurance via non-PSD2, partly credential-based channel; 9 IT banks (dated) [F docs] → **5** (unique; compliance caveat) | Investments product US; EU [U] → **3?** | [U] → **2?** | [U] → **2?** | Payment accounts only [F] → **2** |
 
@@ -62,11 +64,11 @@
 | **E4 Docs quality (2)** | Strong, via index [F/A] → **4** | No developer evidence found [U] → **2?** | "Polished API with strong documentation" [A low] → **5** | Comprehensive OpenAPI; per-institution pages; some internal inconsistencies (90 vs 180) [F] → **4** | Swagger v6; detailed attributes [F] → **4** | Good but stale (90-day cap) [F] → **3** | Docs + monthly changelogs [F] → **4** | Docs via mirror [F] → **3** | Best-in-class [A] → **5** | [U] → **2?** | Portal with quick start [F] → **3** | Wiki after registration [F] → **2** |
 | **E5 DX / community (2)** | "Right answer for funded teams" (dev.to, low) [A] → **4** | None found [U] → **2?** | "Good sandbox", SDKs maintained (low) [A] → **4** | API-first, no UI (low) [A] → **3** | Widget + SDK + callbacks [A] → **4** | Was the self-hosted default (now closed) [F] → **3** | "Most self-serve and indie-friendly" (openbankingtracker, low) [A] → **4** | Finary community thread only [U] → **3** | [A] → **5** | [U] → **2?** | [U] → **3** | Enterprise-grade, bank-oriented → **2** |
 
-## 6. Block F — Consent (weight 4)
+## 6. Block F — Consent and SCA documentation (weight 4)
 
 | Criterion (w) | Tink | Fabrick | TrueLayer | Yapily | Salt Edge | GoCardless BAD | Enable Banking | Powens | Plaid EU | Neonomics | Mastercard OFE | CBI Globe direct |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **F1 Consent duration (2)** | "90 or 180 days depending on the market"; IT 180-day status [U] [F] → **3** | Follows ASPSP [A] → **3?** | Docs: "maximum of 90 days" (v1) [F] → **2** | **180 days EEA** explicit (one tutorial says 90) [F] → **5** | `period_days` up to `max_consent_days` per provider [F] → **4** | Docs cap at 90 days [F] → **2** | `valid_until` follows ASPSP [A] → **3?** | [U] → **3?** | Follows bank [A] → **3?** | [U] → **2?** | [U] → **2?** | Whatever the bank grants (up to 180) [F law] → **4** |
+| **F1 Documented consent / SCA lifecycle (2)** | "90 or 180 days depending on the market"; IT 180-day status [U] [F] → **3** | Follows ASPSP [A] → **3?** | Docs: "maximum of 90 days" (v1) [F] → **2** | **180 days EEA** explicit (one tutorial says 90) [F] → **5** | `period_days` up to `max_consent_days` per provider [F] → **4** | Docs cap at 90 days [F] → **2** | `valid_until` follows ASPSP [A] → **3?** | [U] → **3?** | Follows bank [A] → **3?** | [U] → **2?** | [U] → **2?** | Per-bank validity; 180-day SCA exemption is not a maximum consent lifetime [F law / U implementation] → **4** |
 | **F2 Consent renewal UX (2)** | `update-consent` URL; `sessionExpiryDate`; insight near expiry [F] → **4** | [U] → **2?** | `POST /connections/extend`; reconfirmation UX checklist [F] → **4** | Re-auth at bank in EEA; `/consents/extend-consent` UK-only [F] → **3** | Reconnect endpoint; mandatory end-user consent dashboard [F] → **4** | [F stale] → **2** | [U] → **2?** | [U] → **3?** | Link update mode [A] → **3?** | [U] → **2?** | [U] → **2?** | DIY → **2** |
 
 ## 7. Block G — Commercial (weight 15)
@@ -86,9 +88,9 @@
 
 | Criterion (w) | Tink | Fabrick | TrueLayer | Yapily | Salt Edge | GoCardless BAD | Enable Banking | Powens | Plaid EU | Neonomics | Mastercard OFE | CBI Globe direct |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **H1 EU data residency (3)** | Hosting region not found [U] → **2?** | Italian company [A] → **4** | "Primarily stores data within the EEA and the UK" [F] → **4** | Privacy policy not fetched [U] → **2?** | "EU/EEA users' data stored only in the EU"; ISO 27001; PCI DSS [F] → **5** | EU entity (LV) [A] → **3?** | Finland [A] → **4** | France [A] → **4** | Plaid B.V. (NL); hosting [U] → **3?** | Norway/EEA [A] → **3?** | Denmark; Mastercard global [A] → **3?** | Italy [F] → **5** |
+| **H1 EU data residency (3)** | Hosting region not found [U] → **2?** | Italian company; hosting/support locations unverified [U] → **2?** | "Primarily stores data within the EEA and the UK" [F] → **4** | Privacy policy not fetched [U] → **2?** | "EU/EEA users' data stored only in the EU"; ISO 27001; PCI DSS [F] → **5** | EU entity (LV) [A] → **3?** | Finnish company; hosting/support locations unverified [U] → **2?** | French company; hosting/support locations unverified [U] → **2?** | Plaid B.V. (NL); hosting [U] → **2?** | Norway/EEA [U] → **2?** | Denmark; Mastercard global [U] → **2?** | Italian gateway; hosting/support locations unverified [U] → **2?** |
 | **H2 Licensing arrangement (EEA licence + Italy evidence) (6)** | Tink AB, Finansinspektionen; Italian ops since 2019 [F] → **5** | Banca d'Italia payment institution (AISP+PISP) since May 2020 [F press] → **5** | TrueLayer (Ireland) Ltd, CBI C433487; EEA passporting [F registers] → **5** | Yapily Connect UAB, Bank of Lithuania LB002045, AIS+PIS, cross-border [F register]; IT line [A] → **5** | Only UK FCA FRN 822499 found; EEA entity [U] → **2** | Closed → **1** | FIN-FSA AISP; EBA register (own FAQ snippet); IT passport [A] → **4** | ACPR; 30 countries; IT launch 2023 [F self] → **4** | Plaid B.V., DNB R179714 [F] → **4** | Finanstilsynet; passported [F self, thin] → **3** | Mastercard OB Services Europe A/S; NCA [A] → **4** | Own licence required → **1** |
-| **H3 Operate under provider licence (route A documented for EEA users) (6)** | Customer on Tink's licence after KYC; Tink T&Cs consent in Link [F] → **4** | "Fabrick Pass" AISP-as-a-service for "fourth parties" [F offer / U B2C] → **4** | "UK and EU" unregulated clients; mandatory copy; UI review [F] → **4** | Delegated registration; Yapily Connect named on consent; no agency registration for EEA PSUs [F] → **5** | Partner Program documented [F]; entity [U] → **3** | n/a → **1** | Terms-consent widget; EB as regulated entity [F] → **5** | T&Cs track unregulated sub-clients [F snippet] → **4** | Entities [F]; route A for EU customers [A] → **2?** | [U] → **2?** | "Aiia Data … do not require a license" [F] → **5** | No → **1** |
+| **H3 Provider-described route A offer (Italian acceptance unverified) (6)** | Customer on Tink's licence after KYC; Tink T&Cs consent in Link [F] → **4** | "Fabrick Pass" AISP-as-a-service for "fourth parties" [F offer / U B2C] → **4** | "UK and EU" unregulated clients; mandatory copy; UI review [F] → **4** | Delegated registration; Yapily Connect named on consent; no agency registration for EEA PSUs [F] → **5** | Partner Program documented [F]; entity [U] → **3** | n/a → **1** | Terms-consent widget; EB as regulated entity [F] → **5** | T&Cs track unregulated sub-clients [F snippet] → **4** | Entities [F]; route A for EU customers [A] → **2?** | [U] → **2?** | "Aiia Data … do not require a license" [F] → **5** | No → **1** |
 | **H4 Agent / FPP possibility (route B) (1)** | Exists on paper; one agent in total [F] → **2** | [U] → **2?** | Agent model documented (UK-framed, transitional) [F] → **3** | Not used for EEA PSUs [F] → **1** | Not offered [A] → **1?** | — → **1** | [U] → **2?** | [U] → **2?** | YNAB is an agent of Plaid Financial Ltd (UK); EU [U] → **2?** | [U] → **2?** | [U] → **2?** | n/a → **1** |
 | **H5 Time-to-market (4)** | Hosted Link + KYC + enterprise sales; weeks–months [U] → **3** | Enterprise onboarding weeks–months [A] → **2?** | Fast sandbox; UI review; sales [A] → **3** | Sales for production keys; build UI + scheduler [A] → **3** | Widget + SDK; Test status; but P0 entity question [A] → **3** | — → **1** | Self-serve sandbox → restricted production → contract; weeks [A] → **4** | [U] → **3?** | Link fast; EU sales [A] → **3** | [U] → **2?** | Quick-start docs; onboarding [U] → **3** | 6–12 months licence first → **1** |
 | **H6 Lock-in (5 = lowest) (3)** | Category/recurring ids lock; raw ok [A] → **3** | Proprietary API [A] → **3** | Simple schema [A] → **4** | Berlin-Group-like schema; Data Plus optional [A] → **4** | Salt Edge ids/categories; `extra` keeps raw [A] → **3** | Thin API [A] → **3** | Thin API near Berlin Group; BYO-licence TSP mode = exit path [F] → **4** | Proprietary; categories [A] → **3** | Plaid schema [A] → **3** | [U] → **3?** | [U] → **3?** | Raw standard, no vendor → **5** |
@@ -100,38 +102,57 @@
 
 Block weights: A coverage 23 · B transaction data 10 · C balances/history/refresh/webhooks 8 · D enrichment 4 · E integration/DX 9 · F consent 4 · G commercial 15 · H legal/strategic 27.
 
-| Rank | Provider | Weighted score (0–5) | Share of weight resting on UNKNOWN defaults | Reading |
+| Rank | Provider | Weighted judgement score (0–5) | Weight of explicitly imputed `?` scores | Reading |
 |---|---|---|---|---|
-| 1 | **Tink** | **3.60** | 12 % | Most complete managed platform; penalised by pricing opacity and unknown residency; wallets absent from IT list. |
-| 2 | **Yapily** | **3.44** | 12 % | Best licence evidence, richest raw data, documented 180-day consent; DIY refresh/UI; residency unknown. |
-| 3 | **Enable Banking** | **3.36** | 12 % | Explicit Italian coverage incl. 2026 card work; self-serve pilot; per-account pricing with unknown floor; no enrichment/SDK. |
-| 4 | Salt Edge | 3.26 | 16 % | Would be a top-two candidate on data and operations; held back by the unverified EEA entity (H2 = 2). |
-| 5 | Powens | 3.07 | 49 % | Unique wealth channel; too much unknown. |
-| 6 | Plaid EU | 3.06 | 54 % | Best DX; route A for EU B2C unverified. |
-| 7 | TrueLayer | 3.04 | 9 % | Well documented but no IT enrichment, 90-day docs, 2025 restructuring. |
-| 8 | Fabrick | 2.79 | 78 % | Score reflects lack of developer evidence, not a negative finding; Italian supervision is a qualitative plus the matrix cannot capture. |
-| 9 | Mastercard OFE | 2.66 | 64 % | Clean licence wording; no Italian evidence. |
-| 10 | CBI Globe direct | 2.61 | 13 % | Not usable without own licence (phase 2+). |
-| 11 | Neonomics | 2.25 | 85 % | Stability concern; no Italian depth. |
-| 12 | GoCardless BAD | 1.93 | 24 % | Closed to new customers. |
+| 1 | Tink | 3.60 | 12 % | Managed-platform documentation; price, residency, field quality and role gates unclosed. |
+| 2 | Yapily | 3.44 | 12 % | Rich documented raw schema; Italian fill-rates, hosting, price and legal role untested. |
+| 3 | Enable Banking | 3.30 | 15 % | Documented self-service pilot and account-price model; quota, residency and field quality untested. |
+| 4 | Salt Edge | 3.26 | 16 % | EEA entity/passport gate unresolved despite documented data features. |
+| 5 | TrueLayer | 3.04 | 9 % | Documentation available; current Italian commercial and account-type coverage untested. |
+| 6 | Plaid EU | 3.03 | 54 % | Strong DX reference; EU B2C route, raw field quality and hosting untested. |
+| 7 | Powens | 3.01 | 52 % | Wealth channel documented; licensing, commercial and privacy conditions require review. |
+| 8 | Fabrick | 2.73 | 81 % | Sparse developer evidence; Italian supervision is not a legal clearance for Lilleri. |
+| 9 | Mastercard OFE | 2.63 | 64 % | Italian depth and startup terms untested. |
+| 10 | CBI Globe direct | 2.52 | 16 % | Own regulatory route required; gateway membership does not prove coverage of every account type. |
+| 11 | Neonomics | 2.22 | 85 % | High uncertainty and stability concern; not shortlisted. |
+| 12 | GoCardless BAD | 1.93 | 24 % | Closed to new customers; excluded regardless of score. |
 
-**Interpretation.** The top three are separated by 0.24 points while each carries 12 % of its weight on defaulted UNKNOWNs (a single RFP answer moves a score by ±0.1–0.2); this is a shortlist, not a ranking. The decision in `open-banking-providers.md` §5 applies two non-scorable gates (commercial accessibility for a pre-seed B2C company; verified EEA licence for Italian users) and Lilleri's build-own strategy, which is why Yapily is primary and Enable Banking fallback while Tink is the challenger.
+**Interpretation (DECISION):** scores support an RFP shortlist, not a production procurement decision. The `?` share counts only explicitly imputed scores; other cells also contain ASSUMPTIONS, mixed UNKNOWN fields and untested vendor claims. It is therefore a lower bound on uncertainty, not a confidence measure. No statistical equivalence or demonstrated coverage is claimed. Country of incorporation earns no residency credit. All providers must separately pass legal role/passport, bank-level data-quality, commercial and data-location gates in `open-banking-providers.md` §5.5. Yapily remains a provisional RFP preference, Enable Banking a pilot candidate, and Tink a challenger.
+
+Reproducible score check (DECISION; Python standard library, run from repository root):
+
+```python
+from pathlib import Path
+import re
+weights, totals, imputed = [], [0] * 12, [0] * 12
+for line in Path("docs/research/provider-capability-matrix.md").read_text().splitlines():
+    if not re.match(r"^\| \*\*[A-H]\d+ ", line):
+        continue
+    cells = [cell.strip() for cell in line.split("|")[1:-1]]
+    weight = int(re.search(r"\((\d+)\)\*\*$", cells[0]).group(1))
+    weights.append(weight)
+    for index, cell in enumerate(cells[1:]):
+        score = int(re.findall(r"→ \*\*([1-5])(?:\?)?\*\*", cell)[-1])
+        totals[index] += weight * score
+        if re.search(r"→ \*\*[1-5]\?\*\*", cell):
+            imputed[index] += weight
+assert sum(weights) == 100
+print([round(total / 100, 2) for total in totals], imputed)
+```
 
 ## 10. Sensitivity notes — which UNKNOWN could flip the ranking
 
-| # | UNKNOWN / scenario | Change applied | Result (top of table) | Flip? |
-|---|---|---|---|---|
-| S1 | **Salt Edge names an EEA-licensed entity with an Italy passport** | H2 2→5, H3 3→5 | Tink 3.60 · **Salt Edge 3.56** · Yapily 3.44 · EB 3.36 | Yes — Salt Edge jumps from 4th to 2nd; it would become the main alternative to Yapily (managed refresh, transfer/duplicate flags, EEA residency). This single written answer is the most valuable one in the RFP. |
-| S2 | **Tink offers startup-accessible terms** (quote at/below Base, published floor, non-exclusive) and fast onboarding | G1 2→4, G3 2→4, G7 2→4, H5 3→4 | **Tink 3.80** · Yapily 3.44 · EB 3.36 | Confirms Tink as primary if the commercial gate opens; this is the promotion condition in the decision. |
-| S3 | **Yapily's quote is high** (above Base; floor > €1.5k/month) | G1 3→1, G3 3→1 | Tink 3.60 · **EB 3.36** · Yapily 3.32 | Yes — Yapily drops below Enable Banking; the fallback becomes primary (decision gate G2). |
-| S4 | **Enable Banking's minimum invoice is high and its raw fields are thinner than assumed** | G1 4→2, G3 3→1, B6 4→3 | Tink 3.60 · Yapily 3.44 · Salt Edge 3.26 · EB 3.21 | EB falls to 4th; fallback role would pass to Salt Edge only if S1 also resolves, otherwise to TrueLayer/Tink. |
-| S5 | **Fabrick sells Fabrick Pass to a B2C startup with usable DX** | G1→4, G7→4, E4→4, E5→4, H5→4, A2→4 | Tink 3.60 · Yapily 3.44 · EB 3.36 · Salt Edge 3.26 · **Fabrick 3.19** | No flip on the numbers (still 5th); but Italian supervision answers the P0 legal question (not scorable) — treat as a qualitative override candidate if counsel finds route A under a foreign licensee problematic. |
-| S6 | **Mastercard proves Italian coverage and startup pricing** | A1→4, A2→3, G1→3 | unchanged top four; Mastercard ≈ 2.9 | No. |
-| S7 | **Build-own profile**: enrichment criteria neutralised (D1–D3 = 3 for all) | — | **Tink 3.54** · Yapily 3.44 · **EB 3.42** | Gap Tink–EB narrows to 0.12; Yapily and EB statistically tied → tie-breakers are licence evidence, documented raw fields and documented 180-day consent (Yapily) vs pilot speed, EU company and price model (EB). |
-| S8 | **Yapily confirms EU/EEA hosting** | H1 2→4 | Tink 3.60 · Yapily 3.50 | No flip; but a "non-EEA hosting" answer is a binary gate (G3) independent of the score. |
-| S9 | **Wallet coverage**: Tink's IT list lacks PayPal/Satispay/Hype (confirmed) while Yapily/EB list PayPal | A1 Tink 4→3 | Tink 3.51 · Yapily 3.44 · EB 3.36 | Almost closes the Tink–Yapily gap; if Yapily or EB also confirms Satispay, Tink's lead disappears. |
-| S10 | **Banca d'Italia rejects route A for a B2C app under a foreign licensee** (counsel outcome) | H3 → 1 for all foreign providers; Fabrick keeps 4 | Fabrick leads; everything else collapses to route B/C | Total flip — this is why the Fabrick enquiry and the counsel opinion run in parallel with the RFP (decision D4/D9). |
-| S11 | **Italian field fill-rates turn out poor at CBI Globe banks** (counterparties/ISO codes empty) | B6 differences vanish (all providers deliver the same sparse payload) | Yapily loses its +2 on B6 (−0.06); ranking unchanged | No flip, but it changes the reconciliation design (description-based matching dominates) — measured in the EB pilot. |
+| Scenario (all HYPOTHESIS until written evidence) | Decision consequence |
+|---|---|
+| Salt Edge names the EEA AISP, Italy passport and the permitted Lilleri role | Re-admit to the RFP and rescore; a register entry alone does not pass data, privacy or price gates. |
+| Tink offers startup-accessible terms and passes every gate | Re-evaluate the primary preference; managed operations may offset integration work. |
+| Yapily price, hosting, role or Italian pilot results fail a gate | Pause real integration and compare qualified alternatives; do not infer Enable Banking’s price or hosting from its country. |
+| Enable Banking’s quota, recurring invoice or raw field quality differs from assumptions | Recompute account/user economics and reconciliation feasibility before choosing the fallback. |
+| Fabrick offers a B2C contract with good Italian field quality | Rescore on written evidence; Italian supervision is a benefit, not automatic clearance of route A. |
+| Enrichment is removed from the score | Recompute the table rather than asserting a statistically meaningful tie. |
+| Banca d’Italia/counsel rejects the proposed Lilleri role | Reclassify the product/contract route; Fabrick is affected too unless its specific arrangement is approved. |
+| CBI-bank counterparties or stable IDs are absent | Accuracy may be constrained across multiple providers; revise automatic thresholds and use the Review Inbox. |
+| Italian wallet/credit-card coverage is unverified | Keep bank-side movements and explicitly incomplete manual/import views; no connected-wallet promise. |
 
 ## 11. Criteria the matrix cannot capture (qualitative overrides)
 
@@ -139,7 +160,7 @@ Block weights: A coverage 23 · B transaction data 10 · C balances/history/refr
 |---|---|
 | Consent-screen name familiar to Italian consumers | Fabrick (Sella) and Tink (Visa) carry recognisable names; "Yapily Connect UAB" and "Enable Banking" do not. Mitigation is copy ("Lilleri uses …, an AISP authorised by …"), not a provider choice; weight = trust, unquantified here. |
 | Banca d'Italia supervision of the AISP of record | Only Fabrick (and CRIF, unverified). Value depends entirely on counsel's answer to question L1 in `open-banking-providers.md`. |
-| Two-provider resilience | The adapter architecture (decision D7) makes the second-ranked provider a live fallback per institution; the matrix scores providers in isolation. |
+| Two-provider resilience | The adapter architecture (decision D7) permits a future second provider. Reconnection needs that provider’s terms, user authorisation and identifier reconciliation; automatic transfer of bank consent is not assumed. |
 | Wallet coverage (PayPal, Satispay, Hype) | UNKNOWN for all but Tink (absent); scored inside A1 only lightly because no provider has positive evidence. RFP clause required. |
 
 ---
@@ -167,4 +188,18 @@ Block weights: A coverage 23 · B transaction data 10 · C balances/history/refr
 
 ## Sources
 
-This matrix cites no source that is not already listed, with URL and verification date (2026-10-02), in `open-banking-providers.md` → Sources (raw-note source numbers `A-#n`, `B-#n`, `NB-S-n`, `REG-S-n` and `NEW-1…NEW-10`). Per-cell provenance: Block A — A-§2.3, A-§3.1–3.4, B-§2.2, B-§4, B-§6–8, B-§13, B-§16.1, NB-S-37, NEW-7, NEW-9; Block B — A-§2.4, A-§3.x "Fields", B-§4–6, B-§8; Block C — A-§2.5, A-§3.x, B-§3–6; Block D — A-§3.x "Enrichment/Recurring/Account holder", B-§5–8, B-§12; Block E — A-§3.x "Sandbox/Mobile SDK/Flow/DX", B-§4 (restricted production, widgets), B-§6; Block F — A-§2.1, A-§2.5, A-§3.x "Consent"; Block G — A-§1.5, A-§3.x "Pricing/Commercial/SLA", B-§4 (minimum monthly invoice), B-§7, NEW-2, NEW-6; Block H — A-§2.6 (AV/AV2), A-§3.x "Licensing/EU residency/Lock-in", B-§2.1, B-§15.1, REG-§10.2, NEW-1, NEW-8. Script used for totals and sensitivities: `score_matrix.py` (session scratchpad; weights and scores identical to the cells above).
+This matrix cites no source that is not already listed, with URL and verification date (2026-10-02), in `open-banking-providers.md` → Sources (raw-note source numbers `A-#n`, `B-#n`, `NB-S-n`, `REG-S-n` and `NEW-1…NEW-10`). Per-cell provenance: Block A — A-§2.3, A-§3.1–3.4, B-§2.2, B-§4, B-§6–8, B-§13, B-§16.1, NB-S-37, NEW-7, NEW-9; Block B — A-§2.4, A-§3.x "Fields", B-§4–6, B-§8; Block C — A-§2.5, A-§3.x, B-§3–6; Block D — A-§3.x "Enrichment/Recurring/Account holder", B-§5–8, B-§12; Block E — A-§3.x "Sandbox/Mobile SDK/Flow/DX", B-§4 (restricted production, widgets), B-§6; Block F — A-§2.1, A-§2.5, A-§3.x "Consent"; Block G — A-§1.5, A-§3.x "Pricing/Commercial/SLA", B-§4 (minimum monthly invoice), B-§7, NEW-2, NEW-6; Block H — A-§2.6 (AV/AV2), A-§3.x "Licensing/EU residency/Lock-in", B-§2.1, B-§15.1, REG-§10.2, NEW-1, NEW-8. Totals are reproducible with the parser in §9. Sensitivity decisions in §10 are qualitative HYPOTHESES, not vendor measurements.
+
+## Review log
+
+Repository evidence/arithmetic review — 2026-10-02. Scores are DECISION judgements; not a vendor benchmark.
+
+| Critique | Resolution | Remaining evidence / owner |
+|---|---|---|
+| MAJOR — EU corporate country earned data-residency credit | Country-only H1 cells now UNKNOWN with imputed score 2; actual region/support/subprocessors required | Providers/Privacy: DPA, full data-location/access and onward-transfer map |
+| MAJOR — imputed-score share was read as total uncertainty | Column now names `?`-score weight; explicitly excludes other assumptions/mixed unknowns and is not confidence | RFP owner: replace assumptions and verify all gates |
+| MAJOR — precise ranking/statistical ties and scratchpad script were unreviewable | Re-parsed 41 rows, weights=100, totals recomputed; reproducible standard-library parser embedded; statistical claims removed | Architecture: rescore only on written quotes/pilot evidence |
+| BLOCKER — route-A offer score looked like legal acceptance | H3 scores documentation of an offer; every selected route separately requires approved legal role/passport/contract | Counsel/Provider: G1 in provider decision |
+| MAJOR — sensitivity totals became stale after residency corrections | Sensitivities are explicit qualitative hypotheses; recompute a numeric scenario before using it | Procurement: quoted-price/location/data-quality scenarios |
+
+**Result:** Tink 3.60, Yapily 3.44, Enable Banking 3.30; provisional shortlist retained, not a production decision. **Human blockers:** exact legal role/Italy passport, prices/floors/quotas, data-region access map, SLA and bank-level field/completeness pilot. No score overrides a failed gate.

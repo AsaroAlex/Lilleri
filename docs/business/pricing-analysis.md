@@ -1,21 +1,16 @@
-# Lilleri pricing analysis — competitor prices, willingness to pay, store economics, proposed price points
+# Lilleri pricing analysis — research anchors and testable prices
 
-**Project:** LILLERI (consumer PFM, Italy-first then Europe)
-**Document date / verification date of carried-over claims:** 2026-10-02
-**Inputs:** the nine raw research documents listed in `business-model.md` (cited as R-BC, R-OBA, R-OBB, R-US, R-EU, R-IT, R-PP, R-AI, R-BB) plus WebSearch checks run on 2026-10-02 (W-1…W-6, search-engine summaries, medium reliability).
-**Currency conventions:** prices are quoted in the vendor's currency and converted to EUR at **1 USD = €0.855 and 1 GBP = €1.17 (ASSUMPTION — use the live rate before any decision)**. Consumer prices are gross (incl. VAT) unless stated. Italian VAT on digital services is 22 % (FACT, law; R-BC §8).
-**Label key:** FACT · ASSUMPTION · HYPOTHESIS · DECISION · OPEN QUESTION · UNKNOWN.
+**Review date:** 2026-10-02. **Evidence:** external claims and URLs below are inherited from the research; this review rechecks document consistency and arithmetic, not live vendor terms or legal clearance. Source verification dates belong to the cited research. FACT labels there retain the original limitations. All prices, conversion, usage, costs and projections proposed here are ASSUMPTIONS or HYPOTHESES; DECISION means a reversible internal planning choice.
 
----
+**Delivery boundary (DECISION):** local mock → official sandbox → legally cleared, contracted, consented real-data beta → store launch → later capabilities. Requirements and budgets do not prove implementation. No real-bank keys, bank credentials, purchase, contract, counsel opinion or store billing are obtained by these documents.
 
-## 0. Summary
+## 0. Pricing conclusion
 
-- The European "Plus" band moved up during 2025–26 to **€3.99–€5.99 per month / €30–€48 per year**; Italian neobank and payment-app tiers sit at **€2.90 / €3.99 / €4.90 / €9.90–€9.99 / €15.99–€16.90**; the US full-PFM anchor is **$95–$109 per year** with a premium tier at 2–3× (FACT, §1–§2).
-- **DECISION:** Plus €4.99/month or €39.99/year (Low €3.99/€29.99, High €5.99/€49.99); Pro €7.99/€64.99 (Low €6.99/€54.99, High €9.99/€79.99); Family €9.99/€79.99 for up to 5 people (Low €8.99/€69.99, High €12.99/€99.99); Free as defined in `business-model.md`. Annual ≈ 33 % off; 30-day Pro trial, no card on web; price parity between web and in-app; launch prices grandfathered for life (§7–§10).
-- Every €4.99 charged nets Lilleri ≈ €3.48 via Apple IAP (Small Business Program 15 %) or Google Play Billing (10 % + 5 %), ≈ €3.37 via the 10 % alternative-payment rails net of PSP fees, ≈ €3.75 via web Stripe; all minus RevenueCat 1 % above $2.5 k MTR (FACT-derived, §5).
-- The Plus price is the third-largest lever on gross profit per 1,000 MAU after AIS price and paid share: €3.99 → €5.99 moves Base GP per 1,000 MAU from €42 to €143 (HYPOTHESIS from the model in `unit-economics.md`). The beta must run a Van Westendorp survey and a €4.99 vs €5.99 test before launch (§11).
+**DECISION:** one consumer paid SKU at launch, **Lilleri Plus**, beside **Lilleri Gratis**. Plus **€4.99/month or €39.99/year** is a HYPOTHESIS, with €3.99/€29.99 and €5.99/€49.99 alternatives. Consumer **Lilleri Famiglia** is Later after safe sharing ships; hypothetical €9.99/€79.99 is a test anchor, not a purchasable five-seat promise. **Lilleri Pro** is reserved for future professional workflows; no launch price or SKU.
 
----
+Italian willingness to pay is UNKNOWN. Competitor prices below are carried research observations with source limits; they do not establish Lilleri conversion. The free beta has no paid conversion. Proposed 30-day **non-renewing Plus preview** needs implemented entitlements and tested end-state copy; it requires no card and never charges at expiry. Store introductory auto-renewing offers are not part of this proposal.
+
+The prior blended €3.68 ARPPU is retired. At 60% annual mix and provisional 13% effective take, net Plus ARPPU is **€2.85**. Revised Base GP is **−€79.49/1k MAU** with offers zero. Test prices against retained net contribution rather than assumed unchanged demand.
 
 ## 1. Competitor price table (EUR-converted; state as of 2026-10-02)
 
@@ -71,168 +66,121 @@
 |---|---|---|---|
 | Sustained EU Plus prices | Finanzguru €4.29 (monthly) / ≈ €2.99 (annual-equivalent); Outbank €3.99; Bankin' €4.99; Linxo €4.49; Dyme €4.99; Snoop £5.99; Emma £4.99; Spendee $5.99; Wallet IT €5.99 | FACT (R-EU §8; R-PP §F) | Band €3.99–€5.99 monthly, €30–€48 annual |
 | Direction of travel | Snoop +20 % (2026), Spendee ×2, Finanzguru monthly €2.99→€4.29, Linxo Lab adds a paid tier, PocketGuard removed its free plan | FACT (R-EU pass 2; R-US W27) | The market is testing the ceiling, not racing to the bottom |
-| > €9/month only with perks | Plum Max £14.99 (insurance/VPN), Dyme Gold €9.99, Emma Ultimate £14.99, Cleo Pro £12.99 (cash advance) | FACT (R-EU §8) | Pro ≤ €9.99; Family is the only plan allowed above €9.99 (Low/High range) |
-| US ceiling | $95–$109/yr full PFM; premium tier 2–3× (Monarch Plus $199–$299) | FACT (R-US §4.4) | Confirms a 2× premium multiple is accepted when it bundles planning/AI |
+| > €9/month only with perks | Plum Max £14.99 (insurance/VPN), Dyme Gold €9.99, Emma Ultimate £14.99, Cleo Pro £12.99 (cash advance) | FACT (R-EU §8) | Comparator only; a richer household tier needs measured use and delivered sharing |
+| US ceiling | $95–$109/yr full PFM; premium tier 2–3× (Monarch Plus $199–$299) | FACT (R-US §4.4) | US comparator; does not establish an Italian premium multiple |
 | Effort pricing | Italian creators rank tools by minutes/month (ChatGPT 2 min, sheet 5 min, Wallet 15 min) | FACT low-medium (R-IT Y-02) | WTP is for time saved: "zero-setup" is the paid value |
-| Household WTP | Monarch unlimited household is "best-in-class"; Italian couples use free split apps or joint accounts; per-seat pricing does not fit | FACT (R-US S40; R-IT Y-05) | One Family price, not per-seat |
-| Price-increase backlash | YNAB $99→$109; Simplifi renewal step-up; Monefy/MoneyWiz/Money Pro forced subscriptions | FACT (R-PP §F) | Grandfather launch prices; never silent step-ups |
-| Trial auto-conversion anger | Emma £83.99 charge after cancelling trial; Cleo FTC $17 M (Mar 2025) | FACT (R-EU S-20, S-45) | Pre-renewal reminders, no-card trial on web |
-| Italian "free" expectation | 73 % of Italians use at least one app or digital service to manage expenses, 36 % at least two (2025 survey as summarised by search; attribution unclear); bank apps' analytics are free; creators recommend free apps | FACT low (W-7; attribution UNKNOWN) / FACT low (R-IT Y-33) | Free tier must be real; price the depth |
+| Household WTP | Monarch unlimited household is "best-in-class"; Italian couples use free split apps or joint accounts; per-seat pricing does not fit | FACT (R-US S40; R-IT Y-05) | Test one Famiglia price after safe sharing; seat ceiling and WTP UNKNOWN |
+| Price-increase backlash | YNAB $99→$109; Simplifi renewal step-up; Monefy/MoneyWiz/Money Pro forced subscriptions | FACT (R-PP §F) | Announce prices/terms clearly; do not commit an uncosted lifetime price |
+| Trial auto-conversion anger | Emma £83.99 charge after cancelling trial; Cleo FTC $17 M (Mar 2025) | FACT (R-EU S-20, S-45) | Non-renewing Plus preview proposal; an eventual auto-renewing purchase is a separate explicit flow |
+| Italian "free" expectation | 73 % of Italians use at least one app or digital service to manage expenses, 36 % at least two (2025 survey as summarised by search; attribution unclear); bank apps' analytics are free; creators recommend free apps | UNVERIFIED (W-7; attribution UNKNOWN) / carried anecdotal creator evidence | Free tier must be real; price the depth |
 | Direct WTP survey for PFM in Italy | None found | UNKNOWN | Run Van Westendorp + Gabor-Granger in the waitlist (§11) |
-| Trial length | 17–32-day trials convert at a median 42.5 % vs 25.5 % for < 4 days (cross-category, 115 k apps) | FACT medium (W-1) | 30-day trial |
+| Trial length | Cross-category search summaries suggest longer trials may work better; the cohort, eligibility and conversion denominator require primary-source verification | UNKNOWN applicability (W-1) | 30-day preview remains a hypothesis, not an evidence-derived optimum |
 
 ---
 
-## 3. Net-revenue waterfall per price (FACT-derived from R-BC §8; rates as of 2026-10-01)
 
-Gross price → ex-VAT (÷ 1.22) → after rail commission → after RevenueCat 1 % (applies above $2.5 k monthly tracked revenue).
+## 3. Payment/VAT waterfall and uncertainty
 
-| Rail | Rule (FACT) | €4.99 monthly | €39.99 annual (per month) | €7.99 monthly | €9.99 monthly |
-|---|---|---|---|---|---|
-| Ex-VAT | ÷ 1.22 | €4.09 | €2.73 | €6.55 | €8.19 |
-| Apple IAP, Small Business Program | 15 % of ex-VAT (EU terms 2026-10-01; standard 26 % above $1 M prior-year proceeds) | €3.48 | €2.32 | €5.57 | €6.96 |
-| Google Play Billing (EEA from 2026-06-30) | 10 % service fee + 5 % billing fee = 15 % | €3.48 | €2.32 | €5.57 | €6.96 |
-| Apple alternative payment in-app / out-of-app link | 10 % to Apple + own PSP (Stripe 1.5 % + €0.25) | ≈ €3.37 | ≈ €2.40 | ≈ €4.69 | ≈ €5.90 |
-| Google alternative billing / external link | 10 % to Google + own PSP | ≈ €3.37 | ≈ €2.40 | ≈ €4.69 | ≈ €5.90 |
-| Web (Stripe standard EEA card 1.5 % + €0.25; Billing +0.7 %) | Lilleri is merchant of record; VAT via OSS | ≈ €3.75 | ≈ €2.65 | ≈ €6.16 | ≈ €7.76 |
-| RevenueCat | −1 % of tracked revenue above $2.5 k MTR | −€0.03 | −€0.02 | −€0.06 | −€0.07 |
+Consumer prices include VAT. Italy 22% is the carried law reference; tax adviser must confirm the merchant and geographic route before checkout. Annual cash receipts and recognised monthly revenue differ. For a €4.99 monthly charge, ex-VAT is €4.09. For €39.99/year, recognised gross is €3.33/month and ex-VAT €2.73.
 
-Doubts: Stripe premium-EEA and non-EEA card rates conflict across sources (ASSUMPTION, R-BC §8 P2-10); Google programme-specific conditions for EEA link-outs are UNKNOWN (help pages blocked). Apple's standard 26 % applies if prior-year proceeds exceed $1 M (FACT, R-BC §8).
+```text
+nativeStoreNet = gross/(1+VAT) × (1−verifiedEffectiveStoreFee) − billingServiceFee
+webNet        = gross/(1+VAT) − PSPpercentage×gross − fixedPSPfee − billing/taxServiceFees
+linkedWebNet  = webNet − applicableExternalOfferCommission
+annualNetPerMonth = verifiedNetAnnualCharge / 12
+```
 
-**Blended take rate used in the model:** Low 8 % (50 % web, 50 % store on 10 % rails) / Base 13 % (70 % store at 15 %, 30 % web, + RevenueCat 1 %) / High 16 % (100 % store at 15 % + RevenueCat 1 %) — ASSUMPTION on channel mix (`unit-economics.md` U8).
+**Provisional fee envelope:** effective 8/13/16% take on ex-VAT revenue for model scenarios (ASSUMPTION). A 15% native-store case produces €3.48 monthly / €2.32 annual-equivalent before additional billing services. The carried research claims several 2026 EU programme rates; their dates, conditions, eligibility, fee stacking, thresholds, refunds and taxes require primary-source/contract verification. Do not treat a “10%” rail as automatically cheaper: PSP fixed fees, reporting and external-offer terms can erase the difference.
 
----
+Launch billing implementation must verify developer programme eligibility, signed terms, server-side receipts, renewal/failure/restore/cancellation states, store review, consumer information and tax remittance. Native IAP is a simplicity hypothesis; web checkout and alternative EU rails remain gated. No developer account, subscription service or tax registration is created by this document.
 
-## 4. Price anchoring and plan architecture
+## 4. Price presentation and choice
 
-| Technique | Application (DECISION unless noted) | Evidence |
-|---|---|---|
-| Market anchor | Plus at €4.99 sits at the Italian "second rung" (Revolut Plus €3.99, Satispay Plus €3.99, N26 Smart €4.90, Bankin'/Dyme €4.99) and below Wallet IT €5.99 | §1.2 |
-| Annual framing | Show monthly and annual side by side with the euro saving ("€39,99 all'anno — risparmi €19,89"); the annual-equivalent €3.33 is the number users will compare with Finanzguru's ≈ €2.99 | R-EU §8 |
-| Decoy / good-better-best | Pro €7.99 (single) next to Family €9.99 (up to 5) makes Family the obvious choice for couples and keeps Pro as the anchor for singles | Monarch household inclusion; Italian couples norm (R-IT §4.5) |
-| Free as the anchor of value, not of price | Free shows the full promise on one institution; the upgrade prompt names the concrete thing gained ("Aggiungi Fineco e Revolut con Plus") | R-PP §H #6 |
-| Charm pricing | .99 endings match every Italian anchor; whole-euro pricing (€5) would read as a rounding up | §1.2 |
-| No lifetime deals | PocketGuard's withdrawn-then-returned lifetime plan and Monefy/MoneyWiz migrations show the reputational cost | R-US §6 #4; R-PP §F |
-| No "ad-free" tier | Nothing has ads, so ad removal cannot be sold | `business-model.md` D-BM-5 |
+| Rule | Decision / test |
+|---|---|
+| Public names | Gratis / Plus; Famiglia Later; Pro reserved |
+| Benefit anchor | Supported additional source and optional delivered planning/reporting; never a more accurate ledger, better security or paid export |
+| Annual display | “€39,99 all’anno, addebitati in un’unica soluzione”; €19.89 saving vs 12×€4.99 (~33.2%); also show monthly total/period |
+| Default choice | No preselected purchase or trial-to-charge conversion; compare monthly/annual fairly; measure comprehension and refunds |
+| Price parity | Proposed equal VAT-inclusive price web/native; revisit only after verified net fees and comprehension tests |
+| Price changes | Clear notice and channel-specific consent/rights; no automatic renewal price jump promised, no lifetime protection committed |
+| No decoy SKU | One launch paid tier; Famiglia value comes from sharing, not an anchor designed to push people to an unavailable tier |
 
----
+## 5. Store and checkout release requirements
 
-## 5. App Store / Google Play commission and EU alternative terms — effects
+All-free beta uses test/shadow entitlements and charges nobody. Real billing is P1 before any purchase opens, independent of P0 domain entitlements. Confirm store/PSP fees at implementation, record evidence date and plan IDs, authenticate receipt webhooks and derive access from verified server state. Test duplicate/delayed/out-of-order events, restore across devices, grace periods, expiry, cancellation and refund. Security, privacy, correctness, held-history access and export/deletion stay available when access downgrades. Service/safety support is free for everyone.
 
-| Effect | Detail | Status | Decision |
-|---|---|---|---|
-| Base take | 15 % on both stores for a developer under $1 M (Apple SBP; Google 10 % service + 5 % billing) | FACT (R-BC §8) | Model Base 15 % on store sales |
-| 10 % rails | Apple: alternative payment in-app or out-of-app link at 10 % (+ own PSP) since 2026-10-01; choice fixed for 12 months; developer collects and remits VAT and reports monthly. Google EEA: alternative billing/external link at 10 % service fee, no billing fee | FACT high (Apple) / medium-high (Google) | Launch with native IAP (simplest, highest trust, refunds handled by store); evaluate the 10 % rails at ≥ 5 k subscriptions when the ≈ €0.11 per €4.99 gain exceeds the VAT/reporting/PSP overhead |
-| Apple over $1 M | 26 % standard IAP in the EU | FACT | Not before ≈ 25 k Plus-equivalent subscribers; re-evaluate rails then |
-| Subscriptions after year one | 15 % (Apple) irrespective of SBP; Google 10 % on all auto-renewing subscriptions from day one | FACT | Annual plans are favoured by the fee structure as well |
-| Store as merchant of record | Apple/Google remit consumer VAT; developer proceeds are net | FACT medium | No OSS registration needed for store sales; needed for web sales above the €10 k EU micro threshold |
-| RevenueCat | Free < $2.5 k MTR, then 1 % | FACT high | Keep; replace only above ≈ €250 k MTR if the 1 % matters |
+## 6. VAT and parity questions
 
----
+Consumer-location tax, merchant-of-record terms, web registration/OSS requirements, fixed PSP fees by term, subscriptions tax classification and cross-channel store constraints are OPEN. Resolve with tax/counsel/provider terms, not app-store anecdotes. The provisional fee envelope must be replaced by an invoice-level waterfall before launching checkout.
 
-## 6. VAT and web vs in-app parity
+## 7. Proposed price points (HYPOTHESES)
 
-| Item | Rule | Decision |
-|---|---|---|
-| VAT | 22 % Italy; B2C digital services taxed in the consumer's member state; EU-wide €10 k micro-business threshold then Union OSS (quarterly return in Italy) | FACT (law, R-BC §8) | Prices displayed gross incl. VAT everywhere; web sales through Stripe Tax + OSS registration before web billing opens |
-| Web vs IAP price | Web nets ≈ €3.75 vs ≈ €3.48 in-store per €4.99 | FACT-derived | **DECISION: price parity.** Same gross price on web and in-app; the ≈ €0.27 difference is not worth two price lists, user confusion and the appearance of steering; web checkout is offered on the site and via the permitted out-of-app link (10 % Apple commission on sales within 7 days of the tap) |
-| Trial parity | Web: 30 days, no card; stores: 30-day introductory free offer (store-native, requires the store account's payment method) | DECISION | Reminder 3 days before conversion on all channels |
-| Price localisation (later markets) | One EUR price list for the euro area; local-currency lists only when a market is opened | DECISION | — |
-
----
-
-## 7. Proposed price points (DECISION with Low/Base/High)
-
-| Plan | Low | Base (launch) | High | Who / why |
+| Public plan | Low monthly/yearly | Base test monthly/yearly | High monthly/yearly | Capability gate |
 |---|---|---|---|---|
-| Free | €0 | €0 | €0 | 1 institution (≤ 2 accounts) synced while active + import + all correctness features (`business-model.md` §4) |
-| Plus | €3.99/mo · €29.99/yr | **€4.99/mo · €39.99/yr** | €5.99/mo · €49.99/yr | Multi-institution, background refresh, unlimited history, alerts |
-| Pro | €6.99/mo · €54.99/yr | **€7.99/mo · €64.99/yr** | €9.99/mo · €79.99/yr | AI assistant, forecasting, receipts OCR, automation, API |
-| Family | €8.99/mo · €69.99/yr | **€9.99/mo · €79.99/yr** | €12.99/mo · €99.99/yr | Pro for up to 5 people + household ledger |
-| Business (Later) | €9.99/mo | **€14.99/mo · €119.99/yr** (placeholder) | €19.99/mo | Partita IVA features; not before month 12 — ASSUMPTION |
+| Lilleri Gratis | €0 | €0 | €0 | Proposed one supported institution/≤2 accounts plus manual/supported imports; quotes/legal route decide live-sync envelope |
+| Lilleri Plus | €3.99 / €29.99 | **€4.99 / €39.99** | €5.99 / €49.99 | Supported breadth and delivered optional planning; no paid correctness/security/export |
+| Lilleri Famiglia (Later) | €8.99 / €69.99 | €9.99 / €79.99 | €12.99 / €99.99 | Invite/revoke, per-member consent/isolation, shared permissions, own export; seats not committed |
+| Lilleri Pro (reserved) | UNKNOWN | UNKNOWN | UNKNOWN | Professional workflow research; no launch SKU |
 
-Net revenue per subscription-month (Base take 13 %, 60 % annual): Plus €2.85, Pro €4.60, Family €5.70; blended across the Base mix (65/15/20) **€3.68** (`unit-economics.md` §4). Gross-profit sensitivity to the Plus price at Base (per 1,000 MAU): €3.99 → €42; €4.49 → €67; €4.99 → €92; €5.49 → €117; €5.99 → €143 (HYPOTHESIS, model output).
+Using Base usage/conversion unchanged (an artificial sensitivity), Low/Base/High Plus pairs generate GP approximately **−€156.51 / −€79.49 / −€2.47 per 1k MAU**, without offers/minimums. A higher price may reduce demand/retention; economics must re-estimate those inputs together. Lower prices do not automatically improve acquisition or support cost.
 
-Why not €5.99 at launch: it would top the Italian second rung and exceed every Italian neobank "Plus" by €1–2 while Lilleri has no perks and no brand; the beta test decides (§11). Why not €3.99: at Base COGS the free tier is only fundable with Plus contribution ≥ €2.5/month; €3.99 leaves €1.88 (model).
+## 8. Preview proposal (HYPOTHESIS / DECISION)
 
----
+| Element | Scope |
+|---|---|
+| Closed beta | Free product access; no purchased subscription, trial autocharge or paid conversion metric |
+| Length | Proposed 30-day non-renewing Plus preview after implementation; 30 vs 34 days can be tested for end-of-month value |
+| Card / stores | No checkout or card required for the preview; no store-native introductory purchase is promised |
+| Access | Supported multi-institution capability only; no chat/OCR/household unlocked merely by the preview label |
+| Notice | Start/end date and post-preview envelope before connecting; expiry notices at day 23/27, with no charge wording |
+| End | User selects Gratis sources; unsupported extra refresh pauses after notice; held records stay accessible/correctable/exportable; explicit new checkout required to buy Plus |
+| Extension | Do not require fifty reviews or more accounts to earn time; referral reward later only after clear cost, fraud and consent controls |
 
-## 8. Trial strategy (DECISION)
+## 9. Annual pricing and retention
 
-| Element | Decision | Evidence |
+The €39.99 test point is ~33.2% below twelve monthly charges. Annual share 40/60/80% is an ASSUMPTION, not a target that justifies steering users. Measure annual renewal with an eligible maturity denominator, refunds and collected net revenue; do not infer LTV from cash prepayment. Reminder and easy renewal cancellation requirements depend on the implemented rail; no universal store cancellation/refund control is promised.
+
+## 10. Famiglia pricing, Later
+
+Start research with two adults with private accounts by default. A joint account is not proof that all member data can be shared. Per-member consent, account permissions, revoke/leave, own-member export/deletion and adversarial isolation tests are prerequisites. Average occupancy 2.3 is an ASSUMPTION. At Base hypothetical net revenue €5.70, Plus-core COGS for two/2.3/five active members is €2.13/€2.45/€5.33 before sharing overhead; five seats leave only ~€0.37 contribution. Separate account/fair-usage pricing, willingness to pay and workload must be evaluated before committing seats or adding revenue to launch.
+
+## 11. Price testing plan (RECOMMENDATION)
+
+| Method | Question / evidence | Decision rule |
 |---|---|---|
-| Length | 30 days of Pro | 17–32-day trials convert best (W-1); reconciliation needs weeks of data and at least one monthly cycle to show value (R-US §6 #12) |
-| Card | No card on web; store-native introductory offer in-app | YNAB 34 days no card is praised; Monarch 7-day card-required is a recurring complaint (R-US §5 #14) |
-| What the trial unlocks | All institutions connected (the full promise), Pro features | The free tier then keeps 1 institution; the user chooses which one |
-| Reminders | Day 23 ("una settimana alla fine della prova"), day 27, and on conversion day; cancellation link in every reminder | Emma/Cleo complaints (R-PP §A #7) |
-| End of trial | No auto-charge on web; in-app the store rule applies with the reminder above; connections beyond the free envelope pause with a clear message and one-tap upgrade; nothing is deleted | Trust priority; `business-model.md` Q8 |
-| Extensions | +15 days for completing onboarding (3 institutions connected, 50 reviews done) and for referrals | Product-led growth |
-| Student / young | 50 % off Plus with a .edu/.it university email (Later) | YNAB student year precedent |
+| Waitlist interviews + Van Westendorp/Gabor-Granger | Is supported multi-source correctness/time saved worth a subscription? Separate survey intent from observed purchase | Pre-register sample/segment/bank coverage; report uncertainty and selection bias; no optimum inferred from unsupported “60% band” rule |
+| Prototype choice | Gratis vs Plus; Famiglia concept separately with visible Later label | Test understanding of free limits and preview end; no live charge in a mock |
+| Eligible purchase experiment, after billing gates | €4.99/€39.99 vs €5.99/€49.99 | Primary: collected net contribution per eligible start, including refunds, preview COGS and support; inspect retention, coverage/trust and intervals before choosing |
+| Term choice | Monthly/annual informed choice, not default manipulation | Compare comprehension, annual maturation and refunds; no artificial annual-mix quota |
 
----
-
-## 9. Annual discount (DECISION)
-
-| Option | Annual price for Plus | Discount vs 12 × monthly | Observed norm |
-|---|---|---|---|
-| 16 % (Finanzguru 2025, Outbank, Satispay Plus) | €49.99 | 16 % | DE/IT |
-| **33 % (chosen)** | **€39.99** | **33 %** | Snoop 33 %, Bankin' 33 %, Emma ≈ 30 %, Linxo 44 % |
-| 40–44 % (US) | €35.99 | 40 % | YNAB 39 %, Monarch 44 % |
-
-Rationale: 33 % puts the annual-equivalent at €3.33, within €0.34 of Finanzguru's annual rate, while keeping the monthly price as the visible anchor. Annual mix target 60 % (Low 40 / High 80, R-BC §12). Annual renewals get a reminder 7 days before and can be switched to monthly in-app.
-
----
-
-## 10. Family pricing (DECISION)
-
-| Element | Decision | Evidence / doubt |
-|---|---|---|
-| Model | One household price, up to 5 members, each with own login and private accounts; shared household ledger; member-level privacy controls | Monarch unlimited household on one price; YNAB Together up to 6; Italian norm against per-seat (R-IT Y-05) |
-| Price | €9.99/mo · €79.99/yr (Low €8.99/€69.99; High €12.99/€99.99) | 2× Plus; below N26 You/Revolut Premium (€9.90/€9.99) only in the Low case |
-| COGS caveat | Members per family 2.0 / 2.3 / 3.0 (ASSUMPTION) × 3 accounts × AIS price; at Base the Family contribution is €3.09/month (54 % margin) vs Plus €1.78 (62 %) — Family is accretive in euros, dilutive in margin | `unit-economics.md` §5 |
-| Alternative to test | "Plus includes one partner" (2 people) at €5.99 — may fit Italian couples better and lift Plus ARPPU | OPEN QUESTION Q7 in `business-model.md` |
-| Guardrails | Family members must be in the same household (self-declared); max 5; member removal keeps the member's data exportable | Trust |
-
----
-
-## 11. Price testing plan (Recommendation)
-
-| Step | When | Method | Decision rule |
-|---|---|---|---|
-| Van Westendorp (4 questions) + Gabor-Granger on Plus | Waitlist (n ≥ 400) | Survey in Italian; test €3.99 / €4.99 / €5.99 monthly and €29.99 / €39.99 / €49.99 annual | Pick the point of marginal expensiveness if ≥ 60 % of the optimal-price band |
-| Plan-choice conjoint (Plus vs Pro vs Family) | Closed beta | 3-plan paywall mock with feature bundles | Confirms the Pro/Family gap and whether AI chat belongs in Plus |
-| Live A/B of €4.99 vs €5.99 | Open beta, ≥ 2,000 trial starts per arm | RevenueCat Experiments | Keep the higher price if net revenue per trial start is ≥ 95 % of the lower price's |
-| Annual share test | Open beta | Default-selected annual vs monthly | Target ≥ 60 % annual |
-
----
+Sample size is determined by baseline effect/variance and minimum detectable difference; “2,000 per arm” alone is not proof of power. Fee/product capabilities and price assignments must be stable and documented.
 
 ## 12. Decisions / Recommendations
 
-| ID | Decision |
+| ID | Decision / recommendation |
 |---|---|
-| D-PR-1 | Launch prices (Base): Plus €4.99/€39.99; Pro €7.99/€64.99; Family €9.99/€79.99; Free €0; Business Later |
-| D-PR-2 | Annual ≈ 33 % off; annual share target 60 % |
-| D-PR-3 | 30-day Pro trial, no card on web, store-native offer in-app, reminders at day 23/27/30, no silent conversion |
-| D-PR-4 | Price parity web vs in-app; native IAP at launch; evaluate 10 % rails at ≥ 5 k subscriptions |
-| D-PR-5 | Launch prices grandfathered for life; increases apply to new subscribers only, announced 30 days ahead |
-| D-PR-6 | One Family price up to 5 members; test "Plus + partner" as an alternative |
-| R-PR-1 | Run the §11 tests before fixing Plus; the business case prefers €5.99 but trust and anchors prefer €4.99 |
-
----
+| D-PR-1 | Gratis / Plus; Plus €4.99/€39.99 hypothesis; Famiglia Later; Pro reserved and unpriced |
+| D-PR-2 | Annual saving shown transparently; annual share/retention measured, not steered |
+| D-PR-3 | 30-day non-renewing Plus preview proposal; free beta; no charge without explicit separate purchase |
+| D-PR-4 | Equal gross web/native test prices; billing choice follows verified terms and implemented consumer safeguards |
+| D-PR-5 | No lifetime price/seat commitment; price-change rights/notice follow actual contract/channel |
+| D-PR-6 | Famiglia price/occupancy hypothetical until sharing and member controls validated |
+| R-PR-1 | Re-check primary competitor/fee evidence, then compare retained contribution with uncertainty before price selection |
 
 ## 13. Open questions
 
-| # | Question | How to verify |
-|---|---|---|
-| Q1 | Monarch Plus list price ($299 vs $199) — affects the "premium at 2–3×" pattern only | monarch.com/pricing |
-| Q2 | Exact EUR App Store prices for Spendee, MoneyWiz, Toshl, Splitwise in Italy; Wallet IAP period mapping | apps.apple.com/it listings, In-App Purchases section |
-| Q3 | Revolut Ultra €45 vs €55 and the exact IT list for Revolut/N26 | revolut.com/it-IT/our-pricing-plans; n26.com/it-it/conti |
-| Q4 | Stripe Italy premium/international card rates; Stripe Tax rate | stripe.com/it/pricing |
-| Q5 | Google Play EEA external-offers programme conditions (non-fee) | support.google.com/googleplay/android-developer/answer/14372887 |
-| Q6 | Italian WTP for a PFM (no survey found) | Waitlist survey (§11); Osservatorio Fintech & Insurtech PoliMi "Il consumatore Fintech & Insurtech del futuro" |
-| Q7 | Attribution and method of the "73 % of Italians use at least one app to manage expenses" figure | Open focusrisparmio.com / SumUp survey page; ISP–Einaudi "Indagine sul Risparmio 2025" |
+Italian actual WTP and purchase retention; primary competitor list prices; RevenueCat benchmark denominators; unverified W-7 attribution (exclude from market proof); store eligibility/fee stacking; PSP/tax fees; preview-end comprehension; household occupancy/privacy; allowed channel parity and renewal/refund rules. Sources below retain original verification limitations.
 
----
+## Review log
+
+| Reviewer | Finding | Resolution |
+|---|---|---|
+| Brand/PM (major) | Consumer Pro and launch Famiglia contradicted D7/MVP | Canonical Gratis / Plus; Famiglia Later; Pro professional reserved |
+| CFO (major) | Trial described no-card and store-native autocharge at once | Separate free beta and non-renewing preview; explicit checkout gate |
+| CFO (major) | Precise rail proceeds/fee thresholds stated without current programme eligibility | Retained source chain, replaced authoritative numbers with provisional waterfall and primary-verification requirements |
+| Consumer (major) | Lifetime prices, default annual selection and fifty-review extension conflict with simple informed choice | Removed lifetime commitment/steering/work incentive; neutral term comparison |
+| Investor (major) | Survey/snippet trial figures treated as Italian purchase evidence | Denominator and attribution checks; contribution-based experiment with uncertainty |
 
 ## 14. Sources
 

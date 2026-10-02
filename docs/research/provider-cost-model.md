@@ -3,12 +3,14 @@
 **Project:** LILLERI · **Date / verification date for every claim:** 2026-10-02 · **Author:** CTO fintech + open banking specialist, founding team
 **Status:** Phase 1 synthesis. Inputs: `docs/research/raw/open-banking-providers-a.md` (A), `open-banking-providers-b.md` (B), `non-bank-sources-and-os-limits.md` (NB), and the WebSearch queries run for `open-banking-providers.md` (`NEW-n`). Companion: `provider-capability-matrix.md`, `open-banking-providers.md`.
 
+**Review provenance (DECISION, 2026-10-02):** this revision checks repository evidence, source consistency and design implications. Source URLs/access dates below are inherited observations, not fresh web verification. FACT means the cited observation is recorded; vendor performance, source independence, market prevalence and current legal/commercial eligibility remain unverified where stated.
+
 ## How to read this document — read this first
 
-- **There is no public price list for any shortlisted provider** (FACT, all raw notes and NEW-2/NEW-6). Every euro figure below that is not labelled FACT is an **ASSUMPTION range** chosen to bracket the plausible outcome of a quote, with the anchor that motivated it and the way to verify it (request a quote). Do not budget from the point estimates; budget from the ranges, and replace them with quotes.
-- **What is FACT about pricing** (verified 2026-10-02): Enable Banking bills **per connected account per month**, volume-based, with a **minimum monthly invoice that includes a quota of accounts and payments** (own FAQ; amount undisclosed; "Get a Quote" tool since March/April 2026) [B-§4, NEW-2]; Neonomics bills data aggregation **per user per month** with volume tiers and **no setup fee** (GetApp/openbankingtracker — low reliability) [B-§7]; Salt Edge meters AIS **per consented end-user** (secondary, low) [A-§3.4]; Yapily production is "base + usage fees" (listing sites, low) [A-§3.3]; Fabrick offers "flexible business models from flat fee to revenue sharing" (own fintech page, self-claim) [NEW-6]; Tink mentions an "Enterprise tier" in its docs (no prices) [A-§3.1]; GoCardless Bank Account Data is closed to new customers [B-§3]; CBI Globe fees are UNKNOWN [B-§13, NEW-5].
+- **No current first-party price list was verified in the retained research for the shortlisted providers** (FACT about the research result, not universal absence; NEW-2/NEW-6). Every euro figure below that is not labelled FACT is an **ASSUMPTION range** chosen to bracket the plausible outcome of a quote, with the anchor that motivated it and the way to verify it (request a quote). Do not budget from the point estimates; budget from the ranges, and replace them with quotes.
+- **Retained pricing-model observations** (source verification dates retained, not refreshed by this repository review): Enable Banking bills **per connected account per month**, volume-based, with a **minimum monthly invoice that includes a quota of accounts and payments** (own FAQ; amount undisclosed; "Get a Quote" tool since March/April 2026) [B-§4, NEW-2]; Neonomics bills data aggregation **per user per month** with volume tiers and **no setup fee** (GetApp/openbankingtracker — low reliability) [B-§7]; Salt Edge meters AIS **per consented end-user** (secondary, low) [A-§3.4]; Yapily production is "base + usage fees" (listing sites, low) [A-§3.3]; Fabrick offers "flexible business models from flat fee to revenue sharing" (own fintech page, self-claim) [NEW-6]; Tink mentions an "Enterprise tier" in its docs (no prices) [A-§3.1]; GoCardless Bank Account Data is closed to new customers [B-§3]; CBI Globe fees are UNKNOWN [B-§13, NEW-5].
 - **Public numbers that exist are low-reliability and must not be upgraded**: Tink "€0.50 per user per month (Standard), €0.25 per verification" (listing sites copying each other); Yapily "£200–500/month entry production"; Salt Edge "Free $0 (100 live connections) / Growth $500 per month / Custom" (a card reproduced identically on f6s, TrustRadius and a 2019 GitHub thread → historical, not on saltedge.com today); Plaid "Europe adds 5–15 % to licence cost; no pay-as-you-go in Europe" (pricing sites) [A-§1.5 AV2, B-§6].
-- **Model outputs are computed by script** (`cost_model.py`, session scratchpad) from the assumption tables in §2; re-running it with quoted values is the intended use.
+- **Model outputs are arithmetic under the assumptions in §1–§2, not vendor quotes.** Reproduce them with the formula in §1; the earlier `cost_model.py` scratchpad is not a repository artifact.
 - Currency: EUR. Where the anchor is GBP/USD the conversion is ASSUMPTION (≈ 1 GBP = 1.15 EUR; 1 USD = 0.90 EUR), rounded.
 
 ---
@@ -19,11 +21,11 @@
 |---|---|---|---|
 | Users (active, connected) | 1,000 · 10,000 · 100,000 · 1,000,000 | DECISION (brief) | Seed → Series A → Italian scale → European scale. |
 | Connections per user | 1.0 · 1.8 · 2.5 | DECISION (brief) | 1.0 = single current account; 1.8 = typical Italian user with a bank + Postepay/Revolut/N26 (ASSUMPTION); 2.5 = power user. |
-| Scenarios | Low / Base / High | — | Low = best negotiated outcome; High = list/entry pricing; Base = planning value. |
-| Metering | "per connected account/month" for most providers; "per consented end-user/month" for Salt Edge and Neonomics | FACT (model) / ASSUMPTION (rates) | A per-user meter makes the connections ratio irrelevant to cost. |
+| Scenarios | Low / Base / High | — | Low/Base/High are invented sensitivity cases, not verified negotiated/list prices or probability bounds; quotes may fall outside every case. |
+| Metering | "per connected account/month" for most providers; "per consented end-user/month" for Salt Edge and Neonomics | ASSUMPTION (meters/rates except retained provider-specific metering statement) | A per-user meter makes the connections ratio irrelevant to cost. |
 | Volume tier multiplier on the unit price | 1k: ×1.00 · 10k: ×0.90 · 100k: ×0.75 · 1M: ×0.60 | ASSUMPTION | Typical enterprise tiering; no provider publishes tiers. Verify in quotes at each scale. |
-| Monthly floor | Provider-specific range (§2) | ASSUMPTION (amounts) / FACT (Enable Banking has one) | A floor dominates cost at 1k users. |
-| Formula | `cost_month = max(floor, quantity × unit × tier)` where `quantity = users × connections` (per-account meter) or `users` (per-user meter) | DECISION | Setup fees are excluded (UNKNOWN; one-off; see §7). |
+| Monthly floor / quota | Provider-specific range (§2) | ASSUMPTION (amounts) / FACT (Enable Banking has one) | A floor dominates cost at 1k users. |
+| Formula | `cost_month = max(floor, quantity × unit × tier)` where `quantity = users × connections` (per-account meter) or `users` (per-user meter) | DECISION | This assumes a floor inclusive of usage; an additive base fee, prepaid quota, per-call charges or annual commitment requires another formula. Setup, tax, FX, failures/retries, dual-provider overlap and legal/security/compliance work are excluded (UNKNOWN; see §7). |
 
 ## 2. Assumption table per provider (EUR; all ASSUMPTION unless stated)
 
@@ -46,7 +48,7 @@
 
 | Provider | Add-on Low / Base / High | What it buys | Anchor |
 |---|---|---|---|
-| Tink | 0.10 / 0.20 / 0.40 | Categorisation (per-user learning), recurring + predicted, merchant logo/location | Deepest stack (FACT, marketing/docs); priced separately or bundled — UNKNOWN |
+| Tink | 0.10 / 0.20 / 0.40 | Categorisation (per-user learning), recurring + predicted, merchant logo/location | Documented marketed stack (FACT of claim, quality unmeasured); priced separately or bundled — UNKNOWN |
 | Yapily | 0.05 / 0.15 / 0.30 | Data Plus: tier1–3 categories, merchant, recurrence, MCC | "Requires separate contract + scope" (FACT, docs) |
 | Salt Edge | 0.05 / 0.15 / 0.30 | Data Enrichment Platform, Merchant Identification | Vendor claims (FACT existence) |
 | Fabrick | 0.05 / 0.15 / 0.30 | "Value-added PSD2 services" | Marketed (ASSUMPTION) |
@@ -177,24 +179,24 @@ Add-on cost at Base, 1.8 connections per user (EUR per month; ASSUMPTION):
 
 | Model | Price per MTok in / out (USD) | Label of price | ≈ USD per user per month |
 |---|---|---|---|
-| Gemini 2.5 Flash-Lite (Vertex AI list) | 0.10 / 0.40 | FACT (pricing page fetched 2026-10-02) [NB-S-36] | 0.0023 |
-| gpt-5-mini | 0.25 / 2.00 | registry value (medium) [NB-S-22] | 0.0077 |
-| Claude Haiku 4.5 | 1.00 / 5.00 | first-party cache dated 2026-09-25 (high) [NB-S-21] | 0.025 |
-| Claude Sonnet 5.5 | 2.00 / 10.00 | first-party cache (high) | 0.050 |
+| Gemini 2.5 Flash-Lite (retained Vertex AI list) | 0.10 / 0.40 | Retained price observation [NB-S-36]; current region/contract UNKNOWN | 0.0023 |
+| gpt-5-mini | 0.25 / 2.00 | Registry observation (medium) [NB-S-22]; current price UNKNOWN | 0.0078 |
+| Claude Haiku 4.5 | 1.00 / 5.00 | Unreproduced prior-session cache dated 2026-09-25; re-verification required [NB-S-21] | 0.025 |
+| Claude Sonnet 5.5 | 2.00 / 10.00 | Unreproduced prior-session cache; model availability/price UNKNOWN | 0.050 |
 
-Even at Sonnet-class pricing the inference cost of own categorisation (≈ €0.05 per user per month) is **3–8× lower** than a vendor enrichment add-on at Base (€0.10–0.20 per account, i.e. €0.18–0.36 per user at 1.8 connections) — before counting the engineering and evaluation cost of building it, which this document does not model (see the AI/ML research track). HYPOTHESIS: buying enrichment is only worth it as a cold-start signal for the first months; it should never be a per-month dependency.
+**HYPOTHESIS:** token-only inference can be below an assumed enrichment fee, but these are different services. The retained dollar inputs are not fresh quotes; 100 transactions × 150 input/20 output tokens omits system prompts, retries, privacy filtering, runtime, storage, evaluation, support and human corrections. EUR conversion is an assumption. The table does not establish total cost or equivalent accuracy. **DECISION:** deterministic rules and user corrections first; an optional external classifier or vendor enrichment requires an Italian accuracy/privacy benchmark and a total-cost comparison, with appropriate permission and contract controls.
 
 ## 6. Sensitivity — what moves the cost most
 
 | Driver | Effect (Base, Yapily unless noted) | Label |
 |---|---|---|
-| Monthly floor | At 1k users: €250 → €1,500 floor changes cost per user from €0.27 to €1.50 (6×). | ASSUMPTION |
+| Monthly floor | At 1k users and 1.8 accounts/user, Base usage is 1,000 × 1.8 × €0.30 = €540. Moving the assumed floor from €250 to €1,500 changes cost from €0.540 to €1.500/user/month (2.78×). | ASSUMPTION |
 | Metering basis | Per-account vs per-user at 1.8 connections: 1.8× the bill at the same unit rate. A provider quoting per *user* at €0.40 beats one quoting per *account* at €0.25. | ASSUMPTION |
-| Per-call pricing (Yapily "per call + subscription", low) | If AIS refreshes are billed per call, 4 background refreshes/day × 30 days × 1.8 accounts ≈ 216 calls per user per month: at €0.002/call that is €0.43 per user per month — larger than the per-account price itself. **Must be clarified in the RFP** (OPEN QUESTION C1). | HYPOTHESIS |
+| Per-call pricing (Yapily "per call + subscription", low) | If AIS refreshes are billed per call, an assumed 4 one-call requests/day × 30 days × 1.8 accounts = 216 calls/user/month, yielding €0.432 at an assumed €0.002/call. Real account, balance and paginated-transaction endpoints, failures/retries and provider refresh billing can require more calls; the RTS access allowance is not a billing definition — larger than the per-account price itself. **Must be clarified in the RFP** (OPEN QUESTION C1). | HYPOTHESIS |
 | Volume tier multiplier | Removing the assumed tiers (×1.0 at all scales) raises the 100k Base from €40.5k to €54k/month (Yapily). | ASSUMPTION |
 | Connections ratio | 1.0 → 2.5 connections: 2.5× for per-account meters. Product design (which accounts users actually connect) is a cost lever. | FACT (arithmetic) |
 | Enrichment | +30–50 % at Base if bought. | ASSUMPTION |
-| Consent churn | Consents that expire at day 180 and are not renewed stop costing (per-account meters usually count *active* consents — ASSUMPTION; ask whether dormant/expired consents are billed). | ASSUMPTION |
+| Consent churn | Consents expire at provider/bank-specific times, distinct from the SCA exemption; expired connections may keep costing (active vs dormant/expired billing is UNKNOWN; ask whether dormant/expired consents are billed). | ASSUMPTION |
 
 ## 7. Own-licence path (route C) and CBI Globe direct — fixed-cost model
 
@@ -205,13 +207,13 @@ All figures are ASSUMPTION (founder estimates to be replaced by quotes); the raw
 | One-off: registration file (legal/advisory), programme of operations, security policy, governance set-up | €60k | €120k | €250k | No source; UNKNOWN in B-§15.2 → obtain 2–3 Italian fintech-regulatory law-firm quotes |
 | One-off: CBI Globe TPP onboarding + connector build/test | €8k | €15k | €25k | 2021 SME blog anchors: TPP contract €0–1,500, analysis €2–4k, connector €5–15k, test/go-live €1–3k (low) [B-#31] |
 | Annual: professional indemnity insurance (EBA/GL/2017/08 formula) | €10k | €25k | €60k | UNKNOWN; broker quotes; the French "€5M per incident" figure must not be used [B-§15.2] |
-| Annual: compliance officer / DPO share, audit, incident reporting, DORA programme | €60k | €120k | €250k | No source; DORA applies in full once licensed [REG-§4] |
+| Annual: compliance officer / DPO share, audit, incident reporting, DORA programme | €60k | €120k | €250k | No source; DORA scope/framework and proportionality require counsel classification [REG-§4] |
 | Annual: eIDAS QWAC/QSealC certificates | €2k | €4k | €8k | "few k€/yr" (ASSUMPTION) [B-§15.2]; InfoCert/QTSP price list |
 | Annual: CBI Globe TPP fees | €600 | €2,000 | €3,600 | 2021 blog anchor (low); request CBI fee schedule [NEW-5: brochure exists, not read] |
 | Annual: connector maintenance (CBI Globe banks + UniCredit direct + Revolut/N26 direct or via an aggregator in BYO-licence/TSP mode) | €80k | €150k | €300k | No source; depends on whether an aggregator remains in TSP mode (Enable Banking documents one) [B-§4] |
 | Elapsed time | 6 months | 9 months | 12+ months | 90-day statutory decision (FACT) + pre-filing/completeness rounds (HYPOTHESIS) |
 
-**Crude break-even (HYPOTHESIS):** annual running cost at Base ≈ €300k (excluding one-offs and infra); the aggregator Base at 100k users and 1.8 connections is €40.5k/month ≈ €486k/year (Yapily) or €405k/year (Enable Banking). Own licence therefore starts to pay back somewhere around **50–80k connected users**, *if* non-Italian coverage can be kept cheaply through a TSP-mode aggregator and the organisation accepts full DORA/incident obligations. This is a phase-2 decision; it is not an MVP cost lever.
+**Crude break-even (HYPOTHESIS):** annual running cost at Base ≈ €300k (excluding one-offs and infra); the aggregator Base at 100k users and 1.8 connections is €40.5k/month ≈ €486k/year (Yapily) or €405k/year (Enable Banking). Own licence therefore starts to pay back somewhere around **50–80k connected users**, *if* non-Italian coverage can be kept cheaply through a TSP-mode aggregator and the organisation accepts the applicable DORA/incident obligations. This is a phase-2 decision; it is not an MVP cost lever.
 
 ## 8. How to verify — RFP pricing questionnaire (identical for every shortlisted provider)
 
@@ -226,12 +228,12 @@ All figures are ASSUMPTION (founder estimates to be replaced by quotes); the raw
 
 ## Decisions / Recommendations
 
-1. **Plan the seed phase on the floor, not the unit price**: budget €500–2,500/month for the primary provider at 1k users (Base range across Yapily/Enable Banking/Tink), and insist on a ramp-up waiver in the RFP (DECISION: a floor above €1,500/month at 1k users fails gate G2 in `open-banking-providers.md`).
-2. **Plan Series-A scale (10k users) on €0.40–0.65 per user per month** at 1.8 connections (Base; ASSUMPTION), and **€0.30–0.55 at 100k** — i.e. open banking data should cost well under €1 per user per month in every scenario except Plaid/Fabrick High.
+1. **Plan the seed phase on the floor, not the unit price**: use €540–2,500/month only as the Base sensitivity span at 1k users/1.8 accounts across Yapily/Enable Banking/Tink. Obtain quotes; gate G2 is evaluated against the current business model, not this unquoted range.
+2. **Plan Series-A scale (10k users) on €0.40–0.65 per user per month** at 1.8 connections (Base; ASSUMPTION), and **€0.30–0.55 at 100k** — these are Base-only assumptions. At 10k users/1.8 accounts, High cases also exceed €1 for Tink/TrueLayer/Powens/Mastercard, and floors make 1k-user cases expensive. No provider affordability is verified.
 3. **Make the metering basis an explicit RFP criterion**; prefer per-user or per-account with active-consent counting; refuse per-call pricing for AIS refreshes unless capped.
-4. **Do not buy enrichment as a per-month dependency**; own categorisation inference costs ≈ €0.002–0.05 per user per month (FACT-derived) versus €0.18–0.36 for vendor add-ons (ASSUMPTION). A time-boxed enrichment trial for cold-start data is acceptable.
+4. **Keep enrichment optional.** Compare accuracy, privacy and total cost; the token-only and vendor-price tables are sensitivity inputs, not a demonstrated cheaper equivalent. No commercial trial or purchase is authorised here.
 5. **Treat the own-licence path as a 50–80k-user decision** (HYPOTHESIS), to be re-costed with real quotes once the product-market signal exists.
-6. Re-run `cost_model.py` with quoted values and publish the result in the architecture ADR; keep Low/Base/High discipline.
+6. Recompute the §1 formula with quoted values and publish the result in the architecture ADR; keep Low/Base/High discipline.
 
 ## Open questions
 
@@ -270,4 +272,19 @@ All figures are ASSUMPTION (founder estimates to be replaced by quotes); the raw
 | NB-S-22, S-45 | LiteLLM `model_prices_and_context_window.json` (gpt-5-mini) | https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json | 2026-10-02 | medium | Build-own comparator |
 | A-#97 | Yapily docs — Data Plus categorisation requires a separate contract | https://docs.yapily.com/data/data-plus/categorisation | 2026-10-02 (mirror) | high | Enrichment add-on existence |
 | A-#52, A-#119 | Tink Data Enrichment product; Salt Edge Data Enrichment docs | https://tink.com/products/data-enrichment/ ; https://docs.saltedge.com/data_enrichment/v5/ | 2026-10-02 | high (existence) | Enrichment add-on existence |
-| — | `cost_model.py` (session scratchpad): formula, tiers, assumption tables as in §1–§2 | local | 2026-10-02 | — | All computed tables |
+| — | Formula and assumption tables in §1–§2; prior-session scratchpad not retained | local | Repository arithmetic review 2026-10-02 | Arithmetic only | Derived scenarios, not quotes |
+
+## Review log
+
+Repository arithmetic/evidence review — 2026-10-02; no fresh price quotation or procurement performed.
+
+| Critique | Resolution | Remaining evidence / owner |
+|---|---|---|
+| MAJOR — sensitivity ranges sounded like real list/negotiated prices | All scenarios remain invented sensitivity inputs; no current first-party quote verified; actual values may lie outside ranges | Founder/Providers: written meter, quotas, floor/base fees, calls/retries/setup/renewal and tax/FX terms |
+| MAJOR — floor example had wrong denominator/arithmetic | At 1k users×1.8 accounts×€0.30, €250→€1,500 floor yields €0.540→€1.500/user (2.78×), not €0.27→€1.50 | Recompute with actual quote and measured account/user ratio |
+| MAJOR — four refreshes represented one billed call each | 216-call example is a single-call assumption; multiple endpoints, pages, retries and service billing may increase it | Providers/Engineering: request accounting and billing definitions |
+| MAJOR — every high case claimed below €1/user | Recommendation now identifies several >€1 High cases and floor-dominated seed costs | Business: use Plus-only economics/guardrail, no offer revenue assumption |
+| MAJOR — token-only AI cost proved enrichment replacement | Retained/cache inputs not current quotes; total engineering/evaluation/privacy cost and quality omitted; comparator explicitly unequal | Engineering/Privacy: Italian quality benchmark, approved vendor contract and total cost |
+| MAJOR — ephemeral script and licensing costs implied repeatable quotation | Formula is explicit; scratchpad availability not claimed; DORA/own-licence scope and cost remain counsel/quote-dependent | Counsel/Brokers: route-C obligations/insurance; provider contract |
+
+**Gate contribution:** arithmetic scenarios useful; provider affordability and Gate C are unvalidated. **Human blockers:** contractual quotes, meter/quota definitions, total compliance/operations costs and real connection ratios. No purchase/contract or live free AIS commitment is authorised here.

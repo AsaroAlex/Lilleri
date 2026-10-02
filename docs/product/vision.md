@@ -6,6 +6,16 @@
 **Author:** Head of Product + principal architect (product side), founding team
 **Language:** documentation in English; product copy, taglines and voice examples in Italian with English glosses.
 
+## Delivery and evidence boundary (review decision, 2026-10-02)
+
+This is a requirements document, not a list of delivered features. Local work uses synthetic fixtures and a mock provider. Official sandbox work needs provider-issued non-production access. Any real-data pilot needs a written acceptable licence route, provider permission/contract, DPIA/privacy controls, security isolation and informed participant consent before access. Bank credentials are never collected by Lilleri. Mock or sandbox success does not verify Italian production coverage, user demand, retention, classification calibration, store approval or legal clearance.
+
+The full P0 list describes a future cleared beta, not the initial repository scaffold. Implement a small synthetic vertical slice first: exact money → mock ingest → idempotency → deterministic reconciliation/classification with explicit rules → evidence/review/undo → honest synthetic summary. Record actual commands/results in repository status; do not claim every planned fixture or UI flow is already implemented.
+
+Canonical commercial policy: **Lilleri Gratis / Lilleri Plus** at launch; Plus **€4.99/month / €39.99/year is a hypothesis**. **Lilleri Famiglia Later** after consent/sharing/isolation tests; **Pro reserved** for future professional workflows. Closed beta is free. A proposed **30-day non-renewing Plus preview** requires implemented entitlements; it never charges. Store billing, real purchases and renewal metrics are P1 and require explicit checkout and release gates. Correctness, corrections/learning/rules, privacy/security/consent safety, retained-data access, export and deletion stay free in every plan and after downgrade.
+
+Evidence dates/FACT labels below are inherited from source research, including its snippets and uncertainty; this review does not freshly verify vendor terms or law. Numerical success criteria are HYPOTHESES. Fixture correctness cannot establish production precision. Report audited error numerator/denominator, sample selection, decision type, bank/period, label agreement and confidence intervals; audit and user corrections must not double-count errors. A zero-error small sample is not proof of zero error. All A–G letters refer to the brief: A market, B data feasibility, C business, D architecture, E security, F core-loop UX, G brand. Beta/public-launch/expansion releases are separate decisions.
+
 ## How to read this document
 
 - Every variable claim carries a label: **FACT** (cited source seen on 2026-10-02 by the input document named), **ASSUMPTION** (working value, not verified), **HYPOTHESIS** (belief to validate with users or data), **DECISION** (choice proposed here; final only when recorded in an ADR or ratified in the PRD), **OPEN QUESTION / UNKNOWN** (not established; how to verify given).
@@ -53,7 +63,7 @@ The task brief forbids "because it uses AI" as the answer, and the evidence agre
 
 | Counter-argument | Evidence | Mitigation | Label |
 |---|---|---|---|
-| Aggregation cost killed Mint and every European subscription-only D2C PFM | `MA` §8.4; `UE` §0 (AIS is 80–85% of per-user COGS at Base and UNKNOWN until the RFP) | Free tier bounded (1 institution, ≤2 accounts) with a guardrail; Plus from day one; a disclosed, opt-in second rail planned before scale; never ads, lending or data sale | DECISION (`BM` D-BM-1, D-BM-4) |
+| Several PFM exits warn about delivery cost and monetisation; individual shutdown causality is not established by this evidence | `MA` §8.4; `UE` §0 (AIS is 80–85% of per-user COGS at Base and UNKNOWN until the RFP) | Free tier bounded (1 institution, ≤2 accounts) with a guardrail; Plus-only launch hypothesis after billing gates; offer income €0 at launch, Later only after distinct legal/trust gates; never ads, lending or data sale | DECISION (`BM` D-BM-1, D-BM-4) |
 | Incumbents could ship reconciliation inside XME Banks or Hype | `MA` §6 (depth UNKNOWN) | Verify depth now (Gate A condition 2); differentiate on per-user learning data and bank-independence | OPEN QUESTION |
 | Connector quality is outside our control (57.4% success; Intesa limits; missing card accounts) | `MA` NEW-4; `OBP` §1.3–1.4 | Provider-agnostic connector layer, two adapters, per-bank health page, honest coverage per account type, CSV import as a first-class path | DECISION (`OBP` D7–D8) |
 | Italian willingness to pay for a PFM is unproven | `MA` §3, §9 | Phase 1 price test; free core generous enough to retain non-payers as learning contributors | OPEN QUESTION |
@@ -118,10 +128,10 @@ The six principles below are the design constitution. Each is stated as a rule, 
 
 | | |
 |---|---|
-| Rule | Every automated write is an append-only event with actor (`rule:<id>@<v>`, `model:<name>@<v>`, `provider:<name>`), a stored evidence record (features, score, threshold version, candidates considered) and a compensating undo. Every surface that shows an automated result can show its "why" in one line. Rejections are remembered so undone matches are never re-proposed. |
+| Rule | Every automated write is an append-only event with actor (`rule:<id>@<v>`, `model:<name>@<v>`, `provider:<name>`), a stored evidence record (features, score, threshold version, candidates considered) and a compensating undo. Every surface that shows an automated result can show its "why" in one line. Rejections are remembered against the same candidate/evidence/version; materially new evidence may produce a new explicit proposal, with the earlier rejection visible. |
 | Why | Silent automation is the trust-killer with the most direct evidence: hidden pending that reappears, invented transfer counterparts, silent skips and overwrites (`US-S29`; `PP-G-24`, `G-83`, `G-84`, `G-87`); Maybe's `RejectedTransfer` is the negative-memory precedent (`RC` §5, FACT); Cass. 14381/2021 (Mevaluate) holds that consent to algorithmic scoring is invalid unless the logic is knowable, and the Garante expects a correction path (`PM` §5.2 S8). |
 | What it forbids | Hard deletes of user-visible state by automation; AI outputs without a stored provenance; "95%" shown as a bare number; a model that moves money or calls tools beyond read-only queries. |
-| How we test it | 100% of automated decisions below score 1.0 are renderable in the inbox with a human explanation generated from features (`RC` §9.2); undo works for every decision type in the test fixtures (`RC` §9.3); batch undo per sync run. |
+| How we test it | 100% of automated decisions, including deterministic decisions are renderable in the inbox with a human explanation generated from features (`RC` §9.2); undo works for every decision type in the test fixtures (`RC` §9.3); batch undo per sync run. |
 
 ### Corollaries from the priority order (DECISION)
 
@@ -142,7 +152,7 @@ The six principles below are the design constitution. Each is stated as a rule, 
 
 | Stage | What the system does | What the user sees (Italian copy, draft) | Invariant | Primary signal |
 |---|---|---|---|---|
-| **CONNECT** | Provider-agnostic connector; consent as a first-class object (provider named, read-only, expiry read from the provider, never assumed); coverage per account type; CSV/manual fallback | *"Per leggere i tuoi movimenti, Lilleri usa [Provider], un intermediario autorizzato e vigilato da [Autorità]. Lilleri vede solo saldi e movimenti: non può muovere denaro. Il collegamento dura 180 giorni, poi ti chiederemo di rinnovarlo."* ("To read your transactions Lilleri uses [Provider], an authorised intermediary supervised by [Authority]. Lilleri only sees balances and transactions: it cannot move money. The connection lasts 180 days, then we will ask you to renew it.") | Never asks for bank credentials; never promises a bank or account type that does not connect | Connection success per institution; consent completion ≥ 85% of starts (HYPOTHESIS) |
+| **CONNECT** | Provider-agnostic connector; consent as a first-class object (provider named, read-only, expiry read from the provider, never assumed); coverage per account type; CSV/manual fallback | *"Per leggere i tuoi movimenti, Lilleri usa [Provider], un intermediario autorizzato e vigilato da [Autorità]. Lilleri vede solo saldi e movimenti: non può muovere denaro. Vedrai la scadenza del collegamento e quando rinnovarlo."* ("To read your transactions Lilleri uses [Provider], an authorised intermediary supervised by [Authority]. Lilleri only sees balances and transactions: it cannot move money. You can see the connection expiry and when to renew it.") | Never asks for bank credentials; never promises a bank or account type that does not connect | Connection success per institution; consent completion ≥ 85% of starts (HYPOTHESIS) |
 | **SYNC** | Fetch within the 4×/24 h budget plus user-present refresh on open; immutable provider records; layered identity (provider-stable id → vendor id → fingerprint + ordinal → fuzzy window); pending→booked, duplicate, transfer, settlement, refund passes; balance check against the provider's balance | *"Aggiornato alle 07:41 — Intesa, Fineco, Revolut. 14 movimenti nuovi, 1 giroconto riconosciuto, 1 addebito carta abbinato, 2 in attesa, 0 saltati. Prossimo aggiornamento alle 13:00."* ("Updated at 07:41 — … 14 new, 1 transfer recognised, 1 card debit matched, 2 pending, 0 skipped. Next update at 13:00.") | Zero silent skips; balance equality or an inbox item; a pair is never created by inventing a leg | Duplicate rate; pairing precision/recall; % accounts with balance = bank |
 | **UNDERSTAND** | Kind + category with provenance; recurring detection with Italian periodicities; insights with source data, calculation, confidence; safe-to-spend from reconciled data only | *"Ottobre finora: 1.240 € spesi. Casa 540 €, Spesa 310 €, Trasporti 95 €. In arrivo: Hera ≈140 € (12 ott), TARI 187 € (14 ott). Puoi ancora spendere 612 € fino al 31."* | No estimate presented as a fact; every category shows a one-line "why" | % auto-categorised never corrected at day 30; recurring next-date error |
 | **CORRECT ONLY WHEN NECESSARY** | Review Inbox receives only what is below threshold or structurally ambiguous; one or two taps per correction; undo stack; empty state is the goal | *"2 movimenti da rivedere."* → *"SUMUP *BAR CENTRALE 3,20 € — Caffè e bar? (probabile)"* → *"Niente da fare. Tutto è al suo posto."* ("Nothing to do. Everything is in its place.") | Inbox items ≤ 3 after the first sync; no approve-everything; no ads, no upsell in the inbox | Minutes per month in the inbox (< 5); one-tap resolution rate |
@@ -211,7 +221,7 @@ The evidence says the failure path, not the happy path, decides retention: churn
 
 ### 6.3 Preconditions and killers
 
-Preconditions (FACT-based, `JTBD` §6.3): consent screen names the licensed AISP, says read-only, redirects to the bank for SCA; export and deletion free, one tap, every tier; a "what we store, who we send it to, what happens if Lilleri closes" page; no trial converts without a reminder, no renewal step-up; nothing ever moves money; a human answers when a bank link breaks.
+Preconditions (FACT-based, `JTBD` §6.3): consent screen names the licensed AISP, says read-only, redirects to the bank for SCA; export and deletion free, accessible in every tier with appropriate confirmation/reauthentication; a "what we store, who we send it to, what happens if Lilleri closes" page; preview never converts automatically; any actual purchase/renewal requires clear consent/notice under the implemented rail; nothing ever moves money; a human answers when a bank link breaks.
 
 Trust killers (DECISION — release blockers): silent skips/overwrites; "clear the cache" as advice; a connect flow that asks for bank credentials; a charge the user was not reminded of; a bank listed as supported that does not connect; an automation that moved money; a shutdown without export; an upgrade prompt inside the inbox or on a failure screen (`BM` D-BM-3).
 
@@ -268,7 +278,7 @@ Nothing moves money. Explicit rules win. Locked fields are never overwritten. Ev
 | 3 | A chat-first interface | Users want the output, not a prompt (`IT-Y-02`); chat is a Later feature grounded in deterministic tools, never the product | DECISION |
 | 4 | Zero-based envelope budgeting as a method to learn | YNAB's 2–4-week learning curve is a churn driver (`US-S13`); one safe-to-spend number plus watchlists covers the job | DECISION |
 | 5 | Replacing the bank app for payments (F24, MAV/RAV, PagoPA) | Hype and Poste already pay them in-app; Lilleri *understands* them | DECISION |
-| 6 | Ads, contextual ads, data sale, affiliate steering inside the product surfaces | Mint's free model died; Snoop's data sale and Emma's offers are the opposite model; no ads in the inbox ever (`BM` D-BM-4) | DECISION |
+| 6 | Display/contextual banners, data sale, affiliate steering inside the core product surfaces | Mint's free model died; Snoop's data sale and Emma's offers are the opposite model; no ads in the inbox ever (`BM` D-BM-4) | DECISION |
 | 7 | Bill negotiation / cancellation concierge with success fees | Collapsed Rocket's Trustpilot (`US-§6.1`) | DECISION |
 | 8 | Investment analytics and portfolio tooling | Over-built for the job; FIDA not in force; balances only (`OM` §2.22) | DECISION |
 | 9 | Screen scraping, credential storage, SMS reading, accessibility scraping, unofficial APIs | Illegal, policy-hostile or catastrophic for trust (`DSF` §12 "Never") | DECISION |
@@ -288,7 +298,7 @@ Nothing moves money. Explicit rules win. Locked fields are never overwritten. Ev
 | V-4 | WOW = first correct cross-institution picture with nothing to fix; instrument WOW-session rate and time-to-first-correct-picture from day one; single-institution fallback WOW | DECISION | No |
 | V-5 | TRUST = first failure handled honestly; the four trust events are designed flows with their own copy, telemetry and release criteria; the trust-killer list is a release gate | DECISION | No |
 | V-6 | Three automation modes with per-mode target auto-error rates (0.5% / 2% / 4%), BALANCED default, calibrated versioned thresholds, mode-independent invariants | DECISION (targets HYPOTHESIS) | Yes — automation policy and calibration service |
-| V-7 | Non-goals 1–12 are stated publicly where they are promises (no money movement, no ads, no lending, no data sale) | DECISION | Business-model ADR references them |
+| V-7 | Non-goals 1–12 are stated publicly where they are promises (no money movement, no display/contextual banners, no lending, no data sale) | DECISION | Business-model ADR references them |
 | V-8 | Validate with 20–30 S1/S2 users before design freeze: (a) empty inbox as hero vs dashboard; (b) safe-to-spend as first number vs category totals; (c) automatic pairing with undo vs confirm-first; (d) the Italian mode labels | RECOMMENDATION | — |
 | V-9 | Calibrate every numeric target in this document after the first 200 consented users; none appears in external claims before then | RECOMMENDATION | — |
 
@@ -305,6 +315,15 @@ Nothing moves money. Explicit rules win. Locked fields are never overwritten. Ev
 | 7 | Does a per-sync report reduce or increase anxiety for non-technical users? | SYNC copy density | A/B on report density; P3/P4 interviews | P2 |
 | 8 | What is the incumbents' support-contact rate per connection failure (benchmark for the TRUST metric)? | Target setting | Ask providers; estimate from review volumes | P2 |
 
+## Review log
+
+| Reviewer | Concrete issue | Resolution |
+|---|---|---|
+| Investor (major) | Shutdown comparators described as proof aggregation cost killed every subscription-only PFM | Reframed as warning evidence; Lilleri economics independently modelled, zero-offers launch |
+| Fintech/PM (major) | CONNECT copy promised universal 180-day lifetime | Provider-derived expiry/date and coverage, renewal remains visible |
+| PM (major) | Absolute repeated-correction/undo rejection promises could ignore changed evidence/context | Same-context explicit rules preserved; new evidence can justify a reviewed new match |
+| PM/CFO (major) | Vision implied current paid/store capabilities and production foundation | Added stage boundary and canonical Gratis/Plus, non-renewing preview; no implementation pass claimed |
+
 ## Sources
 
 All verified on 2026-10-02 by the input documents named; URLs carried over verbatim. Reliability as graded in those documents.
@@ -313,20 +332,20 @@ All verified on 2026-10-02 by the input documents named; URLs carried over verba
 
 | ID | Document | Used for |
 |---|---|---|
-| MA | `/home/user/Lilleri/docs/research/market-analysis.md` | Why now; sizing signals; incumbents; founding-hypothesis validation; Gate A |
-| OM | `/home/user/Lilleri/docs/research/opportunity-map.md` | Feature-area opportunities; differentiator ranking; what not to build |
-| PP | `/home/user/Lilleri/docs/research/user-pain-points.md` | Ranked pain points; Italian specifics; decisions D1–D13 |
-| PE | `/home/user/Lilleri/docs/product/personas.md` | Personas; trust thresholds; zero-setup meaning |
-| JTBD | `/home/user/Lilleri/docs/product/jobs-to-be-done.md` | Jobs; core loop; WOW and TRUST definitions; success signals |
-| OBP | `/home/user/Lilleri/docs/research/open-banking-providers.md` | PSD2 mechanics; provider decision; coverage; Gate B |
-| DSF | `/home/user/Lilleri/docs/research/data-sources-feasibility.md` | Sources A–I; never list |
-| REG | `/home/user/Lilleri/docs/compliance/regulatory-landscape.md` | Law in force; AI Act posture; store rules |
-| BM | `/home/user/Lilleri/docs/business/business-model.md` | Free tier; never-paywalled list; no ads |
-| UE | `/home/user/Lilleri/docs/business/unit-economics.md` | AIS as dominant cost |
-| BS | `/home/user/Lilleri/docs/brand/brand-strategy.md` | Promise; positioning; tone; anti-patterns |
-| AI | `/home/user/Lilleri/docs/research/raw/ai-ml-transaction-intelligence.md` | Italian descriptors; cascade; calibration; locks; prompt injection |
-| RC | `/home/user/Lilleri/docs/research/raw/reconciliation-and-data-model-patterns.md` | Identity strategy; match types; evidence model; undo; state machines |
-| PM / CM | `/home/user/Lilleri/docs/compliance/privacy-model.md`; `/home/user/Lilleri/docs/compliance/consent-model.md` | Quiet set; consent families; renewal timeline |
+| MA | `docs/research/market-analysis.md` | Why now; sizing signals; incumbents; founding-hypothesis validation; Gate A |
+| OM | `docs/research/opportunity-map.md` | Feature-area opportunities; differentiator ranking; what not to build |
+| PP | `docs/research/user-pain-points.md` | Ranked pain points; Italian specifics; decisions D1–D13 |
+| PE | `docs/product/personas.md` | Personas; trust thresholds; zero-setup meaning |
+| JTBD | `docs/product/jobs-to-be-done.md` | Jobs; core loop; WOW and TRUST definitions; success signals |
+| OBP | `docs/research/open-banking-providers.md` | PSD2 mechanics; provider decision; coverage; Gate B |
+| DSF | `docs/research/data-sources-feasibility.md` | Sources A–I; never list |
+| REG | `docs/compliance/regulatory-landscape.md` | Law in force; AI Act posture; store rules |
+| BM | `docs/business/business-model.md` | Free tier; never-paywalled list; no ads |
+| UE | `docs/business/unit-economics.md` | AIS as dominant cost |
+| BS | `docs/brand/brand-strategy.md` | Promise; positioning; tone; anti-patterns |
+| AI | `docs/research/raw/ai-ml-transaction-intelligence.md` | Italian descriptors; cascade; calibration; locks; prompt injection |
+| RC | `docs/research/raw/reconciliation-and-data-model-patterns.md` | Identity strategy; match types; evidence model; undo; state machines |
+| PM / CM | `docs/compliance/privacy-model.md`; `docs/compliance/consent-model.md` | Quiet set; consent families; renewal timeline |
 
 ### Primary and secondary sources carried over (most load-bearing)
 

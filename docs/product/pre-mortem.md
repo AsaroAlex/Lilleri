@@ -8,6 +8,16 @@
 **Inputs read in full:** the fifteen documents listed in `metrics.md` ("Inputs"); failure evidence is drawn mainly from `user-pain-points.md`, `market-analysis.md` §5 (trends) and §8.4 (counter-arguments), `open-banking-providers.md` §3 (provider risks), `regulatory-landscape.md` §2, `business-model.md` §2–3, `unit-economics.md` §8, `revenue-scenarios.md` §6, `brand-strategy.md` §10.
 **Method:** Klein's pre-mortem (`NEW-M1`): assume the project has already failed, write the obituary, then list every reason it could have happened. The 1989 Mitchell/Russo work cited by Klein found that "prospective hindsight" raises the ability to identify reasons for future outcomes by about 30 % (reported in the HBR article; not re-verified here). Each failure mode below has a probability, an impact, early-warning signals with thresholds, mitigations and an owner role.
 
+## Delivery and evidence boundary (review decision, 2026-10-02)
+
+This is a requirements document, not a list of delivered features. Local work uses synthetic fixtures and a mock provider. Official sandbox work needs provider-issued non-production access. Any real-data pilot needs a written acceptable licence route, provider permission/contract, DPIA/privacy controls, security isolation and informed participant consent before access. Bank credentials are never collected by Lilleri. Mock or sandbox success does not verify Italian production coverage, user demand, retention, classification calibration, store approval or legal clearance.
+
+The full P0 list describes a future cleared beta, not the initial repository scaffold. Implement a small synthetic vertical slice first: exact money → mock ingest → idempotency → deterministic reconciliation/classification with explicit rules → evidence/review/undo → honest synthetic summary. Record actual commands/results in repository status; do not claim every planned fixture or UI flow is already implemented.
+
+Canonical commercial policy: **Lilleri Gratis / Lilleri Plus** at launch; Plus **€4.99/month / €39.99/year is a hypothesis**. **Lilleri Famiglia Later** after consent/sharing/isolation tests; **Pro reserved** for future professional workflows. Closed beta is free. A proposed **30-day non-renewing Plus preview** requires implemented entitlements; it never charges. Store billing, real purchases and renewal metrics are P1 and require explicit checkout and release gates. Correctness, corrections/learning/rules, privacy/security/consent safety, retained-data access, export and deletion stay free in every plan and after downgrade.
+
+Evidence dates/FACT labels below are inherited from source research, including its snippets and uncertainty; this review does not freshly verify vendor terms or law. Numerical success criteria are HYPOTHESES. Fixture correctness cannot establish production precision. Report audited error numerator/denominator, sample selection, decision type, bank/period, label agreement and confidence intervals; audit and user corrections must not double-count errors. A zero-error small sample is not proof of zero error. All A–G letters refer to the brief: A market, B data feasibility, C business, D architecture, E security, F core-loop UX, G brand. Beta/public-launch/expansion releases are separate decisions.
+
 ## How to read this document
 
 - Labels: **FACT** (cited source seen on the verification date), **ASSUMPTION** (working value), **HYPOTHESIS** (interpretation to validate), **DECISION** (proposed), **OPEN QUESTION / UNKNOWN**. The failure *stories* are HYPOTHESES by construction; the *evidence* behind each is labelled.
@@ -22,7 +32,7 @@
 
 *Written as if in 2029.*
 
-**Storyline 1 — "The free tier ate the company."** Lilleri launched with a generous free core because the research said Italians expect free money apps. The provider quote came in at €0.45 per connected account per month with a €2,000 minimum; the team kept the free sync "for one more quarter" three times. Paid subscriptions never passed 90 per 1,000 MAU. By the time the F′ fallback was switched on, the seed money was gone and the users who left over "my accounts stopped updating" wrote the reviews that killed the relaunch. (Evidence that this chain is real: Mint, Moneyhub, Spiir, Yolt, Grip, Oval Money — `market-analysis.md` T4, FACT; Base-case economics never break even — `revenue-scenarios.md` §3, HYPOTHESIS.)
+**Storyline 1 — "The free tier ate the company."** In this hypothetical future, Lilleri launched with a generous free core because the research said Italians expect free money apps. The provider quote came in at €0.45 per connected account per month with a €2,000 minimum; the team kept the free sync "for one more quarter" three times. Paid subscriptions never passed 90 per 1,000 MAU. By the time the F′ fallback was switched on, the seed money was gone and the users who left over "my accounts stopped updating" wrote the reviews that killed the relaunch. (Comparable exits illustrate the risk; they do not prove the same cause for Lilleri: Mint, Moneyhub, Spiir, Yolt, Grip, Oval Money — `market-analysis.md` T4, FACT; Base-case economics never break even — `revenue-scenarios.md` §3, HYPOTHESIS.)
 
 **Storyline 2 — "It connected to everything except the banks people use."** Intesa worked, UniCredit worked, Poste worked on the second attempt, Satispay never, Hype never, credit cards never. The WOW moment required two institutions; most users had one that worked and one that did not. The App Store filled with "non si collega" and "mancano i movimenti della carta" ("the card's transactions are missing"). The coverage page was honest, so nobody was lied to; nobody stayed either. (Evidence: CRIF 57.4 % connection success in Italy; UniCredit/Mediolanum/Crédit Agricole expose no card accounts; Satispay has no aggregator listing — `open-banking-providers.md` §1.4, FACT/UNKNOWN.)
 
@@ -35,6 +45,8 @@
 The failure modes below are the parts these storylines are made of.
 
 ---
+
+**Risk-quantification limit (DECISION):** probabilities/residual targets below are elicited planning judgements, not measured failure rates. Modes are correlated (cost, retention, funding, support and trust); do not sum percentages or use weighted rank as portfolio failure probability. Re-elicit after quotes/audits/cohorts; an implemented mitigation is not evidence that its residual target has been achieved.
 
 ## 1. Summary ranking
 
@@ -79,8 +91,8 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Story** | Every provider is sales-led; the only price range we have is €0.10 / €0.30 / €0.60 per connected account-month with minimum invoices of €0 / €500 / €2,000 (UNKNOWN → ASSUMPTION, `unit-economics.md` U9–U10). At €0.30 a free connected user costs ≈ €0.59/month; at €0.45 or above "nothing works" at any paid share (`unit-economics.md` §8.2, HYPOTHESIS). The quote arrives after the architecture is built; the team accepts it. |
 | **Probability** | High — Base 35 % (Low 25 / High 50) that the achievable price is > €0.30 with no per-user or inactive-account relief. Residual after mitigation: Medium 15 %. |
 | **Impact** | Fatal in combination with a free sync tier; Severe alone (margin). |
-| **Early-warning signals** | RFP quotes > €0.30 at 25 k accounts (Phase 2, Gate C C1); minimum invoice > 25 % of AIS cost; provider_cost_per_active_user Base exceeded two months running; free AIS cost per paid subscription > €1.20 (`metrics.md` §5 #13); gross margin per 1,000 MAU < 30 %. |
-| **Mitigations** | P: identical RFP to five providers with a 5 k/25 k/100 k ladder, per-user pricing, no charge for accounts not accessed, lite single-institution rate (D-BM-7); non-exclusive ≤ 12-month contract; Enable Banking fallback contracted (D2). P: free envelope capped at 1 institution ≤ 2 accounts with sync pause after 14 days of inactivity (D-BM-1). D: invoice ingestion into the finance model from the first bill; monthly guardrail review. C: F′ "Free Classic" for new cohorts; trial-gated shape G if > €0.35; route C (own AISP + CBI Globe direct) as the long-run cost lever (`open-banking-providers.md` D6). |
+| **Early-warning signals** | RFP quotes > €0.30 at 25 k accounts (Phase 2, Gate C C1); minimum invoice > 25 % of AIS cost; provider_cost_per_active_user Base exceeded two months running; free AIS cost per paid subscription > €0.95 (`metrics.md` §5 #13); gross margin per 1,000 MAU < 30 %. |
+| **Mitigations** | P: identical RFP to five providers with a 5 k/25 k/100 k ladder, per-user pricing, no charge for accounts not accessed, lite single-institution rate (D-BM-7); non-exclusive ≤ 12-month contract; fallback contract proposed only after provider/legal due diligence. P: free envelope capped at 1 institution ≤ 2 accounts with sync pause after 14 days of inactivity (D-BM-1). D: invoice ingestion into the finance model from the first bill; monthly guardrail review. C: F′ time-boxed Gratis sync for new cohorts; trial-gated shape G if > €0.35; route C (own AISP + CBI Globe direct) as the long-run cost lever (`open-banking-providers.md` D6). |
 | **Owner** | CEO (contract) + CFO (guardrail). |
 | **Evidence** | `unit-economics.md` §0, §8.1–8.2 (HYPOTHESIS from ASSUMPTION inputs); Enable Banking FAQ on per-account billing and minimum invoice (`EB-1`, FACT); GoCardless free tier closed July 2025 (`PP-AD-01`, FACT) — the free route is gone. |
 
@@ -116,7 +128,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Probability** | High — Base 35 % (25–50) that trust friction keeps activation and retention below the Low targets. Residual: Medium 15 %. |
 | **Impact** | Fatal: trust is priority one and the whole promise depends on connecting. |
 | **Early-warning signals** | Consent-screen completion < 70 % of starts (`jobs-to-be-done.md` §7); `trust_page_viewed` followed by abandonment > 30 %; `deletion_requested{reason: distrust}` > 10 % of deletions; Trustpilot − store gap > 1.5 (G9); interview verbatims on "sola lettura" doubts; press framing as "another app that wants your bank password". |
-| **Mitigations** | P: the trust set shipped in the MVP — named licensed provider with licence number, read-only wording, SCA at the bank, EU hosting, "I tuoi dati" page, export and deletion in two taps, no money movement, no ads, no data sale, no lending (`market-analysis.md` decision 7; `brand-strategy.md` R6–R8); Fabrick as the Italian-supervised option if the foreign name tests badly; candid failure states (never "sync offline"); incident comms before users ask. D: consent funnel; trust-page exits; qualitative tag on deletions; brand measures (`brand-strategy.md` §13). C: creator-led reassurance ("works with my banks, read-only, my bank confirmed"), public status and coverage pages, a visible human support channel. |
+| **Mitigations** | P: the trust set shipped in the MVP — named licensed provider with licence number, read-only wording, SCA at the bank, EU hosting, "I tuoi dati" page, export and deletion in two taps, no money movement, no display/contextual banners, no data sale, no lending (`market-analysis.md` decision 7; `brand-strategy.md` R6–R8); Fabrick as the Italian-supervised option if the foreign name tests badly; candid failure states (never "sync offline"); incident comms before users ask. D: consent funnel; trust-page exits; qualitative tag on deletions; brand measures (`brand-strategy.md` §13). C: creator-led reassurance ("works with my banks, read-only, my bank confirmed"), public status and coverage pages, a visible human support channel. |
 | **Owner** | CEO (brand and public posture) + Head of Product (trust surfaces). |
 | **Evidence** | `user-pain-points.md` §6 (what scares / what reassures, FACT); Revolut Sep 2026 incident and Garante fine (`IT-W-08`, medium); `IT-Y-02` read-only reassurance (low-medium); competitor rating gap (`competitors-us.md` §4.5, FACT). |
 
@@ -136,7 +148,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 
 | | |
 |---|---|
-| **Story** | Every bank-side failure becomes a ticket; the three founders answer e-mails at night; the SLA for Plus is missed; Trustpilot fills with "support non risponde". Contacts run at 40 per 1,000 MAU at €8 each (the High case) — a cost line the model did not budget. |
+| **Story** | Every bank-side failure becomes a ticket; the three founders answer e-mails at night; the funded Plus support response promise is missed; Trustpilot fills with "support non risponde". Contacts run at 40 per 1,000 MAU at €8 each (the High case) — a cost line the model did not budget. |
 | **Probability** | High — Base 40 % (25–55) that contacts exceed 25 per 1,000 MAU in the first six months. Residual: Medium 20 %. |
 | **Impact** | Major: margin and founder time; Severe if it drives the rating gap. |
 | **Early-warning signals** | support_contacts_per_1k_MAU > 25 for two months (`metrics.md` §5 #19); contacts per 100 connection failures rising; first-response time > 48 h; deflection < 50 %; "sync" tickets > 30 % of total (`brand-strategy.md` §13 proxy). |
@@ -148,11 +160,11 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 
 | | |
 |---|---|
-| **Story** | Storyline 1 above. Free connected users cost more than paying users contribute; the guardrail (≤ €1.20 free AIS cost per paid subscription) is breached and then "paused" for growth; conversion never reaches 120 per 1,000 MAU; F′ is switched on too late and reads as a bait-and-switch. |
+| **Story** | Storyline 1 above. Free connected users cost more than paying users contribute; the guardrail (≤ €0.95 free AIS cost per paid subscription) is breached and then "paused" for growth; conversion never reaches 120 per 1,000 MAU; F′ is switched on too late and reads as a bait-and-switch. |
 | **Probability** | High — Base 45 % (30–60). Residual with the guardrail enforced as a rule: Medium 20 %. |
 | **Impact** | Fatal. |
-| **Early-warning signals** | Free AIS cost per paid subscription > €1.20 for two months (`metrics.md` §5 #13; D-BM-1); share of free MAU with a live connection > 60 % (U13 High); paid subscriptions per 1,000 MAU < 100 at beta month 6 (Gate F F6); trial→paid < 15 %; GM per 1,000 MAU < 30 %. |
-| **Mitigations** | P: free envelope 1 institution ≤ 2 accounts, sync pause after 14 days of inactivity, consent left to expire after 90 days unused with a plain explanation; 30-day no-card trial so everyone experiences multi-institution reconciliation; the F′ fallback designed and copy-tested *before* launch ("i tuoi conti smettono di aggiornarsi, i dati restano tuoi"). D: the three Gate C KPIs reported monthly from beta month 3 (R-BM-2). C: F′ for new cohorts after two misses, grandfathering 12 months; trial-gated G at the 12-month review if F misses twice more (`business-model.md` §2–3). |
+| **Early-warning signals** | Free AIS cost per paid subscription > €0.95 for two months (`metrics.md` §5 #13; D-BM-1); share of free MAU with a live connection > 60 % (U13 High); paid subscriptions per 1,000 MAU < 100 at beta month 6 (post-billing purchase release evidence); trial→paid < 15 %; GM per 1,000 MAU < 30 %. |
+| **Mitigations** | P: free envelope 1 institution ≤ 2 accounts, sync pause after 14 days of inactivity, actual provider expiry preserved; pause behaviour and billing relief disclosed/verified without inventing consent dates; proposed 30-day non-renewing Plus preview after implementation; free beta no paid trial/conversion; the F′ fallback designed and copy-tested *before* launch ("i tuoi conti smettono di aggiornarsi, i dati restano tuoi"). D: the three Gate C KPIs reported monthly from beta month 3 (R-BM-2). C: F′ for new cohorts after two misses, funded transition and explicit notice for existing commitments; trial-gated G at the 12-month review if F misses twice more (`business-model.md` §2–3). |
 | **Owner** | CFO (guardrail) + Head of Product (envelope and copy). |
 | **Evidence** | `business-model.md` §2 model comparison (HYPOTHESIS), §3 decision; `revenue-scenarios.md` §3 (Base never breaks even); European subscription-only exits (`market-analysis.md` T4, FACT); PocketGuard removed its free plan (`US-W27`, medium). |
 
@@ -188,7 +200,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Probability** | Medium — Base 25 % (15–40) for the route-A question alone; Medium 20 % for an Art. 9 or offers-rail block. Residual: Low 10 % with the opinions in hand. |
 | **Impact** | Fatal (route A rejected after launch without a fallback); Major otherwise. |
 | **Early-warning signals** | Counsel memo negative or hedged; provider KYB refuses a B2C app; Fabrick declines B2C terms; Garante newsletter mentions aggregators; store review asks for a licence; taxonomy review flags labels. |
-| **Mitigations** | P: counsel engaged in Phase 1, opinion before any production launch (D9); Fabrick parallel enquiry (Italian licensee); route B requested in writing as an upgrade; route C budget held as a contingency (€40–150 k, ASSUMPTION); DPIA before beta; taxonomy without special-category labels and a "Privata" flag; no monetised referrals in v1 (D3 of `regulatory-landscape.md`); licence evidence pack for the stores. D: quarterly OEIL/Garante/Play watch (D10). C: pause the affected feature, not the product; switch to the Italian-supervised licensee. |
+| **Mitigations** | P: counsel engaged in Phase 1, opinion before any real-data pilot/beta access (D9); Fabrick parallel enquiry (Italian licensee); route B requested in writing as an upgrade; route C budget held as a contingency (€40–150 k, ASSUMPTION); DPIA before beta; taxonomy without special-category labels and a "Privata" flag; no monetised referrals in launch; €0 offers in model (D3 of `regulatory-landscape.md`); licence evidence pack for the stores. D: quarterly OEIL/Garante/Play watch (D10). C: pause the affected feature, not the product; switch to the Italian-supervised licensee. |
 | **Owner** | Compliance/DPO + CEO. |
 | **Evidence** | `open-banking-providers.md` §2.2 L1–L5 (UNKNOWN); `regulatory-landscape.md` §2 rows 7, 9, 12, 19 (FACT/UNKNOWN); Fabrick "quarta parte" attribution not found on Banca d'Italia pages (`NEW-3` in regulatory, ASSUMPTION). |
 
@@ -199,7 +211,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Story** | Storyline 5: the correct picture is delivered, the inbox is empty, and nothing pulls the user back. Or the opposite: the inbox is full of questions, the user does the work for two months and leaves (the YNAB effect). D30 settles at the finance-app average of 4 % instead of the 10 % the plan needs. |
 | **Probability** | High — Base 45 % (30–60) that D30 < 8 % at launch. Residual: Medium 25 %. |
 | **Impact** | Severe: paid subscriptions per 1,000 MAU cannot reach 180 on a leaking base. |
-| **Early-warning signals** | D30 < 8 % on open-beta cohorts (Gate F F5); M3 MAU retention < 30 %; WACU-fresh < 40 % of MAU; inbox items per week > 10 (work) **or** `summary_viewed` < 1 per user-month (absence); consent renewal before expiry < 60 % (connections silently die); insight opens < 35 %. |
+| **Early-warning signals** | D30 < 8 % on open-beta cohorts (beta retention release evidence); M3 MAU retention < 30 %; WACU-fresh < 40 % of MAU; inbox items per week > 10 (work) **or** `summary_viewed` < 1 per user-month (absence); consent renewal before expiry < 60 % (connections silently die); insight opens < 35 %. |
 | **Mitigations** | P: the amended promise made visible — the sync report, the "why", the monthly "Cosa è successo" card, the consent countdown as a *moment*, recurring and price-increase cards, safe-to-spend; inbox budget ≤ 5 minutes a month; household layer as the first expansion; WOW vs non-WOW cohort instrumentation from day one. D: cohort retention by WOW status and by number of institutions; inbox size and minutes per month watched together. C: single-institution fallback WOW; nudge cadence tuned within the push cap (≤ 3/week) and never for engagement's sake. |
 | **Owner** | Head of Product + Growth. |
 | **Evidence** | Finance D30 ≈ 4.2 % (Business of Apps) vs 10–15 % cited for fintech (`NEW-M2`, medium-low, sources disagree); YNAB manual-effort churn (`US-S13`); "sense of control" retention (`US-S12`); `jobs-to-be-done.md` §4 AUTOMATE stage. |
@@ -220,13 +232,13 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 
 | | |
 |---|---|
-| **Story** | Three stories compete inside the company: "the AI money app", "the calm money app", "inbox zero for your finances". The store listing says one, the creators say another, the paywall a third. Plan names drift (Plus, Pro, Family, Famiglia). Users cannot place Lilleri between their bank app and a tracker. |
+| **Story** | Three stories compete inside the company: "the AI money app", "the calm money app", "inbox zero for your finances". The store listing says one, the creators say another, the paywall a third. Plan labels or promised capabilities drift from canonical Gratis/Plus, Famiglia Later and Pro professional reserved. Users cannot place Lilleri between their bank app and a tracker. |
 | **Probability** | Medium — Base 30 % (20–45). Residual: Low 10 % with one positioning sentence enforced. |
 | **Impact** | Major. |
 | **Early-warning signals** | Copy tests fail to produce a consistent restatement; store-listing conversion below median; press describes "a new budgeting app"; internal documents disagree (today: `brand-strategy.md` D7 two paid tiers vs `business-model.md` D-BM-6 three — an existing inconsistency, FACT by inspection). |
-| **Mitigations** | P: positioning P1 ("keeps your money correctly accounted for, by itself") as the only brand sentence; P2 as the product narrative; "AI" only as an explanation; a pricing/plan ADR that settles the ladder before Phase 5 paywall tests (`roadmap.md` R-8). D: quarterly message audit across store, site, creators, paywall. C: one-page positioning refresh with copy tests. |
+| **Mitigations** | P: positioning P1 ("keeps your money correctly accounted for, by itself") as the only brand sentence; P2 as the product narrative; "AI" only as an explanation; a pricing/plan ADR carrying the settled Gratis/Plus ladder and explicit Later capability gates before paywall tests (`roadmap.md` R-8). D: quarterly message audit across store, site, creators, paywall. C: one-page positioning refresh with copy tests. |
 | **Owner** | Head of Product + Brand lead. |
-| **Evidence** | `brand-strategy.md` §3 (DECISION); `messaging-framework.md`; the plan-ladder conflict between brand and business documents. |
+| **Evidence** | `brand-strategy.md` §3 (DECISION); `messaging-framework.md`; the formerly conflicting ladder, now resolved in business D-BM-6; future capability/copy drift remains a risk. |
 
 ### F14 — Provider shutdown, acquisition or price hike
 
@@ -236,7 +248,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Probability** | Medium — Base 30 % (20–45) over three years for a material event at the primary. Residual: the event probability is unchanged; impact drops to Major with the dual-adapter architecture. |
 | **Impact** | Severe without a second adapter; Major with it. |
 | **Early-warning signals** | Layoff or funding news; status-page degradation; renewal terms with > 30 % increase; institutions silently dropped from the provider's list; provider's "new sign-ups disabled" page. |
-| **Mitigations** | P: provider-agnostic architecture (canonical schema, raw payload retention, adapter per institution, dual-provider capability from release one, D7); non-exclusive ≤ 12-month contract; the second adapter exercised in production for ≥ 1 institution by Gate G (G5); Fabrick and Tink lines kept warm. D: quarterly vendor review in the vendor register (DORA-style). C: switch institutions to the dormant adapter within one release; re-consent users with a plain explanation; route C decision re-opened. |
+| **Mitigations** | P: provider-agnostic architecture (canonical schema, raw payload retention, adapter per institution, provider-agnostic mock boundary first; second live adapter only after contract/coverage/re-consent evidence, D7); non-exclusive ≤ 12-month contract; the second adapter exercised in production for ≥ 1 institution by expansion release provider-concentration review; Fabrick and Tink lines kept warm. D: quarterly vendor review in the vendor register (DORA-style). C: switch only after verified adapter/contract/capability and re-consent evidence; release timing UNKNOWN; re-consent users with a plain explanation; route C decision re-opened. |
 | **Owner** | CTO. |
 | **Evidence** | `open-banking-providers.md` §3.1–3.6 (FACT for the corporate events); `market-analysis.md` T3 (FACT); `PP-AD-01` (FACT). |
 
@@ -294,9 +306,9 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 |---|---|
 | **Story** | Italians pay €3.99–€9.99 for neobank tiers that come with a card and perks; a PFM at €4.99 that "just shows what my bank already shows" does not clear the bar. The Van Westendorp survey says €2.99; trial→paid lands at 12 %; annual plans are rare. The Target corridor (180 subscriptions per 1,000 MAU) is never reached. |
 | **Probability** | High — Base 40 % (25–55) that Italian PFM WTP sits below the Base assumptions. Residual: Medium 25 %. |
-| **Impact** | Severe: Gate C C2 fails; the model needs the second rail earlier than trust allows. |
-| **Early-warning signals** | Phase 1 survey acceptance of €4.99 < 30 % of ICP respondents; trial→paid < 15 % after two paywall iterations (Gate F F6); annual share < 40 %; paywall views with `trigger: second_institution` not converting; interview verbatims "la banca lo fa gratis". |
-| **Mitigations** | P: price test €3.99/€4.99/€5.99 in Phase 1 and in beta; depth and automation as the paid value (multi-institution, background refresh, history, forecasts, household); Famiglia as the family-budget annual purchase; grandfathered launch price; no gating of correctness (gating basics is the fastest route to the rating gap). D: monetisation metrics with paired guardrails. C: F′ shape; trial-gated G at the 12-month review; the opt-in offers rail (Phase 7) only after trust metrics hold; B2B2C with a bank that funds the free core. |
+| **Impact** | Severe: Gate C C2 fails; launch economics fail; no offer income can be assumed before separate legal/product/trust gates. |
+| **Early-warning signals** | Phase 1 survey acceptance of €4.99 < 30 % of ICP respondents; trial→paid < 15 % after two paywall iterations (post-billing purchase release evidence); annual share < 40 %; paywall views with `trigger: second_institution` not converting; interview verbatims "la banca lo fa gratis". |
+| **Mitigations** | P: price test €3.99/€4.99/€5.99 in Phase 1 and in beta; depth and automation as the paid value (multi-institution, background refresh, history, forecasts, household); Famiglia as the family-budget annual purchase; clear price-change notice/rights, no lifetime price commitment; no gating of correctness (gating basics is the fastest route to the rating gap). D: monetisation metrics with paired guardrails. C: F′ shape; trial-gated G at the 12-month review; the opt-in offers rail (Phase 7) only after trust metrics hold; B2B2C with a bank that funds the free core. |
 | **Owner** | Growth / Monetisation. |
 | **Evidence** | `market-analysis.md` §3 (WTP for a PFM in Italy UNKNOWN); Italian price anchors (`user-pain-points.md` §7, FACT low-medium); RevenueCat benchmarks are cross-category (`W-1`); Moneyhub at £1.49 was loved and still closed (`EU-S-07a`). |
 
@@ -308,21 +320,21 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | **Probability** | Medium — Base 25 % (15–40). Residual: Low 10 % with D-BM-5 rules enforced. |
 | **Impact** | Major (trust and revenue both). |
 | **Early-warning signals** | Opt-in < 15 % in the experiment cohort; complaints > 1 per 1,000 offers shown; NPS delta ≤ −5 vs control (kill switch); support topic "privacy" rising; press or creator mentions of "vende i dati". |
-| **Mitigations** | P: no ads ever; the rail only after beta trust metrics hold; separate revocable consent; visible "Lilleri riceve un compenso" label; never in the inbox, insights or categorisation; no "you should" language; counsel on PSD2 art. 67(2)(f) and OAM/IVASS boundaries before launch; Free and paid see the same rail (no "ad-free" upsell). D: opt-in, opt-out, complaints, NPS delta measured per cohort. C: kill switch at NPS −5; withdraw partners that generate complaints. |
+| **Mitigations** | P: no display/contextual banners, no data sale; the rail only after beta trust metrics hold; separate revocable consent; visible "Lilleri riceve un compenso" label; never in the inbox, insights or categorisation; no "you should" language; counsel on PSD2 art. 67(2)(f) and OAM/IVASS boundaries before launch; Free and paid see the same rail (no "ad-free" upsell). D: opt-in, opt-out, complaints, NPS delta measured per cohort. C: kill switch at NPS −5; withdraw partners that generate complaints. |
 | **Owner** | Head of Product + Compliance. |
-| **Evidence** | `business-model.md` §5–6 (DECISION); Snoop sells anonymised data, Moneyhub's "we don't sell your data" loved (`EU-S-22/S-23`, `EU-S-07a`); Finanzguru ≈ 70 % commissions proves the rail can work (`EU-S-35/S-68`, medium). |
+| **Evidence** | `business-model.md` §5–6 (DECISION); Snoop sells anonymised data, Moneyhub's "we don't sell your data" loved (`EU-S-22/S-23`, `EU-S-07a`); Finanzguru commission concentration is a comparator, not proof of Lilleri legal/monetisation feasibility (`EU-S-35/S-68`, medium). |
 
 ### F21 — Funding gap
 
 | | |
 |---|---|
-| **Story** | The seed round sized on the Target case (€1.5–2.5 M to 100 k MAU) is raised on Base-case evidence; beta metrics land between Base and Pessimistic; the bridge does not close; the provider minimum invoice and the DPO retainer are the last bills paid. |
-| **Probability** | High — Base 35 % (25–50) that runway ends before Gate G evidence exists. Residual: Medium 20 %. |
+| **Story** | A seed round is sized on an unverified growth/cash path and raised as if the Target scenario were a forecast; beta metrics land between Base and Pessimistic; the bridge does not close; the provider minimum invoice and the DPO retainer are the last bills paid. |
+| **Probability** | High — Base 35 % (25–50) that runway ends before renewal/expansion evidence exists. Residual: Medium 20 %. |
 | **Impact** | Fatal. |
 | **Early-warning signals** | Runway < 9 months without a term sheet; fixed costs > stage cap by 20 %; Gate C KPIs trending to Base or worse at beta month 6; CAC > €3 for two weeks; investor feedback "another budgeting app". |
-| **Mitigations** | P: stage budgets as hard caps (D-RS-3); raise on the Target case with the Base case shown as the floor (D-RS-1); beta designed to produce the three Gate C numbers early; organic/referral-led growth (no paid UA beyond tests). D: monthly runway review. C: F′ or trial-gated G to fix margin; slow Phase 6 growth spend; B2B2C conversations as a strategic option. |
+| **Mitigations** | P: stage budgets as hard caps (D-RS-3); show launch Plus-only Base/downside/Target together, with funding need UNKNOWN until a monthly cash path is modelled (D-RS-1); beta designed to produce the three Gate C numbers early; organic/referral-led growth (no paid UA beyond tests). D: monthly runway review. C: F′ or trial-gated G to fix margin; slow Phase 6 growth spend; B2B2C conversations as a strategic option. |
 | **Owner** | CEO + CFO. |
-| **Evidence** | `revenue-scenarios.md` §6 funding implication (HYPOTHESIS, order of magnitude). |
+| **Evidence** | `revenue-scenarios.md` §5: funding UNKNOWN; retired unsupported seed estimate. |
 
 ### F22 — Market smaller than assumed
 
@@ -383,8 +395,8 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | D30 (open beta) | < 8 % | §3.2 #4 | F11 | 5–6 |
 | WOW-session rate | < 30 % | §3.2 #1 | F08, F11, F03 | 5 |
 | Trial → paid | < 15 % after two iterations | §3.2 #10 | F19, F07 | 5 |
-| Paid subscriptions per 1,000 MAU | < 100 at month 6 | Gate F F6 | F07, F19 | 5–6 |
-| Free AIS cost per paid subscription | > €1.20 for 2 months | §5 #13 | F07, F01 | 5–7 |
+| Paid subscriptions per 1,000 MAU | < 100 at month 6 | post-billing purchase release evidence | F07, F19 | 5–6 |
+| Free AIS cost per paid subscription | > €0.95 for 2 months | §5 #13 | F07, F01 | 5–7 |
 | Trustpilot − store gap | > 1.5 | G9 | F04, F06 | 6 |
 | CAC per registered | > €3 for 2 weeks | `go-to-market.md` §6 | F12, F22, F21 | 6 |
 | Runway | < 9 months without a term sheet | — | F21 | 5–7 |
@@ -433,7 +445,7 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | PM-4 | The highest-scoring modes that a product or contract deliverable can prevent (F07, F01, F04, F03) each get a named preventive deliverable in Phases 1–2 of `roadmap.md` (F′ copy test, RFP pricing clauses, trust set in the MVP, fill-rate pilot); F15 and F21 are governed by the fixed-cost caps and hiring triggers of `revenue-scenarios.md` D-RS-3 and `roadmap.md` §1.2 | DECISION (proposed) |
 | PM-5 | Re-run this pre-mortem at Gate E (before real users) and at Gate G (12-month review), re-estimating probabilities with measured data | RECOMMENDATION |
 | PM-6 | Every incident post-mortem must map to a failure mode here or add a new one (F24+), so the register learns | RECOMMENDATION |
-| PM-7 | Resolve the brand vs business plan-ladder inconsistency (F13) in a pricing/plan ADR before any paywall is shown to users | RECOMMENDATION |
+| PM-7 | Preserve canonical Gratis/Plus in the pricing/plan ADR; keep Famiglia Later and Pro professional reserved; only delivered capabilities appear in paywall | RECOMMENDATION |
 
 ## Open questions
 
@@ -450,6 +462,16 @@ Reading (HYPOTHESIS): the top of the list is economics, capacity and trust, not 
 | 9 | What does the final PSR text say on the AIS SCA cycle (180 vs 365 days) and the 4×/24 h cap? | F18 | Council doc 8222/26; OEIL after 14 Dec 2026 | Compliance, ongoing |
 | 10 | Is the weekly audit feasible under the beta consent, and at what sample size per bank? | F05 | DPO memo; statistical design | DPO + Data/ML, Phase 4 |
 | 11 | Would a B2B2C deal with an Italian bank be a credible fallback for F07/F21, and what would it cost the brand? | F07, F21, F09 | Two exploratory conversations in Phase 7, no commitment | CEO, Phase 7 |
+
+## Review log
+
+| Reviewer | Finding | Resolution |
+|---|---|---|
+| Investor/CFO (major) | Funding story and mitigations reused retired seed/ARPPU model and required offer income | Funding UNKNOWN; Plus-only zero-offers launch, Base negative and Target stage losses preserved |
+| Fintech/privacy (blocker) | “Own accounts”/licence transfer/dual consent implied real access allowed before legal clearance | Staged mock/sandbox/pilot boundary; written route, provider and privacy/security gates |
+| Brand/PM (major) | F13 still treated resolved plan naming as open | Canonical Gratis/Plus; Famiglia Later, Pro reserved; price/demand questions remain |
+| Consumer (major) | Mitigations committed lifetime prices,12-month grandfathering and blanket no-ad promise | Notice/funded transitions; non-renewing preview; no-banner/no-data-sale policy |
+| Data (major) | Subjective risk-score ranking could be read as calibrated probability or independent compound risk | Explicit elicited judgements, correlated risks and no implied residual-risk verification |
 
 ## Sources
 

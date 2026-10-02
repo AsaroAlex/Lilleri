@@ -7,6 +7,12 @@
 
 **Labels.** FACT = verified against a cited source on 2026-10-02 (research facts are cited by their source IDs in the input documents). ASSUMPTION = plausible, unverified. HYPOTHESIS = to be tested with users or data. DECISION = a choice made here (brand decisions do not need an ADR unless they constrain architecture; the ones that do are flagged). OPEN QUESTION / UNKNOWN = not established. Product capabilities that do not yet exist are labelled **commitment** and must not be presented to users as facts until shipped.
 
+**Consolidation — DECISION, 2026-10-02:** Direction B li monogram / T3 Carta & Vinaccia / Geist UI, Newsreader editorial. `brand-identity.md` and `brand-jury.md` now govern visual implementation. Gate G is conceptually satisfied for implementation; designer finalisation, legal clearance and user/device validation remain open. No recruited consumer panel or timed recognition test occurred.
+
+**Launch scope — DECISION:** Gratis / Plus only; Famiglia is Later until consent-aware sharing exists; Pro reserved for possible professional workflows. Current Plus planning hypothesis is €4.99/month or €39.99/year, not a live offer. See `brand-architecture.md` and current business review for entitlements/economics. Correctness/privacy do not become a paid accuracy tier. Possible optional labelled partner offers later mean an absolute “no advertising ever” promise is inappropriate; draft policy is “Niente banner. Non vendiamo i tuoi dati.”
+
+**Truthful promise:** “Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.” (“Connect your accounts. Lilleri organises transactions and asks when needed.”) “Once” describes low setup effort, not perpetual access: bank/provider authentication and consent may need renewal at the actual provider expiry. The current demo uses synthetic data and does not connect real banks; public copy must disclose this rather than borrow the future licensed-provider promise.
+
 ---
 
 ## 1. What the research tells the brand (one page)
@@ -32,7 +38,7 @@
 | **Purpose** (why we exist) | People should be able to know what is happening to their money without giving it their evenings. | The pain research shows the alternative today is spreadsheets, "1000 apps" abandoned, or exporting statements into ChatGPT (`competitors-italy-and-ai-first.md` Y-02). DECISION |
 | **Mission** (what we do) | Lilleri connects every account a person has and keeps one correct, explainable record of what happens to their money — reconciled automatically, categorised their way, private by design, Italian first. | Each clause maps to a product commitment in §7. DECISION |
 | **Vision** (the world if we succeed) | A Europe where checking what happened to your money is as effortless and as trustworthy as checking the time. | Long-horizon; the "trustworthy" qualifier is deliberate — effortless alone is a Revolut/Cleo world. DECISION |
-| **Promise** (what the user can hold us to) | *Colleghi i conti una volta. Al resto pensa Lilleri — e ti chiede solo quando ha un dubbio.* ("Connect your accounts once. Lilleri takes care of the rest — and asks you only when it is unsure.") | The second clause keeps the promise honest: the Review Inbox exists. A promise of total automation would fail the trust priority. DECISION |
+| **Promise** (what the user can hold us to) | *Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.* ("Connect your accounts. Lilleri organises transactions and asks when needed.") | Product commitment, not current real-bank availability. Review and renewal remain explicit; never promise perpetual authorisation or total automation. DECISION |
 | **Internal one-liner** | Your money, correctly accounted for, by itself. | For decks, briefs and hiring; not consumer copy. |
 
 ---
@@ -147,7 +153,7 @@ None of R1–R10 is a FACT today. Marketing copy may describe *what Lilleri does
 | Element | Rule | Status |
 |---|---|---|
 | Master brand | **Lilleri** is a monolithic master brand. Everything the user touches is "Lilleri" plus a plain descriptor. No sub-brands, no endorsed brands, no product families at launch | DECISION |
-| Plan naming | Plans are descriptors, never names: **Lilleri** (free core), **Lilleri Plus** (depth), **Lilleri Famiglia** (household). Descriptor language: Italian where it is natural and ownable ("Famiglia"), English where it is the pan-European convention ("Plus"). Always written "Lilleri Plus", never "Plus" alone or "Lilleri+" | DECISION |
+| Plan naming | Master brand **Lilleri**; launch descriptors **Lilleri Gratis** and **Lilleri Plus**. **Lilleri Famiglia** is Later, gated to actual sharing. In a labelled plan selector “Gratis”/“Plus” is sufficient; prose uses the full name. Never “Lilleri+” | DECISION |
 | Words never used for plans | Premium, Metal, Gold, Platinum, Ultra, Black, VIP, Elite — the neobank status ladder; they sell status, not usefulness, and read "bank-like/cheap" at once. Also never "Pro" for a consumer tier | DECISION |
 | "Lilleri Pro" | Reserved for a possible future **partita-IVA** tier (personal + business separation, tax set-aside), because in Italy "Pro" reads as "professionista". Not at launch; requires its own decision | OPEN QUESTION |
 | "Lilleri Business" | **Not coherent** with a consumer brand built on calm and personal clarity; a separate B2B product (banks, PFM modules) would dilute the master brand and compete with Fabrick-style players. Do not create. If B2B2C distribution happens, Lilleri is the *consumer* brand inside a partner, never "Lilleri Business" | DECISION |
@@ -242,7 +248,7 @@ Priorities (from the project brief, in order): trust, data correctness, security
 | D4 | No published archetype; internal filter "Sage's clarity, Caregiver's manners, never the Magician" | DECISION | No |
 | D5 | Emotional territory "la tranquillità di sapere": clarity → calm; control as RTB; lightness as tone | DECISION | No |
 | D6 | Reasons to believe are product commitments until shipped and measured; no public claim before then | DECISION | Yes — ties to the reconciliation-accuracy metric and the business-model ADR (R8) |
-| D7 | Monolithic master brand; plans "Lilleri / Lilleri Plus / Lilleri Famiglia"; no Premium/Metal/Gold/Ultra; "Pro" reserved for a future partita-IVA tier; no "Lilleri Business" | DECISION | Pricing/plan ADR should reference this |
+| D7 | Monolithic master brand; launch “Lilleri Gratis / Lilleri Plus”; Famiglia Later only with real sharing; no Premium/Metal/Gold/Ultra; Pro reserved for a future professional workflow; no Lilleri Business | DECISION | `brand-architecture.md` and business review govern active ladder; earlier four-plan scenarios are comparators |
 | D8 | Feature names are plain Italian nouns; at most one branded noun (the inbox), pending test | DECISION | No |
 | D9 | Anti-patterns of §10 are hard rules for identity and copy | DECISION | No |
 | D10 | Italian is the master copy language with an English term glossary from day one; locale-correct number rendering is a brand rule | DECISION | Yes — i18n and money-formatting architecture (`typography-options.md` §10.4) |
