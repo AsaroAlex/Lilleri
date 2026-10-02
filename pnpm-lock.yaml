@@ -27,6 +27,60 @@ importers:
         specifier: 5.0.3
         version: 5.0.3(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5))
 
+  packages/brand:
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+
+  packages/domain:
+    dependencies:
+      '@lilleri/money':
+        specifier: workspace:*
+        version: link:../money
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5))
+
+  packages/engines:
+    dependencies:
+      '@lilleri/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@lilleri/money':
+        specifier: workspace:*
+        version: link:../money
+    devDependencies:
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5))
+
+  packages/financial-providers:
+    dependencies:
+      '@lilleri/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@lilleri/money':
+        specifier: workspace:*
+        version: link:../money
+    devDependencies:
+      '@types/node':
+        specifier: ^22.19.0
+        version: 22.20.5
+      typescript:
+        specifier: 7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: 5.0.3
+        version: 5.0.3(@types/node@22.20.5)(vite@8.3.2(@types/node@22.20.5))
+
   packages/money:
     devDependencies:
       typescript:
