@@ -1,0 +1,104 @@
+{
+  "t1": {
+    "order": [
+      "cotto",
+      "blue",
+      "green",
+      "plum",
+      "ochre",
+      "teal"
+    ],
+    "light": [
+      "#9F4925",
+      "#1C5D98",
+      "#3E7329",
+      "#AE6AA8",
+      "#A07506",
+      "#03999F"
+    ],
+    "dark": [
+      "#B65E3A",
+      "#3675B2",
+      "#669D53",
+      "#985593",
+      "#AA7E1A",
+      "#09A6AD"
+    ],
+    "minCvd": {
+      "light": 16.4,
+      "dark": 15.2
+    },
+    "minNormal": {
+      "light": 19.5,
+      "dark": 20.2
+    }
+  },
+  "t2": {
+    "order": [
+      "olive",
+      "plum",
+      "ochre",
+      "teal",
+      "clay",
+      "blue"
+    ],
+    "light": [
+      "#587020",
+      "#A965A4",
+      "#A07506",
+      "#03999F",
+      "#9B471B",
+      "#1C5D98"
+    ],
+    "dark": [
+      "#7A9546",
+      "#985593",
+      "#AA7E1A",
+      "#09A6AD",
+      "#AF592F",
+      "#3675B2"
+    ],
+    "minCvd": {
+      "light": 16.5,
+      "dark": 16.4
+    },
+    "minNormal": {
+      "light": 19.5,
+      "dark": 20.2
+    }
+  },
+  "t3": {
+    "order": [
+      "wine",
+      "ochre",
+      "teal",
+      "clay",
+      "blue",
+      "green"
+    ],
+    "light": [
+      "#933153",
+      "#A07506",
+      "#03999F",
+      "#9B471B",
+      "#1C5D98",
+      "#588E44"
+    ],
+    "dark": [
+      "#AF4A6B",
+      "#B88C2E",
+      "#079298",
+      "#AF592F",
+      "#3675B2",
+      "#669D53"
+    ],
+    "minCvd": {
+      "light": 13.3,
+      "dark": 10
+    },
+    "minNormal": {
+      "light": 19.5,
+      "dark": 20
+    }
+  }
+}
