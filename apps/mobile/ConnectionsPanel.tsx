@@ -7,10 +7,15 @@ import {
   type ConnectionInstitutionDto,
   type ConnectionLifecycleDto,
   type DemoOverview,
+  type SyncJobDto,
 } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
+import { useI18n } from './src/i18n/context'
+
+type ConnectionMessageKey = keyof typeof CONNECTION_MESSAGE_PAIRS
 
 type ThemeColors = typeof colors.light | typeof colors.dark
 type ConnectionClient = Pick<
@@ -22,7 +27,11 @@ type ConnectionClient = Pick<
   | 'pauseConnection'
   | 'resumeConnection'
   | 'renewConnection'
-  | 'sync'
+  | 'startSync'
+  | 'resumeSync'
+  | 'syncJob'
+  | 'connectionSyncJobs'
+  | 'disconnect'
 >
 export interface ConnectionsPanelProps {
   readonly overview: DemoOverview
@@ -34,52 +43,45 @@ export interface ConnectionsPanelProps {
   readonly onManualFallback: () => void
   readonly onError?: (cause: unknown) => boolean
 }
-const kindLabels: Readonly<Record<ConnectionAccountKind, string>> = {
-  current: 'Conto corrente',
-  savings: 'Risparmi',
-  card: 'Carta',
-  cash: 'Contanti',
+const kindLabels: Readonly<Record<ConnectionAccountKind, ConnectionMessageKey>> = {
+  current: 'connections.kind.current',
+  savings: 'connections.kind.savings',
+  card: 'connections.kind.card',
+  cash: 'connections.kind.cash',
 }
-const stateLabels: Readonly<Record<ConnectionLifecycleDto['state'], string>> = {
-  active: 'Attivo',
-  expiring: 'Da rinnovare a breve',
-  expired: 'Autorizzazione scaduta',
-  revoked: 'Scollegato',
-  error: 'Richiede una verifica',
-  paused: 'In pausa',
-  unknown: 'Autorizzazione da verificare',
+const stateLabels: Readonly<Record<ConnectionLifecycleDto['state'], ConnectionMessageKey>> = {
+  active: 'connections.state.active',
+  expiring: 'connections.state.expiring',
+  expired: 'connections.state.expired',
+  revoked: 'connections.state.revoked',
+  error: 'connections.state.error',
+  paused: 'connections.state.paused',
+  unknown: 'connections.state.unknown',
 }
-const eventLabels: Readonly<Record<ConnectionConsentEventDto['action'], string>> = {
-  granted: 'Autorizzazione della fonte',
-  renewed: 'Autorizzazione rinnovata',
-  paused: 'Collegamento in pausa',
-  resumed: 'Collegamento ripreso',
-  revoked: 'Collegamento scollegato',
-  provider_error: 'Problema segnalato dalla fonte',
-  provider_recovered: 'Fonte nuovamente disponibile',
-  legacy_imported: 'Storico precedente ricostruito',
+const eventLabels: Readonly<Record<ConnectionConsentEventDto['action'], ConnectionMessageKey>> = {
+  granted: 'connections.event.granted',
+  renewed: 'connections.event.renewed',
+  paused: 'connections.event.paused',
+  resumed: 'connections.event.resumed',
+  revoked: 'connections.event.revoked',
+  provider_error: 'connections.event.provider_error',
+  provider_recovered: 'connections.event.provider_recovered',
+  legacy_imported: 'connections.event.legacy_imported',
 }
-function formatInstant(value: string | null, timezone: string): string {
-  if (!value || !Number.isFinite(Date.parse(value))) return 'Non comunicata dalla fonte'
-  return new Intl.DateTimeFormat('it-IT', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: timezone,
-  }).format(new Date(value))
-}
-function coverageLabel(institution: ConnectionInstitutionDto, kind: ConnectionAccountKind): string {
+
+function coverageLabel(
+  institution: ConnectionInstitutionDto,
+  kind: ConnectionAccountKind,
+): ConnectionMessageKey {
   const coverage = institution.accountTypes.find((item) => item.kind === kind)
   if (!coverage || coverage.availability === 'unknown' || coverage.evidence.status === 'unknown')
-    return 'Copertura non verificata'
-  if (coverage.availability === 'unavailable') return 'Non ancora collegabile'
-  if (coverage.evidence.status === 'synthetic') return 'Disponibile solo nella simulazione'
-  if (coverage.evidence.status === 'unverified') return 'Disponibilità dichiarata, non verificata'
+    return 'connections.coverage.unknown'
+  if (coverage.availability === 'unavailable') return 'connections.coverage.unavailable'
+  if (coverage.evidence.status === 'synthetic') return 'connections.coverage.synthetic'
+  if (coverage.evidence.status === 'unverified') return 'connections.coverage.unverified'
   return coverage.evidence.environment === 'sandbox'
-    ? 'Verificata nel solo ambiente di prova'
-    : 'Copertura verificata nella configurazione'
+    ? 'connections.coverage.sandbox'
+    : 'connections.coverage.verified'
 }
 function canConnectFixture(
   catalogue: ConnectionInstitutionCatalogueDto | null,
@@ -107,6 +109,12 @@ export function ConnectionsPanel({
   onManualFallback,
   onError,
 }: ConnectionsPanelProps) {
+  const i18n = useI18n(),
+    { t } = i18n
+  const formatInstant = (value: string | null, timezone: string) =>
+    value && Number.isFinite(Date.parse(value))
+      ? i18n.instant(value, timezone)
+      : t('connections.dateUnknown')
   const c = colors[theme]
   const s = useMemo(() => styles(c), [c])
   const scope = `${overview.profile.id}:${String(resetKey)}`
@@ -121,6 +129,10 @@ export function ConnectionsPanel({
   const callbacks = useRef({ onRefresh, onError })
   callbacks.current = { onRefresh, onError }
   const [dataScope, setDataScope] = useState(scope)
+  const [jobs, setJobs] = useState<Readonly<Record<string, readonly SyncJobDto[]>>>({})
+  const startRequests = useRef({ epoch: context.current.epoch, ids: new Map<string, string>() })
+  if (startRequests.current.epoch !== context.current.epoch)
+    startRequests.current = { epoch: context.current.epoch, ids: new Map() }
   const [catalogue, setCatalogue] = useState<ConnectionInstitutionCatalogueDto | null>(null)
   const [lifecycles, setLifecycles] = useState<readonly ConnectionLifecycleDto[]>([])
   const [kind, setKind] = useState<ConnectionAccountKind>('current')
@@ -128,6 +140,11 @@ export function ConnectionsPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [disconnectChoice, setDisconnectChoice] = useState<{
+    connectionId: string
+    data: 'retain' | 'erase'
+    acknowledged: boolean
+  } | null>(null)
   const [history, setHistory] = useState<{
     connectionId: string
     events: readonly ConnectionConsentEventDto[]
@@ -148,13 +165,24 @@ export function ConnectionsPanel({
         ...extraIds,
       ]),
     ]
-    const [institutions, states] = await Promise.all([
+    const [institutions, states, jobGroups] = await Promise.all([
       api.institutions(),
       Promise.all(ids.map((id) => api.connectionLifecycle(id))),
+      Promise.all(ids.map(async (id) => ({ id, jobs: await api.connectionSyncJobs(id) }))),
     ])
     if (!current(epoch) || version !== loadVersion.current) return
     if (states.some((state) => state.profileId !== latestOverview.current.profile.id))
       throw new Error('Lo stato ricevuto non corrisponde al profilo corrente. Ricarica i dati.')
+    if (
+      jobGroups.some((group) =>
+        group.jobs.some(
+          (job) =>
+            job.profileId !== latestOverview.current.profile.id || job.connectionId !== group.id,
+        ),
+      )
+    )
+      throw new Error('Invalid owned sync job response')
+    setJobs(Object.fromEntries(jobGroups.map((group) => [group.id, group.jobs])))
     setCatalogue(institutions)
     setLifecycles(states)
     setDataScope(context.current.scope)
@@ -175,6 +203,8 @@ export function ConnectionsPanel({
       setCatalogue(null)
       setLifecycles([])
       setHistory(null)
+      setJobs({})
+      setDisconnectChoice(null)
       setKind('current')
       setBusy(false)
       setError(null)
@@ -186,9 +216,7 @@ export function ConnectionsPanel({
     reload(epoch)
       .catch((cause) => {
         if (!active || !current(epoch) || handlers.onError?.(cause)) return
-        setError(
-          cause instanceof Error ? cause.message : 'Non riesco a caricare i collegamenti. Riprova.',
-        )
+        setError(i18n.problemMessage(cause))
       })
       .finally(() => {
         if (active && current(epoch)) setLoading(false)
@@ -222,10 +250,7 @@ export function ConnectionsPanel({
       if (current(epoch)) setNotice(typeof success === 'function' ? success() : success)
     } catch (cause) {
       if (!current(epoch) || handlers.onError?.(cause)) return
-      if (saved)
-        setError(
-          'La modifica è stata confermata, ma l’aggiornamento dei dati non è riuscito. Ricarica per vedere lo stato corrente.',
-        )
+      if (saved) setError(t('connections.savedRefreshFailed'))
       else if (cause instanceof ApiError && cause.status === 409) {
         try {
           await handlers.onRefresh()
@@ -234,21 +259,14 @@ export function ConnectionsPanel({
           if (current(epoch))
             setError(
               cause.code === 'consent_changed'
-                ? 'Il collegamento è cambiato. Ho aggiornato i dati: controllali prima di scegliere di nuovo.'
-                : cause.message,
+                ? t('connections.changed')
+                : i18n.problemMessage(cause),
             )
         } catch (refreshError) {
           if (!current(epoch) || handlers.onError?.(refreshError)) return
-          setError(
-            'Il collegamento richiede una verifica e non riesco ad aggiornare lo stato. Ricarica prima di continuare.',
-          )
+          setError(t('connections.refreshFailed'))
         }
-      } else
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : 'L’azione non è confermata. Controlla lo stato prima di riprovare.',
-        )
+      } else setError(i18n.problemMessage(cause))
     } finally {
       if (current(epoch)) {
         busyEpoch.current = null
@@ -279,7 +297,114 @@ export function ConnectionsPanel({
     } catch (cause) {
       if (!current(epoch) || version !== historyVersion.current || handlers.onError?.(cause)) return
       setHistory(null)
-      setError(cause instanceof Error ? cause.message : 'Lo storico non è disponibile.')
+      setError(i18n.problemMessage(cause))
+    }
+  }
+  const rememberJob = (job: SyncJobDto) => {
+    if (
+      job.profileId !== latestOverview.current.profile.id ||
+      !latestOverview.current.connections.some((connection) => connection.id === job.connectionId)
+    )
+      throw new Error('Invalid owned sync job response')
+    setJobs((previous) => ({
+      ...previous,
+      [job.connectionId]: [
+        job,
+        ...(previous[job.connectionId] ?? []).filter((existing) => existing.id !== job.id),
+      ],
+    }))
+  }
+  const runSync = async (connectionId: string, jobId?: string) => {
+    const epoch = context.current.epoch
+    if (busyEpoch.current === epoch) return
+    busyEpoch.current = epoch
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    const handlers = callbacks.current
+    let completed = false
+    try {
+      let result: SyncJobDto
+      if (jobId) result = await api.resumeSync(jobId)
+      else {
+        let requestId = startRequests.current.ids.get(connectionId)
+        if (!requestId) {
+          requestId =
+            globalThis.crypto?.randomUUID?.() ??
+            `connection_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`
+          startRequests.current.ids.set(connectionId, requestId)
+        }
+        result = await api.startSync({ connectionId, requestId, mode: 'user_present' })
+        if (!current(epoch)) return
+        rememberJob(result)
+        startRequests.current.ids.delete(connectionId)
+        if (result.state === 'queued') result = await api.resumeSync(result.id)
+      }
+      if (!current(epoch)) return
+      rememberJob(result)
+      if (result.state === 'completed') {
+        completed = true
+        await handlers.onRefresh()
+        if (!current(epoch)) return
+        await reload(epoch)
+      }
+    } catch (cause) {
+      if (!current(epoch) || handlers.onError?.(cause)) return
+      setError(completed ? t('connections.savedRefreshFailed') : i18n.problemMessage(cause))
+      if (cause instanceof ApiError && cause.status === 409) {
+        try {
+          await reload(epoch)
+        } catch (refreshError) {
+          if (current(epoch) && !handlers.onError?.(refreshError))
+            setError(i18n.problemMessage(refreshError))
+        }
+      }
+    } finally {
+      if (current(epoch)) {
+        busyEpoch.current = null
+        setBusy(false)
+      }
+    }
+  }
+  const checkJobs = async (connectionId: string) => {
+    const epoch = context.current.epoch
+    if (busyEpoch.current === epoch) return
+    busyEpoch.current = epoch
+    setBusy(true)
+    setError(null)
+    const handlers = callbacks.current
+    try {
+      const fresh = await api.connectionSyncJobs(connectionId)
+      if (!current(epoch)) return
+      if (
+        fresh.some(
+          (job) =>
+            job.profileId !== latestOverview.current.profile.id ||
+            job.connectionId !== connectionId,
+        )
+      )
+        throw new Error('Invalid owned sync job response')
+      setJobs((previous) => ({ ...previous, [connectionId]: fresh }))
+      const latestCompleted = fresh.find((job) => job.state === 'completed')
+      if (
+        latestCompleted &&
+        (latestCompleted.report.syncedAt !==
+          latestOverview.current.connections.find((connection) => connection.id === connectionId)
+            ?.lastSyncedAt ||
+          !jobs[connectionId]?.some(
+            (prior) => prior.id === latestCompleted.id && prior.state === 'completed',
+          ))
+      ) {
+        await handlers.onRefresh()
+        if (current(epoch)) await reload(epoch)
+      }
+    } catch (cause) {
+      if (current(epoch) && !handlers.onError?.(cause)) setError(i18n.problemMessage(cause))
+    } finally {
+      if (current(epoch)) {
+        busyEpoch.current = null
+        setBusy(false)
+      }
     }
   }
   const button = (label: string, action: () => void, disabled = false, secondary = false) => (
@@ -287,6 +412,7 @@ export function ConnectionsPanel({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy }}
+      aria-disabled={disabled || busy}
       disabled={disabled || busy}
       onPress={action}
       style={[s.button, secondary && s.secondaryButton, (disabled || busy) && s.disabled]}
@@ -296,19 +422,16 @@ export function ConnectionsPanel({
   )
   if (dataScope !== scope)
     return (
-      <View accessibilityLabel="Caricamento dei collegamenti del profilo corrente">
+      <View accessibilityLabel={t('connections.loadingProfile')}>
         <ActivityIndicator color={c.primary} />
       </View>
     )
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.title}>
-        Collegamenti
+      <Text accessibilityRole="header" aria-level={2} style={s.title}>
+        {t('connections.title')}
       </Text>
-      <Text style={s.body}>
-        Questa versione usa solo dati sintetici. Nessuna banca reale viene collegata. La fonte
-        dimostrativa fornisce saldi e movimenti e non dispone pagamenti.
-      </Text>
+      <Text style={s.body}>{t('connections.syntheticDisclosure')}</Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
           {error}
@@ -322,12 +445,12 @@ export function ConnectionsPanel({
       {loading && (
         <View style={s.inline}>
           <ActivityIndicator color={c.primary} />
-          <Text style={s.body}>Aggiornamento dello stato dei collegamenti…</Text>
+          <Text style={s.body}>{t('connections.loading')}</Text>
         </View>
       )}
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          Disponibilità per tipo di conto
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {t('connections.availableKinds')}
         </Text>
         <View style={s.row}>
           {(Object.keys(kindLabels) as ConnectionAccountKind[]).map((value) => (
@@ -341,7 +464,7 @@ export function ConnectionsPanel({
               onPress={() => setKind(value)}
               style={[s.choice, kind === value && s.selectedChoice]}
             >
-              <Text style={s.body}>{kindLabels[value]}</Text>
+              <Text style={s.body}>{t(kindLabels[value])}</Text>
             </Pressable>
           ))}
         </View>
@@ -357,43 +480,35 @@ export function ConnectionsPanel({
             <View key={`${institution.providerId}:${institution.id}`} style={s.institution}>
               <Text style={s.subtitle}>{institution.name}</Text>
               <Text style={s.body}>
-                {kindLabels[kind]} · {coverageLabel(institution, kind)}
+                {t(kindLabels[kind])} · {t(coverageLabel(institution, kind))}
               </Text>
-              {permitted && (
-                <Text style={s.body}>
-                  Il collegamento include i conti della simulazione. L’elenco non indica banche
-                  reali supportate.
-                </Text>
-              )}
+              {permitted && <Text style={s.body}>{t('connections.syntheticKinds')}</Text>}
               <View style={s.row}>
                 {permitted ? (
                   button(
-                    linked ? 'Fonte dimostrativa già collegata' : 'Collega la fonte dimostrativa',
+                    linked ? t('connections.linked') : t('connections.connect'),
                     () => {
                       void run(async () => {
                         const connection = await api.connectInstitution(institution.id, kind)
                         return [connection.id]
-                      }, 'Fonte dimostrativa collegata. Controlla qui lo stato e l’ultima acquisizione.')
+                      }, t('connections.connected'))
                     },
                     linked || loading,
                   )
                 ) : (
-                  <Text style={s.body}>Non ancora collegabile — aggiungi il saldo a mano.</Text>
+                  <Text style={s.body}>{t('connections.manualUnavailable')}</Text>
                 )}
-                {button('Aggiungi il saldo a mano', onManualFallback, false, true)}
+                {button(t('connections.manual'), onManualFallback, false, true)}
               </View>
             </View>
           )
         })}
         {!loading && catalogue !== null && !catalogue.institutions.length && (
-          <Text style={s.body}>
-            Nessuna copertura disponibile nella configurazione corrente. Puoi aggiungere un conto a
-            mano.
-          </Text>
+          <Text style={s.body}>{t('connections.noCoverage')}</Text>
         )}
         {!loading &&
           !catalogue?.institutions.length &&
-          button('Usa un conto manuale', onManualFallback, false, true)}
+          button(t('connections.useManual'), onManualFallback, false, true)}
       </View>
       {overview.connections
         .filter((connection) => connection.providerId !== 'local-manual')
@@ -406,6 +521,16 @@ export function ConnectionsPanel({
           const accounts = overview.accounts.filter(
             (account) => account.connectionId === connection.id,
           )
+          const sourceJobs = jobs[connection.id] ?? []
+          const activeJob = sourceJobs.find((job) =>
+            ['queued', 'running', 'partial', 'retry_wait'].includes(job.state),
+          )
+          const canContinue =
+            activeJob?.mode === 'user_present' &&
+            Date.parse(activeJob.availableAt) <= Date.now() &&
+            (activeJob.state !== 'running' ||
+              !activeJob.leaseExpiresAt ||
+              Date.parse(activeJob.leaseExpiresAt) <= Date.now())
           const canSync = lifecycle?.state === 'active' || lifecycle?.state === 'expiring'
           const canPause = Boolean(
             lifecycle?.consentId && lifecycle.state !== 'revoked' && lifecycle.state !== 'unknown',
@@ -423,136 +548,365 @@ export function ConnectionsPanel({
           )
           return (
             <View key={connection.id} style={s.card}>
-              <Text accessibilityRole="header" style={s.subtitle}>
-                {institution?.name ?? 'Fonte dimostrativa'}
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {institution?.name ?? t('connections.source')}
               </Text>
               <Text style={s.state}>
-                {lifecycle ? stateLabels[lifecycle.state] : 'Stato non disponibile'}
+                {lifecycle ? t(stateLabels[lifecycle.state]) : t('connections.state.unavailable')}
               </Text>
               <Text style={s.body}>
-                {accounts.length} conti inclusi
-                {accounts.length ? `: ${accounts.map((account) => account.name).join(', ')}` : '.'}
+                {t('connections.accounts', {
+                  count: accounts.length,
+                  names: accounts.length
+                    ? `: ${accounts.map((account) => account.name).join(', ')}`
+                    : '.',
+                })}
               </Text>
               <Text style={s.body}>
-                Ultima acquisizione:{' '}
-                {formatInstant(
-                  lifecycle?.lastSyncedAt ?? connection.lastSyncedAt,
-                  overview.profile.timezone,
-                )}
+                {t('connections.lastAcquisition', {
+                  date: formatInstant(
+                    lifecycle?.lastSyncedAt ?? connection.lastSyncedAt,
+                    overview.profile.timezone,
+                  ),
+                })}
               </Text>
               {lifecycle && (
                 <>
                   <Text style={s.body}>
-                    Scadenza dell’autorizzazione:{' '}
-                    {formatInstant(
-                      lifecycle.authorization.consentExpiresAt,
-                      overview.profile.timezone,
-                    )}
+                    {t('connections.consentExpiry', {
+                      date: formatInstant(
+                        lifecycle.authorization.consentExpiresAt,
+                        overview.profile.timezone,
+                      ),
+                    })}
                   </Text>
                   <Text style={s.body}>
-                    Autenticazione richiesta dalla fonte:{' '}
-                    {formatInstant(lifecycle.authorization.scaDueAt, overview.profile.timezone)}
+                    {t('connections.scaDue', {
+                      date: formatInstant(
+                        lifecycle.authorization.scaDueAt,
+                        overview.profile.timezone,
+                      ),
+                    })}
                   </Text>
                   <Text style={s.body}>
-                    Scadenza della sessione della fonte:{' '}
-                    {formatInstant(
-                      lifecycle.authorization.providerSessionExpiresAt,
-                      overview.profile.timezone,
-                    )}
+                    {t('connections.sessionExpiry', {
+                      date: formatInstant(
+                        lifecycle.authorization.providerSessionExpiresAt,
+                        overview.profile.timezone,
+                      ),
+                    })}
                   </Text>
                   <Text style={s.body}>
-                    Scadenza del token della fonte:{' '}
-                    {formatInstant(
-                      lifecycle.authorization.tokenExpiresAt,
-                      overview.profile.timezone,
-                    )}
+                    {t('connections.tokenExpiry', {
+                      date: formatInstant(
+                        lifecycle.authorization.tokenExpiresAt,
+                        overview.profile.timezone,
+                      ),
+                    })}
                   </Text>
                   {lifecycle.source === 'legacy' && (
-                    <Text style={s.body}>
-                      Le date disponibili provengono dallo storico precedente; la fonte non ha
-                      comunicato gli altri termini.
-                    </Text>
+                    <Text style={s.body}>{t('connections.legacyDates')}</Text>
                   )}
-                  {lifecycle.paused && (
-                    <Text style={s.body}>
-                      La pausa interrompe gli aggiornamenti e conserva lo storico. L’autorizzazione
-                      continua a seguire la sua scadenza.
-                    </Text>
-                  )}
+                  {lifecycle.paused && <Text style={s.body}>{t('connections.pausedHelp')}</Text>}
                   {lifecycle.state === 'expired' && (
                     <Text style={s.body}>
-                      I dati salvati restano visibili con la loro data. Rinnova l’autorizzazione
-                      prima di aggiornare{lifecycle.paused ? ' o riprendere il collegamento' : ''}.
+                      {t('connections.expiredHelp', {
+                        resume: lifecycle.paused ? t('connections.orResume') : '',
+                      })}
                     </Text>
                   )}
                   {lifecycle.state === 'revoked' && (
-                    <Text style={s.body}>
-                      Gli aggiornamenti sono interrotti. Lo storico resta disponibile; una nuova
-                      autorizzazione richiede un’altra scelta esplicita.
-                    </Text>
+                    <Text style={s.body}>{t('connections.revokedHelp')}</Text>
                   )}
                 </>
               )}
               <View style={s.row}>
                 {button(
-                  'Aggiorna questa fonte',
+                  t('connections.update'),
                   () => {
-                    let result: Awaited<ReturnType<ConnectionClient['sync']>> | undefined
-                    void run(
-                      async () => {
-                        result = await api.sync(connection.id)
-                      },
-                      () =>
-                        result
-                          ? `${result.rejected ? 'Aggiornamento parziale' : 'Aggiornamento completato'}: ${result.inserted} nuovi, ${result.updated} aggiornati, ${result.unchanged} invariati${result.rejected ? `; ${result.rejected} non acquisiti` : ''}. L’orario mostra l’ultima acquisizione.`
-                          : 'Controlla lo stato corrente della fonte.',
-                    )
+                    void runSync(connection.id)
                   },
-                  !canSync || loading,
+                  !canSync || loading || Boolean(activeJob),
+                )}
+                {activeJob &&
+                  activeJob.mode === 'user_present' &&
+                  button(
+                    t('connections.syncContinue'),
+                    () => {
+                      void runSync(connection.id, activeJob.id)
+                    },
+                    !canSync || loading || !canContinue,
+                    true,
+                  )}
+                {button(
+                  t('connections.syncCheck'),
+                  () => {
+                    void checkJobs(connection.id)
+                  },
+                  loading,
+                  true,
                 )}
                 {lifecycle?.paused
                   ? button(
-                      'Riprendi il collegamento',
+                      t('connections.resume'),
                       () => {
                         void run(async () => {
                           await api.resumeConnection(connection.id, lifecycle.revision)
-                        }, 'Collegamento ripreso. Puoi scegliere Aggiorna questa fonte.')
+                        }, t('connections.resumed'))
                       },
                       !canResume || loading,
                       true,
                     )
                   : button(
-                      'Metti in pausa',
+                      t('connections.pause'),
                       () => {
                         if (lifecycle)
                           void run(async () => {
                             await api.pauseConnection(connection.id, lifecycle.revision)
-                          }, 'Collegamento in pausa. Lo storico e la scadenza sono conservati.')
+                          }, t('connections.paused'))
                       },
                       !canPause || loading,
                       true,
                     )}
                 {button(
-                  'Rinnova autorizzazione dimostrativa',
+                  t('connections.renew'),
                   () => {
                     if (lifecycle)
                       void run(async () => {
                         await api.renewConnection(connection.id, lifecycle.revision)
-                      }, 'Rinnovo confermato dalla fonte dimostrativa. Controlla la scadenza comunicata qui sopra.')
+                      }, t('connections.renewed'))
                   },
                   !canRenew || loading,
                   true,
                 )}
                 {button(
                   history?.connectionId === connection.id
-                    ? 'Chiudi storico autorizzazione'
-                    : 'Storico autorizzazione',
+                    ? t('connections.closeHistory')
+                    : t('connections.history'),
                   () => {
                     void showHistory(connection.id)
                   },
                   loading,
                   true,
                 )}
+                {button(
+                  t('connections.disconnectChoice'),
+                  () => {
+                    setDisconnectChoice({
+                      connectionId: connection.id,
+                      data: 'retain',
+                      acknowledged: false,
+                    })
+                    setError(null)
+                    setNotice(null)
+                  },
+                  loading,
+                  true,
+                )}
+              </View>
+              {disconnectChoice?.connectionId === connection.id && (
+                <View style={s.history}>
+                  <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                    {t('connections.disconnectQuestion')}
+                  </Text>
+                  <Text style={s.body}>{t('connections.disconnectMandate')}</Text>
+                  <View
+                    accessibilityRole="radiogroup"
+                    accessibilityLabel={t('connections.dataChoiceLabel')}
+                    style={s.row}
+                  >
+                    {(['retain', 'erase'] as const).map((data) => {
+                      const label = t(
+                        data === 'retain' ? 'connections.retainChoice' : 'connections.eraseChoice',
+                      )
+                      return (
+                        <Pressable
+                          key={data}
+                          accessibilityRole="radio"
+                          accessibilityLabel={label}
+                          accessibilityState={{
+                            checked: disconnectChoice.data === data,
+                            disabled: busy,
+                          }}
+                          aria-checked={disconnectChoice.data === data}
+                          aria-disabled={busy}
+                          disabled={busy}
+                          onPress={() =>
+                            setDisconnectChoice({
+                              connectionId: connection.id,
+                              data,
+                              acknowledged: false,
+                            })
+                          }
+                          style={[
+                            s.choice,
+                            disconnectChoice.data === data && s.selectedChoice,
+                            busy && s.disabled,
+                          ]}
+                        >
+                          <Text style={s.body}>{label}</Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                  <Text style={s.body}>
+                    {t(
+                      disconnectChoice.data === 'retain'
+                        ? 'connections.retainExplanation'
+                        : 'connections.eraseExplanation',
+                    )}
+                  </Text>
+                  {disconnectChoice.data === 'erase' && (
+                    <>
+                      <Text style={s.body}>{t('connections.sharedKeyDisclosure')}</Text>
+                      <Pressable
+                        accessibilityRole="checkbox"
+                        accessibilityLabel={t('connections.eraseAcknowledgement')}
+                        accessibilityState={{
+                          checked: disconnectChoice.acknowledged,
+                          disabled: busy,
+                        }}
+                        aria-checked={disconnectChoice.acknowledged}
+                        aria-disabled={busy}
+                        disabled={busy}
+                        onPress={() =>
+                          setDisconnectChoice({
+                            ...disconnectChoice,
+                            acknowledged: !disconnectChoice.acknowledged,
+                          })
+                        }
+                        style={[
+                          s.choice,
+                          disconnectChoice.acknowledged && s.selectedChoice,
+                          busy && s.disabled,
+                        ]}
+                      >
+                        <Text style={s.body}>{t('connections.eraseAcknowledgement')}</Text>
+                      </Pressable>
+                    </>
+                  )}
+                  <View style={s.row}>
+                    {button(
+                      t(
+                        disconnectChoice.data === 'erase'
+                          ? 'connections.confirmErase'
+                          : 'connections.confirmRetain',
+                      ),
+                      () => {
+                        const data = disconnectChoice.data,
+                          epoch = context.current.epoch
+                        void run(
+                          async () => {
+                            await api.disconnect(connection.id, data)
+                            if (current(epoch)) setDisconnectChoice(null)
+                          },
+                          t(data === 'erase' ? 'connections.erased' : 'connections.disconnected'),
+                        )
+                      },
+                      disconnectChoice.data === 'erase' && !disconnectChoice.acknowledged,
+                    )}
+                    {button(
+                      t('connections.cancelDisconnect'),
+                      () => setDisconnectChoice(null),
+                      false,
+                      true,
+                    )}
+                  </View>
+                </View>
+              )}
+              <View style={s.history}>
+                <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                  {t('connections.syncHistory')}
+                </Text>
+                {!sourceJobs.length && <Text style={s.body}>{t('connections.syncNone')}</Text>}
+                {sourceJobs.slice(0, 10).map((job) => (
+                  <View key={job.id} style={s.historyItem}>
+                    <Text style={s.state}>{t(`connections.job.${job.state}`)}</Text>
+                    <Text style={s.small}>
+                      {formatInstant(job.updatedAt, overview.profile.timezone)}
+                    </Text>
+                    <Text style={s.body}>
+                      {t('connections.syncProgress', {
+                        pages: job.report.pages,
+                        done: job.report.windowsCompleted,
+                        total: job.report.windowsTotal,
+                      })}
+                    </Text>
+                    {job.reason && (
+                      <Text style={s.body}>{t(`connections.reason.${job.reason}`)}</Text>
+                    )}
+                    {job.state !== 'completed' && (
+                      <Text style={s.body}>{t('connections.syncFinancialUnchanged')}</Text>
+                    )}
+                    {job.state === 'retry_wait' && (
+                      <Text style={s.body}>
+                        {t('connections.syncRetryAt', {
+                          date: formatInstant(job.availableAt, overview.profile.timezone),
+                        })}
+                      </Text>
+                    )}
+                    {job.mode === 'unattended' &&
+                      ['queued', 'running', 'partial', 'retry_wait'].includes(job.state) && (
+                        <Text style={s.body}>{t('connections.syncAutomatic')}</Text>
+                      )}
+                    {job.state === 'completed' && (
+                      <>
+                        <Text style={s.body}>
+                          {t('connections.syncCompleted', {
+                            inserted: job.report.inserted,
+                            updated: job.report.updated,
+                            unchanged: job.report.unchanged,
+                            rejected: job.report.rejected,
+                          })}
+                        </Text>
+                        <Text style={s.body}>
+                          {t(
+                            job.report.coverage === 'complete_requested_interval'
+                              ? 'connections.syncCoverageComplete'
+                              : 'connections.syncCoverageUnknown',
+                          )}
+                        </Text>
+                        {job.report.pendingUnresolved > 0 && (
+                          <Text style={s.body}>
+                            {t('connections.syncPendingUnknown', {
+                              count: job.report.pendingUnresolved,
+                            })}
+                          </Text>
+                        )}
+                        {job.report.removedBySource > 0 && (
+                          <Text style={s.body}>
+                            {t('connections.syncSourceRemoval', {
+                              count: job.report.removedBySource,
+                            })}
+                          </Text>
+                        )}
+                        {job.report.balances.map((balance) => (
+                          <View key={balance.accountId} style={s.historyItem}>
+                            <Text style={s.body}>
+                              {overview.accounts.find((account) => account.id === balance.accountId)
+                                ?.name ?? t('connections.source')}
+                            </Text>
+                            <Text style={s.small}>
+                              {i18n.money({
+                                amountMinor: BigInt(balance.providerAmountMinor),
+                                currency: balance.currency,
+                              })}
+                            </Text>
+                            <Text style={s.body}>
+                              {t(
+                                balance.result === 'equal'
+                                  ? 'connections.syncBalanceEqual'
+                                  : balance.result === 'mismatch'
+                                    ? 'connections.syncBalanceMismatch'
+                                    : 'connections.syncBalanceUnknown',
+                              )}
+                            </Text>
+                          </View>
+                        ))}
+                      </>
+                    )}
+                  </View>
+                ))}
               </View>
               {history?.connectionId === connection.id && (
                 <View style={s.history}>
@@ -561,22 +915,19 @@ export function ConnectionsPanel({
                   ) : history.events.length ? (
                     history.events.map((event) => (
                       <View key={event.id} style={s.historyItem}>
-                        <Text style={s.body}>{eventLabels[event.action]}</Text>
+                        <Text style={s.body}>{t(eventLabels[event.action])}</Text>
                         <Text style={s.small}>
                           {formatInstant(event.occurredAt, overview.profile.timezone)} ·{' '}
                           {event.source === 'legacy'
-                            ? 'Evento ricostruito dallo storico'
+                            ? t('connections.eventLegacy')
                             : event.source === 'user'
-                              ? 'Scelta tua'
-                              : 'Informazione della fonte'}
+                              ? t('connections.eventUser')
+                              : t('connections.eventProvider')}
                         </Text>
                       </View>
                     ))
                   ) : (
-                    <Text style={s.body}>
-                      Nessun evento registrato. Lo stato precedente resta distinto da una nuova
-                      autorizzazione.
-                    </Text>
+                    <Text style={s.body}>{t('connections.noEvents')}</Text>
                   )}
                 </View>
               )}
@@ -585,15 +936,13 @@ export function ConnectionsPanel({
         })}
       {!loading &&
         !overview.connections.some((connection) => connection.providerId !== 'local-manual') && (
-          <Text style={s.body}>
-            Non hai collegamenti. Puoi usare la fonte dimostrativa o aggiungere un saldo a mano.
-          </Text>
+          <Text style={s.body}>{t('connections.noConnections')}</Text>
         )}
       <View style={s.row}>
         {button(
-          'Ricarica stato e disponibilità',
+          t('connections.reloadAvailability'),
           () => {
-            void run(async () => undefined, 'Stato e disponibilità aggiornati.')
+            void run(async () => undefined, t('connections.availabilityUpdated'))
           },
           false,
           true,

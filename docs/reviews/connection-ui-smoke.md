@@ -30,3 +30,19 @@ The helper checks:
 The default machine-readable report is `/tmp/lilleri-connection-ui.json`; `LILLERI_CONNECTION_SMOKE_REPORT` selects another private validation path. Reports contain group names and error summaries rather than financial descriptions or credentials. Source typechecks/Biome and API lifecycle scenarios are separate from an executed browser result. Actual browser execution is recorded only after the current server/bundle are available.
 
 On 2026-10-03 the current synthetic API3004/Expo web8082 run passed **9/9 groups** with **zero browser JavaScript errors**. The final report is `/workspace/.lilleri-validation/completion-connection-ui.json`. The unknown-coverage group uses the disclosed injected synthetic browser fixture and an actual server refusal; it establishes no real institution coverage.
+
+The subsequent acquisition extension adds actual durable start/resume/report APIs, captured progress and degraded reasons, bounded explicit continuation, retained job history and locale-aware dates/exact money in Italian and British English. Reopening reads unfinished jobs; there is no unbounded client polling. Responses and uncertain start request identities remain fenced by the parent scope epoch. The source-disconnect controls now default to retaining history, offer an explicit source-data erasure choice with acknowledgement, and state that the shared profile encryption key remains. Confirm/cancel controls are inline; no modal focus trap is introduced. The new client/API integration typechecks and owned source lint pass. The earlier **9/9** browser report validates the earlier consent/coverage implementation; a fresh browser run is required before claiming acceptance for these added durable/erasure controls.
+
+## Durable acquisition and source erasure helper
+
+`tools/durable-sync-ui-smoke.cjs` uses the current demo API and Expo bundle, with no substituted browser responses or provider fixture changes. It requires an active synthetic bank connection and the isolated profile in Italian. Run it as the **last exclusive writer**: it leaves the default bank source revoked and erased, with a real erasure receipt. It creates one explicitly synthetic manual account/expense and preserves that other source.
+
+```sh
+. /workspace/.lilleri-toolchain/env.sh
+LILLERI_DURABLE_SYNC_SMOKE_REPORT=/workspace/.lilleri-validation/completion-durable-sync-ui.json \
+  node tools/durable-sync-ui-smoke.cjs http://localhost:8082 http://127.0.0.1:3004
+```
+
+The helper explicitly finishes any due user-present preflight catch-up through the bounded HTTP resume port, recording its slice count; it does not promote unattended work or reset the archive. It then prepares partial progress through an actual user-present HTTP start/resume over a long calendar interval. This preparation is recorded in the report; it does not establish that the UI offers a custom interval selector. Browser gestures verify start and bounded continuation, authoritative progress reads after reopening, saved freshness throughout partial acquisition, exact payload accounting at completion, and no repeated idle polling. Unknown balance anchors remain explicitly unavailable. Separate groups exercise private Inbox suppression, saved British English, narrow-screen controls, retain-by-default cancellation/confirmation, acknowledged source erasure, other-source exact money, and the complete owner ZIP with declared file sizes/hashes and receipt.
+
+The helper source passes syntax/Biome checks. Its **10 functional groups are not yet an executed browser acceptance result**; record the actual current-server report after the coordinated run. PGlite and PostgreSQL sync backend regression suites separately pass **44/44 each**, including scoped leases, consent fences, partial failures, unattended-only scheduling and profile-calendar DATE boundaries.

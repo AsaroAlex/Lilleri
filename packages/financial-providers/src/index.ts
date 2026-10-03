@@ -7,6 +7,10 @@ import type {
   ProviderAuthorization,
   ProviderConnectionGrant,
   ProviderDiscoveryMetadata,
+  SyntheticSyncMetadata,
+  SyntheticSyncPage,
+  SyntheticSyncPageRequest,
+  SyntheticSyncSnapshot,
 } from './contracts.js'
 
 export * from './contracts.js'
@@ -340,6 +344,123 @@ export class MockItalianProvider implements FinancialDataProviderV2 {
   async getBalances(context: ProviderContext) {
     return this.listAccounts(context)
   }
+  syncMetadata(): SyntheticSyncMetadata {
+    return {
+      providerId: this.id,
+      environment: 'synthetic',
+      evidenceReference: 'synthetic-fixture-window-policy/1',
+      userPresent: 'supported',
+      unattendedBudget: {
+        requests: 4,
+        windowSeconds: 86400,
+        anchor: 'utc_epoch',
+        unit: 'refresh_attempt',
+        evidenceReference: 'synthetic-fixture-refresh-policy/1',
+      },
+      maxWindowDays: 14,
+      maxPageSize: 7,
+      maxCursorBytes: 32,
+      pendingSet: 'complete_snapshot',
+      deletionEvidence: 'complete_window',
+    }
+  }
+  #syncSnapshotId(context: ProviderContext): string {
+    return stableId(
+      'synthetic-snapshot',
+      context.profileId,
+      context.connectionId,
+      context.grantId ?? '',
+      createHash('sha256').update(JSON.stringify(this.#bankFixture())).digest('hex'),
+    )
+  }
+  // Legacy demonstration collection intentionally also contains separate CSV/manual examples.
+  // This explicit synthetic partition never filters an unexpected live provider response.
+  #bankFixture() {
+    return this.#fixture.filter((record) => record.source === undefined || record.source === 'bank')
+  }
+  async openSync(
+    context: ProviderContext,
+    _mode: 'user_present' | 'unattended',
+    requestedAt?: string,
+  ): Promise<SyntheticSyncSnapshot> {
+    if (
+      requestedAt !== undefined &&
+      (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u.test(requestedAt) ||
+        !Number.isFinite(Date.parse(requestedAt)) ||
+        new Date(requestedAt).toISOString() !== requestedAt)
+    )
+      throw new Error('Invalid synthetic observation instant')
+    await this.refreshConnection(context)
+    const accounts = await this.listAccounts(context)
+    return {
+      snapshotId: this.#syncSnapshotId(context),
+      accounts,
+      observedAt:
+        requestedAt === undefined ? new Date().toISOString() : new Date(requestedAt).toISOString(),
+      historyFrom: Object.fromEntries(
+        accounts.map((account) => [
+          account.id,
+          this.#bankFixture()
+            .filter((record) => record.accountId === account.id && record.bookedOn)
+            .map((record) => record.bookedOn as string)
+            .sort()[0] ?? null,
+        ]),
+      ),
+      balances: accounts.map((account) => ({
+        accountId: account.id,
+        currency: account.currency,
+        amount: account.balance,
+        type: 'unknown',
+        referenceDate: null,
+        opening: null,
+      })),
+    }
+  }
+  async getSyncPage(
+    context: ProviderContext,
+    request: SyntheticSyncPageRequest,
+  ): Promise<SyntheticSyncPage> {
+    this.#check(context)
+    if (request.snapshotId !== this.#syncSnapshotId(context))
+      throw new Error('Unknown synthetic snapshot')
+    dateOnly(request.from)
+    dateOnly(request.to)
+    const days =
+      (Date.parse(`${request.to}T00:00:00Z`) - Date.parse(`${request.from}T00:00:00Z`)) /
+        86_400_000 +
+      1
+    if (
+      days < 1 ||
+      days > this.syncMetadata().maxWindowDays ||
+      !Number.isSafeInteger(request.pageSize) ||
+      request.pageSize < 1 ||
+      request.pageSize > this.syncMetadata().maxPageSize
+    )
+      throw new Error('Invalid synthetic page window')
+    if (request.cursor !== null && !/^(0|[1-9]\d*)$/u.test(request.cursor))
+      throw new Error('Invalid cursor')
+    const offset = request.cursor === null ? 0 : Number(request.cursor)
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset % request.pageSize !== 0)
+      throw new Error('Invalid cursor')
+    const items = this.#bankFixture().filter(
+      (record) =>
+        record.accountId === request.accountId &&
+        (record.status === 'pending'
+          ? request.includePending
+          : Boolean(
+              record.bookedOn && record.bookedOn >= request.from && record.bookedOn <= request.to,
+            )),
+    )
+    return {
+      snapshotId: request.snapshotId,
+      from: request.from,
+      to: request.to,
+      transactions: items.slice(offset, offset + request.pageSize),
+      nextCursor:
+        offset + request.pageSize < items.length ? String(offset + request.pageSize) : null,
+      coverage: 'complete_window',
+    }
+  }
   async getTransactions(
     context: ProviderContext,
     accountId: string,
@@ -513,3 +634,4 @@ export const ITALIAN_TRANSACTIONS: readonly ProviderTransaction[] = [
     status: 'booked',
   },
 ]
+export * from './xlsx-mapper.js'

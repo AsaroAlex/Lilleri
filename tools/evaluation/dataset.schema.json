@@ -1,0 +1,347 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "datasetId",
+    "source",
+    "purpose",
+    "frozenAt",
+    "authorization",
+    "catalogue",
+    "splits",
+    "rows"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "lilleri-evaluation-dataset-v1"
+    },
+    "datasetId": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+    },
+    "source": {
+      "enum": ["synthetic", "consented", "licensed"]
+    },
+    "purpose": {
+      "enum": ["tool-correctness", "promotion-assessment"]
+    },
+    "frozenAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["referenceHash", "recordedAt", "expiresAt", "purposes"],
+      "properties": {
+        "referenceHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "recordedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "expiresAt": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "purposes": {
+          "type": "array",
+          "items": {
+            "enum": ["evaluation", "training"]
+          },
+          "maxItems": 100000
+        }
+      }
+    },
+    "catalogue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "parents", "leaves"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+        },
+        "parents": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+          },
+          "maxItems": 100000
+        },
+        "leaves": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "parent", "quiet"],
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+              },
+              "parent": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+              },
+              "quiet": {
+                "type": "boolean"
+              }
+            }
+          },
+          "maxItems": 100000
+        }
+      }
+    },
+    "splits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["train", "calibration", "test"],
+      "properties": {
+        "train": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rowIds", "sha256"],
+          "properties": {
+            "rowIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100000
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "calibration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rowIds", "sha256"],
+          "properties": {
+            "rowIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100000
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "test": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rowIds", "sha256"],
+          "properties": {
+            "rowIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "maxItems": 100000
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "profileKey",
+          "merchantKey",
+          "sourceDigest",
+          "authorizationHash",
+          "bankId",
+          "kind",
+          "observedAt",
+          "status",
+          "subset",
+          "quiet",
+          "private",
+          "injection",
+          "label",
+          "annotation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "profileKey": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "merchantKey": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceDigest": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "authorizationHash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "bankId": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+          },
+          "kind": {
+            "enum": [
+              "expense",
+              "income",
+              "transfer",
+              "card_settlement",
+              "cash_withdrawal",
+              "refund",
+              "unknown"
+            ]
+          },
+          "observedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "enum": ["pending", "booked", "reversed"]
+          },
+          "subset": {
+            "enum": [
+              "ordinary",
+              "injection",
+              "quiet",
+              "private",
+              "pending",
+              "booked",
+              "settlement",
+              "unknown"
+            ]
+          },
+          "quiet": {
+            "type": "boolean"
+          },
+          "private": {
+            "type": "boolean"
+          },
+          "injection": {
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "annotation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "first",
+              "firstLabel",
+              "second",
+              "secondLabel",
+              "adjudicator",
+              "adjudicatedLabel"
+            ],
+            "properties": {
+              "first": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "firstLabel": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "second": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              "secondLabel": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "adjudicator": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "adjudicatedLabel": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,119}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "maxItems": 100000
+    }
+  }
+}

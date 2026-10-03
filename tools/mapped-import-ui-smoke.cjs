@@ -6,6 +6,7 @@
  * Playwright and Chromium are local validation prerequisites, not app dependencies.
  */
 const assert = require('node:assert/strict')
+const { assertFinancialUnchanged } = require('./demo-financial-invariant.cjs')
 const { randomUUID } = require('node:crypto')
 const { writeFile } = require('node:fs/promises')
 const { chromium } = require('playwright')
@@ -21,11 +22,6 @@ const check = (name) => {
 }
 const button = (page, name) => page.getByRole('button', { name, exact: true })
 const csvField = (page) => page.getByRole('textbox', { name: 'CSV da associare', exact: true })
-const financial = (overview) => ({
-  accounts: overview.accounts,
-  transactions: overview.transactions,
-  analysis: overview.analysis,
-})
 function validateOrigin(value) {
   const url = new URL(value)
   assert.ok(url.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname))
@@ -158,7 +154,7 @@ async function noOverflow(page, name) {
     assert.equal(saved.accountId, account.id)
     assert.equal(saved.mapping.columns.valueOn, 'Valuta')
     assert.deepEqual(saved.mapping.statusValues, { Fatto: 'booked' })
-    assert.deepEqual(financial(await request('/v1/demo')), financial(initial))
+    assertFinancialUnchanged(initial, await request('/v1/demo'), report, true)
     check(
       'Owned account, explicit headers, Italian decimals/dates and stable status aliases save without importing',
     )
@@ -170,7 +166,7 @@ async function noOverflow(page, name) {
     assert.equal(first.rows[0].provenance.valueOn, '2026-10-04')
     assert.equal(first.rows[0].provenance.rawValueOn, '04/10/2026')
     assert.equal(first.rows[0].provenance.identity, 'external')
-    assert.deepEqual(financial(await request('/v1/demo')), financial(initial))
+    assertFinancialUnchanged(initial, await request('/v1/demo'), report, true)
     await page
       .getByRole('textbox', { name: 'Nome delle associazioni CSV', exact: true })
       .fill(`${name} aggiornato`)
@@ -189,6 +185,7 @@ async function noOverflow(page, name) {
     // must use the same command identity; the server returns its accepted result once.
     const commitPath = '/v1/imports/mapped/commit'
     const acceptedBodies = []
+    let acceptedServerStatus
     page.on('request', (outbound) => {
       if (new URL(outbound.url()).pathname === commitPath && outbound.method() === 'POST')
         acceptedBodies.push(outbound.postDataJSON())
@@ -197,7 +194,19 @@ async function noOverflow(page, name) {
       `${api}${commitPath}`,
       async (route) => {
         const accepted = await route.fetch()
-        assert.equal(accepted.status(), 200)
+        acceptedServerStatus = accepted.status()
+        if (acceptedServerStatus !== 200) {
+          const failure = await accepted.json()
+          report.actualCommitFailure = {
+            status: acceptedServerStatus,
+            code:
+              typeof failure.code === 'string' && /^[a-z_]{1,80}$/.test(failure.code)
+                ? failure.code
+                : 'unknown',
+          }
+          await route.fulfill({ response: accepted })
+          return
+        }
         await route.fulfill({
           status: 503,
           contentType: 'application/problem+json',
@@ -221,6 +230,7 @@ async function noOverflow(page, name) {
       () => button(page, 'Importa righe dell’anteprima').click(),
       503,
     )
+    assert.equal(acceptedServerStatus, 200, 'The actual server commits before a lost success reply')
     await page.getByRole('alert').waitFor()
     assert.equal(await csvField(page).inputValue(), csv)
     assert.equal((await manualAccount(account.id)).balanceMinor, firstBalance)
@@ -250,7 +260,7 @@ async function noOverflow(page, name) {
       .getByText('0 nuovi movimenti, 0 aggiornati, 2 già presenti.', { exact: false })
       .waitFor()
     assert.equal(repeated.unchanged, 2)
-    assert.deepEqual(financial(await request('/v1/demo')), financial(afterFirst))
+    assertFinancialUnchanged(afterFirst, await request('/v1/demo'), report, true)
     check('Reimport with stable source IDs leaves financial facts unchanged')
 
     const duplicateCsv = `${header}\n03/10/2026;04/10/2026;Acquisto uguale ${suffix};-2,50;;Fatto\n03/10/2026;04/10/2026;Acquisto uguale ${suffix};-2,50;;Fatto`
@@ -327,13 +337,13 @@ async function noOverflow(page, name) {
     assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
     await page.waitForTimeout(200)
     assert.equal(acceptedBodies.length, beforeStaleWrites + 1)
-    assert.deepEqual(financial(await request('/v1/demo')), financial(intervened))
+    assertFinancialUnchanged(intervened, await request('/v1/demo'), report, true)
     await preview(page)
     await responseFrom(page, commitPath, 'POST', () =>
       button(page, 'Importa righe dell’anteprima').click(),
     )
     await page
-      .getByText('1 nuovi movimenti, 0 aggiornati, 0 già presenti.', { exact: false })
+      .getByText('1 nuovo movimento, 0 aggiornati, 0 già presenti.', { exact: false })
       .waitFor()
     assert.equal((await manualAccount(account.id)).balanceMinor, finalBalance)
     check(
@@ -356,7 +366,7 @@ async function noOverflow(page, name) {
     await page.getByText('Associazioni ripristinate.', { exact: false }).waitFor()
     assert.equal(restored.archived, false)
     assert.equal(restored.revision, archived.revision + 1)
-    assert.deepEqual(financial(await request('/v1/demo')), financial(beforeArchive))
+    assertFinancialUnchanged(beforeArchive, await request('/v1/demo'), report, true)
     await button(page, `Usa ${renamed.name}`).click()
     await inspect(page, csv)
     assert.equal(

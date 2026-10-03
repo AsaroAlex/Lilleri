@@ -5,6 +5,7 @@ import {
   type Classification,
   type CurrencySummary,
   daysBetween,
+  type MerchantResolution,
   type Preference,
   type ReconciliationMatch,
   type RecurringSeries,
@@ -15,6 +16,10 @@ import {
 import { money } from '@lilleri/money'
 import { ruleMatches } from './rules.js'
 
+export * from './merchant.js'
+export * from './recurring-liabilities.js'
+export * from './recurring-observed.js'
+export * from './recurring-policy.js'
 export { ruleMatches } from './rules.js'
 export * from './understanding.js'
 
@@ -24,6 +29,7 @@ export interface AnalysisOptions {
   readonly preferences?: readonly Preference[]
   readonly userClassifications?: Readonly<Record<string, CategoryId>>
   readonly matchOverrides?: Readonly<Record<string, ReconciliationMatch['state']>>
+  readonly merchantResolutions?: Readonly<Record<string, MerchantResolution>>
   readonly globalDictionaryEnabled?: boolean
   /** User-declared exclusions affect attention and summaries; financial records remain owned/exportable. */
   readonly excludedFromInsights?: readonly string[]
@@ -132,11 +138,16 @@ export function classify(transaction: Transaction, options: AnalysisOptions = {}
       evidence: ['provider-kind:income'],
     }
   }
+  const resolution = options.merchantResolutions?.[transaction.id]
+  const merchantKey =
+    resolution && ['ambiguous', 'suppressed'].includes(resolution.status)
+      ? null
+      : (resolution?.normalizedKey ?? transaction.merchantKey)
   const category =
     options.globalDictionaryEnabled !== false &&
-    transaction.merchantKey &&
-    Object.hasOwn(GLOBAL_MERCHANTS, transaction.merchantKey)
-      ? GLOBAL_MERCHANTS[transaction.merchantKey]
+    merchantKey &&
+    Object.hasOwn(GLOBAL_MERCHANTS, merchantKey)
+      ? GLOBAL_MERCHANTS[merchantKey]
       : undefined
   if (category)
     return {
@@ -449,7 +460,11 @@ export function summarize(
           ),
         ),
     )
-    const booked = relevant.filter((transaction) => transaction.status === 'booked')
+    // A source-declared card payment moves existing debt; it is never a second purchase,
+    // including when the card detail is unavailable. Retain its balance and pending cash facts.
+    const booked = relevant.filter(
+      (transaction) => transaction.status === 'booked' && transaction.kind !== 'card_settlement',
+    )
     const spend = booked.reduce(
       (total, transaction) =>
         total +

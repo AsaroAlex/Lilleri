@@ -1,9 +1,17 @@
-import { ApiError, type DemoOverview, type MoneyDto } from '@lilleri/api-client'
+import type { DemoOverview, MoneyDto } from '@lilleri/api-client'
 import { type BrandTheme, colors } from '@lilleri/brand'
 import { type CurrencyCode, parseDecimal } from '@lilleri/domain'
-import { formatMoney, fromJson } from '@lilleri/money'
+import { fromJson, toDecimalString } from '@lilleri/money'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import type { MessageKey } from './src/i18n'
+import { useI18n } from './src/i18n/context'
+import {
+  displayMessage,
+  displayProblem,
+  type UiMessage,
+  UiValidationError,
+} from './src/i18n/ui-message'
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>
 interface Boundary {
@@ -35,6 +43,59 @@ interface MonthlyResponse {
   profileTimezone: string
   insights: MonthlyInsight[]
   boundary: Boundary
+  capture: {
+    capturedAt: string
+    inputDigest: string
+    ledgerDigest: string
+    privacyDigest: string
+    policyVersion: string
+  }
+}
+interface PreferenceValues {
+  accountIds: string[]
+  bufferByCurrency: Partial<Record<CurrencyCode, string>>
+  horizon: { mode: 'month_end' } | { mode: 'date' | 'next_salary'; on: string }
+}
+interface Preferences {
+  profileId: string
+  revision: number
+  digest: string
+  updatedAt: string
+  values: PreferenceValues
+}
+interface PreferenceEvent {
+  id: string
+  revision: number
+  action: 'changed' | 'undone' | 'source_erased'
+  payload: {
+    before: PreferenceValues | null
+    after: PreferenceValues
+    undoOf: string | null
+  } | null
+}
+interface PreferenceResponse {
+  preferences: Preferences
+  events: PreferenceEvent[]
+}
+interface SavedMonthly {
+  id: string
+  profileId: string
+  capturedAt: string
+  payload: {
+    result: MonthlyResponse
+    inputFacts: {
+      transactions: {
+        id: string
+        amountMinor: string
+        currency: CurrencyCode
+        bookedOn: string | null
+      }[]
+    }
+  } | null
+}
+interface SavedHistory {
+  items: SavedMonthly[]
+  nextCursor: string | null
 }
 interface SafeResult {
   currency: CurrencyCode
@@ -70,54 +131,37 @@ export interface UnderstandingPanelProps {
   readonly onError?: (cause: unknown) => boolean
   readonly onOpenTransaction?: (id: string) => void
 }
-const reasonLabels: Readonly<Record<string, string>> = {
-  coverage_partial: 'Il periodo contiene dati incompleti.',
-  coverage_unknown: 'La completezza della fonte non è verificata.',
-  missing_booked_date: 'Alcuni movimenti non hanno una data di contabilizzazione.',
-  unresolved_refund: 'Un rimborso deve essere collegato al suo acquisto.',
-  unresolved_cash_flow: 'Il tipo di alcuni movimenti richiede verifica.',
-  reconciliation_requires_review: 'Ci sono collegamenti tra movimenti da controllare.',
-  future_booked_date: 'La fonte riporta una contabilizzazione futura da verificare.',
-  future_booked_data: 'La fonte riporta una contabilizzazione futura da verificare.',
-  balance_meaning_unknown: 'La fonte non precisa come interpretare il saldo.',
-  balance_stale: 'Il saldo deve essere aggiornato.',
-  balance_timestamp_invalid: 'La data del saldo non è valida.',
-  balance_timestamp_in_future: 'La data del saldo è futura.',
-  card_balance_not_spendable_cash: 'Il saldo carta non è denaro disponibile da spendere.',
-  pending_balance_semantics_unknown: 'Non è chiaro se il saldo comprende già le uscite in sospeso.',
-  private_outflow_coverage: 'Una preferenza di privacy impedisce di completare questa stima.',
-  private_recurring_coverage: 'Una preferenza di privacy impedisce di completare questa stima.',
-  unresolved_pending_reconciliation: 'Una prenotazione e il suo addebito richiedono verifica.',
-  unresolved_recurring_occurrence:
-    'Un pagamento potrebbe essere una ricorrenza già prevista: verifica il collegamento.',
-  overdue_recurring_occurrence: 'Una ricorrenza prevista non risulta ancora verificata.',
-  buffer_not_configured: 'Indica un margine per questa valuta.',
-  forecast_work_limit:
-    'Il periodo comprende troppe ricorrenze per questa stima: scegli una data più vicina.',
+const reasonLabels: Readonly<Record<string, MessageKey>> = {
+  coverage_partial: 'understanding.coveragePartial',
+  coverage_unknown: 'understanding.coverageUnknown',
+  missing_booked_date: 'understanding.missingDate',
+  unresolved_refund: 'understanding.unresolvedRefund',
+  unresolved_cash_flow: 'understanding.unresolvedFlow',
+  reconciliation_requires_review: 'understanding.reconciliationReview',
+  future_booked_date: 'understanding.futureDate',
+  future_booked_data: 'understanding.futureDate',
+  balance_meaning_unknown: 'understanding.balanceMeaning',
+  balance_stale: 'understanding.balanceStale',
+  balance_timestamp_invalid: 'understanding.balanceTimestamp',
+  balance_timestamp_in_future: 'understanding.balanceFuture',
+  card_balance_not_spendable_cash: 'understanding.cardBalance',
+  pending_balance_semantics_unknown: 'understanding.pendingSemantics',
+  private_outflow_coverage: 'understanding.privacyCoverage',
+  private_recurring_coverage: 'understanding.privacyCoverage',
+  unresolved_pending_reconciliation: 'understanding.pendingReconciliation',
+  unresolved_recurring_occurrence: 'understanding.recurringReconciliation',
+  overdue_recurring_occurrence: 'understanding.overdue',
+  buffer_not_configured: 'understanding.bufferMissing',
+  forecast_work_limit: 'understanding.workLimit',
 }
-const displayMoney = (amountMinor: string, currency: CurrencyCode) =>
-  formatMoney(fromJson({ amountMinor, currency }), { symbolPosition: 'before' })
-const displayDate = (value: string) =>
-  new Intl.DateTimeFormat('it-IT', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(`${value}T00:00:00Z`))
-const displayMonth = (value: string) =>
-  new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(
-    new Date(`${value}-01T00:00:00Z`),
-  )
 function bufferMinor(value: string, currency: CurrencyCode) {
   const normalized = value.trim().replace(',', '.')
   if (!/^\d+(?:\.\d+)?$/.test(normalized))
-    throw new Error(
-      'Indica un margine per ogni valuta: per esempio 0 oppure 10,50, senza separatori delle migliaia.',
-    )
+    throw new UiValidationError('understanding.invalidBuffer')
   try {
     return parseDecimal(normalized, currency).amountMinor.toString()
   } catch {
-    throw new Error('Controlla le cifre decimali del margine per questa valuta.')
+    throw new UiValidationError('understanding.bufferDecimals')
   }
 }
 
@@ -130,6 +174,15 @@ export function UnderstandingPanel({
   onError,
   onOpenTransaction,
 }: UnderstandingPanelProps) {
+  const i18n = useI18n()
+  const i18nRef = useRef(i18n)
+  i18nRef.current = i18n
+  const displayMoney = (amountMinor: string, currency: CurrencyCode) =>
+    i18n.money(fromJson({ amountMinor, currency }), { symbolPosition: 'before' })
+  const readMoney = (amountMinor: string, currency: CurrencyCode) =>
+    i18n.accessibleMoney(fromJson({ amountMinor, currency }))
+  const displayDate = (value: string) => i18n.calendarDate(value)
+  const displayMonth = (value: string) => i18n.calendarMonth(value)
   const c = colors[theme],
     s = useMemo(() => styles(c), [c])
   const scopeKey = `${overview.profile.id}:${resetKey}`
@@ -156,11 +209,29 @@ export function UnderstandingPanel({
   } | null>(null)
   const [month, setMonth] = useState(''),
     [horizon, setHorizon] = useState('')
+  const [horizonMode, setHorizonMode] = useState<'month_end' | 'date' | 'next_salary'>('month_end')
   const [selected, setSelected] = useState<string[]>([]),
     [buffers, setBuffers] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false),
     [calculating, setCalculating] = useState(false),
-    [error, setError] = useState<string | null>(null)
+    [error, setError] = useState<UiMessage | null>(null)
+  const preferenceTicket = useRef(0),
+    historyTicket = useRef(0),
+    mutationBusy = useRef(false)
+  const [persisting, setPersisting] = useState(false),
+    [notice, setNotice] = useState<UiMessage | null>(null)
+  const [savedPreferences, setSavedPreferences] = useState<{
+    key: string
+    data: PreferenceResponse
+  } | null>(null)
+  const [savedHistory, setSavedHistory] = useState<{
+    key: string
+    snapshot: DemoOverview
+    data: SavedHistory
+  } | null>(null)
+  const currentPreferences = savedPreferences?.key === scopeKey ? savedPreferences.data : null
+  const currentHistory =
+    savedHistory?.key === scopeKey && savedHistory.snapshot === overview ? savedHistory.data : null
   const [openEvidence, setOpenEvidence] = useState<string | null>(null)
   const currentMonthly =
     monthly?.key === scopeKey && monthly.snapshot === overview ? monthly.data : null
@@ -199,11 +270,7 @@ export function UnderstandingPanel({
           snapshot === currentOverview.current &&
           !onError?.(cause)
         )
-          setError(
-            cause instanceof ApiError
-              ? cause.message
-              : 'Non riesco a caricare il riepilogo del mese. Riprova.',
-          )
+          setError(displayProblem(cause, 'understanding.monthFailed'))
       } finally {
         if (
           stillCurrent(captured) &&
@@ -238,9 +305,7 @@ export function UnderstandingPanel({
           snapshot === currentOverview.current &&
           !onError?.(cause)
         )
-          setError(
-            cause instanceof ApiError ? cause.message : 'Non riesco a calcolare la stima. Riprova.',
-          )
+          setError(displayProblem(cause, 'understanding.estimateFailed'))
       } finally {
         if (
           stillCurrent(captured) &&
@@ -252,6 +317,113 @@ export function UnderstandingPanel({
     },
     [request, scopeKey, stillCurrent, onError],
   )
+  const applyPreferences = useCallback(
+    (value: PreferenceResponse) => {
+      setSavedPreferences({ key: scopeKey, data: value })
+      setSelected(value.preferences.values.accountIds)
+      setBuffers(
+        Object.fromEntries(
+          Object.entries(value.preferences.values.bufferByCurrency).map(([currency, amount]) => [
+            currency,
+            toDecimalString(
+              fromJson({ amountMinor: amount as string, currency: currency as CurrencyCode }),
+            ),
+          ]),
+        ),
+      )
+      setHorizonMode(value.preferences.values.horizon.mode)
+      setHorizon(
+        value.preferences.values.horizon.mode === 'month_end'
+          ? ''
+          : value.preferences.values.horizon.on,
+      )
+      lastQuery.current = null
+      safeTicket.current++
+      setSafeResult(null)
+    },
+    [scopeKey],
+  )
+  const loadPreferences = useCallback(async () => {
+    const captured = epoch.current.value,
+      ticket = ++preferenceTicket.current
+    try {
+      const value = await request<PreferenceResponse>('/v1/understanding/preferences')
+      if (stillCurrent(captured) && ticket === preferenceTicket.current) applyPreferences(value)
+    } catch (cause) {
+      if (stillCurrent(captured) && ticket === preferenceTicket.current && !onError?.(cause))
+        setError(displayProblem(cause, 'understanding.preferencesFailed'))
+    }
+  }, [request, stillCurrent, onError, applyPreferences])
+  const loadHistory = useCallback(
+    async (cursor?: string) => {
+      const captured = epoch.current.value,
+        ticket = ++historyTicket.current,
+        snapshot = currentOverview.current
+      try {
+        const value = await request<SavedHistory>(
+          `/v1/insights/monthly/history${cursor ? `?before=${encodeURIComponent(cursor)}` : ''}`,
+        )
+        if (
+          stillCurrent(captured) &&
+          ticket === historyTicket.current &&
+          snapshot === currentOverview.current
+        )
+          setSavedHistory((previous) => ({
+            key: scopeKey,
+            snapshot,
+            data:
+              cursor && previous?.key === scopeKey && previous.snapshot === snapshot
+                ? { items: [...previous.data.items, ...value.items], nextCursor: value.nextCursor }
+                : value,
+          }))
+      } catch (cause) {
+        if (
+          stillCurrent(captured) &&
+          ticket === historyTicket.current &&
+          snapshot === currentOverview.current &&
+          !onError?.(cause)
+        )
+          setError(displayProblem(cause, 'understanding.historyFailed'))
+      }
+    },
+    [request, scopeKey, stillCurrent, onError],
+  )
+  const mutatePersistence = async (
+    action: () => Promise<unknown>,
+    success: UiMessage,
+    refreshPreferences = false,
+  ) => {
+    if (mutationBusy.current) return
+    mutationBusy.current = true
+    setPersisting(true)
+    setNotice(null)
+    setError(null)
+    const captured = epoch.current.value,
+      snapshot = currentOverview.current
+    try {
+      await action()
+      if (!stillCurrent(captured) || snapshot !== currentOverview.current) return
+      setNotice(success)
+      if (refreshPreferences) await loadPreferences()
+      await loadHistory()
+    } catch (cause) {
+      if (stillCurrent(captured) && snapshot === currentOverview.current) {
+        const handled = onError?.(cause)
+        if (cause && typeof cause === 'object' && 'status' in cause && cause.status === 409) {
+          if (refreshPreferences) await loadPreferences()
+          if (!stillCurrent(captured) || snapshot !== currentOverview.current) return
+          await loadMonth(selectedMonth.current || undefined)
+        }
+        if (!handled && stillCurrent(captured) && snapshot === currentOverview.current)
+          setError(displayProblem(cause, 'understanding.persistenceFailed'))
+      }
+    } finally {
+      if (stillCurrent(captured)) {
+        mutationBusy.current = false
+        setPersisting(false)
+      }
+    }
+  }
   useEffect(() => {
     mounted.current = true
     setMonthly(null)
@@ -260,6 +432,14 @@ export function UnderstandingPanel({
     setHorizon('')
     setSelected([])
     setBuffers({})
+    setHorizonMode('month_end')
+    setSavedPreferences(null)
+    setSavedHistory(null)
+    setNotice(null)
+    setPersisting(false)
+    mutationBusy.current = false
+    preferenceTicket.current++
+    historyTicket.current++
     setOpenEvidence(null)
     setError(null)
     setCalculating(false)
@@ -268,20 +448,25 @@ export function UnderstandingPanel({
     lastOverview.current = null
     safeTicket.current++
     void loadMonth()
+    void loadPreferences()
+    void loadHistory()
     return () => {
       mounted.current = false
       monthTicket.current++
       safeTicket.current++
+      preferenceTicket.current++
+      historyTicket.current++
     }
-  }, [loadMonth])
+  }, [loadMonth, loadPreferences, loadHistory])
   useEffect(() => {
     const previous = lastOverview.current
     lastOverview.current = overview
     if (!previous || previous === overview) return
     void loadMonth(selectedMonth.current || undefined)
+    void loadHistory()
     setSafeResult(null)
     if (lastQuery.current) void loadEstimate(lastQuery.current)
-  }, [overview, loadMonth, loadEstimate])
+  }, [overview, loadMonth, loadEstimate, loadHistory])
   const chosenCurrencies = [
     ...new Set(
       overview.accounts
@@ -301,7 +486,7 @@ export function UnderstandingPanel({
     setSafeResult(null)
     setOpenEvidence(null)
     if (!selected.length) {
-      setError('Scegli almeno un conto per questa stima.')
+      setError('understanding.chooseAccount')
       return
     }
     let exactBuffers: Record<string, string>
@@ -310,10 +495,10 @@ export function UnderstandingPanel({
         chosenCurrencies.map((code) => [code, bufferMinor(buffers[code] ?? '', code)]),
       )
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Controlla gli importi indicati.')
+      setError(displayProblem(cause, 'understanding.checkAmounts'))
       return
     }
-    const query = `accountIds=${encodeURIComponent(selected.join(','))}&horizonOn=${encodeURIComponent(horizon)}&bufferByCurrency=${encodeURIComponent(JSON.stringify(exactBuffers))}`
+    const query = `accountIds=${encodeURIComponent(selected.join(','))}&horizonOn=${encodeURIComponent(horizonMode === 'month_end' ? currentMonthly.boundary.defaultHorizonOn : horizon)}&bufferByCurrency=${encodeURIComponent(JSON.stringify(exactBuffers))}`
     lastQuery.current = query
     await loadEstimate(query)
   }
@@ -332,8 +517,11 @@ export function UnderstandingPanel({
   )
   const evidence = (key: string, ids: readonly string[]) => (
     <View style={s.stack}>
-      {button(openEvidence === key ? 'Chiudi i movimenti' : 'Apri i movimenti usati', () =>
-        setOpenEvidence(openEvidence === key ? null : key),
+      {button(
+        openEvidence === key
+          ? i18nRef.current.t('understanding.closeEvidence')
+          : i18nRef.current.t('understanding.openEvidence'),
+        () => setOpenEvidence(openEvidence === key ? null : key),
       )}
       {openEvidence === key &&
         (ids.length ? (
@@ -343,46 +531,187 @@ export function UnderstandingPanel({
               <Pressable
                 key={id}
                 accessibilityRole={onOpenTransaction ? 'button' : 'text'}
-                accessibilityLabel={`Movimento del ${row.bookedOn ?? row.authorizedOn ?? 'giorno non disponibile'}: ${row.merchantName || row.description}`}
+                accessibilityLabel={i18n.t('understanding.transactionAccessible', {
+                  date:
+                    row.bookedOn || row.authorizedOn
+                      ? displayDate((row.bookedOn ?? row.authorizedOn) as string)
+                      : i18n.t('understanding.unknownDay'),
+                  merchant: row.merchantName || row.description,
+                })}
                 onPress={() => onOpenTransaction?.(id)}
                 style={s.evidence}
               >
                 <Text style={s.text}>{row.merchantName || row.description}</Text>
                 <Text style={s.hint}>
-                  {row.bookedOn ?? row.authorizedOn ?? 'Data non disponibile'} ·{' '}
-                  {displayMoney(row.amount.amountMinor, row.amount.currency)}
+                  {row.bookedOn || row.authorizedOn
+                    ? displayDate((row.bookedOn ?? row.authorizedOn) as string)
+                    : i18n.t('understanding.unknownDate')}{' '}
+                  · {displayMoney(row.amount.amountMinor, row.amount.currency)}
                 </Text>
               </Pressable>
             ) : (
               <Text key={id} style={s.hint}>
-                Il movimento è cambiato: aggiorna i dati.
+                {i18nRef.current.t('understanding.transactionChanged')}
               </Text>
             )
           })
         ) : (
-          <Text style={s.hint}>Nessun movimento contabilizzato nel periodo selezionato.</Text>
+          <Text style={s.hint}>{i18n.t('understanding.noBookedTransactions')}</Text>
         ))}
     </View>
   )
+  const renderMonthlyInsight = (
+    item: MonthlyInsight,
+    insightMonth: string,
+    referencePrefix: string,
+  ) => (
+    <View key={item.id} style={s.stack}>
+      <Text style={s.title}>
+        {item.currency} · {displayMonth(insightMonth)}
+      </Text>
+      <Text style={s.hint}>
+        {displayDate(item.inputs.fromOn)} – {displayDate(item.inputs.throughOn)} ·{' '}
+        {item.status === 'partial'
+          ? i18nRef.current.t('understanding.partial')
+          : i18nRef.current.t('understanding.localLedger')}
+      </Text>
+      <Text
+        style={s.text}
+        accessibilityLabel={i18n.t('understanding.incomeAmount', {
+          amount: readMoney(item.calculation.incomeMinor, item.currency),
+        })}
+      >
+        {i18n.t('understanding.incomeAmount', {
+          amount: displayMoney(item.calculation.incomeMinor, item.currency),
+        })}
+      </Text>
+      <Text
+        style={s.text}
+        accessibilityLabel={i18n.t('understanding.expensesAmount', {
+          amount: readMoney(item.calculation.expensesMinor, item.currency),
+        })}
+      >
+        {i18n.t('understanding.expensesAmount', {
+          amount: displayMoney(item.calculation.expensesMinor, item.currency),
+        })}
+      </Text>
+      <Text
+        style={s.text}
+        accessibilityLabel={i18n.t('understanding.refundsAmount', {
+          amount: readMoney(item.calculation.linkedRefundsMinor, item.currency),
+        })}
+      >
+        {i18n.t('understanding.refundsAmount', {
+          amount: displayMoney(item.calculation.linkedRefundsMinor, item.currency),
+        })}
+      </Text>
+      <Text
+        style={s.label}
+        accessibilityLabel={i18n.t('understanding.netAmount', {
+          amount: readMoney(item.value.netSpending.amountMinor, item.currency),
+        })}
+      >
+        {i18n.t('understanding.netAmount', {
+          amount: displayMoney(item.value.netSpending.amountMinor, item.currency),
+        })}
+      </Text>
+      <Text
+        style={s.hint}
+        accessibilityLabel={i18n.t('understanding.netFormulaAmount', {
+          amount: readMoney(item.value.netFlow.amountMinor, item.currency),
+        })}
+      >
+        {i18n.t('understanding.netFormulaAmount', {
+          amount: displayMoney(item.value.netFlow.amountMinor, item.currency),
+        })}
+      </Text>
+      {(item.calculation.unresolvedCreditsMinor !== '0' ||
+        item.calculation.unresolvedDebitsMinor !== '0') && (
+        <Text
+          style={s.hint}
+          accessibilityLabel={i18n.t('understanding.unresolvedAmounts', {
+            credits: readMoney(item.calculation.unresolvedCreditsMinor, item.currency),
+            debits: readMoney(item.calculation.unresolvedDebitsMinor, item.currency),
+          })}
+        >
+          {i18n.t('understanding.unresolvedAmounts', {
+            credits: displayMoney(item.calculation.unresolvedCreditsMinor, item.currency),
+            debits: displayMoney(item.calculation.unresolvedDebitsMinor, item.currency),
+          })}
+        </Text>
+      )}
+      {item.reasons.map((reason) => (
+        <Text key={reason} style={s.hint}>
+          {i18n.t(
+            Object.hasOwn(reasonLabels, reason)
+              ? (reasonLabels[reason] as MessageKey)
+              : 'understanding.genericReason',
+          )}
+        </Text>
+      ))}
+      {evidence(`${referencePrefix}:${item.id}`, item.inputs.transactionIds)}
+    </View>
+  )
+  const savePreferences = () => {
+    if (!currentPreferences || !currentMonthly) return
+    let values: PreferenceValues
+    try {
+      values = {
+        accountIds: selected,
+        bufferByCurrency: Object.fromEntries(
+          chosenCurrencies.map((code) => [code, bufferMinor(buffers[code] ?? '', code)]),
+        ),
+        horizon:
+          horizonMode === 'month_end' ? { mode: 'month_end' } : { mode: horizonMode, on: horizon },
+      }
+    } catch (cause) {
+      setError(displayProblem(cause, 'understanding.checkAmounts'))
+      return
+    }
+    void mutatePersistence(
+      () =>
+        request('/v1/understanding/preferences', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            revision: currentPreferences.preferences.revision,
+            expectedDigest: currentPreferences.preferences.digest,
+            values,
+          }),
+        }),
+      'understanding.preferencesSaved',
+      true,
+    )
+  }
+  const lastPreferenceEvent = currentPreferences?.events[0]
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.heading}>
-        Il mese e il tuo margine
+      <Text accessibilityRole="header" aria-level={2} style={s.heading}>
+        {i18nRef.current.t('understanding.title')}
       </Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
-          {error}
+          {displayMessage(i18n, error)}
+        </Text>
+      )}
+      {notice && (
+        <Text
+          accessibilityRole="text"
+          accessibilityLiveRegion="polite"
+          aria-live="polite"
+          style={s.hint}
+        >
+          {displayMessage(i18n, notice)}
         </Text>
       )}
       <View style={s.card}>
-        <Text style={s.title}>Cosa è successo nel mese</Text>
-        <Text style={s.hint}>
-          Totali dei movimenti contabilizzati disponibili, separati per valuta.
+        <Text accessibilityRole="header" aria-level={3} style={s.title}>
+          {i18nRef.current.t('understanding.monthTitle')}
         </Text>
+        <Text style={s.hint}>{i18nRef.current.t('understanding.monthHelp')}</Text>
         {loading && (
           <ActivityIndicator
             color={c.primary}
-            accessibilityLabel="Caricamento riepilogo del mese"
+            accessibilityLabel={i18nRef.current.t('understanding.monthLoading')}
           />
         )}
         {currentMonthly && (
@@ -392,7 +721,9 @@ export function UnderstandingPanel({
                 <Pressable
                   key={value}
                   accessibilityRole="button"
-                  accessibilityLabel={`Mostra ${displayMonth(value)}`}
+                  accessibilityLabel={i18n.t('understanding.showMonthAccessible', {
+                    month: displayMonth(value),
+                  })}
                   accessibilityState={{
                     selected: currentMonthly.month === value,
                     disabled: loading,
@@ -406,9 +737,9 @@ export function UnderstandingPanel({
                 </Pressable>
               ))}
             </View>
-            <Text style={s.label}>Altro mese · AAAA-MM</Text>
+            <Text style={s.label}>{i18nRef.current.t('understanding.anotherMonth')}</Text>
             <TextInput
-              accessibilityLabel="Mese del riepilogo"
+              accessibilityLabel={i18nRef.current.t('understanding.monthInput')}
               autoCapitalize="none"
               value={month}
               onChangeText={setMonth}
@@ -417,75 +748,108 @@ export function UnderstandingPanel({
               style={s.input}
             />
             {button(
-              'Mostra il mese',
+              i18nRef.current.t('understanding.showMonth'),
               () => void loadMonth(month),
               loading || !/^\d{4}-\d{2}$/.test(month),
             )}
             {!currentMonthly.insights.length && (
-              <Text style={s.text}>Aggiungi un conto per vedere il riepilogo dei movimenti.</Text>
+              <Text style={s.text}>{i18nRef.current.t('understanding.noAccounts')}</Text>
             )}
-            {currentMonthly.insights.map((item) => (
-              <View key={item.id} style={s.stack}>
-                <Text style={s.title}>
-                  {item.currency} · {displayMonth(currentMonthly.month)}
-                </Text>
-                <Text style={s.hint}>
-                  {displayDate(item.inputs.fromOn)} – {displayDate(item.inputs.throughOn)} ·{' '}
-                  {item.status === 'partial'
-                    ? 'Dati disponibili, copertura incompleta'
-                    : 'Movimenti del registro locale'}
-                </Text>
-                <Text style={s.text}>
-                  Entrate: {displayMoney(item.calculation.incomeMinor, item.currency)}
-                </Text>
-                <Text style={s.text}>
-                  Spese: {displayMoney(item.calculation.expensesMinor, item.currency)}
-                </Text>
-                <Text style={s.text}>
-                  Rimborsi collegati:{' '}
-                  {displayMoney(item.calculation.linkedRefundsMinor, item.currency)}
-                </Text>
-                <Text style={s.label}>
-                  Spesa netta: {displayMoney(item.value.netSpending.amountMinor, item.currency)}
-                </Text>
-                <Text style={s.hint}>
-                  Spesa netta = spese − rimborsi collegati. Entrate − spesa netta:{' '}
-                  {displayMoney(item.value.netFlow.amountMinor, item.currency)}.
-                </Text>
-                {(item.calculation.unresolvedCreditsMinor !== '0' ||
-                  item.calculation.unresolvedDebitsMinor !== '0') && (
-                  <Text style={s.hint}>
-                    Da verificare, fuori dai totali: accrediti{' '}
-                    {displayMoney(item.calculation.unresolvedCreditsMinor, item.currency)}; addebiti{' '}
-                    {displayMoney(item.calculation.unresolvedDebitsMinor, item.currency)}.
-                  </Text>
-                )}
-                {item.reasons.map((reason) => (
-                  <Text key={reason} style={s.hint}>
-                    {reasonLabels[reason] ?? 'Alcuni dati richiedono verifica.'}
-                  </Text>
-                ))}
-                {evidence(item.id, item.inputs.transactionIds)}
-              </View>
-            ))}
+            {button(
+              i18n.t('understanding.saveSnapshot'),
+              () => {
+                const capture = currentMonthly.capture
+                void mutatePersistence(
+                  () =>
+                    request('/v1/insights/monthly/snapshots', {
+                      method: 'POST',
+                      body: JSON.stringify({
+                        month: currentMonthly.month,
+                        expectedInputDigest: capture.inputDigest,
+                        policyVersion: capture.policyVersion,
+                      }),
+                    }),
+                  'understanding.snapshotSaved',
+                )
+              },
+              persisting || loading,
+            )}
+            {currentMonthly.insights.map((item) =>
+              renderMonthlyInsight(item, currentMonthly.month, 'current'),
+            )}
           </>
         )}
-        {!currentMonthly && !loading && button('Riprova il riepilogo', () => void loadMonth())}
+        {!currentMonthly &&
+          !loading &&
+          button(i18nRef.current.t('understanding.retryMonth'), () => void loadMonth())}
       </View>
       <View style={s.card}>
-        <Text style={s.title}>Quanto resta fino alla data scelta</Text>
-        <Text style={s.hint}>
-          Scegli i conti e un margine per ogni valuta. La stima usa solo il registro locale e non
-          aggiunge entrate future.
+        <Text accessibilityRole="header" aria-level={3} style={s.title}>
+          {i18n.t('understanding.historyTitle')}
         </Text>
+        <Text style={s.hint}>{i18n.t('understanding.historyHelp')}</Text>
+        {button(i18n.t('understanding.reloadHistory'), () => void loadHistory(), persisting)}
+        {currentHistory?.items.map(
+          (saved) =>
+            saved.payload && (
+              <View key={saved.id} style={s.stack}>
+                <Text style={s.label}>
+                  {i18n.t('understanding.capturedAt', {
+                    month: displayMonth(saved.payload.result.month),
+                    instant: i18n.instant(saved.capturedAt),
+                  })}
+                </Text>
+                {saved.payload.result.insights.map((item) =>
+                  renderMonthlyInsight(item, saved.payload?.result.month as string, saved.id),
+                )}
+                {saved.payload.inputFacts.transactions.map((fact) => (
+                  <Text
+                    key={fact.id}
+                    style={s.hint}
+                    accessibilityLabel={i18n.t('understanding.capturedFact', {
+                      date: fact.bookedOn
+                        ? displayDate(fact.bookedOn)
+                        : i18n.t('understanding.unknownDay'),
+                      amount: readMoney(fact.amountMinor, fact.currency),
+                    })}
+                  >
+                    {i18n.t('understanding.capturedFact', {
+                      date: fact.bookedOn
+                        ? displayDate(fact.bookedOn)
+                        : i18n.t('understanding.unknownDay'),
+                      amount: displayMoney(fact.amountMinor, fact.currency),
+                    })}
+                  </Text>
+                ))}
+              </View>
+            ),
+        )}
+        {currentHistory && !currentHistory.items.length && (
+          <Text style={s.hint}>{i18n.t('understanding.historyEmpty')}</Text>
+        )}
+        {currentHistory?.nextCursor &&
+          button(
+            i18n.t('understanding.moreHistory'),
+            () => void loadHistory(currentHistory.nextCursor as string),
+            persisting,
+          )}
+      </View>
+      <View style={s.card}>
+        <Text accessibilityRole="header" aria-level={3} style={s.title}>
+          {i18nRef.current.t('understanding.safeTitle')}
+        </Text>
+        <Text style={s.hint}>{i18nRef.current.t('understanding.safeHelp')}</Text>
         {!overview.accounts.length && (
-          <Text style={s.text}>Aggiungi prima un conto manuale con il suo saldo.</Text>
+          <Text style={s.text}>{i18nRef.current.t('understanding.addAccount')}</Text>
         )}
         {overview.accounts.map((account) => (
           <Pressable
             key={account.id}
             accessibilityRole="checkbox"
-            accessibilityLabel={`Includi ${account.name} ${account.balance.currency}`}
+            accessibilityLabel={i18n.t('understanding.includeAccount', {
+              account: account.name,
+              currency: account.balance.currency,
+            })}
             accessibilityState={{ checked: selected.includes(account.id) }}
             aria-checked={selected.includes(account.id)}
             onPress={() => {
@@ -506,13 +870,49 @@ export function UnderstandingPanel({
         ))}
         {currentMonthly && (
           <>
-            <Text style={s.label}>Fino al · AAAA-MM-GG</Text>
+            <View style={s.row}>
+              {(['month_end', 'date', 'next_salary'] as const).map((mode) => (
+                <Pressable
+                  key={mode}
+                  accessibilityRole="radio"
+                  aria-checked={horizonMode === mode}
+                  accessibilityState={{ checked: horizonMode === mode }}
+                  accessibilityLabel={i18n.t(
+                    mode === 'month_end'
+                      ? 'understanding.horizonMonthEnd'
+                      : mode === 'date'
+                        ? 'understanding.horizonDate'
+                        : 'understanding.horizonSalary',
+                  )}
+                  onPress={() => {
+                    invalidateEstimate()
+                    setHorizonMode(mode)
+                    if (mode === 'month_end') setHorizon(currentMonthly.boundary.defaultHorizonOn)
+                  }}
+                  style={[s.button, horizonMode === mode && s.selected]}
+                >
+                  <Text style={s.buttonText}>
+                    {i18n.t(
+                      mode === 'month_end'
+                        ? 'understanding.horizonMonthEnd'
+                        : mode === 'date'
+                          ? 'understanding.horizonDate'
+                          : 'understanding.horizonSalary',
+                    )}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+            <Text style={s.label}>{i18nRef.current.t('understanding.throughDate')}</Text>
             <TextInput
-              accessibilityLabel="Data finale della stima"
+              accessibilityLabel={i18nRef.current.t('understanding.horizon')}
               autoCapitalize="none"
-              value={horizon}
+              value={
+                horizonMode === 'month_end' ? currentMonthly.boundary.defaultHorizonOn : horizon
+              }
               onChangeText={(value) => {
                 invalidateEstimate()
+                setHorizonMode((previous) => (previous === 'month_end' ? 'date' : previous))
                 setHorizon(value)
               }}
               placeholder={currentMonthly.boundary.defaultHorizonOn}
@@ -520,74 +920,183 @@ export function UnderstandingPanel({
               style={s.input}
             />
             <Text style={s.hint}>
-              Dal {displayDate(currentMonthly.boundary.calculatedOn)} al{' '}
-              {displayDate(currentMonthly.boundary.maxHorizonOn)}.
+              {i18n.t('understanding.range', {
+                from: displayDate(currentMonthly.boundary.calculatedOn),
+                through: displayDate(currentMonthly.boundary.maxHorizonOn),
+              })}
             </Text>
           </>
         )}
         {chosenCurrencies.map((code) => (
           <View key={code} style={s.stack}>
-            <Text style={s.label}>Margine da tenere da parte · {code}</Text>
+            <Text style={s.label}>
+              {i18n.t('understanding.bufferCurrency', { currency: code })}
+            </Text>
             <TextInput
-              accessibilityLabel={`Margine ${code}`}
+              accessibilityLabel={i18n.t('understanding.bufferAccessible', { currency: code })}
               keyboardType="decimal-pad"
               value={buffers[code] ?? ''}
               onChangeText={(value) => {
                 invalidateEstimate()
                 setBuffers((current) => ({ ...current, [code]: value }))
               }}
-              placeholder="Per esempio 0 oppure 10,50"
+              placeholder={i18nRef.current.t('understanding.bufferExample')}
               placeholderTextColor={c.textTertiary}
               style={s.input}
             />
           </View>
         ))}
         {button(
-          calculating ? 'Calcolo in corso…' : 'Calcola il margine',
+          i18n.t('understanding.savePreferences'),
+          savePreferences,
+          persisting || !currentPreferences || !currentMonthly,
+        )}
+        {lastPreferenceEvent?.payload?.before &&
+          lastPreferenceEvent.action !== 'source_erased' &&
+          button(
+            i18n.t('understanding.undoPreferences'),
+            () => {
+              if (!currentPreferences) return
+              void mutatePersistence(
+                () =>
+                  request('/v1/understanding/preferences/undo', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      revision: currentPreferences.preferences.revision,
+                      expectedDigest: currentPreferences.preferences.digest,
+                      eventId: lastPreferenceEvent.id,
+                    }),
+                  }),
+                'understanding.preferencesUndone',
+                true,
+              )
+            },
+            persisting,
+          )}
+        <Text style={s.hint}>{i18n.t('understanding.preferencesHelp')}</Text>
+        {button(
+          calculating
+            ? i18nRef.current.t('understanding.calculating')
+            : i18nRef.current.t('understanding.calculate'),
           () => void calculate(),
           calculating || !currentMonthly || !selected.length,
           true,
         )}
         {currentSafe?.results.map((item) => (
           <View key={item.currency} style={s.stack}>
-            <Text style={s.title}>
+            <Text
+              style={s.title}
+              accessibilityLabel={
+                item.value
+                  ? item.status === 'shortfall'
+                    ? i18n.t('understanding.shortfall', {
+                        amount: readMoney(item.value.amountMinor, item.currency),
+                      })
+                    : i18n.t('understanding.available', {
+                        amount: readMoney(item.value.amountMinor, item.currency),
+                        date: displayDate(item.horizonOn),
+                      })
+                  : i18n.t('understanding.unavailable', { currency: item.currency })
+              }
+            >
               {item.value
                 ? item.status === 'shortfall'
-                  ? `Margine insufficiente: ${displayMoney(item.value.amountMinor, item.currency)}`
-                  : `Circa ${displayMoney(item.value.amountMinor, item.currency)} fino al ${displayDate(item.horizonOn)}`
-                : `${item.currency}: stima non disponibile`}
+                  ? i18n.t('understanding.shortfall', {
+                      amount: displayMoney(item.value.amountMinor, item.currency),
+                    })
+                  : i18n.t('understanding.available', {
+                      amount: displayMoney(item.value.amountMinor, item.currency),
+                      date: displayDate(item.horizonOn),
+                    })
+                : i18n.t('understanding.unavailable', { currency: item.currency })}
             </Text>
-            <Text style={s.hint}>{item.explanationIt}</Text>
-            <Text style={s.text}>
-              Saldi scelti: {displayMoney(item.calculation.includedBalanceMinor, item.currency)}
+            <Text style={s.hint}>
+              {i18n.t(
+                item.value === null
+                  ? 'understanding.estimateUnavailableHelp'
+                  : 'understanding.estimateAvailableHelp',
+              )}
             </Text>
-            <Text style={s.text}>
-              − Uscite in sospeso:{' '}
-              {item.calculation.pendingOutflowsMinor === null
-                ? 'da verificare'
-                : displayMoney(item.calculation.pendingOutflowsMinor, item.currency)}
+            <Text
+              style={s.text}
+              accessibilityLabel={i18n.t('understanding.chosenAmount', {
+                amount: readMoney(item.calculation.includedBalanceMinor, item.currency),
+              })}
+            >
+              {i18n.t('understanding.chosenAmount', {
+                amount: displayMoney(item.calculation.includedBalanceMinor, item.currency),
+              })}
             </Text>
-            <Text style={s.text}>
-              − Ricorrenti stimate:{' '}
-              {item.calculation.estimatedUpcomingOutflowsMinor === null
-                ? 'da verificare'
-                : displayMoney(item.calculation.estimatedUpcomingOutflowsMinor, item.currency)}
+            <Text
+              style={s.text}
+              accessibilityLabel={i18n.t('understanding.pendingAmount', {
+                amount:
+                  item.calculation.pendingOutflowsMinor === null
+                    ? i18n.t('understanding.toReview')
+                    : readMoney(item.calculation.pendingOutflowsMinor, item.currency),
+              })}
+            >
+              {i18n.t('understanding.pendingAmount', {
+                amount:
+                  item.calculation.pendingOutflowsMinor === null
+                    ? i18n.t('understanding.toReview')
+                    : displayMoney(item.calculation.pendingOutflowsMinor, item.currency),
+              })}
             </Text>
-            <Text style={s.text}>
-              − Margine:{' '}
-              {item.calculation.bufferMinor === null
-                ? 'non indicato'
-                : displayMoney(item.calculation.bufferMinor, item.currency)}
+            <Text
+              style={s.text}
+              accessibilityLabel={i18n.t('understanding.recurringAmount', {
+                amount:
+                  item.calculation.estimatedUpcomingOutflowsMinor === null
+                    ? i18n.t('understanding.toReview')
+                    : readMoney(item.calculation.estimatedUpcomingOutflowsMinor, item.currency),
+              })}
+            >
+              {i18n.t('understanding.recurringAmount', {
+                amount:
+                  item.calculation.estimatedUpcomingOutflowsMinor === null
+                    ? i18n.t('understanding.toReview')
+                    : displayMoney(item.calculation.estimatedUpcomingOutflowsMinor, item.currency),
+              })}
+            </Text>
+            <Text
+              style={s.text}
+              accessibilityLabel={i18n.t('understanding.bufferAmount', {
+                amount:
+                  item.calculation.bufferMinor === null
+                    ? i18n.t('understanding.notEntered')
+                    : readMoney(item.calculation.bufferMinor, item.currency),
+              })}
+            >
+              {i18n.t('understanding.bufferAmount', {
+                amount:
+                  item.calculation.bufferMinor === null
+                    ? i18n.t('understanding.notEntered')
+                    : displayMoney(item.calculation.bufferMinor, item.currency),
+              })}
             </Text>
             {item.inputs.estimatedOccurrences.map((occurrence) => (
-              <Text key={`${occurrence.seriesId}:${occurrence.on}`} style={s.hint}>
-                Prevista il {displayDate(occurrence.on)}: circa{' '}
-                {displayMoney(occurrence.amountMinor, item.currency)}.
+              <Text
+                key={`${occurrence.seriesId}:${occurrence.on}`}
+                style={s.hint}
+                accessibilityLabel={i18n.t('understanding.occurrence', {
+                  date: displayDate(occurrence.on),
+                  amount: readMoney(occurrence.amountMinor, item.currency),
+                })}
+              >
+                {i18n.t('understanding.occurrence', {
+                  date: displayDate(occurrence.on),
+                  amount: displayMoney(occurrence.amountMinor, item.currency),
+                })}
               </Text>
             ))}
             {item.reasons.map((reason) => (
               <Text key={reason} style={s.hint}>
-                {reasonLabels[reason] ?? 'Alcuni dati richiedono verifica.'}
+                {i18n.t(
+                  Object.hasOwn(reasonLabels, reason)
+                    ? (reasonLabels[reason] as MessageKey)
+                    : 'understanding.genericReason',
+                )}
               </Text>
             ))}
             {evidence(`safe-${item.currency}`, [
@@ -606,11 +1115,41 @@ function styles(c: typeof colors.light | typeof colors.dark) {
     panel: { gap: 20 },
     stack: { gap: 10 },
     heading: { fontFamily: 'Newsreader', fontSize: 28, color: c.textPrimary },
-    title: { fontFamily: 'Geist', fontSize: 18, fontWeight: '600', color: c.textPrimary },
-    text: { fontFamily: 'Geist', fontSize: 16, lineHeight: 24, color: c.textPrimary },
-    hint: { fontFamily: 'Geist', fontSize: 14, lineHeight: 21, color: c.textSecondary },
-    label: { fontFamily: 'Geist', fontSize: 15, fontWeight: '600', color: c.textPrimary },
-    error: { fontFamily: 'Geist', fontSize: 16, lineHeight: 24, color: c.danger },
+    title: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    text: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 16,
+      lineHeight: 24,
+      color: c.textPrimary,
+    },
+    hint: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 14,
+      lineHeight: 21,
+      color: c.textSecondary,
+    },
+    label: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 15,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    error: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 16,
+      lineHeight: 24,
+      color: c.danger,
+    },
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     card: {
       borderWidth: 1,
@@ -641,7 +1180,12 @@ function styles(c: typeof colors.light | typeof colors.dark) {
       justifyContent: 'center',
       backgroundColor: c.surfaceElevated,
     },
-    buttonText: { fontFamily: 'Geist', fontSize: 14, color: c.textPrimary },
+    buttonText: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 14,
+      color: c.textPrimary,
+    },
     primary: { backgroundColor: c.primary, borderColor: c.primary },
     primaryText: { color: c.onPrimary, fontWeight: '600' },
     selected: { backgroundColor: c.primarySoft, borderColor: c.primary },

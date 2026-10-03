@@ -2,6 +2,9 @@ import { ApiError } from '@lilleri/api-client'
 import { type BrandTheme, colors } from '@lilleri/brand'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import type { MessageKey } from './i18n'
+import { useI18n } from './i18n/context'
+import { displayMessage, displayProblem, type UiMessage } from './i18n/ui-message'
 
 type OptionalType =
   | 'inbox'
@@ -52,13 +55,13 @@ interface Props {
   readonly onOpenPrivacy?: () => void
   readonly onOpenDestination?: (destination: NotificationDestination) => void
 }
-const labels: Record<OptionalType, string> = {
-  inbox: 'Movimenti da rivedere',
-  consent_reminder: 'Collegamenti da rinnovare',
-  balance_mismatch: 'Dati da verificare',
-  connection_expired: 'Collegamenti scaduti',
-  connection_paused: 'Collegamenti in pausa',
-  summary_ready: 'Riepiloghi pronti',
+const labels: Record<OptionalType, MessageKey> = {
+  inbox: 'notifications.inbox',
+  consent_reminder: 'notifications.consentReminder',
+  balance_mismatch: 'notifications.mismatch',
+  connection_expired: 'notifications.expired',
+  connection_paused: 'notifications.paused',
+  summary_ready: 'notifications.summary',
 }
 const timePattern = /^(?:[01]\d|2[0-3]):[0-5]\d$/
 
@@ -71,6 +74,9 @@ export function NotificationsPanel({
   onOpenPrivacy,
   onOpenDestination,
 }: Props) {
+  const i18n = useI18n()
+  const i18nRef = useRef(i18n)
+  i18nRef.current = i18n
   const c = colors[theme],
     s = useMemo(() => styles(c), [c])
   const identity = useRef({ request, resetKey, epoch: 0 })
@@ -86,8 +92,8 @@ export function NotificationsPanel({
     data: PanelData | null
     draft: Values | null
     busy: boolean
-    error: string | null
-    notice: string | null
+    error: UiMessage | null
+    notice: MessageKey | null
   }>({ epoch, data: null, draft: null, busy: false, error: null, notice: null })
   const visible = state.epoch === epoch ? state : null
   const current = useCallback(
@@ -141,8 +147,8 @@ export function NotificationsPanel({
       update(captured, {
         error:
           cause instanceof ApiError && cause.code === 'notification_changed'
-            ? 'Gli avvisi sono cambiati. Aggiorna e controlla prima di riprovare.'
-            : 'Non riesco ad aggiornare gli avvisi. Riprova.',
+            ? 'notifications.changed'
+            : displayProblem(cause, 'notifications.failed'),
       })
     },
     [current, update],
@@ -194,7 +200,7 @@ export function NotificationsPanel({
         !timePattern.test(draft.quietHours.end) ||
         draft.quietHours.start === draft.quietHours.end
       ) {
-        update(captured, { error: 'Inserisci due orari diversi nel formato 22:00.' })
+        update(captured, { error: 'notifications.invalidHours' })
         return
       }
       await request<Preferences>('/v1/notifications/preferences', {
@@ -203,7 +209,7 @@ export function NotificationsPanel({
       })
       if (!current(captured)) return
       receive(captured, await read())
-      update(captured, { notice: 'Preferenze degli avvisi salvate.' })
+      update(captured, { notice: 'notifications.saved' })
     })
   const seen = (item: Notice) =>
     run(async (captured) => {
@@ -240,6 +246,7 @@ export function NotificationsPanel({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || !!visible?.busy }}
+      aria-disabled={disabled || !!visible?.busy}
       disabled={disabled || !!visible?.busy}
       onPress={action}
       style={s.button}
@@ -249,73 +256,65 @@ export function NotificationsPanel({
   )
   const format = (text: string) => {
     try {
-      return new Intl.DateTimeFormat('it-IT', {
-        timeZone: visible?.data?.preferences.timezone ?? 'Europe/Rome',
-        day: 'numeric',
-        month: 'short',
-        hour: '2-digit',
-        minute: '2-digit',
-      }).format(new Date(text))
+      return i18n.instant(text, visible?.data?.preferences.timezone)
     } catch {
-      return 'Data non disponibile'
+      return i18nRef.current.t('notifications.dateUnavailable')
     }
   }
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.heading}>
-        Avvisi
+      <Text accessibilityRole="header" aria-level={2} style={s.heading}>
+        {i18nRef.current.t('notifications.title')}
       </Text>
-      <Text style={s.text}>
-        Gli avvisi restano in questa app. Le notifiche al dispositivo non sono attive.
-      </Text>
+      <Text style={s.text}>{i18nRef.current.t('notifications.localOnly')}</Text>
       {visible?.error && (
         <Text accessibilityRole="alert" style={s.error}>
-          {visible.error}
+          {displayMessage(i18n, visible.error)}
         </Text>
       )}
       {visible?.notice && (
-        <Text accessibilityLiveRegion="polite" style={s.text}>
-          {visible.notice}
+        <Text accessibilityLiveRegion="polite" aria-live="polite" style={s.text}>
+          {i18n.t(visible.notice)}
         </Text>
       )}
       {visible?.busy && (
-        <ActivityIndicator accessibilityLabel="Aggiornamento degli avvisi" color={c.primary} />
+        <ActivityIndicator
+          accessibilityLabel={i18nRef.current.t('notifications.loading')}
+          color={c.primary}
+        />
       )}
-      {button('Aggiorna avvisi', () => {
+      {button(i18nRef.current.t('notifications.refresh'), () => {
         void refresh()
       })}
       {visible?.data && (
         <>
           <View style={s.card}>
-            <Text accessibilityRole="header" style={s.subtitle}>
-              Avvisi essenziali
+            <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+              {i18nRef.current.t('notifications.essential')}
             </Text>
-            <Text style={s.text}>
-              Avvisi di sicurezza e risposte su esportazione, eliminazione e dati restano sempre
-              disponibili.
-            </Text>
+            <Text style={s.text}>{i18nRef.current.t('notifications.essentialHelp')}</Text>
           </View>
           <View style={s.card}>
-            <Text accessibilityRole="header" style={s.subtitle}>
-              Avvisi facoltativi
+            <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+              {i18nRef.current.t('notifications.optional')}
             </Text>
             <Text style={s.text}>
               {visible.data.permission
-                ? 'Il permesso per gli avvisi in-app è attivo.'
-                : 'Attiva gli avvisi facoltativi in Permessi e privacy.'}
+                ? i18nRef.current.t('notifications.permissionEnabled')
+                : i18nRef.current.t('notifications.enableInPrivacy')}
             </Text>
-            {onOpenPrivacy && button('Apri Permessi e privacy', onOpenPrivacy)}
+            {onOpenPrivacy && button(i18nRef.current.t('notifications.openPrivacy'), onOpenPrivacy)}
           </View>
           {visible.draft && (
             <View style={s.card}>
-              <Text accessibilityRole="header" style={s.subtitle}>
-                Quali avvisi vedere
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {i18nRef.current.t('notifications.which')}
               </Text>
               {(Object.keys(labels) as OptionalType[]).map((key) => (
                 <Pressable
                   key={key}
                   accessibilityRole="checkbox"
-                  accessibilityLabel={labels[key]}
+                  accessibilityLabel={i18n.t(labels[key])}
                   accessibilityState={{
                     checked: visible.draft?.types[key] ?? false,
                     disabled: visible.busy,
@@ -327,20 +326,19 @@ export function NotificationsPanel({
                   style={s.choice}
                 >
                   <Text style={s.text}>
-                    {visible.draft?.types[key] ? '☑' : '☐'} {labels[key]}
+                    {visible.draft?.types[key] ? '☑' : '☐'} {i18n.t(labels[key])}
                   </Text>
                 </Pressable>
               ))}
-              <Text accessibilityRole="header" style={s.subtitle}>
-                Orari tranquilli
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {i18nRef.current.t('notifications.quiet')}
               </Text>
               <Text style={s.text}>
-                Fuso del profilo: {visible.data.preferences.timezone}. Si cambia in Profilo e
-                formato.
+                {i18n.t('notifications.timezone', { timezone: visible.data.preferences.timezone })}
               </Text>
               <Pressable
                 accessibilityRole="checkbox"
-                accessibilityLabel="Rispetta gli orari tranquilli"
+                accessibilityLabel={i18nRef.current.t('notifications.respectQuiet')}
                 accessibilityState={{
                   checked: visible.draft.quietHours.enabled,
                   disabled: visible.busy,
@@ -352,14 +350,15 @@ export function NotificationsPanel({
                 style={s.choice}
               >
                 <Text style={s.text}>
-                  {visible.draft.quietHours.enabled ? '☑' : '☐'} Rispetta gli orari tranquilli
+                  {visible.draft.quietHours.enabled ? '☑' : '☐'}
+                  {i18nRef.current.t('notifications.respectQuiet')}
                 </Text>
               </Pressable>
               <View style={s.row}>
                 <View style={s.timeField}>
-                  <Text style={s.label}>Dalle</Text>
+                  <Text style={s.label}>{i18nRef.current.t('notifications.from')}</Text>
                   <TextInput
-                    accessibilityLabel="Inizio degli orari tranquilli"
+                    accessibilityLabel={i18nRef.current.t('notifications.quietStart')}
                     value={visible.draft.quietHours.start}
                     onChangeText={(start) => quiet({ start })}
                     editable={!visible.busy}
@@ -369,9 +368,9 @@ export function NotificationsPanel({
                   />
                 </View>
                 <View style={s.timeField}>
-                  <Text style={s.label}>Alle</Text>
+                  <Text style={s.label}>{i18nRef.current.t('notifications.through')}</Text>
                   <TextInput
-                    accessibilityLabel="Fine degli orari tranquilli"
+                    accessibilityLabel={i18nRef.current.t('notifications.quietEnd')}
                     value={visible.draft.quietHours.end}
                     onChangeText={(end) => quiet({ end })}
                     editable={!visible.busy}
@@ -381,31 +380,36 @@ export function NotificationsPanel({
                   />
                 </View>
               </View>
-              {button('Salva preferenze avvisi', () => {
+              {button(i18nRef.current.t('notifications.save'), () => {
                 void save()
               })}
             </View>
           )}
           <View style={s.card}>
-            <Text accessibilityRole="header" style={s.subtitle}>
-              Avvisi ricevuti
+            <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+              {i18nRef.current.t('notifications.received')}
             </Text>
             {visible.data.notices.length === 0 ? (
-              <Text style={s.text}>Non ci sono avvisi ricevuti.</Text>
+              <Text style={s.text}>{i18nRef.current.t('notifications.empty')}</Text>
             ) : (
               visible.data.notices.map((item) => (
                 <View key={item.id} style={s.notice}>
-                  <Text style={s.subtitle}>{item.title}</Text>
+                  <Text style={s.subtitle}>
+                    {i18n.notificationTitle(item.type, item.textVersion)}
+                  </Text>
                   <Text style={s.hint}>
-                    {format(item.deliveredAt)} · {item.seenAt ? 'Letto' : 'Da leggere'}
+                    {format(item.deliveredAt)} ·{' '}
+                    {item.seenAt
+                      ? i18nRef.current.t('notifications.seen')
+                      : i18nRef.current.t('notifications.unseen')}
                   </Text>
                   <View style={s.row}>
                     {!item.seenAt &&
-                      button('Segna come letto', () => {
+                      button(i18nRef.current.t('notifications.markSeen'), () => {
                         void seen(item)
                       })}
                     {onOpenDestination &&
-                      button('Apri avviso', () => {
+                      button(i18nRef.current.t('notifications.open'), () => {
                         void open(item)
                       })}
                   </View>

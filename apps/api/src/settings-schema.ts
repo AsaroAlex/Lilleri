@@ -1,5 +1,5 @@
 import { schema } from '@lilleri/database'
-import type { ProfileSettingsValues } from '@lilleri/domain'
+import type { ProfileLocale, ProfileSettingsValues } from '@lilleri/domain'
 import { sql } from 'drizzle-orm'
 import { check, integer, jsonb, pgTable, text, unique } from 'drizzle-orm/pg-core'
 
@@ -9,12 +9,12 @@ export const profileSettings = pgTable(
     profileId: text('profile_id')
       .primaryKey()
       .references(() => schema.profiles.id, { onDelete: 'cascade' }),
-    locale: text('locale').$type<'it-IT'>().notNull(),
+    locale: text('locale').$type<ProfileLocale>().notNull(),
     revision: integer('revision').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [
-    check('profile_settings_locale', sql`${table.locale} = 'it-IT'`),
+    check('profile_settings_locale', sql`${table.locale} IN ('it-IT', 'en-GB')`),
     check('profile_settings_revision', sql`${table.revision} > 0`),
   ],
 )

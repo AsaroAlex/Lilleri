@@ -29,6 +29,10 @@ export const mappedProvenanceDto = z.strictObject({
   mappingDigest: digestSchema,
   rowNumber: z.number().int().positive(),
   identity: z.enum(['external', 'file_content_ordinal']),
+  fileFormat: z.literal('xlsx').optional(),
+  workbookDigest: digestSchema.optional(),
+  worksheet: z.string().min(1).max(128).optional(),
+  headerRow: z.number().int().min(1).max(100).optional(),
   valueOn: z.string().nullable(),
   createdAt: z.string(),
 })
@@ -111,7 +115,14 @@ export async function exportMappedImportAudit(
     .where(eq(mappedImportProvenance.profileId, profileId))
     .orderBy(asc(mappedImportProvenance.createdAt), asc(mappedImportProvenance.observationId))) {
     const { householdId: _householdId, ...fields } = row
-    provenance.push(mappedProvenanceDto.parse(fields))
+    const { fileFormat, workbookDigest, worksheet, headerRow, ...legacy } = fields
+    provenance.push(
+      mappedProvenanceDto.parse(
+        [fileFormat, workbookDigest, worksheet, headerRow].every((value) => value === null)
+          ? legacy
+          : fields,
+      ),
+    )
   }
   return mappedImportAuditDto.parse({ mappings, events, provenance })
 }

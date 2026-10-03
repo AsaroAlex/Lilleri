@@ -393,7 +393,9 @@ const matchCard = (page) =>
     await responseFrom(page, adjustmentPath, 'POST', () =>
       button(page, 'Annulla ultima correzione').click(),
     )
-    await page.getByText('Correzione annullata con un nuovo evento nello storico.').waitFor()
+    await page
+      .getByText('Correzione annullata. Il saldo è aggiornato e lo storico conserva la modifica.')
+      .waitFor()
     const events = await request(`/v1/manual/accounts/${encodeURIComponent(account.id)}/events`)
     assert.equal(events.filter((item) => item.operation === 'adjustment').length, 2)
     assert.equal(

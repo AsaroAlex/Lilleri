@@ -3,6 +3,7 @@ import { type Database, schema } from '@lilleri/database'
 import {
   isProfileTimezone,
   PROFILE_LOCALE,
+  PROFILE_LOCALES,
   type ProfileSettings,
   type ProfileSettingsEvent,
   type ProfileSettingsValues,
@@ -24,7 +25,7 @@ export const settingsValuesSchema = z
       .min(1)
       .max(80)
       .refine((value) => !/[\p{Cc}\p{Cf}]/u.test(value)),
-    locale: z.literal(PROFILE_LOCALE),
+    locale: z.enum(PROFILE_LOCALES),
     timezone: z.string().max(100).refine(isProfileTimezone),
   })
   .strict()
@@ -130,7 +131,10 @@ export class SettingsService {
       if (!profile) throw notFound()
       const before = await this.read(db)
       if (before.revision !== expectedRevision) throw changed()
-      const now = this.now(),
+      const captured = Date.parse(this.now())
+      if (!Number.isFinite(captured))
+        throw new Problem(400, 'invalid_settings', 'Le impostazioni non possono essere salvate.')
+      const now = new Date(captured).toISOString(),
         nextRevision = before.revision + 1
       if (JSON.stringify(valuesOf(before)) === JSON.stringify(after))
         return {

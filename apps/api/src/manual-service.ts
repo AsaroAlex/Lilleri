@@ -13,7 +13,7 @@ import {
   parseBankCsv,
   stableId,
 } from '@lilleri/financial-providers'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
@@ -22,6 +22,7 @@ import { manualReasonContext } from './financial-storage.js'
 import { manualAccounts, manualBalanceEvents, manualCommands } from './manual-schema.js'
 import { notFound, Problem } from './problem.js'
 import { insertSourceObservation } from './retention.js'
+import type { SourceFactsRecorder } from './service.js'
 
 export const MANUAL_PROVIDER_ID = 'local-manual'
 const identifier = z
@@ -228,6 +229,7 @@ export class ManualService {
     readonly profileId: string,
     readonly now: () => string = () => new Date().toISOString(),
     readonly encryption?: ProfileEncryption,
+    readonly recordSourceFacts?: SourceFactsRecorder,
   ) {}
   async lock(db: Database) {
     const [profile] = await db
@@ -290,6 +292,29 @@ export class ManualService {
       }
       const now = new Date(this.now()).toISOString()
       const result = await action(tx, now, calendarDateAt(new Date(now), profile.timezone))
+      const sourceAccountId =
+        typeof result.accountId === 'string'
+          ? result.accountId
+          : operation === 'account' && typeof result.id === 'string'
+            ? result.id
+            : body &&
+                typeof body === 'object' &&
+                'accountId' in body &&
+                typeof body.accountId === 'string'
+              ? body.accountId
+              : undefined
+      const [sourceAccount] = sourceAccountId
+        ? await tx
+            .select()
+            .from(schema.accounts)
+            .where(
+              and(
+                eq(schema.accounts.profileId, this.profileId),
+                eq(schema.accounts.id, sourceAccountId),
+              ),
+            )
+        : []
+      if (sourceAccountId && !sourceAccount) throw notFound()
       // Audit events reference this command through a deferred FK; both become visible at commit.
       await tx.insert(manualCommands).values({
         profileId: this.profileId,
@@ -298,9 +323,45 @@ export class ManualService {
         operation,
         response: result,
         createdAt: now,
+        sourceAccountId: sourceAccount?.id ?? null,
+        sourceConnectionId: sourceAccount?.connectionId ?? null,
       })
+      if (sourceAccountId) await this.recordCommandFact(tx, key, sourceAccountId, now)
       return result
     })
+  }
+  private async recordCommandFact(db: Database, requestId: string, accountId: string, now: string) {
+    if (!this.recordSourceFacts) return
+    const [account] = await db
+      .select()
+      .from(schema.accounts)
+      .where(and(eq(schema.accounts.profileId, this.profileId), eq(schema.accounts.id, accountId)))
+    if (!account) throw notFound()
+    const [consent] = await db
+      .select()
+      .from(schema.consents)
+      .where(
+        and(
+          eq(schema.consents.profileId, this.profileId),
+          eq(schema.consents.connectionId, account.connectionId),
+          isNull(schema.consents.revokedAt),
+        ),
+      )
+      .orderBy(desc(schema.consents.grantedAt), desc(schema.consents.id))
+      .limit(1)
+    await this.recordSourceFacts(
+      db,
+      {
+        profileId: this.profileId,
+        connectionId: account.connectionId,
+        consentId: consent?.id ?? null,
+        accountIds: [accountId],
+        transactions: [],
+        observations: [],
+        manualCommands: [{ id: requestId, accountId }],
+      },
+      now,
+    )
   }
   async event(
     db: Database,
@@ -365,6 +426,44 @@ export class ManualService {
           'Puoi aggiungere al massimo 100 conti locali in questo prototipo.',
         )
       const connectionId = stableId('manual_source', this.profileId)
+      const [existingSource] = await tx
+        .select()
+        .from(schema.connections)
+        .where(
+          and(
+            eq(schema.connections.profileId, this.profileId),
+            eq(schema.connections.id, connectionId),
+          ),
+        )
+        .for('update')
+      if (existingSource && existingSource.status !== 'active') {
+        const retained = await tx
+          .select({ id: schema.accounts.id })
+          .from(schema.accounts)
+          .where(
+            and(
+              eq(schema.accounts.profileId, this.profileId),
+              eq(schema.accounts.connectionId, connectionId),
+            ),
+          )
+          .limit(1)
+        if (retained.length)
+          throw new Problem(
+            409,
+            'manual_source_inactive',
+            'Questo conto locale è in pausa. La modifica non è stata salvata.',
+          )
+        // Creating an account is explicit authorization for a new local generation after erasure.
+        await tx
+          .update(schema.connections)
+          .set({ status: 'active', lastSyncedAt: null })
+          .where(
+            and(
+              eq(schema.connections.profileId, this.profileId),
+              eq(schema.connections.id, connectionId),
+            ),
+          )
+      }
       await tx
         .insert(schema.connections)
         .values({
@@ -410,6 +509,18 @@ export class ManualService {
         })
         .returning()
       if (!account || !state) throw new Error('Manual account insert failed')
+      await this.recordSourceFacts?.(
+        tx,
+        {
+          profileId: this.profileId,
+          connectionId,
+          consentId: null,
+          accountIds: [accountId],
+          transactions: [],
+          observations: [],
+        },
+        now,
+      )
       await this.event(tx, body.requestId, {
         accountId,
         operation: 'opening',
@@ -448,6 +559,19 @@ export class ManualService {
       .update(schema.accounts)
       .set({ balanceMinor: balance, balanceUpdatedAt: now })
       .where(and(eq(schema.accounts.profileId, this.profileId), eq(schema.accounts.id, accountId)))
+    const { account } = await this.account(db, accountId)
+    await this.recordSourceFacts?.(
+      db,
+      {
+        profileId: this.profileId,
+        connectionId: account.connectionId,
+        consentId: null,
+        accountIds: [accountId],
+        transactions: [],
+        observations: [],
+      },
+      now,
+    )
     return state.revision
   }
   async enter(input: z.infer<typeof manualEntryInput>) {
@@ -519,6 +643,23 @@ export class ManualService {
         this.encryption,
       )
       const accountRevision = await this.writeBalance(tx, account.id, state.revision, balance, now)
+      await this.recordSourceFacts?.(
+        tx,
+        {
+          profileId: this.profileId,
+          connectionId: account.connectionId,
+          consentId: null,
+          accountIds: [account.id],
+          transactions: [{ id: transaction.id, accountId: account.id }],
+          observations: [
+            {
+              id: stableId('observation', this.profileId, transaction.id, contentHash),
+              accountId: account.id,
+            },
+          ],
+        },
+        now,
+      )
       await this.event(tx, body.requestId, {
         accountId: account.id,
         operation: 'entry',
@@ -647,6 +788,23 @@ export class ManualService {
           balance,
           now,
         )
+        await this.recordSourceFacts?.(
+          tx,
+          {
+            profileId: this.profileId,
+            connectionId: account.connectionId,
+            consentId: null,
+            accountIds: [account.id],
+            transactions: [{ id, accountId: account.id }],
+            observations: [
+              {
+                id: stableId('observation', this.profileId, id, contentHash),
+                accountId: account.id,
+              },
+            ],
+          },
+          now,
+        )
         await this.event(tx, body.requestId, {
           accountId: account.id,
           operation: 'reversal',
@@ -729,6 +887,8 @@ export class ManualService {
       operation: 'import',
       response,
       createdAt: now,
+      sourceAccountId: account.id,
+      sourceConnectionId: account.connectionId,
     })
     await this.event(db, key, {
       accountId: account.id,
@@ -740,6 +900,7 @@ export class ManualService {
       reason: transaction.description.slice(0, 200),
       createdAt: now,
     })
+    await this.recordCommandFact(db, key, account.id, now)
   }
   async previewCsv(accountId: string, csv: string) {
     if (Buffer.byteLength(csv, 'utf8') > 262_144)
@@ -993,10 +1154,13 @@ export function recordManualImport(
   transaction: Transaction,
   importedAt: string,
   encryption?: ProfileEncryption,
+  recordSourceFacts?: SourceFactsRecorder,
 ) {
-  return new ManualService(db, transaction.profileId, () => importedAt, encryption).recordImported(
+  return new ManualService(
     db,
-    transaction,
-    importedAt,
-  )
+    transaction.profileId,
+    () => importedAt,
+    encryption,
+    recordSourceFacts,
+  ).recordImported(db, transaction, importedAt)
 }

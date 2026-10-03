@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { type DatabaseHandle, openDatabase, schema } from '@lilleri/database'
 import type { ProfileSettingsValues } from '@lilleri/domain'
 import { eq } from 'drizzle-orm'
+import { strFromU8, unzipSync } from 'fflate'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createApp } from '../src/app.js'
 import { SettingsService } from '../src/settings.js'
@@ -38,6 +39,63 @@ afterAll(async () => {
   if (handle) await handle.close()
 })
 describe('persisted local synthetic profile settings', () => {
+  test('English changes display preferences and preserves financial facts, calendar dates and Italian audit history', async () => {
+    const { app, service, profileId } = await fixture()
+    const before = (await app.inject({ method: 'GET', url: '/v1/demo' })).json()
+    const english = {
+      displayName: before.profile.name,
+      locale: 'en-GB',
+      timezone: before.profile.timezone,
+    } as const
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/v1/settings',
+      payload: { ...english, revision: 1 },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json().settings).toMatchObject({ ...english, profileId, revision: 2 })
+    const after = (await app.inject({ method: 'GET', url: '/v1/demo' })).json()
+    expect(after.accounts).toEqual(before.accounts)
+    expect(after.transactions).toEqual(before.transactions)
+    expect(after.analysis).toEqual(before.analysis)
+    const exported = await app.inject({ method: 'GET', url: '/v1/export' })
+    expect(exported.statusCode).toBe(200)
+    expect(exported.json().profileSettings).toMatchObject({
+      settings: { locale: 'en-GB' },
+      events: [{ before: { locale: 'it-IT' }, after: { locale: 'en-GB' } }],
+    })
+    const archive = await app.inject({ method: 'GET', url: '/v1/export/archive' })
+    expect(archive.statusCode).toBe(200)
+    expect(archive.headers['content-type']).toBe('application/zip')
+    const files = unzipSync(archive.rawPayload)
+    const data = files['data.json']
+    if (!data) throw new Error('Missing machine-readable archive data')
+    expect(JSON.parse(strFromU8(data))).toEqual(exported.json())
+    await service.update(2, { ...english, locale: 'it-IT' })
+    await expect(service.update(1, english)).rejects.toMatchObject({ code: 'settings_changed' })
+    expect(
+      (await service.exportAudit()).events.map((event) => [
+        event.before.locale,
+        event.after.locale,
+      ]),
+    ).toEqual([
+      ['it-IT', 'en-GB'],
+      ['en-GB', 'it-IT'],
+    ])
+  })
+  test('a locale mutation captures one instant for saved preferences and immutable audit', async () => {
+    const { profileId } = await fixture()
+    let calls = 0
+    const service = new SettingsService(handle.db, profileId, () =>
+      new Date(Date.parse(now()) + calls++).toISOString(),
+    )
+    const updated = await service.update(1, { ...edited, locale: 'en-GB' })
+    const audit = await service.exportAudit()
+    expect(calls).toBe(1)
+    expect(updated.settings.updatedAt).toBe(now())
+    expect(audit.events[0]?.createdAt).toBe(updated.settings.updatedAt)
+    expect(audit.settings).toEqual(updated.settings)
+  })
   test('defaults use actual profile values and expose a free beta without purchase flags', async () => {
     const { app, profileId } = await fixture(),
       response = await app.inject({ method: 'GET', url: '/v1/settings' })

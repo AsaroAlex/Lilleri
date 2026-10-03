@@ -1,6 +1,5 @@
 import {
   type Account,
-  addMonths,
   type CurrencyCode,
   calendarDate,
   calendarDateAt,
@@ -10,11 +9,12 @@ import {
   isProfileTimezone,
   type Money,
   type ReconciliationMatch,
-  type RecurringSeries,
   type Transaction,
 } from '@lilleri/domain'
 import { money } from '@lilleri/money'
 import { effectiveTransactions } from './index.js'
+import { advanceRecurringDate, type RecurringSelector } from './recurring-observed.js'
+import { RECURRING_FREQUENCIES, type RecurringFrequency } from './recurring-policy.js'
 
 export const UNDERSTANDING_VERSION = 'observed-understanding-v1'
 export class UnderstandingInputError extends Error {
@@ -340,11 +340,23 @@ export interface SafeToSpendPolicy {
   readonly bufferByCurrency: Readonly<Partial<Record<CurrencyCode, bigint>>>
 }
 export interface SafeToSpendInput extends LedgerInput {
-  readonly recurring: readonly RecurringSeries[]
+  readonly recurring: readonly CashRecurringSeries[]
+  readonly uncertainRecurringTransactionIds?: readonly string[]
   readonly includedAccountIds: readonly string[]
   readonly accountKnowledge: readonly AccountKnowledge[]
   readonly occurrenceBindings: readonly RecurringOccurrenceBinding[]
   readonly policy: SafeToSpendPolicy
+}
+export interface CashRecurringSeries {
+  readonly id: string
+  readonly transactionIds: readonly string[]
+  readonly expectedAmount: Money
+  readonly nextOn: string | null
+  readonly frequency: RecurringFrequency
+  readonly merchantKey?: string
+  readonly selector?: RecurringSelector
+  readonly statistics?: { readonly anchorDay: number }
+  readonly remainingInstallments?: number | null
 }
 export type SafeToSpendReason =
   | 'balance_meaning_unknown'
@@ -439,8 +451,20 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
   const seriesById = new Map(input.recurring.map((series) => [series.id, series]))
   if (seriesById.size !== input.recurring.length) throw new UnderstandingInputError()
   for (const series of input.recurring) {
+    if (
+      !RECURRING_FREQUENCIES.includes(series.frequency) ||
+      (series.remainingInstallments !== undefined &&
+        series.remainingInstallments !== null &&
+        (!Number.isSafeInteger(series.remainingInstallments) ||
+          series.remainingInstallments < 0)) ||
+      (series.statistics !== undefined &&
+        (!Number.isInteger(series.statistics.anchorDay) ||
+          series.statistics.anchorDay < 1 ||
+          series.statistics.anchorDay > 31))
+    )
+      throw new UnderstandingInputError()
     try {
-      dateOnly(series.nextOn)
+      if (series.nextOn !== null) dateOnly(series.nextOn)
     } catch {
       throw new UnderstandingInputError()
     }
@@ -453,7 +477,11 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
           !row ||
           row.accountId !== first.accountId ||
           row.amount.currency !== series.expectedAmount.currency ||
-          row.merchantKey !== series.merchantKey,
+          (series.selector
+            ? series.selector.profileId !== input.profileId ||
+              series.selector.accountId !== row.accountId ||
+              series.selector.currency !== row.amount.currency
+            : row.merchantKey !== series.merchantKey),
       ) ||
       typeof series.expectedAmount.amountMinor !== 'bigint'
     )
@@ -476,8 +504,9 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
       transaction.status === 'reversed' ||
       transaction.accountId !== first.accountId ||
       transaction.amount.currency !== series.expectedAmount.currency ||
-      transaction.merchantKey !== series.merchantKey ||
+      (series.merchantKey !== undefined && transaction.merchantKey !== series.merchantKey) ||
       transaction.amount.amountMinor >= 0n ||
+      series.nextOn === null ||
       daysBetween(observedOn, series.nextOn) > policy.occurrenceToleranceDays
     )
       throw new UnderstandingInputError()
@@ -546,15 +575,32 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
     const fulfilled = new Set<string>()
     const estimatedOccurrences: { seriesId: string; on: string; amountMinor: bigint }[] = []
     let forecastWork = 0
+    for (const id of input.uncertainRecurringTransactionIds ?? []) {
+      const row = transactionsById.get(id)
+      if (!row) throw new UnderstandingInputError()
+      if (currencyIds.has(row.accountId) && row.amount.amountMinor < 0n)
+        reasons.add(
+          excluded.has(id) ? 'private_recurring_coverage' : 'unresolved_recurring_occurrence',
+        )
+    }
     for (const series of input.recurring) {
       const first = transactionsById.get(series.transactionIds[0] ?? '')
       if (
         !first ||
         !currencyIds.has(first.accountId) ||
         series.expectedAmount.amountMinor >= 0n ||
-        series.nextOn > policy.horizonOn
+        (series.nextOn !== null && series.nextOn > policy.horizonOn) ||
+        series.remainingInstallments === 0
       )
         continue
+      if (series.nextOn === null || series.frequency === 'irregular') {
+        reasons.add(
+          series.transactionIds.some((id) => excluded.has(id))
+            ? 'private_recurring_coverage'
+            : 'unresolved_recurring_occurrence',
+        )
+        continue
+      }
       const bound = bindings.get(series.id)
       if (
         series.transactionIds.some((id) => excluded.has(id)) ||
@@ -579,24 +625,28 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
         reasons.add('private_recurring_coverage')
         continue
       }
-      const firstMonth = Number(series.nextOn.slice(0, 4)) * 12 + Number(series.nextOn.slice(5, 7))
-      const lastMonth =
-        Number(policy.horizonOn.slice(0, 4)) * 12 + Number(policy.horizonOn.slice(5, 7))
-      for (let offset = 0; offset <= lastMonth - firstMonth; offset++) {
-        const occurrenceOn = addMonths(calendarDate(series.nextOn), offset)
-        if (occurrenceOn > policy.horizonOn) break
+      let occurrenceOn: string | null = series.nextOn,
+        offset = 0,
+        remaining = series.remainingInstallments ?? null
+      const anchorDay = series.statistics?.anchorDay ?? Number(series.nextOn.slice(8))
+      while (occurrenceOn !== null && occurrenceOn <= policy.horizonOn && remaining !== 0) {
         if (++forecastWork > policy.maxForecastOccurrences) {
           reasons.add('forecast_work_limit')
           break
         }
+        const firstOccurrence = offset === 0,
+          currentOn = occurrenceOn
+        occurrenceOn = advanceRecurringDate(currentOn, series.frequency, anchorDay)
+        offset++
+        if (remaining !== null) remaining--
         const representativeRow = representative ? transactionsById.get(representative) : undefined
         const representativeOn = representativeRow?.bookedOn ?? representativeRow?.authorizedOn
         if (
-          offset === 0 &&
+          firstOccurrence &&
           representative &&
           representativeOn &&
           cashIds.has(representative) &&
-          daysBetween(representativeOn, occurrenceOn) <= policy.occurrenceToleranceDays
+          daysBetween(representativeOn, currentOn) <= policy.occurrenceToleranceDays
         ) {
           fulfilled.add(representative)
           continue
@@ -605,11 +655,15 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
           const observedOn = row.bookedOn ?? row.authorizedOn
           return (
             row.accountId === first.accountId &&
-            row.merchantKey === series.merchantKey &&
+            (series.merchantKey !== undefined
+              ? row.merchantKey === series.merchantKey
+              : series.transactionIds.some(
+                  (id) => transactionsById.get(id)?.merchantKey === row.merchantKey,
+                )) &&
             row.amount.amountMinor < 0n &&
             observedOn !== null &&
             !series.transactionIds.includes(row.id) &&
-            daysBetween(observedOn, occurrenceOn) <= policy.occurrenceToleranceDays
+            daysBetween(observedOn, currentOn) <= policy.occurrenceToleranceDays
           )
         })
         if (candidates.length) {
@@ -620,7 +674,7 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
           )
           continue
         }
-        if (occurrenceOn < today) {
+        if (currentOn < today) {
           reasons.add('overdue_recurring_occurrence')
           continue
         }
@@ -628,7 +682,7 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
         estimatedSeries.add(series.id)
         estimatedOccurrences.push({
           seriesId: series.id,
-          on: occurrenceOn,
+          on: currentOn,
           amountMinor: -series.expectedAmount.amountMinor,
         })
         for (const id of series.transactionIds) recurringEvidence.add(id)
@@ -672,13 +726,15 @@ export function calculateSafeToSpend(input: SafeToSpendInput): SafeToSpendResult
       inputs: {
         accountIds: uniqueSorted(selected.map((row) => row.id)),
         pendingTransactionIds: uniqueSorted(visiblePending.map((row) => row.id)),
-        estimatedSeriesIds: uniqueSorted(estimatedSeries),
-        estimatedOccurrences: estimatedOccurrences.sort(
-          (first, second) =>
-            first.on.localeCompare(second.on) || first.seriesId.localeCompare(second.seriesId),
-        ),
-        recurringEvidenceTransactionIds: uniqueSorted(recurringEvidence),
-        fulfilledOccurrenceTransactionIds: uniqueSorted(fulfilled),
+        estimatedSeriesIds: forecastHidden ? [] : uniqueSorted(estimatedSeries),
+        estimatedOccurrences: forecastHidden
+          ? []
+          : estimatedOccurrences.sort(
+              (first, second) =>
+                first.on.localeCompare(second.on) || first.seriesId.localeCompare(second.seriesId),
+            ),
+        recurringEvidenceTransactionIds: forecastHidden ? [] : uniqueSorted(recurringEvidence),
+        fulfilledOccurrenceTransactionIds: forecastHidden ? [] : uniqueSorted(fulfilled),
       },
       calculation: {
         formula:

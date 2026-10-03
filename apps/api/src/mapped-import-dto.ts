@@ -81,6 +81,14 @@ export const mappedPreviewDto = z.strictObject({
   format: z.literal('lilleri.csv-preview.v1'),
   fileDigest: digestSchema.nullable(),
   mappingDigest: digestSchema.nullable(),
+  workbook: z
+    .strictObject({
+      format: z.literal('xlsx'),
+      workbookDigest: digestSchema,
+      sheet: z.string().min(1).max(128),
+      headerRow: z.number().int().min(1).max(100),
+    })
+    .optional(),
   header: z.array(z.string()),
   rowCount: z.number().int().min(0),
   rows: z.array(

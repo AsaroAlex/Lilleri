@@ -10,6 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import { AccessibleDialog } from './accessibility/AccessibilityPrimitives'
+import { useI18n } from './i18n/context'
 import {
   createLocalIdentityClient,
   type LocalIdentitySession,
@@ -34,12 +36,6 @@ interface Setup {
   readonly totpURI: string
   readonly backupCodes: readonly string[]
 }
-const date = (value: string) =>
-  new Intl.DateTimeFormat('it-IT', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-
 /** Local browser authentication; native passkeys and biometrics need device validation. */
 export function LocalIdentityPanel({
   baseUrl,
@@ -51,6 +47,11 @@ export function LocalIdentityPanel({
   onSignedOut,
   onReauthenticated,
 }: Props) {
+  const i18n = useI18n()
+  const language = useRef(i18n)
+  language.current = i18n
+  const t = i18n.t
+  const date = i18n.instant
   const client = useMemo(() => createLocalIdentityClient(baseUrl), [baseUrl]),
     c = colors[theme],
     s = useMemo(() => styles(c), [c])
@@ -84,6 +85,7 @@ export function LocalIdentityPanel({
     channel = useRef<BroadcastChannel | null>(null),
     lostVersion = useRef(sessionLostVersion)
   callbacks.current = { onSignedIn, onSignedOut, onReauthenticated }
+  const renderedIdentityEpoch = identityEpoch.current
   const clearSecrets = useCallback(() => {
     secretEpoch.current += 1
     setPassword('')
@@ -172,7 +174,7 @@ export function LocalIdentityPanel({
     let cancelled = false
     refreshSession()
       .catch(() => {
-        if (!cancelled) setError('Non riesco a verificare la sessione. Riprova.')
+        if (!cancelled) setError(language.current.t('identityPanel.checkFailed'))
       })
       .finally(() => {
         if (!cancelled) setChecking(false)
@@ -188,7 +190,7 @@ export function LocalIdentityPanel({
       // Only a locally observed invalidation is broadcast. Receiving this
       // message calls clearIdentity directly and never echoes it to other tabs.
       channel.current?.postMessage('signed-out')
-      setError('La sessione è terminata. Accedi di nuovo per continuare.')
+      setError(language.current.t('identityPanel.ended'))
     }
   }, [sessionLostVersion, clearIdentity])
   useEffect(() => {
@@ -202,7 +204,7 @@ export function LocalIdentityPanel({
   useEffect(() => {
     if (Platform.OS !== 'web') return
     const check = () => {
-      refreshSession().catch(() => setError('Non riesco a verificare la sessione. Riprova.'))
+      refreshSession().catch(() => setError(language.current.t('identityPanel.checkFailed')))
     }
     const visible = () => {
       if (document.visibilityState === 'visible') check()
@@ -251,8 +253,16 @@ export function LocalIdentityPanel({
       if (expectedEpoch !== identityEpoch.current) return
       setError(
         cause instanceof ApiError
-          ? cause.message
-          : 'Non riesco a completare questa operazione. Riprova.',
+          ? cause.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
+            ? t('identityPanel.emailInUse')
+            : ['PASSWORD_TOO_SHORT', 'PASSWORD_TOO_LONG'].includes(cause.code)
+              ? t('identityPanel.invalidPassword')
+              : ['INVALID_CODE', 'INVALID_BACKUP_CODE'].includes(cause.code)
+                ? t('identityPanel.invalidCode')
+                : cause.status === 401 && cause.code !== 'reauthentication_required'
+                  ? t('identityPanel.invalidCredentials')
+                  : i18n.problemMessage(cause)
+          : t('identityPanel.operationFailed'),
       )
       if (cause instanceof ApiError && cause.code === 'reauthentication_required') {
         clearSecrets()
@@ -275,9 +285,17 @@ export function LocalIdentityPanel({
       setBusy(false)
     }
   }
-  const button = (label: string, action: () => void, primary = false, disabled = false) => (
+  const button = (
+    label: string,
+    action: () => void,
+    primary = false,
+    disabled = false,
+    testID?: string,
+  ) => (
     <Pressable
       accessibilityRole="button"
+      testID={testID}
+      aria-disabled={busy || checking || disabled}
       accessibilityLabel={label}
       accessibilityState={{ disabled: busy || checking || disabled }}
       disabled={busy || checking || disabled}
@@ -290,6 +308,8 @@ export function LocalIdentityPanel({
   const check = (label: string, selected: boolean, action: () => void) => (
     <Pressable
       accessibilityRole="checkbox"
+      aria-checked={selected}
+      aria-disabled={busy}
       accessibilityLabel={label}
       accessibilityState={{ checked: selected, disabled: busy }}
       disabled={busy}
@@ -300,7 +320,7 @@ export function LocalIdentityPanel({
       <Text style={s.checkLabel}>{label}</Text>
     </Pressable>
   )
-  const passwordField = (label = 'Password') => (
+  const passwordField = (label = t('identityPanel.password')) => (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
       <TextInput
@@ -318,7 +338,9 @@ export function LocalIdentityPanel({
       />
     </View>
   )
-  const codeField = (label = backupMode ? 'Codice di recupero' : 'Codice a 6 cifre') => (
+  const codeField = (
+    label = backupMode ? t('identityPanel.recoveryCode') : t('identityPanel.sixDigitCode'),
+  ) => (
     <View style={s.field}>
       <Text style={s.label}>{label}</Text>
       <TextInput
@@ -340,46 +362,46 @@ export function LocalIdentityPanel({
   if (Platform.OS !== 'web')
     return (
       <View style={s.panel}>
-        <Text accessibilityRole="header" style={s.title}>
-          Accesso locale
+        <Text accessibilityRole="header" aria-level={2} style={s.title}>
+          {t('identityPanel.localAccess')}
         </Text>
-        <Text style={s.body}>
-          Questa modalità è disponibile nel browser. Passkey e biometria sui dispositivi iOS e
-          Android richiedono una verifica dedicata.
-        </Text>
+        <Text style={s.body}>{t('identityPanel.nativeUnavailable')}</Text>
       </View>
     )
   const passkeysSupported = typeof window !== 'undefined' && 'PublicKeyCredential' in window
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.title}>
-        {session ? 'Il tuo accesso locale' : 'Accedi al profilo locale'}
+      <Text accessibilityRole="header" aria-level={2} style={s.title}>
+        {session ? t('identityPanel.yourAccess') : t('identityPanel.signIn')}
       </Text>
-      <Text style={s.body}>
-        Ambiente locale con soli dati sintetici. Non usare credenziali bancarie o dati finanziari
-        reali. La verifica email dipende da un servizio di invio configurato.
-      </Text>
+      <Text style={s.body}>{t('identityPanel.localHelp')}</Text>
       {checking && (
-        <ActivityIndicator accessibilityLabel="Verifica della sessione" color={c.primary} />
+        <ActivityIndicator accessibilityLabel={t('identityPanel.checking')} color={c.primary} />
       )}
       {error && (
-        <Text accessibilityRole="alert" style={s.error}>
+        <Text accessibilityRole="alert" aria-live="assertive" aria-atomic={true} style={s.error}>
           {error}
         </Text>
       )}
       {notice && (
-        <Text accessibilityLiveRegion="polite" style={s.success}>
+        <Text
+          role="status"
+          aria-live="polite"
+          aria-atomic={true}
+          accessibilityLiveRegion="polite"
+          style={s.success}
+        >
           {notice}
         </Text>
       )}
-      {busy && <ActivityIndicator accessibilityLabel="Operazione in corso" color={c.primary} />}
+      {busy && <ActivityIndicator accessibilityLabel={t('identityPanel.busy')} color={c.primary} />}
       {!checking && !session && !secondFactorPending && (
         <View style={s.group}>
           {mode === 'signup' && (
             <View style={s.field}>
-              <Text style={s.label}>Nome del profilo</Text>
+              <Text style={s.label}>{t('identityPanel.profileName')}</Text>
               <TextInput
-                accessibilityLabel="Nome del profilo"
+                accessibilityLabel={t('identityPanel.profileName')}
                 value={name}
                 onChangeText={setName}
                 autoComplete="name"
@@ -390,9 +412,9 @@ export function LocalIdentityPanel({
             </View>
           )}
           <View style={s.field}>
-            <Text style={s.label}>Email</Text>
+            <Text style={s.label}>{t('identityPanel.email')}</Text>
             <TextInput
-              accessibilityLabel="Email"
+              accessibilityLabel={t('identityPanel.email')}
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -407,26 +429,21 @@ export function LocalIdentityPanel({
           {passwordField()}
           {mode === 'signup' && (
             <View style={s.group}>
-              <Text style={s.body}>Usa una password da 12 a 128 caratteri.</Text>
-              {check('Dichiaro di avere almeno 18 anni.', adultAttested, () =>
+              <Text style={s.body}>{t('identityPanel.passwordLength')}</Text>
+              {check(t('identityPanel.adult'), adultAttested, () =>
                 setAdultAttested(!adultAttested),
               )}
               <View style={s.draft}>
-                <Text style={s.label}>Condizioni locali — bozza v1</Text>
-                <Text style={s.body}>
-                  Questo profilo serve a provare le funzioni con dati sintetici sul tuo ambiente
-                  locale. Non collega banche reali. L’email non è verificata se non è configurato un
-                  servizio di invio. Puoi esportare i dati, revocare le sessioni ed eliminare il
-                  profilo. Questa bozza non è stata approvata per un servizio pubblico.
-                </Text>
+                <Text style={s.label}>{t('identityPanel.termsHeading')}</Text>
+                <Text style={s.body}>{t('identityPanel.termsCopy')}</Text>
               </View>
-              {check('Accetto le condizioni locali di prova, bozza v1.', termsAccepted, () =>
+              {check(t('identityPanel.termsAccept'), termsAccepted, () =>
                 setTermsAccepted(!termsAccepted),
               )}
             </View>
           )}
           {button(
-            mode === 'signup' ? 'Crea il profilo locale' : 'Accedi con password',
+            mode === 'signup' ? t('identityPanel.create') : t('identityPanel.passwordSignIn'),
             () => {
               run(async (expectedEpoch) => {
                 if (mode === 'signup') {
@@ -441,8 +458,7 @@ export function LocalIdentityPanel({
                   }
                 }
                 const next = await refreshSession(true, expectedEpoch)
-                if (!next && mode === 'signup')
-                  setNotice('Profilo creato. Verifica l’email, se richiesto, poi accedi.')
+                if (!next && mode === 'signup') setNotice(t('identityPanel.created'))
               })
             },
             true,
@@ -452,7 +468,7 @@ export function LocalIdentityPanel({
           )}
           {mode === 'signin' &&
             button(
-              'Accedi con una passkey',
+              t('identityPanel.passkeySignIn'),
               () => {
                 run(async (expectedEpoch) => {
                   await client.signInPasskey()
@@ -464,24 +480,27 @@ export function LocalIdentityPanel({
               !passkeysSupported,
             )}
           {!passkeysSupported && mode === 'signin' && (
-            <Text style={s.body}>Il browser non supporta le passkey. Puoi usare la password.</Text>
+            <Text style={s.body}>{t('identityPanel.passkeyUnsupported')}</Text>
           )}
-          {button(mode === 'signup' ? 'Ho già un profilo' : 'Crea un profilo locale', () => {
-            clearSecrets()
-            setAdultAttested(false)
-            setTermsAccepted(false)
-            setError(null)
-            setNotice(null)
-            setMode(mode === 'signup' ? 'signin' : 'signup')
-          })}
+          {button(
+            mode === 'signup' ? t('identityPanel.haveProfile') : t('identityPanel.createProfile'),
+            () => {
+              clearSecrets()
+              setAdultAttested(false)
+              setTermsAccepted(false)
+              setError(null)
+              setNotice(null)
+              setMode(mode === 'signup' ? 'signin' : 'signup')
+            },
+          )}
         </View>
       )}
       {secondFactorPending && !session && (
         <View style={s.group}>
-          <Text style={s.label}>Conferma il secondo fattore</Text>
+          <Text style={s.label}>{t('identityPanel.confirmFactor')}</Text>
           {codeField()}
           {button(
-            'Conferma il codice e accedi',
+            t('identityPanel.verifySignIn'),
             () => {
               run(async (expectedEpoch) => {
                 await client.verifyFactor(code.trim(), backupMode)
@@ -494,13 +513,13 @@ export function LocalIdentityPanel({
             backupMode ? !code.trim() : !/^\d{6}$/.test(code),
           )}
           {button(
-            backupMode ? 'Usa il codice dell’app autenticatrice' : 'Usa un codice di recupero',
+            backupMode ? t('identityPanel.authenticatorCode') : t('identityPanel.useRecovery'),
             () => {
               setCode('')
               setBackupMode(!backupMode)
             },
           )}
-          {button('Torna all’accesso', () => {
+          {button(t('identityPanel.backSignIn'), () => {
             clearSecrets()
             setSecondFactorPending(false)
           })}
@@ -511,17 +530,18 @@ export function LocalIdentityPanel({
           <Text style={s.label}>{session.user.name}</Text>
           <Text style={s.body}>{session.user.email}</Text>
           <Text style={s.body}>
-            Sessione valida fino al {date(session.expiresAt)}. Il servizio applica un limite di 90
-            giorni.
+            {t('identityPanel.sessionExpiry', { date: date(session.expiresAt) })}
           </Text>
           <Text style={s.body}>
-            Secondo fattore: {session.user.twoFactorEnabled ? 'attivo' : 'non attivo'}.
+            {t('identityPanel.factorState', {
+              state: session.user.twoFactorEnabled
+                ? t('identityPanel.active')
+                : t('identityPanel.inactive'),
+            })}
           </Text>
           <View style={s.actions}>
             {button(
-              showSecurity
-                ? 'Chiudi le impostazioni di accesso'
-                : 'Passkey, secondo fattore e sessioni',
+              showSecurity ? t('identityPanel.closeSecurity') : t('identityPanel.security'),
               () => {
                 run(async (expectedEpoch) => {
                   if (!showSecurity && !(await reloadSecurity(expectedEpoch))) return
@@ -533,36 +553,32 @@ export function LocalIdentityPanel({
                 })
               },
             )}
-            {button('Esci dal profilo', () => {
+            {button(t('identityPanel.signOut'), () => {
               run(async () => {
                 clearIdentity()
                 channel.current?.postMessage('signed-out')
                 await client.signOut()
-                setNotice('Hai terminato la sessione.')
+                setNotice(t('identityPanel.signedOut'))
               })
             })}
           </View>
           {showSecurity && (
             <View style={s.group}>
-              <Text accessibilityRole="header" style={s.subtitle}>
-                Conferma dell’identità
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {t('identityPanel.identityHeading')}
               </Text>
-              <Text style={s.body}>
-                Per esportare, scollegare un conto o eliminare il profilo, conferma la tua identità.
-                Dopo la conferma, scegli di nuovo l’operazione: non verrà eseguita automaticamente.
-              </Text>
+              <Text style={s.body}>{t('identityPanel.stepUpHelp')}</Text>
               {!reauthVisible &&
-                button('Conferma la mia identità', () => {
+                button(t('identityPanel.confirmIdentity'), () => {
                   clearSecrets()
                   setReauthVisible(true)
                 })}
               {reauthVisible && (
                 <View style={s.group}>
-                  {passwordField('Password per confermare l’identità')}
-                  {session.user.twoFactorEnabled &&
-                    codeField('Codice a 6 cifre per confermare l’identità')}
+                  {passwordField(t('identityPanel.confirmPassword'))}
+                  {session.user.twoFactorEnabled && codeField(t('identityPanel.confirmCode'))}
                   {button(
-                    'Verifica la mia identità',
+                    t('identityPanel.verifyIdentity'),
                     () => {
                       run(async (expectedEpoch) => {
                         const result = await client.reauthenticate(
@@ -573,7 +589,7 @@ export function LocalIdentityPanel({
                         setReauthVisible(false)
                         callbacks.current.onReauthenticated()
                         setNotice(
-                          `Identità confermata fino alle ${date(result.expiresAt)}. Scegli di nuovo l’operazione.`,
+                          t('identityPanel.identityExpiry', { date: date(result.expiresAt) }),
                         )
                       })
                     },
@@ -582,52 +598,52 @@ export function LocalIdentityPanel({
                   )}
                 </View>
               )}
-              <Text accessibilityRole="header" style={s.subtitle}>
-                Passkey del browser
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {t('identityPanel.browserPasskeys')}
               </Text>
-              <Text style={s.body}>
-                Usa il dispositivo o il gestore di credenziali del browser. La password resta
-                disponibile come alternativa.
-              </Text>
+              <Text style={s.body}>{t('identityPanel.passkeyHelp')}</Text>
               {passkeys.map((key) => (
                 <View key={key.id} style={s.card}>
                   <Text style={s.label}>
-                    {key.name || 'Passkey'} · {date(key.createdAt)}
+                    {key.name || t('identityPanel.passkey')} · {date(key.createdAt)}
                   </Text>
-                  {button(`Rimuovi ${key.name || 'questa passkey'}`, () => {
-                    run(async (expectedEpoch) => {
-                      await client.deletePasskey(key.id)
-                      if (expectedEpoch !== identityEpoch.current) return
-                      if (!(await reloadSecurity(expectedEpoch))) return
-                      setNotice('Passkey rimossa. Puoi continuare a usare la password.')
-                    })
-                  })}
+                  {button(
+                    t('identityPanel.removePasskey', {
+                      name: key.name || t('identityPanel.thisPasskey'),
+                    }),
+                    () => {
+                      run(async (expectedEpoch) => {
+                        await client.deletePasskey(key.id)
+                        if (expectedEpoch !== identityEpoch.current) return
+                        if (!(await reloadSecurity(expectedEpoch))) return
+                        setNotice(t('identityPanel.passkeyRemoved'))
+                      })
+                    },
+                  )}
                 </View>
               ))}
               {button(
-                'Aggiungi una passkey',
+                t('identityPanel.addPasskey'),
                 () => {
                   run(async (expectedEpoch) => {
-                    await client.addPasskey('Passkey del browser')
+                    await client.addPasskey(t('identityPanel.browserPasskeys'))
                     if (expectedEpoch !== identityEpoch.current) return
                     if (!(await reloadSecurity(expectedEpoch))) return
-                    setNotice('Passkey aggiunta.')
+                    setNotice(t('identityPanel.passkeyAdded'))
                   })
                 },
                 false,
                 !passkeysSupported,
               )}
-              <Text accessibilityRole="header" style={s.subtitle}>
-                App autenticatrice
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {t('identityPanel.authenticator')}
               </Text>
               {!session.user.twoFactorEnabled && !setup && (
                 <View style={s.group}>
-                  <Text style={s.body}>
-                    Aggiungi un codice temporaneo a 6 cifre per gli accessi con password.
-                  </Text>
-                  {passwordField('Password per attivare il secondo fattore')}
+                  <Text style={s.body}>{t('identityPanel.totpHelp')}</Text>
+                  {passwordField(t('identityPanel.enablePassword'))}
                   {button(
-                    'Prepara il secondo fattore',
+                    t('identityPanel.prepareFactor'),
                     () => {
                       run(async (expectedEpoch) => {
                         const preparedEpoch = secretEpoch.current
@@ -648,71 +664,62 @@ export function LocalIdentityPanel({
               )}
               {setup && (
                 <View style={s.draft}>
-                  <Text style={s.label}>Configura la tua app autenticatrice</Text>
-                  <Text style={s.body}>
-                    Importa questo indirizzo nell’app oppure inserisci la chiave manualmente. Questi
-                    segreti sono mostrati soltanto durante questa configurazione.
-                  </Text>
+                  <Text style={s.label}>{t('identityPanel.setupAuthenticator')}</Text>
+                  <Text style={s.body}>{t('identityPanel.setupHelp')}</Text>
                   <Text
                     selectable
-                    accessibilityLabel="Indirizzo di configurazione dell’app autenticatrice"
+                    accessibilityLabel={t('identityPanel.totpAddress')}
                     style={s.secret}
                   >
                     {setup.totpURI}
                   </Text>
-                  <Text
-                    selectable
-                    accessibilityLabel="Chiave dell’app autenticatrice"
-                    style={s.secret}
-                  >
+                  <Text selectable accessibilityLabel={t('identityPanel.totpKey')} style={s.secret}>
                     {new URL(setup.totpURI).searchParams.get('secret')}
                   </Text>
-                  <Text style={s.label}>Codici di recupero</Text>
-                  <Text style={s.body}>
-                    Conservali in un luogo sicuro. Ogni codice può essere usato una sola volta.
-                  </Text>
-                  <Text selectable accessibilityLabel="Codici di recupero" style={s.secret}>
+                  <Text style={s.label}>{t('identityPanel.recoveryCodes')}</Text>
+                  <Text style={s.body}>{t('identityPanel.recoveryHelp')}</Text>
+                  <Text
+                    selectable
+                    accessibilityLabel={t('identityPanel.recoveryCodes')}
+                    style={s.secret}
+                  >
                     {setup.backupCodes.join('\n')}
                   </Text>
-                  {check('Ho conservato i codici di recupero.', backupsSaved, () =>
+                  {check(t('identityPanel.codesSaved'), backupsSaved, () =>
                     setBackupsSaved(!backupsSaved),
                   )}
-                  {codeField('Codice a 6 cifre per attivare il secondo fattore')}
+                  {codeField(t('identityPanel.enableCode'))}
                   {button(
-                    'Conferma e attiva il secondo fattore',
+                    t('identityPanel.activateFactor'),
                     () => {
                       run(async (expectedEpoch) => {
                         await client.verifyFactor(code, false)
                         if (expectedEpoch !== identityEpoch.current) return
                         clearSecrets()
                         if (!(await refreshSession(true, expectedEpoch))) return
-                        setNotice(
-                          'Secondo fattore attivato. I codici di recupero non sono più mostrati.',
-                        )
+                        setNotice(t('identityPanel.factorEnabled'))
                       })
                     },
                     true,
                     !backupsSaved || !/^\d{6}$/.test(code),
                   )}
-                  {button('Chiudi questa configurazione', () => {
+                  {button(t('identityPanel.closeSetup'), () => {
                     clearSecrets()
-                    setNotice(
-                      'Configurazione chiusa. Prepara una nuova configurazione per continuare.',
-                    )
+                    setNotice(t('identityPanel.setupClosed'))
                   })}
                 </View>
               )}
               {session.user.twoFactorEnabled && (
                 <View style={s.group}>
-                  {passwordField('Password per disattivare il secondo fattore')}
+                  {passwordField(t('identityPanel.disablePassword'))}
                   {button(
-                    'Disattiva il secondo fattore',
+                    t('identityPanel.disableFactor'),
                     () => {
                       run(async (expectedEpoch) => {
                         await client.disableTwoFactor(password)
                         if (expectedEpoch !== identityEpoch.current) return
                         if (!(await refreshSession(true, expectedEpoch))) return
-                        setNotice('Secondo fattore disattivato.')
+                        setNotice(t('identityPanel.factorDisabled'))
                       })
                     },
                     false,
@@ -720,21 +727,26 @@ export function LocalIdentityPanel({
                   )}
                 </View>
               )}
-              <Text accessibilityRole="header" style={s.subtitle}>
-                Sessioni attive
+              <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+                {t('identityPanel.sessionsHeading')}
               </Text>
               {sessions.map((record) => (
                 <View key={record.id} style={s.card}>
                   <Text style={s.label}>
-                    {record.current ? 'Questa sessione' : 'Altra sessione'}
+                    {record.current
+                      ? t('identityPanel.thisSession')
+                      : t('identityPanel.otherSession')}
                   </Text>
                   <Text style={s.body}>
-                    Creata il {date(record.createdAt)} · scade il {date(record.expiresAt)}
+                    {t('identityPanel.sessionDates', {
+                      created: date(record.createdAt),
+                      expires: date(record.expiresAt),
+                    })}
                   </Text>
                   {button(
                     record.current
-                      ? 'Revoca questa sessione'
-                      : `Revoca la sessione del ${date(record.createdAt)}`,
+                      ? t('identityPanel.revokeCurrent')
+                      : t('identityPanel.revokeSession', { date: date(record.createdAt) }),
                     () => {
                       run(async (expectedEpoch) => {
                         await client.revokeSession(record.id)
@@ -744,43 +756,58 @@ export function LocalIdentityPanel({
                         )
                         if (record.current) {
                           clearIdentity()
-                          setNotice('Sessione revocata. Accedi di nuovo per continuare.')
+                          setNotice(t('identityPanel.revokedCurrent'))
                         } else {
                           if (!(await reloadSecurity(expectedEpoch))) return
-                          setNotice('Sessione revocata.')
+                          setNotice(t('identityPanel.sessionRevoked'))
                         }
                       })
                     },
                   )}
                 </View>
               ))}
-              {button('Aggiorna le sessioni', () => {
+              {button(t('identityPanel.refreshSessions'), () => {
                 run(async (expectedEpoch) => {
                   await reloadSecurity(expectedEpoch)
                 })
               })}
               {!revokeAllConfirmation &&
-                button('Revoca tutte le sessioni', () => setRevokeAllConfirmation(true))}
+                button(t('identityPanel.revokeAll'), () => setRevokeAllConfirmation(true))}
               {revokeAllConfirmation && (
-                <View style={s.card}>
-                  <Text style={s.body}>
-                    Terminerai anche questa sessione e dovrai accedere di nuovo.
-                  </Text>
+                <AccessibleDialog
+                  style={s.card}
+                  title={t('identityPanel.revokeAll')}
+                  description={t('identityPanel.revokeConsequences')}
+                  resetKey={renderedIdentityEpoch}
+                  isCurrent={() => renderedIdentityEpoch === identityEpoch.current}
+                  mayRestoreFocus={() => renderedIdentityEpoch === identityEpoch.current}
+                  onDismiss={() => setRevokeAllConfirmation(false)}
+                  canDismiss={() => !busy}
+                  initialFocusSelector='[data-testid="revoke-all-cancel"]'
+                  headingStyle={s.subtitle}
+                  descriptionStyle={s.body}
+                >
                   {button(
-                    'Conferma la revoca di tutte le sessioni',
+                    t('identityPanel.confirmRevoke'),
                     () => {
                       run(async (expectedEpoch) => {
                         await client.revokeAllSessions()
                         if (expectedEpoch !== identityEpoch.current) return
                         clearIdentity()
                         channel.current?.postMessage('signed-out')
-                        setNotice('Tutte le sessioni sono state revocate.')
+                        setNotice(t('identityPanel.allRevoked'))
                       })
                     },
                     true,
                   )}
-                  {button('Mantieni le sessioni', () => setRevokeAllConfirmation(false))}
-                </View>
+                  {button(
+                    t('identityPanel.keepSessions'),
+                    () => setRevokeAllConfirmation(false),
+                    false,
+                    false,
+                    'revoke-all-cancel',
+                  )}
+                </AccessibleDialog>
               )}
             </View>
           )}

@@ -1,12 +1,98 @@
 import { createHash } from 'node:crypto'
 import type { Database } from '@lilleri/database'
+import { DEFAULT_RECURRING_POLICY } from '@lilleri/engines'
 import { asc, eq, gt } from 'drizzle-orm'
 import { z } from 'zod'
 import { runtimeConfigurationHead, runtimeConfigurationVersions } from './runtime-config-schema.js'
 
+export const syncConfigurationSchema = z
+  .object({
+    enabled: z.boolean(),
+    intervalMs: z.number().int().min(1000).max(86_400_000),
+    profileLimit: z.number().int().min(1).max(100),
+    jobsPerProfile: z.number().int().min(1).max(20),
+    leaseMs: z.number().int().min(1000).max(300_000),
+    attemptTimeoutMs: z.number().int().min(1).max(300_000),
+    maxAttempts: z.number().int().min(1).max(20),
+    retryBaseMs: z.number().int().min(1).max(86_400_000),
+    maxPagesPerSlice: z.number().int().min(1).max(100),
+    maxPagesPerJob: z.number().int().min(1).max(10_000),
+    maxRecordsPerJob: z.number().int().min(1).max(100_000),
+    maxAccounts: z.number().int().min(1).max(100),
+    pageSize: z.number().int().min(1).max(200),
+    maxStageBytes: z.number().int().min(1024).max(33_554_432),
+    trailingDays: z.number().int().min(7).max(366),
+    windowDays: z.number().int().min(1).max(14),
+    inactiveAfterDays: z.number().int().min(1).max(366),
+    freeDailyRefreshes: z.literal(1),
+    maxWaitSlices: z.number().int().min(1).max(100),
+    stageRetentionMs: z.number().int().min(1000).max(2_592_000_000),
+    foregroundDebounceMs: z.number().int().min(1000).max(86_400_000).optional(),
+    foregroundSessionLimit: z.number().int().min(1).max(10_000).optional(),
+  })
+  .strict()
+  .refine((value) => value.attemptTimeoutMs <= value.leaseMs, {
+    message: 'Sync timeout must fit within the lease',
+  })
+export type SyncConfiguration = z.infer<typeof syncConfigurationSchema>
+export const DEFAULT_SYNC_CONFIGURATION = Object.freeze({
+  enabled: true,
+  intervalMs: 60_000,
+  profileLimit: 20,
+  jobsPerProfile: 4,
+  leaseMs: 30_000,
+  attemptTimeoutMs: 10_000,
+  maxAttempts: 4,
+  retryBaseMs: 1000,
+  maxPagesPerSlice: 20,
+  maxPagesPerJob: 1000,
+  maxRecordsPerJob: 10_000,
+  maxAccounts: 50,
+  pageSize: 100,
+  maxStageBytes: 2_097_152,
+  trailingDays: 30,
+  windowDays: 14,
+  inactiveAfterDays: 14,
+  freeDailyRefreshes: 1,
+  maxWaitSlices: 100,
+  stageRetentionMs: 86_400_000,
+  foregroundDebounceMs: 60_000,
+  foregroundSessionLimit: 1000,
+} satisfies SyncConfiguration)
+export const recurringConfigurationSchema = z
+  .object({
+    version: z.string().min(1).max(128),
+    toleranceDays: z
+      .object({
+        weekly: z.number().int().min(0).max(31),
+        biweekly: z.number().int().min(0).max(31),
+        monthly: z.number().int().min(0).max(31),
+        bimonthly: z.number().int().min(0).max(31),
+        quarterly: z.number().int().min(0).max(31),
+        semiannual: z.number().int().min(0).max(31),
+        annual: z.number().int().min(0).max(31),
+      })
+      .strict(),
+    minimumOccurrences: z.number().int().min(3).max(12),
+    longPeriodMinimumOccurrences: z.number().int().min(2).max(12),
+    fixedAmountToleranceBps: z.number().int().min(0).max(10_000),
+    variableAmountBandBps: z.number().int().min(0).max(10_000),
+    horizonDays: z.number().int().min(1).max(366),
+    maxProjectedOccurrences: z.number().int().min(1).max(10_000),
+  })
+  .strict()
+  .refine(
+    (value) =>
+      value.longPeriodMinimumOccurrences <= value.minimumOccurrences &&
+      value.variableAmountBandBps >= value.fixedAmountToleranceBps,
+    { message: 'Recurring policy thresholds are inconsistent' },
+  )
+
 /** Bounds are safety constraints; operational choices belong to the versioned document. */
 export const runtimeConfigurationValuesSchema = z
   .object({
+    sync: syncConfigurationSchema.optional(),
+    recurring: recurringConfigurationSchema.optional(),
     payloadRetention: z
       .object({
         enabled: z.boolean(),
@@ -58,6 +144,10 @@ export const runtimeConfigurationValuesSchema = z
       })
       .strict()
       .optional(),
+    understandingPersistence: z
+      .object({ historyPageSize: z.number().int().min(1).max(100) })
+      .strict()
+      .optional(),
   })
   .strict()
   .refine((value) => value.revocation.attemptTimeoutMs <= value.revocation.leaseMs, {
@@ -84,6 +174,9 @@ export const DEFAULT_UNDERSTANDING_CONFIGURATION = Object.freeze({
   maxForecastOccurrences: 120,
   horizonDays: 62,
 })
+export const DEFAULT_UNDERSTANDING_PERSISTENCE_CONFIGURATION = Object.freeze({
+  historyPageSize: 20,
+})
 
 /** Bootstrap only. After creation the persisted revision is authoritative. */
 export const DEFAULT_RUNTIME_CONFIGURATION: Readonly<RuntimeConfigurationValues> = Object.freeze({
@@ -105,6 +198,9 @@ export const DEFAULT_RUNTIME_CONFIGURATION: Readonly<RuntimeConfigurationValues>
   connectionLifecycle: DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
   notifications: DEFAULT_NOTIFICATION_CONFIGURATION,
   understanding: DEFAULT_UNDERSTANDING_CONFIGURATION,
+  sync: DEFAULT_SYNC_CONFIGURATION,
+  understandingPersistence: DEFAULT_UNDERSTANDING_PERSISTENCE_CONFIGURATION,
+  recurring: DEFAULT_RECURRING_POLICY,
 })
 export interface RuntimeConfigurationSnapshot {
   readonly revision: number

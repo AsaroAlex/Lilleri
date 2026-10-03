@@ -36,6 +36,8 @@ export const manualCommands = pgTable(
       .notNull()
       .references(() => schema.profiles.id, { onDelete: 'cascade' }),
     requestId: text('request_id').notNull(),
+    sourceAccountId: text('source_account_id'),
+    sourceConnectionId: text('source_connection_id'),
     requestHash: text('request_hash').notNull(),
     operation: text('operation')
       .$type<'account' | 'entry' | 'import' | 'adjustment' | 'reversal'>()

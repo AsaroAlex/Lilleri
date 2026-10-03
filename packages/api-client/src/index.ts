@@ -7,6 +7,7 @@ import type {
   CurrencyCode,
   Transaction,
 } from '@lilleri/domain'
+import { createSyncClient } from './sync.js'
 
 /** Bigint money is serialized as a base-ten string, never a JSON number. */
 export type JsonValue<T> = T extends bigint
@@ -175,6 +176,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     return (await response.json()) as T
   }
   return {
+    ...createSyncClient(request),
     request,
     overview: (signal?: AbortSignal) => request<DemoOverview>('/v1/demo', signal ? { signal } : {}),
     connectMock: () => request<Connection>('/v1/connections/mock', { method: 'POST', body: '{}' }),
@@ -237,8 +239,11 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
         method: 'PATCH',
         body: JSON.stringify({ state, revision }),
       }),
-    disconnect: (connectionId: string) =>
-      request<void>(`/v1/connections/${encodeURIComponent(connectionId)}`, { method: 'DELETE' }),
+    disconnect: (connectionId: string, data?: 'retain' | 'erase') =>
+      request<void>(`/v1/connections/${encodeURIComponent(connectionId)}`, {
+        method: 'DELETE',
+        ...(data ? { body: JSON.stringify({ data }) } : {}),
+      }),
     exportData: () => request<unknown>('/v1/export'),
     exportArchive: async () => {
       const response = await responseFor('/v1/export/archive', {
@@ -271,3 +276,5 @@ export {
 export * from './mapped-import.js'
 export { createRulesClient } from './rules.js'
 export * from './settings.js'
+
+export * from './sync.js'

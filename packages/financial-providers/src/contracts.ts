@@ -1,5 +1,149 @@
 import type { Account } from '@lilleri/domain'
-import type { FinancialDataProvider, ProviderContext } from './index.js'
+import type {
+  FinancialDataProvider,
+  ProviderAccount,
+  ProviderContext,
+  ProviderTransaction,
+} from './index.js'
+
+/** This port declares transaction-window semantics separately from institution discovery. */
+export interface SyntheticSyncMetadata {
+  readonly providerId: string
+  readonly environment: 'synthetic'
+  readonly evidenceReference: string
+  readonly userPresent: 'supported' | 'unsupported' | 'unknown'
+  readonly unattendedBudget: {
+    readonly requests: number
+    readonly windowSeconds: number
+    readonly anchor: 'utc_epoch'
+    readonly unit: 'refresh_attempt'
+    readonly evidenceReference: string
+  } | null
+  readonly maxWindowDays: number
+  readonly maxPageSize: number
+  readonly maxCursorBytes: number
+  readonly pendingSet: 'complete_snapshot' | 'unknown'
+  readonly deletionEvidence: 'complete_window' | 'unknown'
+}
+export interface SyntheticSyncSnapshot {
+  readonly snapshotId: string
+  readonly accounts: readonly ProviderAccount[]
+  readonly historyFrom: Readonly<Record<string, string | null>>
+  readonly observedAt: string
+  /** Absence of an opening anchor or balance type/date means not comparable. */
+  readonly balances: readonly SyntheticBalanceEvidence[]
+}
+export interface SyntheticBalanceEvidence {
+  readonly accountId: string
+  readonly currency: string
+  readonly amount: string
+  readonly type: 'booked' | 'available' | 'unknown'
+  readonly referenceDate: string | null
+  readonly opening: {
+    readonly amount: string
+    readonly date: string
+    readonly type: 'booked'
+  } | null
+}
+export interface SyntheticSyncPageRequest {
+  readonly snapshotId: string
+  readonly accountId: string
+  readonly from: string
+  readonly to: string
+  readonly cursor: string | null
+  readonly pageSize: number
+  readonly includePending: boolean
+}
+export interface SyntheticSyncPage {
+  readonly snapshotId: string
+  readonly from: string
+  readonly to: string
+  readonly transactions: readonly ProviderTransaction[]
+  readonly nextCursor: string | null
+  readonly coverage: 'complete_window' | 'unknown'
+}
+export interface SyntheticSyncProvider extends FinancialDataProvider {
+  syncMetadata(): SyntheticSyncMetadata
+  openSync(
+    context: ProviderContext,
+    mode: 'user_present' | 'unattended',
+    /** Synthetic fixtures may use the captured server clock; this is not a live-provider timestamp override. */
+    requestedAt?: string,
+  ): Promise<SyntheticSyncSnapshot>
+  getSyncPage(
+    context: ProviderContext,
+    request: SyntheticSyncPageRequest,
+  ): Promise<SyntheticSyncPage>
+}
+export function hasSyntheticSyncContract(
+  provider: FinancialDataProvider,
+): provider is SyntheticSyncProvider {
+  const candidate = provider as Partial<SyntheticSyncProvider>
+  return (
+    typeof candidate.syncMetadata === 'function' &&
+    typeof candidate.openSync === 'function' &&
+    typeof candidate.getSyncPage === 'function'
+  )
+}
+/** Categorical errors only: provider exception text is never persisted in job reports. */
+export class SyntheticSyncFailure extends Error {
+  constructor(
+    readonly code: 'rate_limited' | 'snapshot_expired' | 'unavailable',
+    readonly retryAfterSeconds: number | null = null,
+  ) {
+    super(code)
+    if (
+      retryAfterSeconds !== null &&
+      (!Number.isSafeInteger(retryAfterSeconds) ||
+        retryAfterSeconds < 1 ||
+        retryAfterSeconds > 86_400)
+    )
+      throw new Error('Invalid synthetic retry delay')
+  }
+}
+export function validateSyntheticSyncMetadata(value: unknown): SyntheticSyncMetadata {
+  const item = record(value, [
+    'providerId',
+    'environment',
+    'evidenceReference',
+    'userPresent',
+    'unattendedBudget',
+    'maxWindowDays',
+    'maxPageSize',
+    'maxCursorBytes',
+    'pendingSet',
+    'deletionEvidence',
+  ])
+  let budget: SyntheticSyncMetadata['unattendedBudget'] = null
+  if (item.unattendedBudget !== null) {
+    const candidate = record(item.unattendedBudget, [
+      'requests',
+      'windowSeconds',
+      'anchor',
+      'unit',
+      'evidenceReference',
+    ])
+    budget = {
+      requests: integer(candidate.requests, 0, 10_000),
+      windowSeconds: integer(candidate.windowSeconds, 1, 31_536_000),
+      anchor: member(candidate.anchor, ['utc_epoch']),
+      unit: member(candidate.unit, ['refresh_attempt']),
+      evidenceReference: text(candidate.evidenceReference),
+    }
+  }
+  return {
+    providerId: text(item.providerId),
+    environment: member(item.environment, ['synthetic']),
+    evidenceReference: text(item.evidenceReference),
+    userPresent: member(item.userPresent, ['supported', 'unsupported', 'unknown']),
+    unattendedBudget: budget,
+    maxWindowDays: integer(item.maxWindowDays, 1, 14),
+    maxPageSize: integer(item.maxPageSize, 1, 200),
+    maxCursorBytes: integer(item.maxCursorBytes, 1, 1000),
+    pendingSet: member(item.pendingSet, ['complete_snapshot', 'unknown']),
+    deletionEvidence: member(item.deletionEvidence, ['complete_window', 'unknown']),
+  }
+}
 
 export type ProviderEnvironment = 'synthetic' | 'sandbox' | 'live'
 export type CoverageStatus = 'synthetic' | 'verified' | 'unverified' | 'unknown'

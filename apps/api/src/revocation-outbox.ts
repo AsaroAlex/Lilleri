@@ -103,7 +103,11 @@ export async function revocationsForProfile(db: Database, profileId: string) {
   return db
     .select({
       id: schema.revocationJobs.id,
+      profileId: schema.revocationJobs.profileId,
       connectionId: schema.revocationJobs.connectionId,
+      providerId: schema.revocationJobs.providerId,
+      consentId: schema.revocationJobs.consentId,
+      createdAt: schema.revocationJobs.createdAt,
       state: schema.revocationJobs.state,
       attempts: schema.revocationJobs.attempts,
       nextAttemptAt: schema.revocationJobs.nextAttemptAt,
@@ -271,6 +275,8 @@ export interface RevocationPumpOptions extends RevocationOptions {
   readonly batchLimit?: number
   readonly onStorageFailure?: () => void
   readonly configuration?: () => Promise<RevocationPumpConfiguration>
+  /** Trusted database maintenance, including empty and operator-paused provider batches. */
+  readonly afterBatch?: (settings: RevocationPumpConfiguration, now: string) => Promise<void>
 }
 export interface RevocationPumpConfiguration {
   readonly enabled: boolean
@@ -324,10 +330,14 @@ export function createRevocationPump(
       try {
         if (options.configuration)
           settings = checkedPumpConfiguration(await options.configuration())
-        if (!settings.enabled || stopped) return
-        for (let index = 0; index < settings.batchLimit && !stopped; index += 1) {
-          if (!(await processNextRevocation(db, providers, { ...options, ...settings }))) break
+        if (stopped) return
+        const batch = Object.freeze({ ...settings })
+        if (batch.enabled) {
+          for (let index = 0; index < batch.batchLimit && !stopped; index += 1) {
+            if (!(await processNextRevocation(db, providers, { ...options, ...batch }))) break
+          }
         }
+        if (!stopped && options.afterBatch) await options.afterBatch(batch, clock(options))
       } catch {
         storageFailures += 1
         if (options.onStorageFailure) options.onStorageFailure()

@@ -2,6 +2,9 @@ import { ApiError, type DemoOverview } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import type { MessageKey } from './src/i18n'
+import { useI18n } from './src/i18n/context'
+import { displayMessage, displayProblem, type UiMessage } from './src/i18n/ui-message'
 
 interface PrivacySettings {
   readonly profileId: string
@@ -47,8 +50,8 @@ interface PanelState {
   readonly query: string
   readonly busy: boolean
   readonly transactionLoading: boolean
-  readonly error: string | null
-  readonly notice: string | null
+  readonly error: UiMessage | null
+  readonly notice: MessageKey | null
 }
 const emptyState = (epoch: number): PanelState => ({
   epoch,
@@ -72,6 +75,9 @@ export function PrivacyControlsPanel({
   onChanged,
   onError,
 }: PrivacyControlsPanelProps) {
+  const i18n = useI18n()
+  const i18nRef = useRef(i18n)
+  i18nRef.current = i18n
   const c = colors[theme]
   const s = useMemo(() => styles(c), [c])
   const scope = `${overview.profile.id}:${String(resetKey)}`
@@ -141,8 +147,7 @@ export function PrivacyControlsPanel({
     setState(emptyState(captured))
     void reload(captured)
       .catch((cause: unknown) => {
-        if (!report(captured, cause))
-          patch(captured, { error: 'Non riesco a caricare le preferenze. Riprova.' })
+        if (!report(captured, cause)) patch(captured, { error: 'privacyControls.loadFailed' })
       })
       .finally(() => {
         if (!current(captured)) return
@@ -150,7 +155,7 @@ export function PrivacyControlsPanel({
         patch(captured, { busy: false })
       })
   }, [scope, request])
-  const run = async (action: () => Promise<unknown>, notice: string, changed = true) => {
+  const run = async (action: () => Promise<unknown>, notice: MessageKey, changed = true) => {
     const captured = identity.current.epoch
     if (busyEpoch.current === captured || !current(captured)) return
     busyEpoch.current = captured
@@ -176,14 +181,13 @@ export function PrivacyControlsPanel({
           await handlers.current.onChanged()
           if (current(captured))
             patch(captured, {
-              error:
-                'Le preferenze sono cambiate. Ho aggiornato i dati: controllali e scegli di nuovo.',
+              error: 'privacyControls.changed',
             })
         } catch (refreshCause) {
           if (!report(captured, refreshCause))
-            patch(captured, { error: 'Non riesco ad aggiornare le preferenze. Riprova.' })
+            patch(captured, { error: 'privacyControls.refreshFailed' })
         }
-      } else patch(captured, { error: 'Non riesco a salvare le preferenze. Riprova.' })
+      } else patch(captured, { error: displayProblem(cause, 'privacyControls.saveFailed') })
     } finally {
       if (current(captured)) {
         busyEpoch.current = null
@@ -212,8 +216,7 @@ export function PrivacyControlsPanel({
       patch(captured, { flags })
     } catch (cause) {
       if (!current(captured) || version !== selectionVersion.current) return
-      if (!report(captured, cause))
-        patch(captured, { error: 'Non riesco a caricare questo movimento. Riprova.' })
+      if (!report(captured, cause)) patch(captured, { error: 'privacyControls.transactionFailed' })
     } finally {
       if (current(captured) && version === selectionVersion.current)
         patch(captured, { transactionLoading: false })
@@ -247,32 +250,32 @@ export function PrivacyControlsPanel({
   const selected = overview.transactions.find((item) => item.id === view.selectedId)
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.title}>
-        Le tue preferenze di riservatezza
+      <Text accessibilityRole="header" aria-level={2} style={s.title}>
+        {i18nRef.current.t('privacyControls.title')}
       </Text>
       {view.error && (
         <Text accessibilityRole="alert" style={s.error}>
-          {view.error}
+          {displayMessage(i18n, view.error)}
         </Text>
       )}
       {view.notice && (
-        <Text accessibilityLiveRegion="polite" style={s.body}>
-          {view.notice}
+        <Text accessibilityLiveRegion="polite" aria-live="polite" style={s.body}>
+          {i18n.t(view.notice)}
         </Text>
       )}
       {view.busy && (
-        <ActivityIndicator accessibilityLabel="Aggiornamento preferenze" color={c.primary} />
+        <ActivityIndicator
+          accessibilityLabel={i18nRef.current.t('privacyControls.loading')}
+          color={c.primary}
+        />
       )}
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          Come riconosciamo i movimenti
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {i18nRef.current.t('privacyControls.recognition')}
         </Text>
-        <Text style={s.body}>
-          Usa solo le tue regole per rinunciare ai suggerimenti del dizionario degli esercenti. Le
-          correzioni e le regole che hai scelto restano attive.
-        </Text>
+        <Text style={s.body}>{i18nRef.current.t('privacyControls.rulesHelp')}</Text>
         {view.settings &&
-          toggle('Usa solo le mie regole', view.settings.rulesOnly, () => {
+          toggle(i18nRef.current.t('privacyControls.rulesOnly'), view.settings.rulesOnly, () => {
             const saved = view.settings
             if (saved)
               void run(
@@ -281,23 +284,25 @@ export function PrivacyControlsPanel({
                     method: 'PATCH',
                     body: JSON.stringify({ revision: saved.revision, rulesOnly: !saved.rulesOnly }),
                   }),
-                'Preferenza di riconoscimento salvata.',
+                'privacyControls.rulesSaved',
               )
           })}
       </View>
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          Avvisi di servizio nell’app
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {i18nRef.current.t('privacyControls.service')}
         </Text>
-        <Text style={s.body}>
-          Puoi scegliere gli avvisi facoltativi. Gli avvisi essenziali di sicurezza e le
-          informazioni sull’esportazione o sulla cancellazione restano disponibili.
-        </Text>
+        <Text style={s.body}>{i18nRef.current.t('privacyControls.serviceHelp')}</Text>
         {servicePermission && (
           <>
+            <Text style={s.hint}>
+              {i18n.t('privacyControls.disclosureLanguage', {
+                version: servicePermission.disclosure.textVersion,
+              })}
+            </Text>
             <Text style={s.hint}>{servicePermission.disclosure.text}</Text>
             {toggle(
-              'Ricevi gli avvisi facoltativi nell’app',
+              i18nRef.current.t('privacyControls.optional'),
               servicePermission.localPreferenceEnabled,
               () => {
                 const proof = servicePermission.disclosure
@@ -317,20 +322,17 @@ export function PrivacyControlsPanel({
                       method: 'PATCH',
                       body: JSON.stringify(choice),
                     }),
-                  'Preferenza degli avvisi salvata.',
+                  'privacyControls.serviceSaved',
                 )
               },
               !servicePermission.featureAvailable,
             )}
             {servicePermission.granted && !servicePermission.localPreferenceEnabled && (
               <>
-                <Text style={s.hint}>
-                  La scelta precedente non abilita questi avvisi. Puoi revocarla subito, oppure
-                  leggere il testo qui sopra e scegliere di nuovo.
-                </Text>
+                <Text style={s.hint}>{i18nRef.current.t('privacyControls.previousChoice')}</Text>
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Revoca la scelta precedente"
+                  accessibilityLabel={i18nRef.current.t('privacyControls.withdraw')}
                   aria-disabled={view.busy}
                   accessibilityState={{ disabled: view.busy }}
                   disabled={view.busy}
@@ -344,33 +346,27 @@ export function PrivacyControlsPanel({
                             action: 'revoked',
                           }),
                         }),
-                      'Scelta precedente revocata.',
+                      'privacyControls.withdrawn',
                     )
                   }}
                   style={[s.button, view.busy && s.disabled]}
                 >
-                  <Text style={s.buttonText}>Revoca la scelta precedente</Text>
+                  <Text style={s.buttonText}>{i18nRef.current.t('privacyControls.withdraw')}</Text>
                 </Pressable>
               </>
             )}
           </>
         )}
-        <Text style={s.hint}>
-          Questa scelta riguarda l’app. Non abilita notifiche del telefono. Le funzioni di AI
-          esterna e di analisi identificata non sono disponibili nella configurazione attuale.
-        </Text>
+        <Text style={s.hint}>{i18nRef.current.t('privacyControls.unavailableFeatures')}</Text>
       </View>
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          Scegli i movimenti da escludere dai riepiloghi
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {i18nRef.current.t('privacyControls.exclude')}
         </Text>
-        <Text style={s.body}>
-          Un movimento riservato o quieto resta nella tua lista e nella tua esportazione, ma viene
-          escluso dai riepiloghi e dalle stime di spesa. La scelta non cancella il movimento.
-        </Text>
+        <Text style={s.body}>{i18nRef.current.t('privacyControls.excludeHelp')}</Text>
         <TextInput
-          accessibilityLabel="Cerca un movimento per le preferenze di riservatezza"
-          placeholder="Cerca descrizione, esercente o data"
+          accessibilityLabel={i18nRef.current.t('privacyControls.search')}
+          placeholder={i18nRef.current.t('privacyControls.searchPlaceholder')}
           placeholderTextColor={c.textSecondary}
           value={view.query}
           onChangeText={(value) => patch(epoch, { query: value })}
@@ -397,20 +393,22 @@ export function PrivacyControlsPanel({
             ]}
           >
             <Text style={s.buttonText}>
-              {transaction.bookedOn ?? 'Data non comunicata'} ·{' '}
-              {transaction.merchantName ?? transaction.description}
+              {transaction.bookedOn
+                ? i18n.calendarDate(transaction.bookedOn)
+                : i18nRef.current.t('privacyControls.dateUnknown')}{' '}
+              · {transaction.merchantName ?? transaction.description}
             </Text>
           </Pressable>
         ))}
         {matches.length > 50 && (
-          <Text style={s.hint}>
-            Mostro i primi 50 risultati. Cerca per trovare gli altri movimenti.
-          </Text>
+          <Text style={s.hint}>{i18nRef.current.t('privacyControls.firstFifty')}</Text>
         )}
-        {!matches.length && <Text style={s.body}>Nessun movimento corrisponde alla ricerca.</Text>}
+        {!matches.length && (
+          <Text style={s.body}>{i18nRef.current.t('privacyControls.empty')}</Text>
+        )}
         {view.transactionLoading && (
           <ActivityIndicator
-            accessibilityLabel="Caricamento preferenze del movimento"
+            accessibilityLabel={i18nRef.current.t('privacyControls.transactionLoading')}
             color={c.primary}
           />
         )}
@@ -420,14 +418,13 @@ export function PrivacyControlsPanel({
             {overview.analysis.classifications.some(
               (item) => item.transactionId === selected.id && item.categoryId === 'health',
             ) && (
-              <Text style={s.hint}>
-                I movimenti classificati come salute sono già esclusi dai riepiloghi. Queste scelte
-                aggiungono una tua preferenza riservata e non rimuovono quella protezione.
-              </Text>
+              <Text style={s.hint}>{i18nRef.current.t('privacyControls.healthProtection')}</Text>
             )}
             {(['quiet', 'private'] as const).map((field) =>
               toggle(
-                field === 'quiet' ? 'Movimento quieto' : 'Movimento riservato',
+                field === 'quiet'
+                  ? i18nRef.current.t('privacyControls.quiet')
+                  : i18nRef.current.t('privacyControls.private'),
                 view.flags?.[field] ?? false,
                 () => {
                   const flags = view.flags
@@ -446,7 +443,7 @@ export function PrivacyControlsPanel({
                             }),
                           },
                         ),
-                      'Preferenza del movimento salvata.',
+                      'privacyControls.transactionSaved',
                     )
                 },
               ),
@@ -461,10 +458,10 @@ export function PrivacyControlsPanel({
         accessibilityState={{ disabled: view.busy }}
         style={[s.button, view.busy && s.disabled]}
         onPress={() => {
-          void run(async () => undefined, 'Preferenze aggiornate.', false)
+          void run(async () => undefined, 'privacyControls.refreshed', false)
         }}
       >
-        <Text style={s.buttonText}>Ricarica le preferenze</Text>
+        <Text style={s.buttonText}>{i18nRef.current.t('privacyControls.refresh')}</Text>
       </Pressable>
     </View>
   )

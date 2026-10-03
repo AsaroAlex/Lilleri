@@ -56,7 +56,42 @@ async function actionResponse(page, path, action, expected = 200) {
 async function change(page, label, path, expected = 200) {
   return actionResponse(page, path, () => checkbox(page, label).click(), expected)
 }
-const finance = (value) => ({ accounts: value.accounts, transactions: value.transactions })
+const finance = (value) => ({
+  accounts: value.accounts
+    .map(({ balanceUpdatedAt: _freshness, ...facts }) => facts)
+    .sort((first, second) => first.id.localeCompare(second.id)),
+  transactions: [...value.transactions].sort((first, second) => first.id.localeCompare(second.id)),
+})
+function assertFinance(value, initial) {
+  assert.deepEqual(finance(value), finance(initial))
+  const bankConnections = new Set(
+    initial.connections.filter((row) => row.providerId === 'mock-italian').map((row) => row.id),
+  )
+  const previous = new Map(initial.accounts.map((row) => [row.id, row]))
+  let updated = 0
+  for (const account of value.accounts) {
+    const before = previous.get(account.id)
+    assert.ok(before)
+    if (!bankConnections.has(account.connectionId))
+      assert.equal(account.balanceUpdatedAt, before.balanceUpdatedAt)
+    const first = Date.parse(before.balanceUpdatedAt),
+      last = Date.parse(account.balanceUpdatedAt)
+    assert.ok(
+      Number.isFinite(first) && Number.isFinite(last) && last >= first && last <= Date.now(),
+    )
+    if (account.balanceUpdatedAt !== before.balanceUpdatedAt) updated++
+  }
+  report.accountFreshnessUpdates = Math.max(report.accountFreshnessUpdates || 0, updated)
+}
+const displayedDate = (value) =>
+  value
+    ? new Intl.DateTimeFormat('it-IT', {
+        timeZone: 'UTC',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(`${value}T00:00:00Z`))
+    : 'Data non comunicata'
 async function open(page) {
   await page.getByRole('button', { name: 'Privacy', exact: true }).click()
   await page
@@ -127,7 +162,7 @@ async function noOverflow(page, width) {
     await change(page, rulesLabel, '/v1/privacy/settings')
     assert.equal((await request('/v1/privacy/settings')).rulesOnly, true)
     const restricted = await request('/v1/demo')
-    assert.deepEqual(finance(restricted), finance(initial))
+    assertFinance(restricted, initial)
     assert.ok(
       !restricted.analysis.classifications.some(
         (row) =>
@@ -207,7 +242,7 @@ async function noOverflow(page, width) {
     await search.fill(transaction.merchantName || transaction.description)
     await page
       .getByRole('button', {
-        name: `${transaction.bookedOn || 'Data non comunicata'} · ${transaction.merchantName || transaction.description}`,
+        name: `${displayedDate(transaction.bookedOn)} · ${transaction.merchantName || transaction.description}`,
         exact: true,
       })
       .first()
@@ -218,7 +253,7 @@ async function noOverflow(page, width) {
     const flagged = await request(txPath)
     assert.equal(flagged.quiet, true)
     assert.equal(flagged.private, true)
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     const ownedExport = await request('/v1/export')
     assert.ok(ownedExport.transactions.some((row) => row.id === transaction.id))
     assert.ok(
@@ -271,7 +306,7 @@ async function noOverflow(page, width) {
     assert.equal(finalSettings.rulesOnly, false)
     assert.equal(finalFlags.quiet, false)
     assert.equal(finalFlags.private, false)
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     assert.deepEqual(report.pageErrors, [])
     check('saved preferences survive a browser reload and the disposable archive is restored')
     report.status = 'passed'

@@ -40,10 +40,33 @@ async function request(path, method = 'GET', body, expected = 200) {
   return response.status === 204 ? undefined : response.json()
 }
 const finance = (value) => ({
-  accounts: value.accounts,
-  transactions: value.transactions,
+  accounts: value.accounts
+    .map(({ balanceUpdatedAt: _freshness, ...facts }) => facts)
+    .sort((first, second) => first.id.localeCompare(second.id)),
+  transactions: [...value.transactions].sort((first, second) => first.id.localeCompare(second.id)),
   analysis: value.analysis,
 })
+function assertFinance(value, initial) {
+  assert.deepEqual(finance(value), finance(initial))
+  const bankConnections = new Set(
+    initial.connections.filter((row) => row.providerId === 'mock-italian').map((row) => row.id),
+  )
+  const previous = new Map(initial.accounts.map((row) => [row.id, row]))
+  let updated = 0
+  for (const account of value.accounts) {
+    const before = previous.get(account.id)
+    assert.ok(before)
+    if (!bankConnections.has(account.connectionId))
+      assert.equal(account.balanceUpdatedAt, before.balanceUpdatedAt)
+    const first = Date.parse(before.balanceUpdatedAt),
+      last = Date.parse(account.balanceUpdatedAt)
+    assert.ok(
+      Number.isFinite(first) && Number.isFinite(last) && last >= first && last <= Date.now(),
+    )
+    if (account.balanceUpdatedAt !== before.balanceUpdatedAt) updated++
+  }
+  report.accountFreshnessUpdates = Math.max(report.accountFreshnessUpdates || 0, updated)
+}
 async function openPanel(page) {
   await page.getByRole('button', { name: 'Movimenti', exact: true }).click()
   if (!(await button(page, 'Collegamenti e fonti').count()))
@@ -102,7 +125,7 @@ async function noOverflow(page, label) {
     assert.equal(
       await page
         .getByRole('button', {
-          name: /^(Home|Movimenti|Da controllare(?:, \d+ elementi| \(\d+\))?|Ricorrenti|Privacy)$/,
+          name: /^(Home|Movimenti|Da controllare, \d+ moviment[oi]|Ricorrenti|Privacy)$/,
         })
         .count(),
       5,
@@ -145,7 +168,7 @@ async function noOverflow(page, label) {
     assert.equal(paused.state, 'paused')
     assert.equal(paused.consentId, beforeLifecycle.consentId)
     assert.deepEqual(paused.authorization, beforeLifecycle.authorization)
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     assert.equal(await button(page, 'Aggiorna questa fonte').isDisabled(), true)
     const denied = await request(`${base}/sync`, 'POST', {}, 409)
     assert.equal(denied.code, 'connection_paused')
@@ -158,7 +181,7 @@ async function noOverflow(page, label) {
     assert.equal(renewed.state, 'paused')
     assert.equal(renewed.paused, true)
     assert.equal(renewed.consentId, beforeLifecycle.consentId)
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     check('Provider renewal keeps the chosen pause and preserves financial facts')
 
     // Another accepted command changes the revision while this page keeps its older decision.
@@ -192,7 +215,7 @@ async function noOverflow(page, label) {
       .waitFor()
     assert.equal(resumed.state, 'active')
     assert.equal(resumed.paused, false)
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     const events = await request(`${base}/consent-events`)
     assert.deepEqual(events.slice(0, beforeEvents.length), beforeEvents)
     assert.deepEqual(
@@ -248,7 +271,7 @@ async function noOverflow(page, label) {
       refused.status >= 400 && refused.status < 500,
       'The actual server must refuse unknown institution selection',
     )
-    assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
+    assertFinance(await request('/v1/demo'), initial)
     await unknownCard.getByRole('button', { name: 'Aggiungi il saldo a mano', exact: true }).click()
     await page.getByRole('tab', { name: 'Importa CSV', exact: true }).waitFor()
     check(

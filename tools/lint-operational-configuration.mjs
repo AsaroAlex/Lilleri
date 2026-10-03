@@ -13,6 +13,12 @@ export const OPERATIONAL_CONFIGURATION_CONSUMERS = Object.freeze([
   'apps/api/src/notifications.ts',
   'apps/api/src/notifications-maintenance.ts',
   'apps/api/src/understanding-service.ts',
+  'apps/api/src/understanding-persistence.ts',
+  'apps/api/src/sync-jobs.ts',
+  'apps/api/src/sync-maintenance.ts',
+  'apps/api/src/sync-foreground.ts',
+  'apps/api/src/sync-provider.ts',
+  'apps/api/src/recurring.ts',
   'apps/api/src/server.ts',
 ])
 const fields = new Set([
@@ -33,6 +39,29 @@ const fields = new Set([
   'occurrenceToleranceDays',
   'maxForecastOccurrences',
   'horizonDays',
+  'jobsPerProfile',
+  'retryBaseMs',
+  'maxPagesPerSlice',
+  'maxPagesPerJob',
+  'maxRecordsPerJob',
+  'maxStageBytes',
+  'maxAccounts',
+  'pageSize',
+  'trailingDays',
+  'windowDays',
+  'inactiveAfterDays',
+  'freeDailyRefreshes',
+  'maxWaitSlices',
+  'stageRetentionMs',
+  'foregroundDebounceMs',
+  'foregroundSessionLimit',
+  'toleranceDays',
+  'minimumOccurrences',
+  'longPeriodMinimumOccurrences',
+  'fixedAmountToleranceBps',
+  'variableAmountBandBps',
+  'maxProjectedOccurrences',
+  'historyPageSize',
 ])
 function keyName(node) {
   if (node?.type === 'Identifier') return node.name
@@ -104,6 +133,10 @@ function containsLiteralDefault(expression, constants, seen = new Set()) {
     )
   if (node?.type === 'ArrayExpression')
     return node.elements.some((item) => containsLiteralDefault(item, constants, seen))
+  if (node?.type === 'ObjectExpression')
+    return node.properties.some((item) =>
+      containsLiteralDefault(item.type === 'ObjectProperty' ? item.value : item, constants, seen),
+    )
   if (node?.type === 'SpreadElement') return containsLiteralDefault(node.argument, constants, seen)
   if (node?.type === 'LogicalExpression' && ['??', '||'].includes(node.operator))
     return containsLiteralDefault(node.right, constants, seen)

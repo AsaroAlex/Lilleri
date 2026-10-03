@@ -3,6 +3,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { type DatabaseHandle, openDatabase, schema } from '@lilleri/database'
+import { DEFAULT_RECURRING_POLICY } from '@lilleri/engines'
 import { MockItalianProvider } from '@lilleri/financial-providers'
 import { eq, sql } from 'drizzle-orm'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
@@ -16,7 +17,11 @@ import {
   enqueueRevocation,
   revocationsForProfile,
 } from '../src/revocation-outbox.js'
-import { DEFAULT_RUNTIME_CONFIGURATION, RuntimeConfigurationStore } from '../src/runtime-config.js'
+import {
+  DEFAULT_RUNTIME_CONFIGURATION,
+  DEFAULT_SYNC_CONFIGURATION,
+  RuntimeConfigurationStore,
+} from '../src/runtime-config.js'
 import { runtimeConfigurationOperatorArguments } from '../src/runtime-config-operator.js'
 import {
   runtimeConfigurationHead,
@@ -50,6 +55,89 @@ class Timer implements RetentionTimer {
 }
 
 describe('audited operational runtime configuration', () => {
+  test('preserves historical understanding persistence absence and validates bounded history transport pages', async () => {
+    const { understandingPersistence: _persistence, ...legacy } = DEFAULT_RUNTIME_CONFIGURATION,
+      first = await store.ensure(legacy)
+    expect(first.values).not.toHaveProperty('understandingPersistence')
+    expect((await store.read()).digest).toBe(first.digest)
+    const next = await store.update(first.revision, DEFAULT_RUNTIME_CONFIGURATION, audit)
+    expect(next.values.understandingPersistence).toEqual({ historyPageSize: 20 })
+    for (const historyPageSize of [0, 101, 1.5])
+      await expect(
+        store.update(
+          next.revision,
+          { ...DEFAULT_RUNTIME_CONFIGURATION, understandingPersistence: { historyPageSize } },
+          audit,
+        ),
+      ).rejects.toMatchObject({ code: 'configuration_invalid' })
+    expect((await store.read()).revision).toBe(next.revision)
+  })
+  test('preserves absent sync and recurring policy digests and validates captured operating bounds', async () => {
+    const { sync: _sync, recurring: _recurring, ...legacy } = DEFAULT_RUNTIME_CONFIGURATION
+    const first = await store.ensure(legacy)
+    expect(first.values).not.toHaveProperty('sync')
+    expect(first.values).not.toHaveProperty('recurring')
+    expect((await store.read()).digest).toBe(first.digest)
+    const updated = await store.update(1, DEFAULT_RUNTIME_CONFIGURATION, audit)
+    expect(updated.values.sync).toEqual(DEFAULT_SYNC_CONFIGURATION)
+    expect(updated.values.recurring).toEqual(DEFAULT_RUNTIME_CONFIGURATION.recurring)
+    expect(Object.isFrozen(DEFAULT_SYNC_CONFIGURATION)).toBe(true)
+    expect(Object.isFrozen(DEFAULT_RUNTIME_CONFIGURATION.recurring?.toleranceDays)).toBe(true)
+    for (const invalid of [
+      { leaseMs: 999 },
+      { attemptTimeoutMs: 30001 },
+      { maxPagesPerSlice: 0 },
+      { maxRecordsPerJob: 100001 },
+      { windowDays: 15 },
+      { trailingDays: 6 },
+      { freeDailyRefreshes: 2 },
+      { stageRetentionMs: 2592000001 },
+      { maxStageBytes: 33554433 },
+      { foregroundDebounceMs: 999 },
+      { foregroundSessionLimit: 10001 },
+      { unknownProviderUnlimited: true },
+    ])
+      await expect(
+        store.update(
+          updated.revision,
+          { ...DEFAULT_RUNTIME_CONFIGURATION, sync: { ...DEFAULT_SYNC_CONFIGURATION, ...invalid } },
+          audit,
+        ),
+      ).rejects.toThrow()
+    for (const invalid of [
+      { minimumOccurrences: 2 },
+      { longPeriodMinimumOccurrences: 4 },
+      { fixedAmountToleranceBps: 4000, variableAmountBandBps: 3000 },
+      { horizonDays: 367 },
+      { maxProjectedOccurrences: 10001 },
+      { toleranceDays: { ...DEFAULT_RECURRING_POLICY.toleranceDays, weekly: 32 } },
+      { calibratedPrecision: 0.99 },
+    ])
+      await expect(
+        store.update(
+          updated.revision,
+          {
+            ...DEFAULT_RUNTIME_CONFIGURATION,
+            recurring: { ...DEFAULT_RECURRING_POLICY, ...invalid },
+          },
+          audit,
+        ),
+      ).rejects.toThrow()
+    expect((await store.read()).revision).toBe(updated.revision)
+    expect((await store.history())[0]?.digest).toBe(first.digest)
+    const {
+      foregroundDebounceMs: _debounce,
+      foregroundSessionLimit: _sessionLimit,
+      ...olderSync
+    } = DEFAULT_SYNC_CONFIGURATION
+    const historicalSync = await store.update(
+      updated.revision,
+      { ...DEFAULT_RUNTIME_CONFIGURATION, sync: olderSync },
+      audit,
+    )
+    expect(historicalSync.values.sync).not.toHaveProperty('foregroundDebounceMs')
+    expect((await store.read()).digest).toBe(historicalSync.digest)
+  })
   test('keeps historical understanding policy absent and rejects values outside synthetic operating bounds', async () => {
     const { understanding: _understanding, ...legacy } = DEFAULT_RUNTIME_CONFIGURATION
     const first = await store.ensure(legacy)

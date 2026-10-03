@@ -39,6 +39,12 @@ export interface MappedCsvPreviewDto {
   readonly format: 'lilleri.csv-preview.v1'
   readonly fileDigest: string | null
   readonly mappingDigest: string | null
+  readonly workbook?: {
+    readonly format: 'xlsx'
+    readonly workbookDigest: string
+    readonly sheet: string
+    readonly headerRow: number
+  }
   readonly header: readonly string[]
   readonly rowCount: number
   readonly rows: readonly {
@@ -90,9 +96,24 @@ export interface SavedCsvMappingDto {
 }
 export interface MappedCsvImportInput {
   readonly accountId: string
-  readonly csv: string
+  readonly csv?: string
+  readonly xlsx?: {
+    readonly base64: string
+    readonly sheet: string
+    readonly headerRow: number
+  }
   readonly mapping?: MappedCsvMappingDto
   readonly mappingId?: string
+}
+export interface MappedXlsxLayoutDto {
+  readonly format: 'lilleri.xlsx-layout.v1'
+  readonly workbookDigest: string | null
+  readonly sheets: readonly { readonly name: string; readonly rows: number }[]
+  readonly selectedSheet: string | null
+  readonly headerRow: number | null
+  readonly header: readonly string[]
+  readonly rowCount: number
+  readonly errors: readonly MappedCsvIssueDto[]
 }
 export interface MappedCsvReportDto {
   readonly inserted: number
@@ -105,6 +126,11 @@ type Request = <T>(path: string, init?: RequestInit) => Promise<T>
 /** The provided request function carries the parent financial identity/epoch boundary. */
 export function createMappedImportClient(request: Request) {
   return {
+    workbookLayout: (input: { base64: string; sheet?: string; headerRow?: number }) =>
+      request<MappedXlsxLayoutDto>('/v1/imports/mapped/workbook', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
     layout: (input: { csv: string; delimiter: MappedCsvMappingDto['delimiter'] }) =>
       request<MappedCsvLayoutDto>('/v1/imports/mapped/layout', {
         method: 'POST',

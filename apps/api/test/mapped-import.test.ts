@@ -7,6 +7,11 @@ import { type CsvMapping, MockItalianProvider } from '@lilleri/financial-provide
 import { eq, sql } from 'drizzle-orm'
 import { strFromU8, unzipSync } from 'fflate'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import {
+  workbookFiles,
+  xlsxFixture,
+  zipFixture,
+} from '../../../packages/financial-providers/src/xlsx-fixture.js'
 import { createApp } from '../src/app.js'
 import { ProfileEncryption } from '../src/encryption.js'
 import { createLocalSyntheticKeyManagement } from '../src/encryption-local.js'
@@ -20,12 +25,19 @@ import {
 } from '../src/mapped-import-schema.js'
 import { cleanupExpiredObservationPayloads, sourceObservationsForExport } from '../src/retention.js'
 import { DemoService } from '../src/service.js'
+import { readSourceFactEpochs, recordSourceFacts } from '../src/source-erasure.js'
+import {
+  createSourceErasureJournal,
+  type SourceErasureJournal,
+} from '../src/source-erasure-journal.js'
 
 let handle: DatabaseHandle
 let encryption: ProfileEncryption
 let vault: string
 const profiles: string[] = []
 const apps: Awaited<ReturnType<typeof createApp>>[] = []
+const journals: SourceErasureJournal[] = []
+const journalDirectories: string[] = []
 const now = () => '2026-10-03T12:00:00.000Z'
 const mapping: CsvMapping = {
   format: 'lilleri.csv-mapping.v1',
@@ -45,15 +57,29 @@ beforeAll(async () => {
 })
 afterAll(async () => {
   for (const app of apps) await app.close()
+  for (const journal of journals) journal.close()
   for (const profileId of profiles)
     await handle.db.delete(schema.profiles).where(eq(schema.profiles.id, profileId))
   await handle.close()
   await rm(vault, { recursive: true, force: true })
+  for (const directory of journalDirectories) await rm(directory, { recursive: true, force: true })
 })
-async function fixture(clock = now) {
+async function fixture(clock = now, withSourceJournal = false) {
   const profileId = `mapped_${randomUUID()}`
   profiles.push(profileId)
   const provider = new MockItalianProvider()
+  let journal: SourceErasureJournal | undefined
+  if (withSourceJournal) {
+    const directory = await mkdtemp(join(tmpdir(), 'lilleri-mapped-source-journal-'))
+    journalDirectories.push(directory)
+    journal = await createSourceErasureJournal({
+      directory,
+      anchorDirectory: vault,
+      keys: encryption.keys,
+      mode: 'demo',
+    })
+    journals.push(journal)
+  }
   const app = await createApp({
     db: handle.db,
     financialScope: handle.withProfile,
@@ -63,6 +89,7 @@ async function fixture(clock = now) {
     now: clock,
     provider,
     encryption,
+    ...(journal ? { sourceErasureJournal: journal } : {}),
   })
   apps.push(app)
   const response = await app.inject({
@@ -79,8 +106,20 @@ async function fixture(clock = now) {
   })
   expect(response.statusCode, response.payload).toBe(201)
   const account = response.json<{ id: string; balanceMinor: string; revision: number }>()
-  const source = new DemoService(handle.db, profileId, provider, clock, encryption)
-  return { profileId, account, source, mapped: new MappedImportService(source), app }
+  const source = new DemoService(
+    handle.db,
+    profileId,
+    provider,
+    clock,
+    encryption,
+    undefined,
+    undefined,
+    journal
+      ? (db, facts, at) =>
+          recordSourceFacts(db, journal as SourceErasureJournal, facts, at, encryption)
+      : undefined,
+  )
+  return { profileId, account, source, mapped: new MappedImportService(source), app, journal }
 }
 async function counts(profileId: string) {
   const result: Record<string, number> = {}
@@ -117,6 +156,91 @@ function command(
 }
 
 describe('mapped CSV imports with encrypted provenance and atomic reviewed commits', () => {
+  test.each(['csv', 'xlsx'] as const)(
+    '%s HTTP commit with an advancing clock and current journal shares one signed revision instant and retries once',
+    async (format) => {
+      let tick = Date.parse(now())
+      const clock = () => {
+        tick += 1_000
+        return new Date(tick).toISOString()
+      }
+      const f = await fixture(clock, true)
+      if (!f.journal) throw new Error('Current synthetic journal is required')
+      const rows = [
+        ['Data', 'Valuta', 'Importo', 'Descrizione'],
+        ['02/10/2026', '03/10/2026', '-12,34', 'Acquisto sintetico'],
+        ['02/10/2026', '03/10/2026', '-2,00', 'Secondo acquisto sintetico'],
+      ]
+      const input = {
+        accountId: f.account.id,
+        mapping,
+        ...(format === 'csv'
+          ? { csv: `${rows.map((row) => row.join(';')).join('\n')}\n` }
+          : {
+              xlsx: {
+                base64: xlsxFixture({ Movimenti: rows }).toString('base64'),
+                sheet: 'Movimenti',
+                headerRow: 1,
+              },
+            }),
+      }
+      const preview = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/preview',
+        payload: input,
+      })
+      expect(preview.statusCode, preview.payload).toBe(200)
+      expect(preview.json()).toMatchObject({ canImport: true, rowCount: 2, errors: [] })
+      const request = {
+        ...input,
+        previewRevision: preview.json().previewRevision,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: false,
+      }
+      const accepted = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/commit',
+        payload: request,
+      })
+      expect(accepted.statusCode, accepted.payload).toBe(200)
+      const result = accepted.json<{ importedAt: string; inserted: number }>()
+      expect(result.inserted).toBe(2)
+      const proofs = await handle.withProfile(f.profileId, (db) =>
+        readSourceFactEpochs(db, f.profileId, encryption, f.journal as SourceErasureJournal),
+      )
+      const importedProofs = proofs.filter(
+        (proof) =>
+          proof.kind !== 'manual_command' ||
+          proof.subjectId === request.requestId ||
+          proof.subjectId.startsWith('csv_'),
+      )
+      expect(importedProofs).toHaveLength(8)
+      expect(new Set(importedProofs.map((proof) => proof.recordedAt))).toEqual(
+        new Set([result.importedAt]),
+      )
+      for (const table of [mappedImportProvenance, manualCommands, manualBalanceEvents] as const) {
+        const audit = await handle.db.select().from(table).where(eq(table.profileId, f.profileId))
+        const imported = audit.filter((row) => !('operation' in row) || row.operation === 'import')
+        expect(imported.length).toBeGreaterThan(0)
+        expect(imported.every((row) => row.createdAt === result.importedAt)).toBe(true)
+      }
+      const before = await counts(f.profileId)
+      const repeat = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/commit',
+        payload: request,
+      })
+      expect(repeat.statusCode, repeat.payload).toBe(200)
+      expect(repeat.json()).toEqual(result)
+      expect(await counts(f.profileId)).toEqual(before)
+      const [account] = await handle.db
+        .select()
+        .from(schema.accounts)
+        .where(eq(schema.accounts.id, f.account.id))
+      expect(account?.balanceMinor).toBe(8566n)
+    },
+  )
+
   test('preview uses explicit locale and value date without writing records or keys', async () => {
     const f = await fixture(),
       before = await counts(f.profileId)
@@ -661,5 +785,333 @@ describe('mapped CSV imports with encrypted provenance and atomic reviewed commi
     expect(response.statusCode, response.payload).toBe(200)
     expect(response.json()).toMatchObject({ canImport: true, errors: [], rowCount: 1 })
     expect(JSON.stringify(response.json().rows[0].provenance.rawFields)).not.toContain('Ignorata')
+  })
+
+  test('XLSX discovery and explicit sheet/header preview are read-only and preserve physical source rows', async () => {
+    const f = await fixture(),
+      before = await counts(f.profileId),
+      bytes = xlsxFixture({
+        Movimenti: [
+          ['Titolo'],
+          ['Nota'],
+          ['Data', 'Valuta', 'Importo', 'Descrizione'],
+          ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Sintetico'],
+          [null, null, null, null],
+          ['02/10/2026', '03/10/2026', { number: '-2.00' }, 'Due\nrighe'],
+        ],
+        Altro: [
+          ['Data', 'Valuta', 'Importo', 'Descrizione'],
+          ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Sintetico'],
+        ],
+      }),
+      base64 = bytes.toString('base64')
+    const discovery = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/workbook',
+      payload: { base64 },
+    })
+    expect(discovery.statusCode, discovery.payload).toBe(200)
+    expect(discovery.json()).toMatchObject({
+      sheets: [
+        { name: 'Movimenti', rows: 6 },
+        { name: 'Altro', rows: 2 },
+      ],
+      selectedSheet: null,
+      headerRow: null,
+      header: [],
+      errors: [],
+    })
+    const selected = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/workbook',
+      payload: { base64, sheet: 'Movimenti', headerRow: 3 },
+    })
+    expect(selected.statusCode, selected.payload).toBe(200)
+    expect(selected.json()).toMatchObject({
+      header: ['Data', 'Valuta', 'Importo', 'Descrizione'],
+      rowCount: 2,
+      errors: [],
+    })
+    const request = {
+        accountId: f.account.id,
+        mapping,
+        xlsx: { base64, sheet: 'Movimenti', headerRow: 3 },
+      },
+      result = await f.mapped.preview(request)
+    expect(result.errors).toEqual([])
+    expect(result.rows.map((row) => row.rowNumber)).toEqual([4, 6])
+    expect(result.rows[0]?.provenance).toMatchObject({
+      valueOn: '2026-10-03',
+      rawFields: { amount: '-12.34' },
+    })
+    expect(
+      (
+        await f.mapped.preview({
+          ...request,
+          xlsx: { ...request.xlsx, sheet: 'Altro', headerRow: 1 },
+        })
+      ).rows[0]?.record.id,
+    ).not.toBe(result.rows[0]?.record.id)
+    expect(await counts(f.profileId)).toEqual(before)
+  })
+
+  test('actual scoped XLSX commit keeps exact original tokens and permanent workbook provenance through raw expiry and both owned export formats', async () => {
+    const f = await fixture(),
+      bytes = xlsxFixture({
+        Movimenti: [
+          ['Titolo'],
+          ['Nota'],
+          ['Data', 'Valuta', 'Importo', 'Descrizione'],
+          ['02/10/2026', '03/10/2026', { number: '-90071992547409.93' }, 'Sintetico'],
+          [null, null, null, null],
+          ['02/10/2026', '03/10/2026', { number: '-2.00' }, 'Due\nrighe'],
+        ],
+      }),
+      request = {
+        accountId: f.account.id,
+        mapping,
+        xlsx: { base64: bytes.toString('base64'), sheet: 'Movimenti', headerRow: 3 },
+      },
+      previewResponse = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/preview',
+        payload: request,
+      })
+    expect(previewResponse.statusCode, previewResponse.payload).toBe(200)
+    const preview = previewResponse.json(),
+      command = {
+        ...request,
+        previewRevision: preview.previewRevision,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: false,
+      },
+      response = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/commit',
+        payload: command,
+      })
+    expect(response.statusCode, response.payload).toBe(200)
+    expect(response.json()).toMatchObject({ inserted: 2 })
+    const transactions = await handle.db
+      .select()
+      .from(schema.transactions)
+      .where(eq(schema.transactions.profileId, f.profileId))
+    expect(transactions.map((row) => row.amountMinor.toString()).sort()).toEqual([
+      '-200',
+      '-9007199254740993',
+    ])
+    const observations = await sourceObservationsForExport(
+      handle.db,
+      f.profileId,
+      now(),
+      encryption,
+    )
+    expect(observations).toHaveLength(2)
+    expect(JSON.stringify(observations)).not.toContain(bytes.toString('base64'))
+    expect(observations.find((row) => row.payload.rowNumber === 4)?.payload).toMatchObject({
+      format: 'lilleri.xlsx-observation.v1',
+      workbook: { format: 'xlsx', sheet: 'Movimenti', headerRow: 3 },
+      provenance: { rawFields: { amount: '-90071992547409.93' } },
+    })
+    const rows = await handle.db
+      .select()
+      .from(mappedImportProvenance)
+      .where(eq(mappedImportProvenance.profileId, f.profileId))
+    expect(rows.map((row) => row.rowNumber).sort()).toEqual([4, 6])
+    for (const row of rows)
+      expect(row).toMatchObject({
+        fileFormat: 'xlsx',
+        workbookDigest: preview.workbook.workbookDigest,
+        worksheet: 'Movimenti',
+        headerRow: 3,
+        fileDigest: preview.fileDigest,
+        valueOn: '2026-10-03',
+      })
+    const before = await counts(f.profileId)
+    expect(await f.mapped.commit(command)).toMatchObject({ inserted: 2 })
+    expect(await counts(f.profileId)).toEqual(before)
+    const fresh = await f.mapped.preview(request)
+    expect(
+      await f.mapped.commit({
+        ...command,
+        previewRevision: fresh.previewRevision,
+        requestId: randomUUID(),
+      }),
+    ).toMatchObject({ inserted: 0, unchanged: 2 })
+    expect(
+      await handle.db
+        .select()
+        .from(schema.transactions)
+        .where(eq(schema.transactions.profileId, f.profileId)),
+    ).toEqual(transactions)
+    expect(
+      await cleanupExpiredObservationPayloads(handle.db, f.profileId, '2026-11-03T12:00:00.000Z'),
+    ).toEqual({ deleted: 2 })
+    const json = await f.app.inject('/v1/export')
+    expect(json.statusCode, json.payload).toBe(200)
+    const origins = json.json().mappedImports.provenance
+    expect(origins).toHaveLength(2)
+    for (const row of origins)
+      expect(row).toMatchObject({
+        fileFormat: 'xlsx',
+        workbookDigest: preview.workbook.workbookDigest,
+        worksheet: 'Movimenti',
+        headerRow: 3,
+      })
+    const archive = await f.app.inject('/v1/export/archive')
+    expect(archive.statusCode, archive.payload).toBe(200)
+    const data = unzipSync(archive.rawPayload)['data.json']
+    if (!data) throw new Error('Owned archive must include data.json')
+    expect(JSON.parse(strFromU8(data)).mappedImports.provenance).toEqual(origins)
+  })
+
+  test('XLSX duplicate acknowledgement, stale previews and receipts bind the original workbook selection without automatic retry', async () => {
+    const f = await fixture(),
+      rows = [
+        ['Data', 'Valuta', 'Importo', 'Descrizione'],
+        ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Acquisto'],
+        ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Acquisto'],
+      ] as const,
+      request = {
+        accountId: f.account.id,
+        mapping,
+        xlsx: {
+          base64: xlsxFixture({ Movimenti: rows, Altro: rows }).toString('base64'),
+          sheet: 'Movimenti',
+          headerRow: 1,
+        },
+      },
+      preview = await f.mapped.preview(request),
+      command = {
+        ...request,
+        previewRevision: preview.previewRevision,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: false,
+      }
+    await expect(f.mapped.commit(command)).rejects.toMatchObject({
+      code: 'import_duplicate_review_required',
+    })
+    expect((await counts(f.profileId)).transactions).toBe(0)
+    await f.mapped.commit({ ...command, acknowledgeGeneratedDuplicates: true })
+    expect((await counts(f.profileId)).transactions).toBe(2)
+    await expect(
+      f.mapped.commit({
+        ...command,
+        acknowledgeGeneratedDuplicates: true,
+        xlsx: { ...request.xlsx, sheet: 'Altro' },
+      }),
+    ).rejects.toMatchObject({ code: 'idempotency_key_reused' })
+    await expect(
+      f.mapped.commit({
+        ...command,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: true,
+      }),
+    ).rejects.toMatchObject({ code: 'import_preview_stale' })
+    expect((await counts(f.profileId)).transactions).toBe(2)
+  })
+
+  test('saved XLSX column mappings preserve external identity compatibility with the canonical CSV importer', async () => {
+    const f = await fixture(),
+      externalMapping: CsvMapping = {
+        ...mapping,
+        columns: { ...mapping.columns, externalId: 'ID' },
+      },
+      saved = await f.mapped.create({
+        accountId: f.account.id,
+        name: 'Colonne Excel',
+        mapping: externalMapping,
+      }),
+      request = {
+        accountId: f.account.id,
+        mappingId: saved.id,
+        xlsx: {
+          base64: xlsxFixture({
+            Movimenti: [
+              ['Data', 'Valuta', 'Importro', 'Descrizione', 'ID'],
+              ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Acquisto sintetico', 'shared'],
+            ],
+          }).toString('base64'),
+          sheet: 'Movimenti',
+          headerRow: 1,
+        },
+      }
+    // A renamed source column must be rejected before any records are written.
+    expect((await f.mapped.preview(request)).errors[0]?.code).toBe('missing_column')
+    const corrected = {
+        ...request,
+        xlsx: {
+          ...request.xlsx,
+          base64: xlsxFixture({
+            Movimenti: [
+              ['Data', 'Valuta', 'Importo', 'Descrizione', 'ID'],
+              ['02/10/2026', '03/10/2026', { number: '-12.34' }, 'Acquisto sintetico', 'shared'],
+            ],
+          }).toString('base64'),
+        },
+      },
+      preview = await f.mapped.preview(corrected)
+    await f.mapped.commit({
+      ...corrected,
+      previewRevision: preview.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+    })
+    expect(
+      await f.source.importCsv(
+        f.account.id,
+        'id,date,amount,currency,description,merchant,reference\nshared,2026-10-02,-12.34,EUR,Acquisto sintetico,,\n',
+      ),
+    ).toMatchObject({ inserted: 0, unchanged: 1 })
+    expect((await counts(f.profileId)).transactions).toBe(1)
+  })
+
+  test('HTTP XLSX rejection bounds base64 and XML before writes and returns only codes for financial cells', async () => {
+    const f = await fixture(),
+      before = await counts(f.profileId),
+      files = workbookFiles({
+        Movimenti: [
+          ['Data', 'Valuta', 'Importo', 'Descrizione'],
+          [
+            '02/10/2026',
+            '03/10/2026',
+            { xml: '<f>PRIVATE_FINANCIAL_CELL()</f><v>10</v>' },
+            'PRIVATE_DESCRIPTION',
+          ],
+        ],
+      }),
+      request = {
+        accountId: f.account.id,
+        mapping,
+        xlsx: { base64: zipFixture(files).toString('base64'), sheet: 'Movimenti', headerRow: 1 },
+      }
+    const preview = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/preview',
+      payload: request,
+    })
+    expect(preview.statusCode, preview.payload).toBe(200)
+    expect(preview.json()).toMatchObject({ rows: [], errors: [{ code: 'xlsx_formula' }] })
+    expect(preview.payload).not.toContain('PRIVATE_')
+    const mixed = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/preview',
+      payload: { ...request, csv },
+    })
+    expect(mixed.statusCode).toBe(400)
+    const invalidBase64 = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/workbook',
+      payload: { base64: '@PRIVATE_CELL@' },
+    })
+    expect(invalidBase64.statusCode).toBe(422)
+    expect(invalidBase64.payload).not.toContain('PRIVATE_CELL')
+    const tooLarge = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/workbook',
+      payload: { base64: 'A'.repeat(750_000) },
+    })
+    expect(tooLarge.statusCode).toBe(413)
+    expect(await counts(f.profileId)).toEqual(before)
   })
 })

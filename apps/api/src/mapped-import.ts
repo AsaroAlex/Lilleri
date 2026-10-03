@@ -4,8 +4,11 @@ import {
   type CsvMapping,
   csvMappingDigest,
   inspectCsvLayout,
+  inspectXlsxLayout,
   previewMappedCsv,
+  previewMappedXlsx,
   validateCsvMapping,
+  XLSX_IMPORT_LIMITS,
 } from '@lilleri/financial-providers'
 import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
@@ -32,15 +35,23 @@ import { DemoService } from './service.js'
 
 export { csvMappingDto, mappedPreviewDto, savedCsvMappingDto } from './mapped-import-dto.js'
 
+const workbookInput = z.strictObject({
+  base64: z.string().min(1).max(XLSX_IMPORT_LIMITS.base64Characters),
+  sheet: z.string().min(1).max(128),
+  headerRow: z.number().int().min(1).max(XLSX_IMPORT_LIMITS.headerRows),
+})
 const importBase = z.strictObject({
   accountId: identifier,
-  csv: z.string().min(1).max(262_144),
+  csv: z.string().min(1).max(262_144).optional(),
+  xlsx: workbookInput.optional(),
   mapping: csvMappingDto.optional(),
   mappingId: identifier.optional(),
 })
 const importInput = importBase.refine(
-  (value) => (value.mapping !== undefined) !== (value.mappingId !== undefined),
-  'Specify an inline mapping or a saved mapping.',
+  (value) =>
+    (value.mapping !== undefined) !== (value.mappingId !== undefined) &&
+    (value.csv !== undefined) !== (value.xlsx !== undefined),
+  'Specify one file and an inline mapping or a saved mapping.',
 )
 const commitInput = importBase
   .extend({
@@ -49,8 +60,10 @@ const commitInput = importBase
     acknowledgeGeneratedDuplicates: z.boolean(),
   })
   .refine(
-    (value) => (value.mapping !== undefined) !== (value.mappingId !== undefined),
-    'Specify an inline mapping or a saved mapping.',
+    (value) =>
+      (value.mapping !== undefined) !== (value.mappingId !== undefined) &&
+      (value.csv !== undefined) !== (value.xlsx !== undefined),
+    'Specify one file and an inline mapping or a saved mapping.',
   )
 const reportDto = z.strictObject({
   inserted: z.number().int().min(0),
@@ -100,6 +113,21 @@ const context = (profileId: string, table: string, column: string, rowId: string
   column,
   rowId,
 })
+function workbookBytes(base64: string): Buffer {
+  if (
+    base64.length > XLSX_IMPORT_LIMITS.base64Characters ||
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)
+  )
+    throw invalid()
+  const bytes = Buffer.from(base64, 'base64')
+  if (
+    !bytes.length ||
+    bytes.length > XLSX_IMPORT_LIMITS.compressedBytes ||
+    bytes.toString('base64') !== base64
+  )
+    throw invalid()
+  return bytes
+}
 
 export class MappedImportService {
   constructor(readonly source: DemoService) {}
@@ -322,7 +350,14 @@ export class MappedImportService {
   async previewAt(db: Database, input: ImportInput) {
     const account = await this.account(db, input.accountId),
       selected = await this.resolve(db, input),
-      preview = previewMappedCsv(input.csv, account.providerAccountId, selected.mapping)
+      preview = input.xlsx
+        ? await previewMappedXlsx(
+            workbookBytes(input.xlsx.base64),
+            account.providerAccountId,
+            selected.mapping,
+            { sheet: input.xlsx.sheet, headerRow: input.xlsx.headerRow },
+          )
+        : previewMappedCsv(input.csv ?? '', account.providerAccountId, selected.mapping)
     const ledger = await db
       .select({
         id: schema.transactions.id,
@@ -380,7 +415,17 @@ export class MappedImportService {
   async commit(input: CommitInput) {
     const body = {
       accountId: input.accountId,
-      fileDigest: createHash('sha256').update(input.csv).digest('hex'),
+      fileDigest: input.xlsx
+        ? hash({
+            workbookDigest: createHash('sha256')
+              .update(workbookBytes(input.xlsx.base64))
+              .digest('hex'),
+            sheet: input.xlsx.sheet,
+            headerRow: input.xlsx.headerRow,
+          })
+        : createHash('sha256')
+            .update(input.csv ?? '')
+            .digest('hex'),
       mappingDigest: input.mapping ? csvMappingDigest(validateCsvMapping(input.mapping)) : null,
       mappingId: input.mappingId ?? null,
       previewRevision: input.previewRevision,
@@ -391,7 +436,8 @@ export class MappedImportService {
       this.profileId,
       this.source.now,
       this.source.encryption,
-    ).command('import', input.requestId, body, async (tx) => {
+      this.source.recordSourceFacts,
+    ).command('import', input.requestId, body, async (tx, at) => {
       const { dto } = await this.previewAt(tx, input)
       if (dto.previewRevision !== input.previewRevision) throw stale()
       if (dto.errors.length || !dto.rows.length) throw invalid()
@@ -405,16 +451,19 @@ export class MappedImportService {
         tx,
         this.profileId,
         this.source.provider,
-        this.source.now,
+        () => at,
         this.source.encryption,
         this.source.connectionLifecycleConfiguration,
+        this.source.recurringPolicy,
+        this.source.recordSourceFacts,
       )
       return source.importRecords(
         input.accountId,
         dto.rows.map((row) => row.record as Parameters<DemoService['importRecords']>[1][number]),
         {
           sourcePayloads: dto.rows.map((row) => ({
-            format: 'lilleri.csv-observation.v1',
+            format: dto.workbook ? 'lilleri.xlsx-observation.v1' : 'lilleri.csv-observation.v1',
+            ...(dto.workbook ? { workbook: dto.workbook } : {}),
             fileDigest: dto.fileDigest,
             mappingDigest: dto.mappingDigest,
             record: row.record,
@@ -436,7 +485,11 @@ export class MappedImportService {
                 rowNumber: row.rowNumber,
                 identity: row.provenance.identity,
                 valueOn: row.provenance.valueOn,
-                createdAt: this.source.now(),
+                fileFormat: dto.workbook ? 'xlsx' : null,
+                workbookDigest: dto.workbook?.workbookDigest ?? null,
+                worksheet: dto.workbook?.sheet ?? null,
+                headerRow: dto.workbook?.headerRow ?? null,
+                createdAt: at,
               })
               .onConflictDoNothing()
           },
@@ -514,16 +567,53 @@ export function registerMappedImportRoutes(
     async (request) => inspectCsvLayout(request.body.csv, request.body.delimiter),
   )
   api.post(
+    '/v1/imports/mapped/workbook',
+    {
+      bodyLimit: XLSX_IMPORT_LIMITS.requestBytes,
+      schema: {
+        body: workbookInput
+          .partial({ sheet: true, headerRow: true })
+          .refine(
+            (value) => (value.sheet !== undefined) === (value.headerRow !== undefined),
+            'Specify both sheet and header row.',
+          ),
+        response: {
+          200: z.strictObject({
+            format: z.literal('lilleri.xlsx-layout.v1'),
+            workbookDigest: digestSchema.nullable(),
+            sheets: z.array(z.strictObject({ name: z.string(), rows: z.number().int().min(0) })),
+            selectedSheet: z.string().nullable(),
+            headerRow: z.number().int().positive().nullable(),
+            header: z.array(z.string()),
+            rowCount: z.number().int().min(0),
+            errors: z.array(issueDto),
+          }),
+          ...errors,
+        },
+      },
+    },
+    async (request) =>
+      inspectXlsxLayout(
+        workbookBytes(request.body.base64),
+        request.body.sheet !== undefined && request.body.headerRow !== undefined
+          ? { sheet: request.body.sheet, headerRow: request.body.headerRow }
+          : undefined,
+      ),
+  )
+  api.post(
     '/v1/imports/mapped/preview',
     {
-      bodyLimit: 600_000,
+      bodyLimit: XLSX_IMPORT_LIMITS.requestBytes,
       schema: { body: importInput, response: { 200: mappedPreviewDto, ...errors } },
     },
     async (request) => service(request).preview(request.body),
   )
   api.post(
     '/v1/imports/mapped/commit',
-    { bodyLimit: 600_000, schema: { body: commitInput, response: { 200: reportDto, ...errors } } },
+    {
+      bodyLimit: XLSX_IMPORT_LIMITS.requestBytes,
+      schema: { body: commitInput, response: { 200: reportDto, ...errors } },
+    },
     async (request) => service(request).commit(request.body),
   )
 }

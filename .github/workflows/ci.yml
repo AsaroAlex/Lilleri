@@ -44,6 +44,13 @@ jobs:
         run: pnpm exec biome ci .
       - name: Typecheck
         run: pnpm typecheck
+      - name: Configuration, copy and evaluation contracts
+        run: |
+          pnpm test:configuration-lint
+          pnpm lint:configuration
+          pnpm test:copy-lint
+          pnpm lint:copy
+          pnpm test:evaluation-contract
       - name: Zero-investment bootstrap and economics
         run: pnpm test:bootstrap
       - name: Unit tests

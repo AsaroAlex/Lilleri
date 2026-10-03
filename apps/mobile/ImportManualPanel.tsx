@@ -9,9 +9,11 @@ import {
 } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import { type CurrencyCode, parseDecimal } from '@lilleri/domain'
-import { formatMoney, fromJson } from '@lilleri/money'
+import { fromJson } from '@lilleri/money'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import type { Translator } from './src/i18n'
+import { useI18n } from './src/i18n/context'
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>
 type CsvReport = {
@@ -23,6 +25,8 @@ type CsvReport = {
 }
 type Mode = 'entry' | 'account' | 'csv' | 'balance'
 type ThemeColors = typeof colors.light | typeof colors.dark
+const MANUAL_CSV_SAMPLE =
+  'id,date,amount,currency,description,merchant,reference\ncaffe-1,2026-10-03,-2.50,EUR,Caffe,Bar,'
 export interface ImportManualPanelProps {
   readonly overview: DemoOverview
   readonly theme: BrandTheme
@@ -31,8 +35,8 @@ export interface ImportManualPanelProps {
   readonly onChanged: () => Promise<void>
   readonly onError?: (cause: unknown) => boolean
 }
-const currencyAmount = (amountMinor: string, currency: CurrencyCode) =>
-  formatMoney(fromJson({ amountMinor, currency }), { symbolPosition: 'before' })
+const currencyAmount = (amountMinor: string, currency: CurrencyCode, i18n: Translator) =>
+  i18n.money(fromJson({ amountMinor, currency }), { symbolPosition: 'before' })
 const localDate = (timezone: string) => {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
@@ -44,30 +48,21 @@ const localDate = (timezone: string) => {
     .map((type) => parts.find((part) => part.type === type)?.value ?? '')
     .join('-')
 }
-function inputMinor(value: string, currency: CurrencyCode): string {
+class ManualValidationError extends Error {}
+function inputMinor(value: string, currency: CurrencyCode, i18n: Translator): string {
+  const { t } = i18n
   const normalized = value.trim().replace(',', '.')
   if (!/^[+-]?\d+(\.\d+)?$/.test(normalized))
-    throw new Error('Scrivi un importo senza separatori delle migliaia, per esempio 2,50.')
+    throw new ManualValidationError(
+      t('manual.enter_an_amount_without_thousands_separators_for_example_2_50'),
+    )
   try {
     return parseDecimal(normalized, currency).amountMinor.toString()
   } catch {
-    throw new Error(
-      'L’importo o la valuta non è valido. Le cifre decimali devono essere esatte per questa valuta.',
+    throw new ManualValidationError(
+      t('manual.the_amount_or_currency_is_invalid_decimal_places_must_be_exact_for_this_cur'),
     )
   }
-}
-const modeLabels: Readonly<Record<Mode, string>> = {
-  entry: 'Aggiungi movimento',
-  account: 'Aggiungi conto',
-  csv: 'Importa CSV',
-  balance: 'Correggi il saldo',
-}
-const eventLabels: Readonly<Record<ManualBalanceEventDto['operation'], string>> = {
-  opening: 'Saldo iniziale',
-  entry: 'Inserimento a mano',
-  import: 'Importazione CSV',
-  adjustment: 'Correzione del saldo',
-  reversal: 'Inserimento annullato',
 }
 
 /** Explicit local sources and file fallback; command IDs are preserved after an uncertain response. */
@@ -79,6 +74,21 @@ export function ImportManualPanel({
   onChanged,
   onError,
 }: ImportManualPanelProps) {
+  const i18n = useI18n()
+  const { t } = i18n
+  const modeLabels: Readonly<Record<Mode, string>> = {
+    entry: t('manual.add_transaction'),
+    account: t('manual.add_account'),
+    csv: t('manual.import_csv'),
+    balance: t('manual.correct_balance'),
+  }
+  const eventLabels: Readonly<Record<ManualBalanceEventDto['operation'], string>> = {
+    opening: t('manual.opening_balance'),
+    entry: t('manual.manual_entry'),
+    import: t('manual.csv_import'),
+    adjustment: t('manual.balance_correction'),
+    reversal: t('manual.entry_reversed'),
+  }
   const c = colors[theme],
     s = useMemo(() => styles(c), [c]),
     client = useMemo(() => createManualClient(request), [request])
@@ -89,7 +99,7 @@ export function ImportManualPanel({
     [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null),
     [notice, setNotice] = useState<string | null>(null)
-  const [accountName, setAccountName] = useState('Contanti'),
+  const [accountName, setAccountName] = useState(t('manual.cash')),
     [accountKind, setAccountKind] = useState<ManualAccountDto['kind']>('cash')
   const [newCurrency, setNewCurrency] = useState('EUR'),
     [openingAmount, setOpeningAmount] = useState('0')
@@ -133,9 +143,11 @@ export function ImportManualPanel({
       .catch((cause) => {
         if (mounted.current && !onError?.(cause))
           setError(
-            cause instanceof Error
-              ? cause.message
-              : 'I conti locali non sono disponibili. Riprova.',
+            cause instanceof ApiError
+              ? i18n.problemMessage(cause)
+              : cause instanceof ManualValidationError
+                ? cause.message
+                : t('manual.local_accounts_are_unavailable_try_again'),
           )
       })
       .finally(() => {
@@ -144,7 +156,7 @@ export function ImportManualPanel({
     return () => {
       mounted.current = false
     }
-  }, [reload, onError])
+  }, [reload, onError, t, i18n])
   useEffect(() => {
     if (mode !== 'balance' || !selected) {
       setEvents([])
@@ -158,12 +170,18 @@ export function ImportManualPanel({
       })
       .catch((cause) => {
         if (active && !onError?.(cause))
-          setError(cause instanceof Error ? cause.message : 'Lo storico non è disponibile.')
+          setError(
+            cause instanceof ApiError
+              ? i18n.problemMessage(cause)
+              : cause instanceof ManualValidationError
+                ? cause.message
+                : t('manual.history_is_unavailable'),
+          )
       })
     return () => {
       active = false
     }
-  }, [client, mode, selected, onError])
+  }, [client, mode, selected, onError, t, i18n])
   const commandId = (fingerprint: string) => {
     if (!pending.current || pending.current.fingerprint !== fingerprint)
       pending.current = { fingerprint, requestId: manualRequestId() }
@@ -186,7 +204,7 @@ export function ImportManualPanel({
       if (!mounted.current || onError?.(cause)) return
       if (saved)
         setError(
-          'La modifica è stata salvata, ma non riesco ad aggiornare i dati. Ricarica la pagina per vedere il saldo corrente.',
+          t('manual.the_change_was_saved_but_i_could_not_refresh_the_data_reload_the_page_to_se'),
         )
       else if (cause instanceof ApiError && cause.code === 'manual_balance_changed') {
         try {
@@ -195,19 +213,25 @@ export function ImportManualPanel({
           setLastEntry(null)
           setLastAdjustment(null)
           setError(
-            'Il saldo è cambiato. Ho aggiornato i dati: controllali prima di scegliere di nuovo.',
+            t('manual.the_balance_changed_i_refreshed_the_data_review_it_before_choosing_again'),
           )
         } catch (refreshError) {
           if (!onError?.(refreshError))
             setError(
-              'Il saldo è cambiato e l’aggiornamento non è riuscito. Ricarica i dati prima di scegliere di nuovo.',
+              t(
+                'manual.the_balance_changed_and_could_not_be_refreshed_refresh_the_data_before_choo',
+              ),
             )
         }
       } else
         setError(
-          cause instanceof Error
-            ? cause.message
-            : 'Non sappiamo ancora se la modifica è stata salvata. Riprova con gli stessi dati per evitare un doppio inserimento.',
+          cause instanceof ApiError
+            ? i18n.problemMessage(cause)
+            : cause instanceof ManualValidationError
+              ? cause.message
+              : t(
+                  'manual.the_change_is_unconfirmed_retry_with_the_same_data_the_request_retains_its_',
+                ),
         )
     } finally {
       if (mounted.current) setBusy(false)
@@ -220,7 +244,7 @@ export function ImportManualPanel({
         name: accountName.trim(),
         kind: accountKind,
         currency,
-        openingBalanceMinor: inputMinor(openingAmount, currency),
+        openingBalanceMinor: inputMinor(openingAmount, currency, i18n),
         openingOn,
       }
       const result = await client.create({
@@ -230,14 +254,16 @@ export function ImportManualPanel({
       setSelectedId(result.id)
       setAccountName('')
       setMode('entry')
-    }, 'Conto locale aggiunto. Il saldo iniziale non è una nuova entrata.')
+    }, t('manual.local_account_added_the_opening_balance_is_not_new_income'))
   const addEntry = () =>
     run(
       async () => {
-        if (!selected) throw new Error('Aggiungi prima un conto locale.')
-        const parsed = BigInt(inputMinor(entryAmount, selected.currency))
+        if (!selected) throw new ManualValidationError(t('manual.add_a_local_account_first'))
+        const parsed = BigInt(inputMinor(entryAmount, selected.currency, i18n))
         if (entryKind === 'income' && parsed < 0n)
-          throw new Error('Per un’entrata scrivi un importo positivo, oppure scegli Spesa.')
+          throw new ManualValidationError(
+            t('manual.for_incoming_amounts_enter_a_positive_amount_or_choose_expense'),
+          )
         const amountMinor = (
           entryKind === 'expense'
             ? -(parsed < 0n ? -parsed : parsed)
@@ -256,10 +282,10 @@ export function ImportManualPanel({
           description:
             entryDescription.trim() ||
             (entryKind === 'expense'
-              ? 'Spesa in contanti'
+              ? t('manual.cash_expense')
               : entryKind === 'income'
-                ? 'Entrata a mano'
-                : 'Trasferimento a mano'),
+                ? t('manual.manual_income')
+                : t('manual.manual_transfer')),
           ...(transferReference.trim() ? { reference: transferReference.trim() } : {}),
         }
         const result = await client.enter({
@@ -273,16 +299,16 @@ export function ImportManualPanel({
         setTransferReference('')
       },
       entryKind === 'transfer'
-        ? 'Movimento aggiunto. Controlla e conferma il collegamento tra conti prima di escluderlo dai totali.'
-        : 'Movimento aggiunto e saldo aggiornato.',
+        ? t('manual.transaction_added_review_and_confirm_the_link_between_accounts_before_exclu')
+        : t('manual.transaction_added_and_balance_updated'),
     )
   const adjust = () =>
     run(async () => {
-      if (!selected) throw new Error('Scegli un conto locale.')
+      if (!selected) throw new ManualValidationError(t('manual.choose_a_local_account'))
       const body = {
         revision: selected.revision,
         currency: selected.currency,
-        balanceMinor: inputMinor(balanceAmount, selected.currency),
+        balanceMinor: inputMinor(balanceAmount, selected.currency, i18n),
         reason: balanceReason.trim(),
       }
       const result = await client.adjust(selected.id, {
@@ -297,14 +323,14 @@ export function ImportManualPanel({
       setLastEntry(null)
       setBalanceAmount('')
       setBalanceReason('')
-    }, 'Saldo corretto. La differenza è nello storico e non conta come entrata o spesa.')
+    }, t('manual.balance_corrected_the_difference_is_in_history_and_does_not_count_as_income'))
   const reverseEntry = () =>
     run(async () => {
-      if (!lastEntry) throw new Error('Non c’è un inserimento da annullare.')
+      if (!lastEntry) throw new ManualValidationError(t('manual.there_is_no_entry_to_reverse'))
       const body = {
         revision: lastEntry.transactionRevision,
         accountRevision: lastEntry.accountRevision,
-        reason: 'Annullamento dell’ultimo inserimento',
+        reason: t('manual.reversal_of_the_latest_entry'),
       }
       await client.reverse(lastEntry.transactionId, {
         ...body,
@@ -313,22 +339,23 @@ export function ImportManualPanel({
         ),
       })
       setLastEntry(null)
-    }, 'Inserimento annullato. Il saldo e i totali sono stati aggiornati; lo storico è conservato.')
+    }, t('manual.entry_reversed_balance_and_totals_were_updated_history_is_retained'))
   const undoAdjustment = () =>
     run(async () => {
-      if (!selected || !lastAdjustment) throw new Error('Non c’è una correzione da annullare.')
+      if (!selected || !lastAdjustment)
+        throw new ManualValidationError(t('manual.there_is_no_correction_to_reverse'))
       const body = {
         revision: selected.revision,
         currency: selected.currency,
         balanceMinor: lastAdjustment.beforeMinor,
-        reason: 'Annullamento della correzione precedente',
+        reason: t('manual.reversal_of_the_previous_correction'),
       }
       await client.adjust(selected.id, {
         ...body,
         requestId: commandId(JSON.stringify({ operation: 'undo-adjust', id: selected.id, body })),
       })
       setLastAdjustment(null)
-    }, 'Correzione annullata con un nuovo evento nello storico.')
+    }, t('manual.correction_reversed_with_a_new_history_event'))
   const validateCsv = async () => {
     if (busy || !selectedCsv) return
     setBusy(true)
@@ -340,23 +367,32 @@ export function ImportManualPanel({
       setPreview({ csv, report })
     } catch (cause) {
       if (!onError?.(cause))
-        setError(cause instanceof Error ? cause.message : 'Il CSV non è valido.')
+        setError(
+          cause instanceof ApiError
+            ? i18n.problemMessage(cause)
+            : cause instanceof ManualValidationError
+              ? cause.message
+              : t('manual.the_csv_is_invalid'),
+        )
     } finally {
       setBusy(false)
     }
   }
   const applyCsv = () => {
-    let completed = 'Importazione completata.'
+    let completed = t('manual.import_completed')
     return run(
       async () => {
         if (!preview || preview.csv !== csv || preview.report.accountId !== selectedCsv?.id)
-          throw new Error('Controlla una nuova anteprima prima di importare.')
+          throw new ManualValidationError(t('manual.review_a_new_preview_before_importing'))
         const report = await importCsv(preview.report.accountId, preview.csv)
         setCsv('')
         setPreview(null)
         setLastEntry(null)
         setLastAdjustment(null)
-        completed = `${report.inserted} nuovi movimenti, ${report.unchanged} già presenti. Nessuna riga è stata modificata.`
+        completed = t('manual.csvResult', {
+          inserted: report.inserted,
+          unchanged: report.unchanged,
+        })
       },
       () => completed,
     )
@@ -366,6 +402,7 @@ export function ImportManualPanel({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy }}
+      aria-disabled={disabled || busy}
       disabled={disabled || busy}
       onPress={onPress}
       style={({ pressed }) => [
@@ -403,11 +440,10 @@ export function ImportManualPanel({
   return (
     <View style={s.root}>
       <Text accessibilityRole="header" aria-level={2} style={s.heading}>
-        Conti manuali e importazione
+        {t('manual.manual_accounts_and_files')}
       </Text>
       <Text style={s.body}>
-        Tieni traccia di contanti, carte e conti non collegati. Crea un conto, aggiungi un movimento
-        o importa un CSV. Ogni importo resta nella valuta del conto.
+        {t('manual.cash_wallets_and_unconnected_accounts_amounts_retain_the_account_currency_d')}
       </Text>
       <View style={s.row}>
         {(Object.keys(modeLabels) as Mode[]).map((key) => (
@@ -415,6 +451,8 @@ export function ImportManualPanel({
             key={key}
             accessibilityRole="tab"
             accessibilityState={{ selected: mode === key, disabled: busy }}
+            aria-pressed={mode === key}
+            aria-disabled={busy}
             disabled={busy}
             onPress={() => {
               setMode(key)
@@ -431,9 +469,12 @@ export function ImportManualPanel({
         ))}
       </View>
       {loading && (
-        <ActivityIndicator color={c.primary} accessibilityLabel="Caricamento conti locali" />
+        <ActivityIndicator
+          color={c.primary}
+          accessibilityLabel={t('manual.loading_local_accounts')}
+        />
       )}
-      {busy && <ActivityIndicator color={c.primary} accessibilityLabel="Salvataggio in corso" />}
+      {busy && <ActivityIndicator color={c.primary} accessibilityLabel={t('manual.saving')} />}
       {error && (
         <Text accessibilityRole="alert" style={[s.feedback, { color: c.danger }]}>
           {error}
@@ -446,18 +487,21 @@ export function ImportManualPanel({
       )}
       {mode === 'account' ? (
         <View style={s.card}>
-          <Text style={s.title}>Da quale saldo inizi?</Text>
+          <Text style={s.title}>{t('manual.which_balance_are_you_starting_from')}</Text>
           <Text style={s.body}>
-            Il saldo iniziale è quello all’inizio della data scelta. Inserimenti e CSV da quella
-            data lo aggiorneranno. Questo conto resta non collegato a una banca.
+            {t(
+              'manual.the_opening_balance_is_the_balance_at_the_start_of_the_selected_date_entrie',
+            )}
           </Text>
-          {field('Nome del conto', accountName, setAccountName, 'Contanti')}
+          {field(t('manual.account_name'), accountName, setAccountName, t('manual.cash'))}
           <View style={s.row}>
             {(['cash', 'current', 'card', 'savings'] as const).map((kind) => (
               <Pressable
                 key={kind}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: accountKind === kind, disabled: busy }}
+                aria-checked={accountKind === kind}
+                aria-disabled={busy}
                 disabled={busy}
                 onPress={() => setAccountKind(kind)}
                 style={[
@@ -471,21 +515,21 @@ export function ImportManualPanel({
                 <Text style={s.body}>
                   {
                     {
-                      cash: 'Contanti',
-                      current: 'Portafoglio o altro',
-                      card: 'Carta manuale',
-                      savings: 'Risparmio',
+                      cash: t('manual.cash'),
+                      current: t('manual.wallet_or_other'),
+                      card: t('manual.manual_card'),
+                      savings: t('manual.savings'),
                     }[kind]
                   }
                 </Text>
               </Pressable>
             ))}
           </View>
-          {field('Valuta ISO del conto', newCurrency, setNewCurrency, 'EUR')}
-          {field('Saldo iniziale', openingAmount, setOpeningAmount, '0,00')}
-          {field('Data del saldo iniziale', openingOn, setOpeningOn, 'YYYY-MM-DD')}
+          {field(t('manual.account_iso_currency'), newCurrency, setNewCurrency, 'EUR')}
+          {field(t('manual.opening_balance'), openingAmount, setOpeningAmount, '0,00')}
+          {field(t('manual.tracking_start_date'), openingOn, setOpeningOn, 'YYYY-MM-DD')}
           {button(
-            'Crea conto locale',
+            t('manual.create_local_account'),
             () => {
               void createAccount()
             },
@@ -494,23 +538,24 @@ export function ImportManualPanel({
         </View>
       ) : mode === 'csv' ? (
         <View style={s.card}>
-          <Text style={s.title}>Importa movimenti da un CSV</Text>
+          <Text style={s.title}>{t('manual.import_a_csv_with_stable_identities')}</Text>
           <Text style={s.body}>
-            Fino a 1.000 righe e 256 KiB. È supportato questo formato CSV, con virgole tra le
-            colonne, importi con punto decimale e date YYYY-MM-DD. Mantieni lo stesso id quando
-            ripeti un’importazione. Gli abbinamenti con altre fonti vanno controllati.
+            {t(
+              'manual.up_to_1_000_rows_and_256_kib_this_csv_format_is_supported_with_comma_separa',
+            )}
           </Text>
           <Text selectable style={s.sample}>
-            id,date,amount,currency,description,merchant,reference{'\n'}
-            caffe-1,2026-10-03,-2.50,EUR,Caffe,Bar,
+            {MANUAL_CSV_SAMPLE}
           </Text>
-          <Text style={s.label}>Conto di destinazione</Text>
+          <Text style={s.label}>{t('manual.destination_account')}</Text>
           <View style={s.row}>
             {overview.accounts.map((account) => (
               <Pressable
                 key={account.id}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selectedCsv?.id === account.id, disabled: busy }}
+                aria-checked={selectedCsv?.id === account.id}
+                aria-disabled={busy}
                 disabled={busy}
                 onPress={() => {
                   setCsvAccountId(account.id)
@@ -530,19 +575,19 @@ export function ImportManualPanel({
               </Pressable>
             ))}
           </View>
-          {!selectedCsv && <Text style={s.body}>Aggiungi un conto locale per iniziare.</Text>}
+          {!selectedCsv && <Text style={s.body}>{t('manual.add_a_local_account_to_begin')}</Text>}
           {field(
-            'Contenuto del CSV',
+            t('manual.csv_content'),
             csv,
             (value) => {
               setCsv(value)
               setPreview(null)
             },
-            'Incolla intestazione e righe',
+            t('manual.paste_the_header_and_rows'),
             true,
           )}
           {button(
-            'Controlla anteprima CSV',
+            t('manual.review_csv_preview'),
             () => {
               void validateCsv()
             },
@@ -550,18 +595,28 @@ export function ImportManualPanel({
           )}
           {preview && (
             <View style={s.preview}>
-              <Text style={s.title}>{preview.report.rowCount} righe valide</Text>
+              <Text style={s.title}>
+                {t('manual.csvRowCount', { count: preview.report.rowCount })}
+              </Text>
               <Text style={s.body}>
-                {preview.report.newRows} nuove · {preview.report.unchangedRows} già presenti.
-                Variazione dei nuovi movimenti:{' '}
-                {currencyAmount(preview.report.newAmountTotalMinor, preview.report.currency)}.
+                {t('manual.csvPreview', {
+                  inserted: preview.report.newRows,
+                  unchanged: preview.report.unchangedRows,
+                  amount: currencyAmount(
+                    preview.report.newAmountTotalMinor,
+                    preview.report.currency,
+                    i18n,
+                  ),
+                })}
               </Text>
               <Text style={s.body}>
                 {preview.report.manualBalanceWillChange
-                  ? 'Il saldo del conto locale verrà aggiornato con le sole righe nuove.'
-                  : 'Il saldo della fonte resta quello dichiarato dalla fonte; il CSV aggiunge solo i movimenti.'}
+                  ? t('manual.the_local_account_balance_will_update_with_new_rows_only')
+                  : t(
+                      'manual.the_source_balance_remains_the_balance_declared_by_its_source_the_csv_adds_',
+                    )}
               </Text>
-              {button('Importa righe controllate', () => {
+              {button(t('manual.import_reviewed_rows'), () => {
                 void applyCsv()
               })}
             </View>
@@ -569,13 +624,15 @@ export function ImportManualPanel({
         </View>
       ) : (
         <View style={s.card}>
-          <Text style={s.label}>Conto locale</Text>
+          <Text style={s.label}>{t('manual.local_account')}</Text>
           <View style={s.row}>
             {accounts.map((account) => (
               <Pressable
                 key={account.id}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected?.id === account.id, disabled: busy }}
+                aria-checked={selected?.id === account.id}
+                aria-disabled={busy}
                 disabled={busy}
                 onPress={() => {
                   setSelectedId(account.id)
@@ -591,7 +648,7 @@ export function ImportManualPanel({
                 ]}
               >
                 <Text style={s.body}>
-                  {account.name} · {currencyAmount(account.balanceMinor, account.currency)}
+                  {account.name} · {currencyAmount(account.balanceMinor, account.currency, i18n)}
                 </Text>
               </Pressable>
             ))}
@@ -599,19 +656,24 @@ export function ImportManualPanel({
           {!selected ? (
             <View style={s.field}>
               <Text style={s.body}>
-                Non hai ancora conti locali. Parti dal saldo dei tuoi contanti o di un portafoglio.
+                {t('manual.you_have_no_local_accounts_yet_start_with_your_cash_or_wallet_balance')}
               </Text>
-              {button('Aggiungi il primo conto', () => setMode('account'), loading)}
+              {button(t('manual.add_your_first_account'), () => setMode('account'), loading)}
             </View>
           ) : mode === 'entry' ? (
             <>
-              <Text style={s.title}>{selected.name} · non collegato</Text>
+              <Text style={s.title}>
+                {selected.name}
+                {t('manual.unconnected')}
+              </Text>
               <View style={s.row}>
                 {(['expense', 'income', 'transfer'] as const).map((kind) => (
                   <Pressable
                     key={kind}
                     accessibilityRole="radio"
                     accessibilityState={{ checked: entryKind === kind, disabled: busy }}
+                    aria-checked={entryKind === kind}
+                    aria-disabled={busy}
                     disabled={busy}
                     onPress={() => setEntryKind(kind)}
                     style={[
@@ -623,36 +685,46 @@ export function ImportManualPanel({
                     ]}
                   >
                     <Text style={s.body}>
-                      {{ expense: 'Spesa', income: 'Entrata', transfer: 'Trasferimento' }[kind]}
+                      {
+                        {
+                          expense: t('manual.expense'),
+                          income: t('manual.income'),
+                          transfer: t('manual.transfer'),
+                        }[kind]
+                      }
                     </Text>
                   </Pressable>
                 ))}
               </View>
-              {field(`Importo in ${selected.currency}`, entryAmount, setEntryAmount, '2,50')}
               {field(
-                'Descrizione facoltativa',
+                t('manual.amountCurrency', { currency: selected.currency }),
+                entryAmount,
+                setEntryAmount,
+                i18n.locale === 'it-IT' ? '2,50' : '2.50',
+              )}
+              {field(
+                t('manual.optional_description'),
                 entryDescription,
                 setEntryDescription,
-                'Spesa in contanti',
+                t('manual.cash_expense'),
               )}
-              {field('Data del movimento', entryDate, setEntryDate, 'YYYY-MM-DD')}
+              {field(t('manual.transaction_date'), entryDate, setEntryDate, 'YYYY-MM-DD')}
               {entryKind === 'transfer' && (
                 <>
                   <Text style={s.body}>
-                    Per un trasferimento in entrata usa un importo positivo; in uscita usa un
-                    importo negativo. Per contanti prelevati da un tuo conto, aggiungi qui il lato
-                    in entrata. Poi controlla il collegamento in Da controllare: richiede una
-                    conferma.
+                    {t(
+                      'manual.for_an_incoming_transfer_use_a_positive_amount_for_outgoing_transfers_use_a',
+                    )}
                   </Text>
                   {field(
-                    'Riferimento del trasferimento facoltativo',
+                    t('manual.optional_transfer_reference'),
                     transferReference,
                     setTransferReference,
                   )}
                 </>
               )}
               {button(
-                'Salva movimento',
+                t('manual.save_transaction'),
                 () => {
                   void addEntry()
                 },
@@ -660,7 +732,7 @@ export function ImportManualPanel({
               )}
               {lastEntry &&
                 button(
-                  'Annulla ultimo inserimento',
+                  t('manual.reverse_latest_entry'),
                   () => {
                     void reverseEntry()
                   },
@@ -672,26 +744,29 @@ export function ImportManualPanel({
           ) : (
             <>
               <Text style={s.title}>
-                Saldo corrente: {currencyAmount(selected.balanceMinor, selected.currency)}
+                {t('manual.currentBalance', {
+                  amount: currencyAmount(selected.balanceMinor, selected.currency, i18n),
+                })}
               </Text>
               <Text style={s.body}>
-                Scrivi il saldo che hai verificato e il motivo. La differenza diventa un evento
-                nello storico e non una spesa o un’entrata.
+                {t(
+                  'manual.enter_the_balance_you_verified_and_the_reason_the_difference_becomes_a_hist',
+                )}
               </Text>
               {field(
-                `Saldo corretto in ${selected.currency}`,
+                t('manual.correctedCurrency', { currency: selected.currency }),
                 balanceAmount,
                 setBalanceAmount,
-                '0,00',
+                i18n.locale === 'it-IT' ? '0,00' : '0.00',
               )}
               {field(
-                'Motivo della correzione',
+                t('manual.correction_reason'),
                 balanceReason,
                 setBalanceReason,
-                'Contanti contati a mano',
+                t('manual.cash_counted_manually'),
               )}
               {button(
-                'Conferma saldo corretto',
+                t('manual.confirm_corrected_balance'),
                 () => {
                   void adjust()
                 },
@@ -699,7 +774,7 @@ export function ImportManualPanel({
               )}
               {lastAdjustment &&
                 button(
-                  'Annulla ultima correzione',
+                  t('manual.reverse_latest_correction'),
                   () => {
                     void undoAdjustment()
                   },
@@ -707,19 +782,19 @@ export function ImportManualPanel({
                     lastAdjustment.revision !== selected.revision,
                   true,
                 )}
-              <Text style={s.title}>Storico del saldo</Text>
+              <Text style={s.title}>{t('manual.balance_history')}</Text>
               {[...events]
                 .reverse()
                 .slice(0, 10)
                 .map((event) => (
                   <View key={event.id} style={s.event}>
                     <Text style={s.label}>
-                      {eventLabels[event.operation]} · {event.createdAt.slice(0, 10)}
+                      {eventLabels[event.operation]} · {i18n.instant(event.createdAt)}
                     </Text>
                     <Text style={s.body}>{event.reason}</Text>
                     <Text style={s.body}>
-                      {currencyAmount(event.beforeMinor, selected.currency)} →{' '}
-                      {currencyAmount(event.afterMinor, selected.currency)}
+                      {currencyAmount(event.beforeMinor, selected.currency, i18n)} →{' '}
+                      {currencyAmount(event.afterMinor, selected.currency, i18n)}
                     </Text>
                   </View>
                 ))}

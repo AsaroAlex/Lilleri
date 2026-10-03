@@ -1,7 +1,11 @@
 import { createHash } from 'node:crypto'
 import { CANONICAL_CATEGORIES, CATEGORIES, parseDecimal } from '@lilleri/domain'
 import { strToU8, zip } from 'fflate'
-import { ownershipExportJsonSchema, validateOwnershipExport } from './ownership-export.js'
+import {
+  type OwnershipExportValidationOptions,
+  ownershipExportJsonSchema,
+  validateOwnershipExport,
+} from './ownership-export.js'
 import { Problem } from './problem.js'
 
 type RecordValue = Record<string, unknown>
@@ -93,7 +97,7 @@ function assertNoCredentials(value: unknown): void {
     assertNoCredentials(item)
   }
 }
-function normalizedSnapshot(input: unknown) {
+function normalizedSnapshot(input: unknown, options: OwnershipExportValidationOptions) {
   // Bigint conversion is lossless. Text is never changed for spreadsheet compatibility here.
   let serialized: string | undefined
   try {
@@ -108,8 +112,14 @@ function normalizedSnapshot(input: unknown) {
   const snapshot = record(JSON.parse(serialized))
   assertNoCredentials(snapshot)
   if (snapshot.exportVersion !== 1) throw invalid()
-  timestamp(snapshot.exportedAt)
-  const profileId = identifier(record(snapshot.profile).id)
+  const exportedAt = timestamp(snapshot.exportedAt)
+  const profile = record(snapshot.profile)
+  if (
+    profile.createdAt !== undefined &&
+    Date.parse(timestamp(profile.createdAt)) > Date.parse(exportedAt)
+  )
+    throw invalid()
+  const profileId = identifier(profile.id)
   const scoped = (value: unknown) =>
     list(value).map((row) => {
       if (row.profileId !== profileId) throw invalid()
@@ -203,7 +213,7 @@ function normalizedSnapshot(input: unknown) {
   }
   for (const row of list(analysis.recurring)) money(row.expectedAmount)
   try {
-    validateOwnershipExport(snapshot)
+    validateOwnershipExport(snapshot, options)
   } catch {
     throw invalid()
   }
@@ -360,6 +370,34 @@ function events(snapshot: RecordValue) {
     const imports = record(snapshot.mappedImports)
     append('csv_mapping', list(imports.events), 'createdAt')
     append('mapped_import_provenance', list(imports.provenance), 'createdAt')
+  }
+  if (snapshot.merchantTaxonomy) {
+    const recognition = record(snapshot.merchantTaxonomy)
+    append('merchant_alias', list(recognition.aliasEvents), 'occurredAt')
+    append('owned_category', list(recognition.categoryEvents), 'occurredAt')
+    append('category_assignment', list(recognition.assignmentEvents), 'occurredAt')
+  }
+  if (snapshot.recurringPreferenceEvents)
+    append('recurring_preference', list(snapshot.recurringPreferenceEvents), 'occurredAt')
+  if (snapshot.sync) {
+    const sync = record(snapshot.sync)
+    append('sync_job_record', list(sync.jobs), 'updatedAt')
+    append('sync_budget_reservation', list(sync.reservations), 'reservedAt')
+    append('sync_presence_record', list(sync.presence), 'updatedAt')
+    append('sync_issue_record', list(sync.issues), 'createdAt')
+  }
+  if (snapshot.connectionCreation)
+    append(
+      'connection_creation_intent_record',
+      list(record(snapshot.connectionCreation).intents),
+      'createdAt',
+    )
+  if (snapshot.sourceErasures)
+    append('source_erasure_receipt', list(snapshot.sourceErasures), 'appliedAt')
+  if (snapshot.understandingPersistence) {
+    const understanding = record(snapshot.understandingPersistence)
+    append('understanding_preference', list(understanding.preferenceEvents), 'occurredAt')
+    append('monthly_snapshot_record', list(understanding.monthlySnapshots), 'capturedAt')
   }
   if (snapshot.consentEvents)
     append('consent_lifecycle', list(snapshot.consentEvents), 'occurredAt')
@@ -574,13 +612,13 @@ export const DATA_EXPORT_SCHEMA = {
     }),
     settingsValues: object({
       displayName: stringSchema,
-      locale: { const: 'it-IT' },
+      locale: { enum: ['it-IT', 'en-GB'] },
       timezone: stringSchema,
     }),
     settings: object({
       profileId: stringSchema,
       displayName: stringSchema,
-      locale: { const: 'it-IT' },
+      locale: { enum: ['it-IT', 'en-GB'] },
       timezone: stringSchema,
       revision: positiveRevision,
       updatedAt: stringSchema,
@@ -638,7 +676,10 @@ export const DATA_EXPORT_SCHEMA = {
         exportVersion: { const: 1 },
         exportedAt: stringSchema,
         mode: { const: 'synthetic' },
-        profile: object({ id: stringSchema, name: stringSchema, timezone: stringSchema }),
+        profile: object(
+          { id: stringSchema, name: stringSchema, timezone: stringSchema, createdAt: stringSchema },
+          ['id', 'name', 'timezone'],
+        ),
         connections: array(reference('connection')),
         accounts: array(reference('account')),
         transactions: array(reference('transaction')),
@@ -742,16 +783,32 @@ export const DATA_EXPORT_SCHEMA = {
           events: array(reference('settingsEvent')),
         }),
         revocationJobs: array(
-          object({
-            id: stringSchema,
-            connectionId: stringSchema,
-            state: { enum: ['pending', 'running', 'completed', 'failed'] },
-            attempts: integerSchema,
-            nextAttemptAt: stringSchema,
-            deadlineAt: stringSchema,
-            completedAt: nullableString,
-            lastErrorCode: nullableString,
-          }),
+          object(
+            {
+              id: stringSchema,
+              profileId: stringSchema,
+              connectionId: stringSchema,
+              providerId: stringSchema,
+              consentId: stringSchema,
+              createdAt: stringSchema,
+              state: { enum: ['pending', 'running', 'completed', 'failed'] },
+              attempts: integerSchema,
+              nextAttemptAt: stringSchema,
+              deadlineAt: stringSchema,
+              completedAt: nullableString,
+              lastErrorCode: nullableString,
+            },
+            [
+              'id',
+              'connectionId',
+              'state',
+              'attempts',
+              'nextAttemptAt',
+              'deadlineAt',
+              'completedAt',
+              'lastErrorCode',
+            ],
+          ),
         ),
         identity: reference('identity'),
         ...ownershipExportJsonSchema,
@@ -795,8 +852,11 @@ Questo download locale non crea un link pubblico, un collegamento bancario o un 
 `
 
 /** Build from the same schema-validated, profile-scoped snapshot used by JSON export. */
-export async function createDataExportArchive(input: unknown): Promise<DataExportArchive> {
-  const snapshot = normalizedSnapshot(input),
+export async function createDataExportArchive(
+  input: unknown,
+  options: OwnershipExportValidationOptions = {},
+): Promise<DataExportArchive> {
+  const snapshot = normalizedSnapshot(input, options),
     profile = record(snapshot.profile),
     transactions = transactionCsv(snapshot),
     links = linkCsv(snapshot),

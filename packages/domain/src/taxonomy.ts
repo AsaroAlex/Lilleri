@@ -25,6 +25,8 @@ export interface CanonicalCategory {
   readonly quiet?: true
   /** Movements in this category never count as spending or income (e.g. own-account moves). */
   readonly excludedFromSpending?: true
+  /** New local catalogue proposal; never an automatic migration of existing assigned records. */
+  readonly localProposal?: true
 }
 
 export type CanonicalGroup =
@@ -51,7 +53,7 @@ const c = (
   labelIt: string,
   labelEn: string,
   icon: string,
-  extra: { quiet?: true; excludedFromSpending?: true } = {},
+  extra: { quiet?: true; excludedFromSpending?: true; localProposal?: true } = {},
 ): CanonicalCategory => Object.freeze({ code, group, flow, labelIt, labelEn, icon, ...extra })
 
 export const CANONICAL_CATEGORIES = [
@@ -195,6 +197,64 @@ export const CANONICAL_CATEGORIES = [
   // Other
   c('OTHER_EXPENSE', 'other', 'expense', 'Altro', 'Other', 'dots'),
   c('UNCATEGORIZED', 'other', 'expense', 'Da classificare', 'Uncategorised', 'question'),
+  // Additive local proposals. Existing IDs/labels and assignments remain untouched.
+  c('HOME_MOVING', 'home', 'expense', 'Traslochi', 'Moving services', 'home', {
+    localProposal: true,
+  }),
+  c('HOME_CLEANING', 'home', 'expense', 'Pulizia casa', 'Home cleaning', 'home', {
+    localProposal: true,
+  }),
+  c('HOME_GARDEN', 'home', 'expense', 'Giardino', 'Garden', 'seed', { localProposal: true }),
+  c('UTILITIES_HEATING', 'utilities', 'expense', 'Riscaldamento', 'Heating', 'bolt', {
+    localProposal: true,
+  }),
+  c('FOOD_BAKERY', 'food', 'expense', 'Panifici', 'Bakeries', 'basket', { localProposal: true }),
+  c('FOOD_MARKETS', 'food', 'expense', 'Mercati alimentari', 'Food markets', 'basket', {
+    localProposal: true,
+  }),
+  c('TRANSPORT_BICYCLE', 'transport', 'expense', 'Biciclette', 'Bicycles', 'road', {
+    localProposal: true,
+  }),
+  c(
+    'TRANSPORT_CAR_REPAIRS',
+    'transport',
+    'expense',
+    'Riparazioni veicoli',
+    'Vehicle repairs',
+    'wrench',
+    { localProposal: true },
+  ),
+  c('TRANSPORT_CAR_RENTAL', 'transport', 'expense', 'Noleggio veicoli', 'Vehicle rental', 'car', {
+    localProposal: true,
+  }),
+  c('SHOPPING_BOOKS', 'shopping', 'expense', 'Libri', 'Books', 'book', { localProposal: true }),
+  c('SHOPPING_SECONDHAND', 'shopping', 'expense', 'Seconda mano', 'Secondhand goods', 'tag', {
+    localProposal: true,
+  }),
+  c('SHOPPING_HOUSEHOLD', 'shopping', 'expense', 'Prodotti per la casa', 'Household goods', 'bag', {
+    localProposal: true,
+  }),
+  c('PERSONAL_HAIRDRESSER', 'personal', 'expense', 'Parrucchieri', 'Hairdressers', 'sparkle', {
+    localProposal: true,
+  }),
+  c('PERSONAL_COSMETICS', 'personal', 'expense', 'Cosmetici', 'Cosmetics', 'sparkle', {
+    localProposal: true,
+  }),
+  c('LEISURE_CINEMA', 'leisure', 'expense', 'Cinema', 'Cinema', 'ticket', { localProposal: true }),
+  c('LEISURE_MUSEUMS', 'leisure', 'expense', 'Musei', 'Museums', 'ticket', { localProposal: true }),
+  c('LEISURE_HOBBIES', 'leisure', 'expense', 'Hobby', 'Hobbies', 'sparkle', {
+    localProposal: true,
+  }),
+  c('LEISURE_HOTELS', 'leisure', 'expense', 'Alberghi', 'Hotels', 'suitcase', {
+    localProposal: true,
+  }),
+  c('DIGITAL_GAMES', 'digital', 'expense', 'Videogiochi', 'Video games', 'device', {
+    localProposal: true,
+  }),
+  c('INCOME_BONUS', 'income', 'income', 'Premi e bonus', 'Bonuses', 'briefcase', {
+    localProposal: true,
+  }),
+  c('GIVING_FLOWERS', 'giving', 'expense', 'Fiori', 'Flowers', 'gift', { localProposal: true }),
 ] as const satisfies readonly CanonicalCategory[]
 
 export type CanonicalCategoryCode = (typeof CANONICAL_CATEGORIES)[number]['code']
@@ -221,4 +281,214 @@ export function isQuietCategory(code: CanonicalCategoryCode): boolean {
 /** True when the category represents money moving between the user's own pockets. */
 export function isExcludedFromSpending(code: CanonicalCategoryCode): boolean {
   return canonicalCategory(code).excludedFromSpending === true
+}
+
+/** Local catalogue version: original stable codes and labels remain valid historical references. */
+export const TAXONOMY_VERSION = 'canonical-taxonomy-local-v1'
+export interface TaxonomyParent {
+  readonly id: CanonicalGroup
+  readonly labelIt: string
+  readonly labelEn: string
+  readonly selectable: false
+  readonly defaultChild: string
+}
+export interface TaxonomyLeaf extends CanonicalCategory {
+  readonly selectable: boolean
+  readonly deprecated: boolean
+  readonly replacementCode: string | null
+}
+export interface TaxonomySnapshot {
+  readonly version: string
+  readonly parents: readonly TaxonomyParent[]
+  readonly leaves: readonly TaxonomyLeaf[]
+}
+const PARENT_LABELS: Readonly<Record<CanonicalGroup, readonly [string, string, string]>> = {
+  income: ['Entrate', 'Income', 'INCOME_OTHER'],
+  home: ['Casa', 'Home', 'HOME_MAINTENANCE'],
+  utilities: ['Utenze', 'Utilities', 'UTILITIES_ENERGY'],
+  food: ['Alimentazione', 'Food', 'FOOD_GROCERIES'],
+  transport: ['Trasporti', 'Transport', 'TRANSPORT_PUBLIC'],
+  shopping: ['Acquisti', 'Shopping', 'SHOPPING_GENERAL'],
+  personal: ['Persona', 'Personal', 'PERSONAL_CARE'],
+  health: ['Esercenti e servizi sanitari', 'Medical merchants and services', 'PHARMACY'],
+  leisure: ['Tempo libero', 'Leisure', 'LEISURE_ENTERTAINMENT'],
+  digital: ['Servizi digitali', 'Digital services', 'DIGITAL_SOFTWARE'],
+  finance: ['Servizi finanziari', 'Financial services', 'FINANCE_FEES'],
+  family: ['Famiglia', 'Family', 'FAMILY_CHILDREN'],
+  giving: ['Regali e persone', 'Gifts and people', 'GIVING_GIFTS'],
+  transfers: ['Trasferimenti', 'Transfers', 'TRANSFER_INTERNAL'],
+  other: ['Altro', 'Other', 'OTHER_EXPENSE'],
+}
+export const CURRENT_TAXONOMY: TaxonomySnapshot = Object.freeze({
+  version: TAXONOMY_VERSION,
+  parents: Object.freeze(
+    Object.entries(PARENT_LABELS).map(([id, [labelIt, labelEn, defaultChild]]) =>
+      Object.freeze({
+        id: id as CanonicalGroup,
+        labelIt,
+        labelEn,
+        defaultChild,
+        selectable: false as const,
+      }),
+    ),
+  ),
+  leaves: Object.freeze(
+    CANONICAL_CATEGORIES.map((category) =>
+      Object.freeze({ ...category, selectable: true, deprecated: false, replacementCode: null }),
+    ),
+  ),
+})
+
+export function validateTaxonomy(snapshot: TaxonomySnapshot): void {
+  if (
+    !snapshot.version ||
+    snapshot.version.length > 100 ||
+    snapshot.parents.length !== new Set(snapshot.parents.map((p) => p.id)).size ||
+    snapshot.leaves.length !== new Set(snapshot.leaves.map((leaf) => leaf.code)).size
+  )
+    throw new Error('Invalid taxonomy identity')
+  const leaves = new Map(snapshot.leaves.map((leaf) => [leaf.code, leaf]))
+  const parents = new Map(snapshot.parents.map((parent) => [parent.id, parent]))
+  for (const parent of parents.values()) {
+    const child = leaves.get(parent.defaultChild)
+    if (
+      parent.selectable !== false ||
+      !parent.labelIt ||
+      !parent.labelEn ||
+      !child ||
+      child.group !== parent.id ||
+      !child.selectable ||
+      child.deprecated
+    )
+      throw new Error('Invalid taxonomy parent')
+  }
+  for (const leaf of leaves.values()) {
+    if (
+      !parents.has(leaf.group) ||
+      !leaf.labelIt ||
+      !leaf.labelEn ||
+      (leaf.deprecated && leaf.selectable) ||
+      (!leaf.deprecated && leaf.replacementCode !== null)
+    )
+      throw new Error('Invalid taxonomy leaf')
+    if (leaf.replacementCode !== null) {
+      const target = leaves.get(leaf.replacementCode)
+      if (
+        !target ||
+        target.deprecated ||
+        !target.selectable ||
+        target.flow !== leaf.flow ||
+        (leaf.quiet && !target.quiet)
+      )
+        throw new Error('Unsafe taxonomy replacement')
+    }
+  }
+}
+
+export interface TaxonomyReference {
+  readonly referenceId: string
+  readonly kind: 'transaction' | 'rule' | 'feedback' | 'recurring' | 'watchlist' | 'baseline'
+  readonly canonicalCode: string
+  /** Historical user-visible label, never replaced by a newer catalogue's label. */
+  readonly labelSnapshot: string
+}
+export interface TaxonomyMigrationItem extends TaxonomyReference {
+  readonly nextCanonicalCode: string
+  readonly nextLabel: string
+  readonly requiresChoice: boolean
+}
+export function previewTaxonomyMigration(
+  source: TaxonomySnapshot,
+  target: TaxonomySnapshot,
+  references: readonly TaxonomyReference[],
+): readonly TaxonomyMigrationItem[] {
+  validateTaxonomy(source)
+  validateTaxonomy(target)
+  const sourceLeaves = new Map(source.leaves.map((leaf) => [leaf.code, leaf]))
+  const targetLeaves = new Map(target.leaves.map((leaf) => [leaf.code, leaf]))
+  if (
+    new Set(references.map((reference) => `${reference.kind}:${reference.referenceId}`)).size !==
+    references.length
+  )
+    throw new Error('Duplicate taxonomy reference')
+  return references.map((reference) => {
+    const old = sourceLeaves.get(reference.canonicalCode)
+    const current = targetLeaves.get(reference.canonicalCode)
+    if (!reference.referenceId || !reference.labelSnapshot || !old || !current)
+      throw new Error('Missing historical taxonomy reference')
+    const next =
+      current.replacementCode === null ? current : targetLeaves.get(current.replacementCode)
+    if (!next) throw new Error('Missing taxonomy replacement')
+    return {
+      ...reference,
+      nextCanonicalCode: next.code,
+      nextLabel: next.labelIt,
+      requiresChoice:
+        !next.selectable ||
+        next.deprecated ||
+        old.flow !== next.flow ||
+        Boolean(old.quiet && !next.quiet),
+    }
+  })
+}
+
+/** Compatibility projection; existing operational category IDs never change. */
+export function operationalCategoryForCanonical(
+  code: string,
+):
+  | 'income'
+  | 'groceries'
+  | 'shopping'
+  | 'food'
+  | 'transport'
+  | 'utilities'
+  | 'subscriptions'
+  | 'health'
+  | 'travel'
+  | 'transfer'
+  | 'uncategorised' {
+  if (!isCanonicalCategoryCode(code)) throw new Error('Unknown canonical category')
+  const category = canonicalCategory(code)
+  if (category.flow === 'income') return 'income'
+  if (category.flow === 'transfer') return 'transfer'
+  if (category.group === 'health') return 'health'
+  if (code === 'FOOD_GROCERIES') return 'groceries'
+  if (category.group === 'food') return 'food'
+  if (category.group === 'transport') return 'transport'
+  if (category.group === 'utilities' || category.group === 'home') return 'utilities'
+  if (code === 'DIGITAL_STREAMING') return 'subscriptions'
+  if (code === 'LEISURE_TRAVEL') return 'travel'
+  if (category.group === 'shopping' || category.group === 'personal') return 'shopping'
+  return 'uncategorised'
+}
+export const canonicalCategoryId = operationalCategoryForCanonical
+
+export interface OwnedCategoryValues {
+  readonly label: string
+  readonly canonicalCode: string
+  readonly icon: string
+  readonly parentId: string | null
+  readonly position: number
+  readonly hidden: boolean
+}
+export interface OwnedCategory extends OwnedCategoryValues {
+  readonly id: string
+  readonly profileId: string
+  readonly taxonomyVersion: string
+  readonly revision: number
+  readonly archived: boolean
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+export interface OwnedCategoryAssignment {
+  readonly profileId: string
+  readonly transactionId: string
+  readonly categoryId: string
+  readonly categoryRevision: number
+  readonly canonicalCode: string
+  readonly taxonomyVersion: string
+  readonly labelSnapshot: string
+  readonly quiet: boolean
+  readonly revision: number
+  readonly updatedAt: string
 }

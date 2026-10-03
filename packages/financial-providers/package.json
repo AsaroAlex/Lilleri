@@ -16,11 +16,12 @@
   },
   "dependencies": {
     "@lilleri/domain": "workspace:*",
-    "@lilleri/money": "workspace:*"
+    "@lilleri/money": "workspace:*",
+    "read-excel-file": "9.3.10"
   },
   "devDependencies": {
+    "@types/node": "^22.19.0",
     "typescript": "7.0.2",
-    "vitest": "5.0.3",
-    "@types/node": "^22.19.0"
+    "vitest": "5.0.3"
   }
 }

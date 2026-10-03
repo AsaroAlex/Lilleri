@@ -7,18 +7,20 @@
     "dev": "expo start --localhost --clear",
     "build": "EXPO_OFFLINE=1 EXPO_NO_TELEMETRY=1 CI=1 expo export --platform web --clear",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "clean": "rm -rf dist .expo .turbo"
+    "clean": "rm -rf dist .expo .turbo",
+    "test": "vitest run src/i18n/i18n.test.ts src/offline/cache.test.ts src/offline-api.test.ts"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.7.7",
+    "@better-auth/utils": "0.4.2",
     "@lilleri/api-client": "workspace:*",
     "@lilleri/brand": "workspace:*",
     "@lilleri/domain": "workspace:*",
     "@lilleri/money": "workspace:*",
     "better-auth": "1.7.7",
-    "@better-auth/passkey": "1.7.7",
-    "@better-auth/utils": "0.4.2",
     "expo": "57.0.26",
     "expo-font": "57.0.4",
+    "intl-messageformat": "12.1.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",

@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { exportKeyTombstones as exportStoredKeyTombstones } from './encryption.js'
 import * as identity from './identity-schema.js'
 import { enqueueRevocation } from './revocation-outbox.js'
+import { type SignedSourceErasure, signedSourceErasureDto } from './source-erasure-dto.js'
 
 const machineId = z.string().regex(/^[A-Za-z0-9_:.-]{1,200}$/)
 const instant = z.iso.datetime().refine((value) => new Date(value).toISOString() === value)
@@ -37,6 +38,7 @@ export const DELETION_JOURNAL_SCHEMA = z.strictObject({
   deletions: z.array(tombstone).max(100_000),
   keyTombstones: z.array(keyTombstone).max(100_000),
   revocations: z.array(revocation).max(500_000),
+  sourceErasures: z.array(signedSourceErasureDto).max(100000).optional(),
 })
 const signedJournalSchema = z.strictObject({
   body: DELETION_JOURNAL_SCHEMA,
@@ -64,6 +66,26 @@ export const DELETION_CERTIFICATE_SCHEMA = z.strictObject({
   scope: z.literal('local-financial-database-and-configured-key-adapter'),
 })
 export type DeletionCertificate = z.infer<typeof DELETION_CERTIFICATE_SCHEMA>
+export interface SourceReplayHooks {
+  readCurrent(): Promise<readonly SignedSourceErasure[]>
+  verifyCurrent(input: unknown): SignedSourceErasure
+  replayCurrent(
+    db: Database,
+    at: string,
+  ): Promise<{ tombstonesReplayed: number; safeToOpenLocally: true }>
+}
+async function assertSourceAdapter(db: Database, sources?: SourceReplayHooks) {
+  if (sources) return
+  const exists = (await db.execute(sql`SELECT to_regclass('source_erasure_receipts') AS name`)) as {
+    rows: { name: string | null }[]
+  }
+  if ((exists.rows[0] as { name: string | null }).name) {
+    const records = (await db.execute(sql`SELECT 1 FROM source_erasure_receipts LIMIT 1`)) as {
+      rows: unknown[]
+    }
+    if (records.rows.length) throw new Error('Current source erasure replay adapter is required')
+  }
+}
 export interface KeyReplayHooks {
   exportTombstones?(db: Database): Promise<readonly KeyTombstone[]>
   /** Runs inside the replay transaction; must not contact a remote key service. */
@@ -87,6 +109,12 @@ function secretBytes(secret: Uint8Array) {
   return secret
 }
 function assertJournalConsistency(body: DeletionJournal) {
+  const source = body.sourceErasures ?? []
+  if (
+    new Set(source.map((row) => row.body.id)).size !== source.length ||
+    source.some((row) => row.body.erasedAt > body.issuedAt)
+  )
+    throw new Error('Invalid source erasure journal lifecycle')
   const profiles = new Set(body.deletions.map((row) => row.profileId))
   if (profiles.size !== body.deletions.length) throw new Error('Duplicate deletion tombstone')
   if (new Set(body.revocations.map((row) => row.id)).size !== body.revocations.length)
@@ -178,8 +206,16 @@ export function verifyDeletionJournal(
 
 export async function exportDeletionJournal(
   db: Database,
-  options: { secret: Uint8Array; keyId: string; now?: () => string; keys?: KeyReplayHooks },
+  options: {
+    secret: Uint8Array
+    keyId: string
+    now?: () => string
+    keys?: KeyReplayHooks
+    sources?: SourceReplayHooks
+  },
 ): Promise<SignedDeletionJournal> {
+  await assertSourceAdapter(db, options.sources)
+  const sourceErasures = await options.sources?.readCurrent()
   return db.transaction(
     async (tx) => {
       // A consistent export includes tombstones and the outbox created by their erase transaction.
@@ -228,6 +264,7 @@ export async function exportDeletionJournal(
           issuedAt: options.now?.() ?? new Date().toISOString(),
           deletions,
           revocations,
+          ...(sourceErasures ? { sourceErasures: [...sourceErasures] } : {}),
           keyTombstones: keyTombstones.filter((row) => profileIds.includes(row.profileId)),
         },
         options.secret,
@@ -248,6 +285,7 @@ export interface RestoreReplayResult {
   readonly authenticationReset: true
   readonly revocationsOutstanding: number
   readonly keyErasure: 'not_configured' | 'completed_local_adapter'
+  readonly sourceTombstonesReplayed?: number
   readonly safeToOpenLocally: true
   readonly scope: 'local-database-and-configured-key-adapter'
 }
@@ -255,10 +293,31 @@ export interface RestoreReplayResult {
 export async function replayDeletionJournal(
   db: Database,
   input: unknown,
-  options: JournalVerification & { now?: () => string; keys?: KeyReplayHooks },
+  options: JournalVerification & {
+    now?: () => string
+    keys?: KeyReplayHooks
+    sources?: SourceReplayHooks
+    beforeProfileErasure?: (db: Database, profileId: string, at: string) => Promise<void>
+  },
 ): Promise<RestoreReplayResult> {
   // Authentication and rollback fencing complete before the first database mutation.
   const journal = verifyDeletionJournal(input, options)
+  await assertSourceAdapter(db, options.sources)
+  const sourceIntents = journal.body.sourceErasures ?? []
+  if (sourceIntents.length && !options.sources)
+    throw new Error('Current independent source journal is required')
+  const sourceProfiles = new Set<string>()
+  if (options.sources) {
+    const current = await options.sources.readCurrent(),
+      byId = new Map(current.map((row) => [row.body.id, row]))
+    for (const item of current) sourceProfiles.add(item.body.profileId)
+    for (const item of sourceIntents) {
+      const signed = options.sources.verifyCurrent(item),
+        present = byId.get(signed.body.id)
+      if (!present || canonical(present) !== canonical(signed))
+        throw new Error('Source journal differs from current independent state')
+    }
+  }
   if (journal.body.keyTombstones.length && !options.keys?.replayTombstones)
     throw new Error('Restored key tombstones require a configured replay adapter')
   if (journal.body.keyTombstones.length && !options.keys?.finalizeErasure)
@@ -268,6 +327,7 @@ export async function replayDeletionJournal(
     let restoredProfilesRemoved = 0
     let restoredIdentityUsersRemoved = 0
     for (const deleted of journal.body.deletions) {
+      await options.beforeProfileErasure?.(tx, deleted.profileId, now)
       // Capture restored memberships before deleting the financial profile cascades them.
       const members = await tx
         .select({ userId: identity.memberships.userId })
@@ -351,16 +411,19 @@ export async function replayDeletionJournal(
   // Failure here intentionally withholds the release result; financial deletion already persists.
   for (const deleted of journal.body.deletions)
     await options.keys?.finalizeErasure?.(deleted.profileId)
-  const outstanding = journal.body.deletions.length
+  const sourceReplay = await options.sources?.replayCurrent(db, now)
+  if (sourceReplay && sourceReplay.safeToOpenLocally !== true)
+    throw new Error('Source replay did not complete')
+  const relevantProfiles = [
+    ...new Set([...journal.body.deletions.map((row) => row.profileId), ...sourceProfiles]),
+  ]
+  const outstanding = relevantProfiles.length
     ? await db
         .select({ id: schema.revocationJobs.id })
         .from(schema.revocationJobs)
         .where(
           and(
-            inArray(
-              schema.revocationJobs.profileId,
-              journal.body.deletions.map((row) => row.profileId),
-            ),
+            inArray(schema.revocationJobs.profileId, relevantProfiles),
             inArray(schema.revocationJobs.state, ['pending', 'running', 'failed']),
           ),
         )
@@ -372,6 +435,7 @@ export async function replayDeletionJournal(
     tombstonesReplayed: journal.body.deletions.length,
     ...counts,
     authenticationReset: true,
+    ...(sourceReplay ? { sourceTombstonesReplayed: sourceReplay.tombstonesReplayed } : {}),
     revocationsOutstanding: outstanding.length,
     keyErasure: options.keys?.finalizeErasure ? 'completed_local_adapter' : 'not_configured',
     safeToOpenLocally: true,

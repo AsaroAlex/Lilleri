@@ -66,6 +66,10 @@ export const mappedImportProvenance = pgTable(
     rowNumber: integer('row_number').notNull(),
     identity: text('identity').$type<'external' | 'file_content_ordinal'>().notNull(),
     valueOn: date('value_on', { mode: 'string' }),
+    fileFormat: text('file_format').$type<'xlsx'>(),
+    workbookDigest: text('workbook_digest'),
+    worksheet: text('worksheet'),
+    headerRow: integer('header_row'),
     createdAt: text('created_at').notNull(),
   },
   (table) => [

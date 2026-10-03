@@ -30,7 +30,7 @@ Migration `0014_profile_encryption.sql` creates profile-cascading wrapped keys a
 4. Restoration replays the separately protected deletion journal before traffic or jobs resume. `exportKeyTombstones` exposes only profile/key IDs and staging/completion timestamps, never wrapped keys. `replayKeyTombstones` is idempotent, removes any restored live wrapped key and preserves monotonic completion. It runs in the restore transaction.
 5. After journal replay, finalization always checks the current independent key provider, including when the imported journal says destruction already completed. A restored completion timestamp alone does not prove that a different vault has destroyed its key.
 
-Per-profile key destruction does not implement partial transaction deletion while retaining other rows. Separate source/row tombstones, plaintext logs, exports, authorized shared records, provider records and other processors still need their own deletion rules.
+Per-profile key destruction does not implement partial transaction deletion while retaining other rows. Partial source erasure uses its [independent authenticated source journal](source-erasure.md), keeps the shared DEK and requires current quarantined restore replay. The local adapter preserves exact source digest anchors during whole-profile key destruction and excludes them from the candidate-key quota. Plaintext logs, exports, authorized shared records, provider records and other processors still need separate deletion rules.
 
 ## Verification
 

@@ -8,12 +8,12 @@ import {
   type MappedCsvLayoutDto,
   type MappedCsvMappingDto,
   type MappedCsvPreviewDto,
+  type MappedXlsxLayoutDto,
   manualRequestId,
   type SavedCsvMappingDto,
 } from '@lilleri/api-client'
 import { type BrandTheme, colors } from '@lilleri/brand'
 import { type CurrencyCode, parseDecimal } from '@lilleri/domain'
-import { formatMoney } from '@lilleri/money'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
@@ -24,6 +24,8 @@ import {
   TextInput,
   View,
 } from 'react-native'
+import type { Translator } from './src/i18n'
+import { useI18n } from './src/i18n/context'
 
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>
 type ThemeColors = typeof colors.light | typeof colors.dark
@@ -31,6 +33,7 @@ type Column = keyof MappedCsvColumnsDto
 type DateFormat = MappedCsvMappingDto['dateFormat']
 type Status = 'booked' | 'pending' | 'reversed'
 type StatusRow = { id: number; raw: string; status: Status }
+class MappedValidationError extends Error {}
 export interface MappedImportPanelProps {
   readonly overview: DemoOverview
   readonly theme: BrandTheme
@@ -39,60 +42,7 @@ export interface MappedImportPanelProps {
   readonly onChanged: () => Promise<void>
   readonly onError?: (cause: unknown) => boolean
 }
-const fieldLabels: Readonly<Record<Column, string>> = {
-  bookedOn: 'Data di contabilizzazione',
-  description: 'Descrizione',
-  amount: 'Importo con segno',
-  debit: 'Uscite',
-  credit: 'Entrate',
-  currency: 'Valuta',
-  externalId: 'Identificatore della fonte',
-  valueOn: 'Data valuta',
-  merchant: 'Esercente',
-  reference: 'Riferimento',
-  status: 'Stato',
-}
-const issueLabels: Readonly<Record<string, string>> = {
-  file_limit: 'Il file supera il limite di 256 KiB.',
-  row_limit: 'Il file supera il limite di 1.000 righe.',
-  column_limit: 'Il file contiene troppe colonne.',
-  invalid_character: 'Il file contiene caratteri non ammessi. Usa un CSV UTF-8.',
-  malformed_csv: 'Virgolette o separatori non validi nel CSV.',
-  invalid_header: 'Le intestazioni devono essere distinte e non vuote.',
-  empty_rows: 'Il file non contiene righe da importare.',
-  missing_column: 'Una colonna associata non è presente nel file.',
-  column_count: 'Il numero di celle non corrisponde alle intestazioni.',
-  invalid_mapping: 'Controlla le associazioni, i formati e la valuta.',
-  invalid_account: 'Il conto scelto non è disponibile.',
-  account_currency_mismatch: 'La valuta del file deve corrispondere alla valuta del conto scelto.',
-  invalid_id: 'Identificatore della fonte non valido.',
-  duplicate_id: 'L’identificatore della fonte è ripetuto: correggi il file.',
-  invalid_date: 'Data non valida per il formato scelto.',
-  invalid_currency: 'La valuta non è valida per questo movimento.',
-  invalid_amount: 'L’importo non è valido per il formato numerico scelto.',
-  amount_range: 'L’importo supera il limite supportato.',
-  debit_credit_conflict: 'Uscita ed entrata devono indicare un solo importo per riga.',
-  invalid_description: 'La descrizione deve essere presente e valida.',
-  invalid_text: 'Un campo di testo contiene caratteri non ammessi.',
-  invalid_status: 'Il valore dello stato non corrisponde alle associazioni scelte.',
-  duplicate_review_required: 'Controlla le righe uguali e scegli se mantenerle tutte.',
-  generated_file_identity:
-    'Il file non contiene un codice univoco per ogni movimento. Confrontiamo il contenuto e la posizione delle righe: se cambi il file, controlla di nuovo i possibili duplicati.',
-  literal_formula_text:
-    'Una cella simile a una formula sarà conservata come testo, senza eseguirla.',
-  value_date_provenance:
-    'La data valuta è conservata separatamente e non sostituisce la data di contabilizzazione.',
-}
-const dateLabels: Readonly<Record<DateFormat, string>> = {
-  'dd/MM/yyyy': 'Giorno/mese/anno · 04/10/2026',
-  'yyyy-MM-dd': 'Anno-mese-giorno · 2026-10-04',
-  'long-it': 'Data italiana estesa · 4 ottobre 2026',
-}
-const statusLabels = {
-  booked: 'Contabilizzato',
-  pending: 'In attesa',
-  reversed: 'Stornato',
-} as const
+
 const emptyMapping = (currency: CurrencyCode): MappedCsvMappingDto => ({
   format: 'lilleri.csv-mapping.v1',
   delimiter: ';',
@@ -101,15 +51,14 @@ const emptyMapping = (currency: CurrencyCode): MappedCsvMappingDto => ({
   columns: { bookedOn: '', description: '', amount: '' },
   defaultCurrency: currency,
 })
-const issueText = (issue: MappedCsvIssueDto) =>
-  `${issue.row ? `Riga ${issue.row}${issue.column ? ` · ${fieldLabels[issue.column]}` : ''}: ` : ''}${issueLabels[issue.code] ?? 'Il formato richiede una verifica. Nessuna riga è stata importata.'}`
+
 const issueKey = (issue: MappedCsvIssueDto) => `${issue.code}:${issue.row}:${issue.column}`
 const uniqueIssues = (issues: readonly MappedCsvIssueDto[]) => [
   ...new Map(issues.map((issue) => [issueKey(issue), issue])).values(),
 ]
-function rowAmount(row: MappedCsvPreviewDto['rows'][number]): string {
+function rowAmount(row: MappedCsvPreviewDto['rows'][number], i18n: Translator): string {
   try {
-    return formatMoney(parseDecimal(row.record.amount, row.record.currency), {
+    return i18n.money(parseDecimal(row.record.amount, row.record.currency), {
       sign: 'exceptZero',
       symbolPosition: 'before',
     })
@@ -127,6 +76,103 @@ export function MappedImportPanel({
   onChanged,
   onError,
 }: MappedImportPanelProps) {
+  const i18n = useI18n()
+  const { t } = i18n
+  const fieldLabels: Readonly<Record<Column, string>> = {
+    bookedOn: t('mapped.booking_date'),
+    description: t('mapped.description'),
+    amount: t('mapped.signed_amount'),
+    debit: t('mapped.outgoings'),
+    credit: t('mapped.incoming_amounts'),
+    currency: t('mapped.currency'),
+    externalId: t('mapped.source_identifier'),
+    valueOn: t('mapped.value_date'),
+    merchant: t('mapped.merchant'),
+    reference: t('mapped.reference'),
+    status: t('mapped.status'),
+  }
+  const issueLabels: Readonly<Record<string, string>> = {
+    xlsx_invalid_archive: t('mapped.the_excel_file_is_not_a_valid_xlsx_archive'),
+    xlsx_resource_limit: t('mapped.the_excel_file_exceeds_the_size_worksheet_or_cell_limits'),
+    xlsx_unsupported_content: t(
+      'mapped.the_file_contains_unsupported_excel_content_use_a_simple_worksheet_without_',
+    ),
+    xlsx_invalid_xml: t('mapped.the_excel_file_content_is_invalid'),
+    xlsx_formula: t(
+      'mapped.excel_formulas_are_not_imported_export_the_cells_as_values_before_continuin',
+    ),
+    xlsx_merged_cells: t(
+      'mapped.merged_cells_make_columns_ambiguous_unmerge_the_cells_before_importing',
+    ),
+    xlsx_sheet_required: t('mapped.choose_the_worksheet_to_import'),
+    xlsx_header_required: t('mapped.enter_the_header_row_from_1_to_100'),
+    xlsx_date_cells: t(
+      'mapped.use_dates_stored_as_text_in_the_excel_worksheet_in_the_format_selected_belo',
+    ),
+    xlsx_numeric_cell: t(
+      'mapped.a_numeric_cell_uses_an_unsupported_format_use_decimal_numbers_without_expon',
+    ),
+    xlsx_invalid_cell: t('mapped.an_excel_cell_contains_an_unsupported_type'),
+    file_limit: t('mapped.the_file_exceeds_the_256_kib_limit'),
+    row_limit: t('mapped.the_file_exceeds_the_1_000_row_limit'),
+    column_limit: t('mapped.the_file_contains_too_many_columns'),
+    invalid_character: t('mapped.the_file_contains_unsupported_characters_use_a_utf_8_csv'),
+    malformed_csv: t('mapped.invalid_quotes_or_separators_in_the_csv'),
+    invalid_header: t('mapped.headers_must_be_distinct_and_non_empty'),
+    empty_rows: t('mapped.the_file_contains_no_rows_to_import'),
+    missing_column: t('mapped.a_mapped_column_is_missing_from_the_file'),
+    column_count: t('mapped.the_cell_count_does_not_match_the_headers'),
+    invalid_mapping: t('mapped.check_the_mappings_formats_and_currency'),
+    invalid_account: t('mapped.the_selected_account_is_unavailable'),
+    account_currency_mismatch: t(
+      'mapped.the_file_currency_must_match_the_selected_account_currency',
+    ),
+    invalid_id: t('mapped.invalid_source_identifier'),
+    duplicate_id: t('mapped.the_source_identifier_is_repeated_correct_the_file'),
+    invalid_date: t('mapped.invalid_date_for_the_selected_format'),
+    invalid_currency: t('mapped.the_currency_is_invalid_for_this_transaction'),
+    invalid_amount: t('mapped.the_amount_is_invalid_for_the_selected_number_format'),
+    amount_range: t('mapped.the_amount_exceeds_the_supported_limit'),
+    debit_credit_conflict: t(
+      'mapped.outgoing_and_incoming_columns_must_specify_one_amount_per_row',
+    ),
+    invalid_description: t('mapped.the_description_must_be_present_and_valid'),
+    invalid_text: t('mapped.a_text_field_contains_unsupported_characters'),
+    invalid_status: t('mapped.the_status_value_does_not_match_the_selected_mappings'),
+    duplicate_review_required: t(
+      'mapped.review_the_identical_rows_and_choose_whether_to_keep_all_of_them',
+    ),
+    generated_file_identity: t(
+      'mapped.source_identifiers_are_missing_identity_depends_on_file_content_a_different',
+    ),
+    literal_formula_text: t(
+      'mapped.a_formula_like_cell_will_be_retained_as_text_without_being_evaluated',
+    ),
+    value_date_provenance: t(
+      'mapped.the_value_date_is_retained_separately_and_does_not_replace_the_booking_date',
+    ),
+  }
+  const dateLabels: Readonly<Record<DateFormat, string>> = {
+    'dd/MM/yyyy': t('mapped.day_month_year_04_10_2026'),
+    'yyyy-MM-dd': t('mapped.year_month_day_2026_10_04'),
+    'long-it': t('mapped.written_italian_date_4_ottobre_2026'),
+  }
+  const statusLabels = {
+    booked: t('mapped.booked'),
+    pending: t('mapped.pending'),
+    reversed: t('mapped.reversed'),
+  } as const
+  const issueText = (issue: MappedCsvIssueDto) => {
+    const message =
+      issueLabels[issue.code] ?? t('mapped.the_format_needs_review_no_rows_have_been_imported')
+    return issue.row
+      ? t('mapped.issueRow', {
+          row: issue.row,
+          field: issue.column ? ` · ${fieldLabels[issue.column]}` : '',
+          message,
+        })
+      : message
+  }
   const client = useMemo(() => createMappedImportClient(request), [request])
   const s = useMemo(() => styles(colors[theme]), [theme])
   const scope = `${overview.profile.id}:${String(resetKey)}`
@@ -151,6 +197,11 @@ export function MappedImportPanel({
   const [dataScope, setDataScope] = useState(scope)
   const [accountId, setAccountId] = useState(firstAccount?.id ?? '')
   const [csv, setCsv] = useState('')
+  const [fileFormat, setFileFormat] = useState<'csv' | 'xlsx'>('csv')
+  const [xlsxBase64, setXlsxBase64] = useState('')
+  const [workbookLayout, setWorkbookLayout] = useState<MappedXlsxLayoutDto | null>(null)
+  const [xlsxSheet, setXlsxSheet] = useState('')
+  const [xlsxHeaderRow, setXlsxHeaderRow] = useState('')
   const [fileName, setFileName] = useState('')
   const [mapping, setMapping] = useState<MappedCsvMappingDto>(() =>
     emptyMapping(firstAccount?.balance.currency ?? 'EUR'),
@@ -217,7 +268,9 @@ export function MappedImportPanel({
     const rows = await client.listMappings()
     if (!current(epoch) || version !== readVersion.current) return
     if (rows.some((row) => row.profileId !== overview.profile.id))
-      throw new Error('Le associazioni ricevute non corrispondono al profilo corrente.')
+      throw new MappedValidationError(
+        t('mapped.the_received_mappings_do_not_match_the_current_profile'),
+      )
     setMappings(rows)
   }
   useEffect(() => {
@@ -237,6 +290,11 @@ export function MappedImportPanel({
       editVersion.current++
       pending.current = null
       setCsv('')
+      setFileFormat('csv')
+      setXlsxBase64('')
+      setWorkbookLayout(null)
+      setXlsxSheet('')
+      setXlsxHeaderRow('')
       setFileName('')
       setLayout(null)
       setPreview(null)
@@ -261,7 +319,11 @@ export function MappedImportPanel({
       .catch((cause) => {
         if (!active || !current(epoch) || callbacks.onError?.(cause)) return
         setError(
-          cause instanceof Error ? cause.message : 'Le associazioni salvate non sono disponibili.',
+          cause instanceof ApiError
+            ? i18n.problemMessage(cause)
+            : cause instanceof MappedValidationError
+              ? cause.message
+              : t('mapped.saved_mappings_are_unavailable'),
         )
       })
       .finally(() => {
@@ -297,15 +359,21 @@ export function MappedImportPanel({
         }
         if (current(epoch))
           setError(
-            'Il conto, i movimenti o le associazioni sono cambiati. Controlla i dati e mostra una nuova anteprima; l’importazione non viene ripetuta automaticamente.',
+            t('mapped.the_account_transactions_or_mappings_changed_review_the_data_and_show_a_new'),
           )
       } else
         setError(
           saved
-            ? 'La modifica è stata salvata, ma non riesco ad aggiornare i dati. Ricarica prima di continuare.'
-            : cause instanceof Error
-              ? cause.message
-              : 'Non sappiamo ancora se l’importazione è stata completata. Riprova dalla stessa anteprima per evitare un doppio inserimento.',
+            ? t(
+                'mapped.the_change_was_saved_but_i_could_not_refresh_the_data_refresh_before_contin',
+              )
+            : cause instanceof ApiError
+              ? i18n.problemMessage(cause)
+              : cause instanceof MappedValidationError
+                ? cause.message
+                : t(
+                    'mapped.the_request_is_unconfirmed_for_an_uncertain_import_retry_with_the_same_prev',
+                  ),
         )
     } finally {
       if (current(epoch)) {
@@ -315,54 +383,90 @@ export function MappedImportPanel({
     }
   }
   const importInput = (): MappedCsvImportInput => {
-    if (!selectedAccount || !csv.trim())
-      throw new Error('Scegli un conto e aggiungi il contenuto del CSV.')
+    if (!selectedAccount || (fileFormat === 'csv' ? !csv.trim() : !xlsxBase64))
+      throw new MappedValidationError(t('mapped.choose_an_account_and_add_the_file_to_import'))
+    const file =
+      fileFormat === 'csv'
+        ? { csv }
+        : { xlsx: { base64: xlsxBase64, sheet: xlsxSheet, headerRow: Number(xlsxHeaderRow) } }
+    if (fileFormat === 'xlsx' && (!xlsxSheet || !/^(?:[1-9]\d?|100)$/.test(xlsxHeaderRow)))
+      throw new MappedValidationError(
+        t('mapped.choose_the_excel_worksheet_and_enter_the_header_row_from_1_to_100'),
+      )
     const used = Object.values(mapping.columns).filter(Boolean)
     if (
       !mapping.columns.bookedOn ||
       !mapping.columns.description ||
       (!mapping.columns.amount && (!mapping.columns.debit || !mapping.columns.credit))
     )
-      throw new Error(
-        'Associa data di contabilizzazione, descrizione e importo, oppure uscite e entrate.',
+      throw new MappedValidationError(
+        t('mapped.map_booking_date_description_and_amount_or_outgoing_and_incoming_amounts'),
       )
     if (new Set(used).size !== used.length)
-      throw new Error('Ogni colonna può essere associata a un solo campo.')
+      throw new MappedValidationError(t('mapped.each_column_can_be_mapped_to_only_one_field'))
     if (mapping.columns.currency ? mapping.defaultCurrency !== undefined : !mapping.defaultCurrency)
-      throw new Error('Scegli la colonna della valuta oppure una valuta fissa.')
+      throw new MappedValidationError(t('mapped.choose_the_currency_column_or_a_fixed_currency'))
     if (
       (mapping.dateFormat === 'long-it' || mapping.valueDateFormat === 'long-it') &&
       mapping.numberLocale !== 'it-IT'
     )
-      throw new Error('Le date italiane estese richiedono il formato italiano.')
+      throw new MappedValidationError(t('mapped.written_italian_dates_require_the_italian_format'))
     if (
       mapping.columns.status &&
       (!statusRows.length ||
         statusRows.some((row) => !row.raw) ||
         new Set(statusRows.map((row) => row.raw)).size !== statusRows.length)
     )
-      throw new Error('Associa valori dello stato distinti e non vuoti.')
+      throw new MappedValidationError(t('mapped.map_distinct_non_empty_status_values'))
     if (
       selectedSaved &&
       !selectedSaved.archived &&
       selectedSaved.accountId === accountId &&
       JSON.stringify(selectedSaved.mapping) === JSON.stringify(mapping)
     )
-      return { accountId, csv, mappingId: selectedSaved.id }
-    return { accountId, csv, mapping }
+      return { accountId, ...file, mappingId: selectedSaved.id }
+    return { accountId, ...file, mapping }
   }
+  const inspectWorkbook = () =>
+    run(async (epoch) => {
+      const edit = editVersion.current
+      const value = await client.workbookLayout({ base64: xlsxBase64 })
+      if (!current(epoch) || edit !== editVersion.current) return
+      setWorkbookLayout(value)
+      setLayout(null)
+      setPreview(null)
+      setAcknowledged(false)
+      if (!value.errors.length)
+        setNotice(
+          t('mapped.choose_a_worksheet_and_enter_the_header_row_no_worksheet_is_selected_automa'),
+        )
+    })
   const inspect = () =>
     run(async (epoch) => {
       const edit = editVersion.current
-      const value = await client.layout({ csv, delimiter: mapping.delimiter })
+      const selectedWorkbook =
+        fileFormat === 'xlsx'
+          ? await client.workbookLayout({
+              base64: xlsxBase64,
+              sheet: xlsxSheet,
+              headerRow: Number(xlsxHeaderRow),
+            })
+          : null
+      const value: MappedCsvLayoutDto = selectedWorkbook
+        ? {
+            format: 'lilleri.csv-layout.v1',
+            fileDigest: selectedWorkbook.workbookDigest,
+            header: selectedWorkbook.header,
+            rowCount: selectedWorkbook.rowCount,
+            errors: selectedWorkbook.errors,
+          }
+        : await client.layout({ csv, delimiter: mapping.delimiter })
       if (!current(epoch) || edit !== editVersion.current) return
       setLayout(value)
       setPreview(null)
       setAcknowledged(false)
       if (!value.errors.length)
-        setNotice(
-          `${value.header.length} intestazioni e ${value.rowCount} righe lette. Associa le colonne prima dell’anteprima.`,
-        )
+        setNotice(t('mapped.headersRead', { headers: value.header.length, rows: value.rowCount }))
     })
   const makePreview = () =>
     run(async (epoch) => {
@@ -384,8 +488,8 @@ export function MappedImportPanel({
         !preview.value.rows.length ||
         (preview.value.duplicateCandidates.length > 0 && !acknowledged)
       )
-        throw new Error(
-          'Mostra un’anteprima valida e controlla le righe ripetute prima di importare.',
+        throw new MappedValidationError(
+          t('mapped.show_a_valid_preview_and_review_repeated_rows_before_importing'),
         )
       const fingerprint = `${preview.value.previewRevision}:${acknowledged}`
       if (!pending.current || pending.current.fingerprint !== fingerprint)
@@ -400,18 +504,28 @@ export function MappedImportPanel({
       editVersion.current++
       pending.current = null
       setCsv('')
+      setXlsxBase64('')
+      setWorkbookLayout(null)
+      setXlsxSheet('')
+      setXlsxHeaderRow('')
       setFileName('')
       setLayout(null)
       setPreview(null)
       setAcknowledged(false)
       setNotice(
-        `${result.inserted} nuovi movimenti, ${result.updated} aggiornati, ${result.unchanged} già presenti${result.rejected ? `; ${result.rejected} non acquisiti` : ''}. Controlla il saldo e lo storico del conto.`,
+        t('mapped.importResult', {
+          inserted: result.inserted,
+          updated: result.updated,
+          unchanged: result.unchanged,
+          rejected: result.rejected,
+        }),
       )
     }, true)
   const save = () =>
     run(async (epoch) => {
       const input = importInput()
-      if (!mappingName.trim()) throw new Error('Scrivi un nome per le associazioni da salvare.')
+      if (!mappingName.trim())
+        throw new MappedValidationError(t('mapped.enter_a_name_for_the_mappings_to_save'))
       const result =
         selectedSaved && selectedSaved.accountId === accountId
           ? await client.updateMapping(selectedSaved.id, {
@@ -433,7 +547,7 @@ export function MappedImportPanel({
       await reloadMappings(epoch)
       if (current(epoch))
         setNotice(
-          'Associazioni salvate per questo conto. Prepara una nuova anteprima prima di importare.',
+          t('mapped.mappings_saved_for_this_account_prepare_a_new_preview_before_importing'),
         )
     })
   const archive = (saved: SavedCsvMappingDto) =>
@@ -446,8 +560,8 @@ export function MappedImportPanel({
       if (current(epoch))
         setNotice(
           saved.archived
-            ? 'Associazioni ripristinate. Sceglile e mostra una nuova anteprima.'
-            : 'Associazioni archiviate. I movimenti già importati sono conservati.',
+            ? t('mapped.mappings_restored_select_them_and_show_a_new_preview')
+            : t('mapped.mappings_archived_previously_imported_transactions_are_retained'),
         )
     })
   const loadSaved = (saved: SavedCsvMappingDto) => {
@@ -464,21 +578,41 @@ export function MappedImportPanel({
     const callbacks = handlers.current
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.csv,.tsv,text/csv,text/tab-separated-values'
+    input.accept =
+      fileFormat === 'xlsx'
+        ? '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        : '.csv,.tsv,text/csv,text/tab-separated-values'
     input.onchange = () => {
       const file = input.files?.[0]
       if (!file || !current(epoch)) return
       invalidate(true)
       setCsv('')
+      setXlsxBase64('')
+      setWorkbookLayout(null)
+      setXlsxSheet('')
+      setXlsxHeaderRow('')
       setFileName('')
-      if (file.size > 256 * 1024) {
-        setError('Il file supera il limite di 256 KiB.')
+      if (file.size > (fileFormat === 'xlsx' ? 512 : 256) * 1024) {
+        setError(
+          fileFormat === 'xlsx'
+            ? t('mapped.the_excel_file_exceeds_the_512_kib_limit')
+            : t('mapped.the_file_exceeds_the_256_kib_limit'),
+        )
         return
       }
       const edit = editVersion.current
       const fileVersion = ++fileReadVersion.current
-      file
-        .text()
+      const reading =
+        fileFormat === 'xlsx'
+          ? file.arrayBuffer().then((buffer) => {
+              const bytes = new Uint8Array(buffer)
+              let binary = ''
+              for (let offset = 0; offset < bytes.length; offset += 8192)
+                binary += String.fromCharCode(...bytes.subarray(offset, offset + 8192))
+              return btoa(binary)
+            })
+          : file.text()
+      reading
         .then((value) => {
           if (
             current(epoch) &&
@@ -486,7 +620,8 @@ export function MappedImportPanel({
             fileVersion === fileReadVersion.current
           ) {
             invalidate(true)
-            setCsv(value)
+            if (fileFormat === 'xlsx') setXlsxBase64(value)
+            else setCsv(value)
             setFileName(file.name)
           }
         })
@@ -497,7 +632,7 @@ export function MappedImportPanel({
             fileVersion === fileReadVersion.current &&
             !callbacks.onError?.(cause)
           )
-            setError('Non riesco a leggere il file CSV.')
+            setError(t('mapped.i_could_not_read_the_selected_file'))
         })
     }
     input.click()
@@ -507,6 +642,7 @@ export function MappedImportPanel({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || busy }}
+      aria-disabled={disabled || busy}
       disabled={disabled || busy}
       onPress={action}
       style={[s.button, (disabled || busy) && s.disabled]}
@@ -546,9 +682,9 @@ export function MappedImportPanel({
     <View style={s.field}>
       <Text style={s.label}>
         {fieldLabels[key]}
-        {optional ? ' · facoltativo' : ''}
+        {optional ? t('mapped.optional') : ''}
       </Text>
-      {button(`${fieldLabels[key]}: ${mapping.columns[key] || 'Seleziona colonna'}`, () =>
+      {button(`${fieldLabels[key]}: ${mapping.columns[key] || t('mapped.select_column')}`, () =>
         setExpandedColumn(expandedColumn === key ? null : key),
       )}
       {expandedColumn === key && (
@@ -557,7 +693,7 @@ export function MappedImportPanel({
             <Pressable
               key={header || 'none'}
               accessibilityRole="radio"
-              accessibilityLabel={`${fieldLabels[key]}: ${header || 'Nessuna'}`}
+              accessibilityLabel={`${fieldLabels[key]}: ${header || t('mapped.none')}`}
               aria-checked={mapping.columns[key] === header || (!header && !mapping.columns[key])}
               aria-disabled={busy}
               accessibilityState={{
@@ -580,7 +716,7 @@ export function MappedImportPanel({
               }}
               style={[s.choice, mapping.columns[key] === header && s.selected]}
             >
-              <Text style={s.body}>{header || 'Nessuna'}</Text>
+              <Text style={s.body}>{header || t('mapped.none')}</Text>
             </Pressable>
           ))}
         </View>
@@ -590,11 +726,11 @@ export function MappedImportPanel({
   if (dataScope !== scope)
     return (
       <ActivityIndicator
-        accessibilityLabel="Caricamento del conto corrente"
+        accessibilityLabel={t('mapped.loading_current_account')}
         color={colors[theme].primary}
       />
     )
-  const errors = preview?.value.errors ?? layout?.errors ?? []
+  const errors = preview?.value.errors ?? layout?.errors ?? workbookLayout?.errors ?? []
   const duplicateReview = Boolean(preview?.value.duplicateCandidates.length)
   const canCommit = Boolean(
     preview &&
@@ -605,13 +741,11 @@ export function MappedImportPanel({
   )
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.title}>
-        Importa movimenti da file
+      <Text accessibilityRole="header" aria-level={2} style={s.title}>
+        {t(fileFormat === 'xlsx' ? 'mapped.xlsxTitle' : 'mapped.import_csv_with_mappings')}
       </Text>
       <Text style={s.body}>
-        Scegli conto e file, indica quali colonne contengono data, descrizione e importo, poi
-        controlla l’anteprima. I nuovi movimenti aggiornano il saldo dei conti manuali; il saldo dei
-        conti collegati resta quello comunicato dalla fonte.
+        {t('mapped.choose_the_account_read_the_headers_and_map_the_columns_a_manual_account_ba')}
       </Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
@@ -624,15 +758,18 @@ export function MappedImportPanel({
         </Text>
       )}
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          1. Conto e file
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {t('mapped.1_account_and_file')}
         </Text>
         <View style={s.row}>
           {overview.accounts.map((account) => (
             <Pressable
               key={account.id}
               accessibilityRole="radio"
-              accessibilityLabel={`Conto per importazione: ${account.name}, ${account.balance.currency}`}
+              accessibilityLabel={t('mapped.accountChoice', {
+                name: account.name,
+                currency: account.balance.currency,
+              })}
               aria-checked={accountId === account.id}
               aria-disabled={busy}
               accessibilityState={{ checked: accountId === account.id, disabled: busy }}
@@ -653,43 +790,126 @@ export function MappedImportPanel({
           ))}
         </View>
         {!overview.accounts.length && (
-          <Text style={s.body}>Aggiungi un conto a mano prima di importare un file.</Text>
+          <Text style={s.body}>{t('mapped.add_a_manual_account_before_importing_a_file')}</Text>
         )}
-        <Text style={s.label}>Contenuto del CSV UTF-8 · massimo 256 KiB e 1.000 righe</Text>
-        <TextInput
-          accessibilityLabel="CSV da associare"
-          multiline
-          autoCapitalize="none"
-          editable={!busy}
-          value={csv}
-          onChangeText={(value) => {
-            invalidate(true)
-            setCsv(value)
-            setFileName('')
-          }}
-          placeholder="Incolla intestazioni e righe del file"
-          placeholderTextColor={colors[theme].textTertiary}
-          style={[s.input, s.csv]}
-        />
-        {Platform.OS === 'web' && button('Scegli file CSV', pickFile)}
-        {fileName && <Text style={s.body}>File selezionato: {fileName}</Text>}
-        {choices(
-          'Separatore',
-          [';', ',', '\t'] as const,
-          mapping.delimiter,
-          { ';': 'Punto e virgola', ',': 'Virgola', '\t': 'Tabulazione' },
-          (value) => changeMapping({ ...mapping, delimiter: value }, true),
+        {Platform.OS === 'web' &&
+          choices(
+            t('mapped.file_format'),
+            ['csv', 'xlsx'] as const,
+            fileFormat,
+            { csv: 'CSV UTF-8', xlsx: t('mapped.excel_xlsx') },
+            (value) => {
+              invalidate(true)
+              setFileFormat(value)
+              setCsv('')
+              setXlsxBase64('')
+              setWorkbookLayout(null)
+              setXlsxSheet('')
+              setXlsxHeaderRow('')
+              setFileName('')
+            },
+          )}
+        {fileFormat === 'csv' && (
+          <>
+            <Text style={s.label}>
+              {t('mapped.utf_8_csv_content_maximum_256_kib_and_1_000_rows')}
+            </Text>
+            <TextInput
+              accessibilityLabel={t('mapped.csv_to_map')}
+              multiline
+              autoCapitalize="none"
+              editable={!busy}
+              value={csv}
+              onChangeText={(value) => {
+                invalidate(true)
+                setCsv(value)
+                setFileName('')
+              }}
+              placeholder={t('mapped.paste_file_headers_and_rows')}
+              placeholderTextColor={colors[theme].textTertiary}
+              style={[s.input, s.csv]}
+            />
+          </>
         )}
-        {button('Leggi intestazioni CSV', inspect, !csv.trim() || !selectedAccount)}
+        {fileFormat === 'xlsx' && (
+          <Text style={s.body}>
+            {t(
+              'mapped.excel_xlsx_maximum_512_kib_8_worksheets_and_1_000_transactions_choose_a_sim',
+            )}
+          </Text>
+        )}
+        {Platform.OS === 'web' &&
+          button(
+            fileFormat === 'xlsx'
+              ? t('mapped.choose_excel_xlsx_file')
+              : t('mapped.choose_csv_file'),
+            pickFile,
+          )}
+        {fileName && <Text style={s.body}>{t('mapped.selectedFile', { name: fileName })}</Text>}
+        {fileFormat === 'xlsx' && (
+          <>
+            {button(
+              t('mapped.read_excel_worksheets'),
+              inspectWorkbook,
+              !xlsxBase64 || !selectedAccount,
+            )}
+            {workbookLayout && !workbookLayout.errors.length && (
+              <>
+                {choices(
+                  t('mapped.excel_worksheet'),
+                  workbookLayout.sheets.map((sheet) => sheet.name),
+                  xlsxSheet,
+                  Object.fromEntries(
+                    workbookLayout.sheets.map((sheet) => [sheet.name, sheet.name]),
+                  ),
+                  (value) => {
+                    invalidate(true)
+                    setXlsxSheet(value)
+                  },
+                )}
+                <Text style={s.label}>{t('mapped.worksheet_header_row_from_1_to_100')}</Text>
+                <TextInput
+                  accessibilityLabel={t('mapped.excel_header_row')}
+                  editable={!busy}
+                  keyboardType="number-pad"
+                  value={xlsxHeaderRow}
+                  onChangeText={(value) => {
+                    invalidate(true)
+                    setXlsxHeaderRow(value)
+                  }}
+                  placeholder={t('mapped.enter_the_row_number')}
+                  placeholderTextColor={colors[theme].textTertiary}
+                  style={s.input}
+                />
+              </>
+            )}
+          </>
+        )}
+        {fileFormat === 'csv' &&
+          choices(
+            t('mapped.separator'),
+            [';', ',', '\t'] as const,
+            mapping.delimiter,
+            { ';': t('mapped.semicolon'), ',': t('mapped.comma'), '\t': t('mapped.tab') },
+            (value) => changeMapping({ ...mapping, delimiter: value }, true),
+          )}
+        {button(
+          fileFormat === 'xlsx' ? t('mapped.read_excel_headers') : t('mapped.read_csv_headers'),
+          inspect,
+          !selectedAccount ||
+            (fileFormat === 'csv'
+              ? !csv.trim()
+              : !xlsxBase64 || !xlsxSheet || !/^(?:[1-9]\d?|100)$/.test(xlsxHeaderRow)),
+        )}
       </View>
       <View style={s.card}>
-        <Text accessibilityRole="header" style={s.subtitle}>
-          Associazioni salvate per i tuoi conti
+        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+          {t('mapped.saved_mappings_for_your_accounts')}
         </Text>
         {loadingMappings && <ActivityIndicator color={colors[theme].primary} />}
         <Pressable
           accessibilityRole="checkbox"
-          accessibilityLabel="Mostra associazioni archiviate"
+          accessibilityLabel={t('mapped.show_archived_mappings')}
           aria-checked={showArchived}
           aria-disabled={busy}
           accessibilityState={{ checked: showArchived, disabled: busy }}
@@ -697,7 +917,10 @@ export function MappedImportPanel({
           onPress={() => setShowArchived(!showArchived)}
           style={s.choice}
         >
-          <Text style={s.body}>{showArchived ? '✓ ' : ''}Mostra associazioni archiviate</Text>
+          <Text style={s.body}>
+            {showArchived ? '✓ ' : ''}
+            {t('mapped.show_archived_mappings')}
+          </Text>
         </Pressable>
         {mappings
           .filter((saved) => showArchived || !saved.archived)
@@ -706,43 +929,55 @@ export function MappedImportPanel({
               <Text style={s.body}>
                 {saved.name} ·{' '}
                 {overview.accounts.find((account) => account.id === saved.accountId)?.name ??
-                  'Conto non disponibile'}
-                {saved.archived ? ' · archiviate' : ''}
+                  t('mapped.account_unavailable')}
+                {saved.archived ? t('mapped.archived') : ''}
               </Text>
               <View style={s.row}>
                 {button(
-                  `Usa ${saved.name}`,
+                  t('mapped.useMapping', { name: saved.name }),
                   () => loadSaved(saved),
                   saved.archived ||
                     !overview.accounts.some((account) => account.id === saved.accountId),
                 )}
-                {button(`${saved.archived ? 'Ripristina' : 'Archivia'} ${saved.name}`, () => {
-                  void archive(saved)
-                })}
+                {button(
+                  t('mapped.mappingAction', {
+                    action: saved.archived ? t('mapped.restore') : t('mapped.archive'),
+                    name: saved.name,
+                  }),
+                  () => {
+                    void archive(saved)
+                  },
+                )}
               </View>
             </View>
           ))}
         {!loadingMappings && !mappings.some((saved) => showArchived || !saved.archived) && (
           <Text style={s.body}>
-            Nessuna associazione salvata. Prepara le colonne qui sotto e dai un nome al formato.
+            {t('mapped.no_saved_mappings_prepare_the_columns_below_and_give_the_format_a_name')}
           </Text>
         )}
       </View>
       {layout && !layout.errors.length && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.subtitle}>
-            2. Associa le colonne
+          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+            {t('mapped.2_map_the_columns')}
           </Text>
           <Text style={s.body}>
-            {layout.rowCount} righe · intestazioni: {layout.header.join(', ')}
+            {t('mapped.layoutSummary', {
+              rows: layout.rowCount,
+              headers: layout.header.join(', '),
+            })}
           </Text>
           {column('bookedOn')}
           {column('description')}
           {choices(
-            'Colonne degli importi',
+            t('mapped.amount_columns'),
             ['single', 'separate'] as const,
             mapping.columns.amount !== undefined ? 'single' : 'separate',
-            { single: 'Un importo con segno', separate: 'Uscite e entrate separate' },
+            {
+              single: t('mapped.one_signed_amount'),
+              separate: t('mapped.separate_outgoing_and_incoming_amounts'),
+            },
             (value) => {
               const columns = { ...mapping.columns }
               if (value === 'single') {
@@ -766,24 +1001,27 @@ export function MappedImportPanel({
             </>
           )}
           {choices(
-            'Formato numerico',
+            t('mapped.number_format'),
             ['it-IT', 'en-GB'] as const,
             mapping.numberLocale,
-            { 'it-IT': 'Italiano · 1.234,56', 'en-GB': 'Inglese · 1,234.56' },
+            { 'it-IT': t('mapped.italian_1_234_56'), 'en-GB': t('mapped.english_1_234_56') },
             (value) => changeMapping({ ...mapping, numberLocale: value }),
           )}
           {choices(
-            'Formato della data di contabilizzazione',
+            t('mapped.booking_date_format'),
             ['dd/MM/yyyy', 'yyyy-MM-dd', 'long-it'] as const,
             mapping.dateFormat,
             dateLabels,
             (value) => changeMapping({ ...mapping, dateFormat: value }),
           )}
           {choices(
-            'Origine della valuta',
+            t('mapped.currency_source'),
             ['fixed', 'column'] as const,
             mapping.columns.currency !== undefined ? 'column' : 'fixed',
-            { fixed: 'Valuta fissa per il file', column: 'Una colonna della valuta' },
+            {
+              fixed: t('mapped.fixed_currency_for_the_file'),
+              column: t('mapped.a_currency_column'),
+            },
             (value) => {
               const next = { ...mapping, columns: { ...mapping.columns } }
               if (value === 'column') {
@@ -800,9 +1038,9 @@ export function MappedImportPanel({
             column('currency')
           ) : (
             <View style={s.field}>
-              <Text style={s.label}>Valuta fissa</Text>
+              <Text style={s.label}>{t('mapped.fixed_currency')}</Text>
               <TextInput
-                accessibilityLabel="Valuta fissa del CSV"
+                accessibilityLabel={t('mapped.fixed_csv_currency')}
                 editable={!busy}
                 autoCapitalize="characters"
                 value={mapping.defaultCurrency ?? ''}
@@ -820,7 +1058,7 @@ export function MappedImportPanel({
           {column('valueOn', true)}
           {mapping.columns.valueOn &&
             choices(
-              'Formato della data valuta',
+              t('mapped.value_date_format'),
               ['dd/MM/yyyy', 'yyyy-MM-dd', 'long-it'] as const,
               mapping.valueDateFormat ?? mapping.dateFormat,
               dateLabels,
@@ -831,12 +1069,18 @@ export function MappedImportPanel({
           {column('status', true)}
           {mapping.columns.status ? (
             <View style={s.field}>
-              <Text style={s.body}>I valori sono esatti e distinguono maiuscole e minuscole.</Text>
+              <Text style={s.body}>{t('mapped.values_are_exact_and_case_sensitive')}</Text>
               {statusRows.map((row, index) => (
                 <View key={row.id} style={s.field}>
-                  <Text style={s.label}>{statusLabels[row.status]} · valore nel file</Text>
+                  <Text style={s.label}>
+                    {statusLabels[row.status]}
+                    {t('mapped.value_in_the_file')}
+                  </Text>
                   <TextInput
-                    accessibilityLabel={`Valore dello stato ${statusLabels[row.status]}, ${index + 1}`}
+                    accessibilityLabel={t('mapped.statusAlias', {
+                      status: statusLabels[row.status],
+                      index: index + 1,
+                    })}
                     editable={!busy}
                     autoCapitalize="none"
                     value={row.raw}
@@ -860,7 +1104,7 @@ export function MappedImportPanel({
               <View style={s.row}>
                 {(['booked', 'pending', 'reversed'] as const).map((status) => (
                   <View key={status}>
-                    {button(`Associa stato ${statusLabels[status]}`, () => {
+                    {button(t('mapped.addStatus', { status: statusLabels[status] }), () => {
                       const values = { ...mapping.statusValues }
                       values[status] = status
                       changeMapping({ ...mapping, statusValues: values })
@@ -871,45 +1115,45 @@ export function MappedImportPanel({
             </View>
           ) : (
             <Text style={s.body}>
-              Senza una colonna Stato, le righe sono trattate come contabilizzate.
+              {t('mapped.without_a_status_column_rows_are_treated_as_booked')}
             </Text>
           )}
-          <Text style={s.label}>Nome delle associazioni per questo conto</Text>
+          <Text style={s.label}>{t('mapped.mapping_name_for_this_account')}</Text>
           <TextInput
-            accessibilityLabel="Nome delle associazioni CSV"
+            accessibilityLabel={t('mapped.csv_mapping_name')}
             editable={!busy}
             value={mappingName}
             onChangeText={(value) => {
               invalidate()
               setMappingName(value)
             }}
-            placeholder="Per esempio: esportazione del mio conto"
+            placeholder={t('mapped.for_example_my_account_export')}
             style={s.input}
           />
           <View style={s.row}>
             {button(
-              selectedSaved ? 'Salva modifiche alle associazioni' : 'Salva associazioni CSV',
+              selectedSaved ? t('mapped.save_mapping_changes') : t('mapped.save_csv_mappings'),
               () => {
                 void save()
               },
               !mappingName.trim(),
             )}
             {button(
-              'Mostra anteprima importazione',
+              t('mapped.show_import_preview'),
               () => {
                 void makePreview()
               },
-              !selectedAccount || !csv.trim(),
+              !selectedAccount || (fileFormat === 'csv' ? !csv.trim() : !xlsxBase64),
             )}
           </View>
         </View>
       )}
       {errors.length > 0 && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.subtitle}>
-            Correggi il file o le associazioni
+          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+            {t('mapped.correct_the_file_or_mappings')}
           </Text>
-          <Text style={s.body}>Nessuna riga viene importata finché restano errori.</Text>
+          <Text style={s.body}>{t('mapped.no_rows_are_imported_while_errors_remain')}</Text>
           {uniqueIssues(errors).map((issue) => (
             <Text key={issueKey(issue)} style={s.error}>
               {issueText(issue)}
@@ -919,12 +1163,15 @@ export function MappedImportPanel({
       )}
       {preview && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.subtitle}>
-            3. Controlla l’anteprima
+          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+            {t('mapped.3_review_the_preview')}
           </Text>
           <Text style={s.body}>
-            Conto: {selectedAccount?.name ?? 'Non disponibile'} · {preview.value.rowCount} righe nel
-            file, {preview.value.rows.length} righe valide. Non è stato importato nulla.
+            {t('mapped.previewSummary', {
+              name: selectedAccount?.name ?? t('mapped.unavailable'),
+              rows: preview.value.rowCount,
+              valid: preview.value.rows.length,
+            })}
           </Text>
           {uniqueIssues(preview.value.warnings).map((issue) => (
             <Text key={issueKey(issue)} style={s.body}>
@@ -934,42 +1181,53 @@ export function MappedImportPanel({
           {preview.value.rows.slice(0, visibleRows).map((row) => (
             <View key={row.rowNumber} style={s.previewRow}>
               <Text style={s.label}>
-                Riga {row.rowNumber} · {row.record.bookedOn} · {rowAmount(row)}
+                {t('mapped.previewRow', {
+                  row: row.rowNumber,
+                  date: i18n.calendarDate(row.record.bookedOn),
+                  amount: rowAmount(row, i18n),
+                })}
               </Text>
               <Text style={s.body}>
                 {row.record.description} · {statusLabels[row.record.status]}
               </Text>
               {row.provenance.valueOn && (
                 <Text style={s.small}>
-                  Data valuta: {row.provenance.valueOn} · originale: {row.provenance.rawValueOn}
+                  {t('mapped.valueDateOriginal', {
+                    date: i18n.calendarDate(row.provenance.valueOn),
+                    original: row.provenance.rawValueOn ?? '',
+                  })}
                 </Text>
               )}
               <Text style={s.small}>
-                Identità:{' '}
+                {t('mapped.identity')}{' '}
                 {row.provenance.identity === 'external'
-                  ? 'identificatore della fonte'
-                  : 'contenuto del file e posizione della ripetizione'}
+                  ? t('mapped.source_identifier_full')
+                  : t('mapped.file_content_and_repetition_position')}
               </Text>
             </View>
           ))}
           {visibleRows < preview.value.rows.length &&
-            button('Mostra altre righe dell’anteprima', () =>
-              setVisibleRows((value) => value + 20),
-            )}
+            button(t('mapped.show_more_preview_rows'), () => setVisibleRows((value) => value + 20))}
           {preview.value.duplicateCandidates.map((group) => (
             <View key={group.contentFingerprint} style={s.previewRow}>
               <Text style={s.label}>
-                Righe uguali da controllare: {group.rowNumbers.join(', ')}
+                {t('mapped.duplicateRows', { rows: group.rowNumbers.join(', ') })}
               </Text>
               <Text style={s.body}>
-                Possono essere acquisti distinti. Rimarranno tutte presenti se le confermi.
+                {t(
+                  'mapped.these_may_be_separate_purchases_all_will_remain_present_if_you_confirm_them',
+                )}
               </Text>
               {preview.value.rows
                 .filter((row) => group.rowNumbers.includes(row.rowNumber))
                 .map((row) => (
                   <Text key={row.rowNumber} style={s.small}>
-                    Riga {row.rowNumber}: {row.record.bookedOn} · {rowAmount(row)} ·{' '}
-                    {row.record.description}
+                    {t('mapped.duplicateRow', {
+                      row: row.rowNumber,
+                      date: i18n.calendarDate(row.record.bookedOn),
+                      amount: rowAmount(row, i18n),
+                      description: row.record.description,
+                    })}
                   </Text>
                 ))}
             </View>
@@ -977,7 +1235,9 @@ export function MappedImportPanel({
           {duplicateReview && (
             <Pressable
               accessibilityRole="checkbox"
-              accessibilityLabel="Ho controllato le righe uguali e voglio mantenerle tutte"
+              accessibilityLabel={t(
+                'mapped.i_reviewed_the_identical_rows_and_want_to_keep_all_of_them',
+              )}
               aria-checked={acknowledged}
               aria-disabled={busy}
               accessibilityState={{ checked: acknowledged, disabled: busy }}
@@ -989,12 +1249,13 @@ export function MappedImportPanel({
               style={[s.choice, acknowledged && s.selected]}
             >
               <Text style={s.body}>
-                {acknowledged ? '✓ ' : ''}Ho controllato le righe uguali e voglio mantenerle tutte.
+                {acknowledged ? '✓ ' : ''}
+                {t('mapped.i_reviewed_the_identical_rows_and_want_to_keep_all_of_them_full')}
               </Text>
             </Pressable>
           )}
           {button(
-            'Importa righe dell’anteprima',
+            t('mapped.import_preview_rows'),
             () => {
               void commit()
             },

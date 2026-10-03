@@ -1,5 +1,6 @@
 export * from './calendar-date.js'
 export * from './entitlements.js'
+export * from './merchant.js'
 export * from './profile-settings.js'
 export * from './taxonomy.js'
 

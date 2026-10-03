@@ -13,6 +13,7 @@ import {
 
 const KEY_FILE = /^dek_[0-9a-f-]{36}\.key$/
 const PROFILE_DIRECTORY = /^[0-9a-f]{64}$/
+const SOURCE_ERASURE_ANCHOR = /^\.source-erasure-[0-9a-f-]{36}\.json$/
 const MAX_KEYS_PER_PROFILE = 1000
 
 function profileToken(profileId: string): string {
@@ -100,9 +101,10 @@ class LocalSyntheticKeyManagement implements KeyManagementPort {
   }
   private async removeKeys(directory: string) {
     const files = await readdir(directory)
-    if (files.length > MAX_KEYS_PER_PROFILE + 1) throw new EncryptionFailure()
+    if (files.filter((name) => KEY_FILE.test(name)).length > MAX_KEYS_PER_PROFILE)
+      throw new EncryptionFailure()
     for (const filename of files) {
-      if (filename === '.destroyed') continue
+      if (filename === '.destroyed' || SOURCE_ERASURE_ANCHOR.test(filename)) continue
       if (!KEY_FILE.test(filename)) throw new EncryptionFailure()
       await unlink(join(directory, filename)).catch((error: unknown) => {
         if (!missing(error)) throw error
@@ -128,7 +130,11 @@ class LocalSyntheticKeyManagement implements KeyManagementPort {
       if (dataKey.length !== 32) throw new EncryptionFailure()
       await privateDirectory(directory)
       if (await destroyed(directory)) throw new EncryptionFailure()
-      if ((await readdir(directory)).length >= MAX_KEYS_PER_PROFILE) throw new EncryptionFailure()
+      if (
+        (await readdir(directory)).filter((name) => KEY_FILE.test(name)).length >=
+        MAX_KEYS_PER_PROFILE
+      )
+        throw new EncryptionFailure()
       keyId = createEncryptionKeyId()
       await writeExclusive(join(directory, `${keyId}.key`), wrappingKey)
       await syncDirectory(directory)

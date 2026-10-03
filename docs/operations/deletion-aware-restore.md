@@ -6,9 +6,9 @@ This is a local synthetic recovery drill. It does not establish production PITR,
 
 ## Journal contents and trust
 
-The strict `lilleri.deletion-journal.v1` format contains only issued time, profile deletion tombstones, key destruction tombstones, and grant-specific revocation routing/status. It excludes balances, transactions, descriptions, names, email addresses, authentication tokens, provider credentials and encryption key material. Opaque profile, grant and connection identifiers are pseudonymous data: protect the journal and limit access. HMAC-SHA-256 authenticates integrity; it does not encrypt the journal.
+The strict `lilleri.deletion-journal.v1` format contains issued time, profile deletion tombstones, key destruction tombstones, grant-specific revocation routing/status and optional separately authenticated source-erasure receipts (exact opaque row membership/generations). It excludes balances, transactions, descriptions, names, email addresses, authentication tokens, provider credentials and encryption key material. Opaque profile, grant and connection identifiers are pseudonymous data: protect the journal and limit access. HMAC-SHA-256 authenticates integrity; it does not encrypt the journal.
 
-The signing key, current key vault, current journal and its latest digest must remain **outside database snapshots**. A valid signature alone does not prove that a journal is current. Replay also requires the digest independently recorded for the latest journal and a trusted minimum issued time. An older correctly signed journal is rejected when it disagrees with that latest digest. The operator must obtain these trust inputs from the independent current recovery store, never from the stale snapshot being restored.
+The signing key, current key vault, current global journal, current source-erasure journal and latest global digest must remain **outside database snapshots**. A valid signature alone does not prove that a journal is current. Replay also requires the digest independently recorded for the latest journal and a trusted minimum issued time. An older correctly signed journal is rejected when it disagrees with that latest digest. The operator must obtain these trust inputs from the independent current recovery store, never from the stale snapshot being restored.
 
 The signing key file is a private regular file (mode `0600`), containing 32 random bytes or 64 hexadecimal characters. It is supplied through `DELETION_JOURNAL_KEY_FILE`; `DELETION_JOURNAL_KEY_ID` identifies the signing-key generation. The script never prints the key or detailed JSON/schema errors. Its output contains the journal digest, issued time and aggregate counts.
 
@@ -30,7 +30,8 @@ DELETION_JOURNAL_KEY_FILE=/private/current-recovery/journal-signing-key \
 node tools/deletion-restore.mjs journal \
   --database-path=/private/local-db \
   --journal=/private/current-recovery/deletion-journal-current.json \
-  --key-vault=/private/current-key-vault
+  --key-vault=/private/current-key-vault \
+  --source-journal=/private/current-source-erasure-journal
 ```
 
 Record the resulting digest and issued time in the independent latest recovery store. The current journal must advance after every relevant erase and updated key/revocation effect before it is used for recovery. This local command does not provide an external durable deletion stream or automatic independent journal delivery.
@@ -45,10 +46,11 @@ node tools/deletion-restore.mjs restore \
   --journal=/private/current-recovery/deletion-journal-current.json \
   --trusted-digest=REPLACE_WITH_INDEPENDENT_LATEST_SHA256 \
   --minimum-issued-at=2026-10-03T10:01:00.000Z \
-  --key-vault=/private/current-key-vault
+  --key-vault=/private/current-key-vault \
+  --source-journal=/private/current-source-erasure-journal
 ```
 
-A journal containing key tombstones requires the independent current key adapter. The current vault directory must already exist; the restore command does not silently create a replacement empty vault. Restored wrapped DEKs cannot substitute for that adapter. Key replay executes inside the financial deletion transaction; independent destruction runs after commit and must succeed before the tool releases the restore. It invokes destruction again when the journal already records a completed key tombstone. A destruction failure leaves the financial tombstone committed and the restore quarantined. Investigate the adapter, then retry into another fresh restore directory; the command refuses to overwrite the failed copy.
+A journal containing key tombstones requires the independent current key adapter. Source receipts or current vault anchors also require the independently current `--source-journal`; a stale global file cannot omit current source replay. The source signing key is a separate private file managed inside that current source store. A replacement empty store cannot satisfy surviving vault anchors. Source replay also performs authenticated snapshot redaction and exact pending creation-intent cancellation; missing or incompatible intent routing remains quarantined. The current vault directory must already exist; the restore command does not silently create a replacement empty vault. Restored wrapped DEKs cannot substitute for that adapter. Key replay executes inside the financial deletion transaction; independent destruction runs after commit and must succeed before the tool releases the restore. It invokes destruction again when the journal already records a completed key tombstone. A destruction failure leaves the financial tombstone committed and the restore quarantined. Investigate the adapter, then retry into another fresh restore directory; the command refuses to overwrite the failed copy.
 
 The tool creates `.lilleri-restore-quarantine` before opening the restored database. Successful replay records `.lilleri-restore-release.json`, closes the database, and removes the quarantine marker. Start the local API only after this successful result. The marker is an operational gate within the trusted local filesystem, not protection against an administrator who deliberately edits recovery files or bypasses the opener.
 
@@ -64,7 +66,7 @@ The tool creates `.lilleri-restore-quarantine` before opening the restored datab
 
 The returned `safeToOpenLocally` applies to this configured local recovery boundary. Outstanding revocation jobs remain explicit and continue through the existing durable worker; they do not become confirmed merely because local financial data was deleted.
 
-The current migration chain includes `0022_audit_parent_erasure.sql`. It preserves append-only direct-write protections while allowing immutable consent, notification and CSV/provenance descendants to follow their existing exact parent foreign-key cascades. Restored profile erasure can therefore remove these newly added audit rows; independent grant revocation work remains outside those cascades. A physical owned-source deletion removes its attached history while preserving independent profile/support history. The current recovery journal records profile/key tombstones and grant revocations; it does not provide a separate replay record for source-only erasure.
+The current migration chain includes `0022_audit_parent_erasure.sql`. It preserves append-only direct-write protections while allowing immutable consent, notification and CSV/provenance descendants to follow their existing exact parent foreign-key cascades. Restored profile erasure can therefore remove these newly added audit rows; independent grant revocation work remains outside those cascades. A physical owned-source deletion removes its attached history while preserving independent profile/support history. The current independent source-erasure journal records source-only actions and signed post-erasure generations through migrations 0028/0031; the optional global journal section carries those receipts too. Source erasure preserves the shared profile key and other sources, so old source ciphertext remains decryptable until mandatory quarantined replay. See [source erasure](../architecture/source-erasure.md) for the exact generation/content and legacy quarantine rules.
 
 ## Deletion certificate
 
@@ -81,4 +83,6 @@ The targeted test suite includes strict authentication/tamper tests, rollback fe
 
 On 2026-10-03, all **8 scenarios passed** against PGlite (13.94 seconds) and a fresh PostgreSQL 16 database (16.77 seconds, 17 checksum migrations). The two filesystem-copy scenarios deliberately use PGlite in both configurations. The compiled CLI was also exercised with an actual 35-row encrypted snapshot: normal opening was permitted only after release, restored financial/profile counts were zero, one grant revocation remained outstanding, the independent local key effect completed, and the release digest matched the independently supplied latest digest. Its aggregate evidence is saved outside the checkout in `/workspace/.lilleri-validation/deletion-cli-smoke-report.json`.
 
-Run `pnpm --filter @lilleri/api exec vitest run test/deletion-restore.test.ts`. Keep integrated evidence in `PROJECT_STATE.md`/`docs/STATUS.md`; do not infer production backup acceptance from local test success.
+The current migration-chain regression passed **20 source, 14 encryption and 8 deletion-restore scenarios on both drivers**. The separately executed compiled source CLI smoke passed **5 checks** including missing/stale source-store refusal, failed-copy quarantine, retained other-source data, current replay and verified release digest/outstanding revocation. Its aggregate report is `/workspace/.lilleri-validation/completion-source-erasure-cli.json`.
+
+Run `pnpm --filter @lilleri/api exec vitest run test/deletion-restore.test.ts` and `node tools/source-erasure-restore-smoke.mjs /tmp/source-erasure-cli-report.json` after the API build. Keep integrated evidence in `PROJECT_STATE.md`/`docs/STATUS.md`; do not infer production backup acceptance from local test success.

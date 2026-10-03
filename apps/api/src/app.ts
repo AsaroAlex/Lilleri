@@ -1,6 +1,7 @@
 import swagger from '@fastify/swagger'
 import { type Database, ProfileScopeError } from '@lilleri/database'
-import { CATEGORIES } from '@lilleri/domain'
+import { type Account, CATEGORIES } from '@lilleri/domain'
+import { DEFAULT_RECURRING_POLICY, type RecurringEvidence } from '@lilleri/engines'
 import { type FinancialDataProvider, MockItalianProvider } from '@lilleri/financial-providers'
 import Fastify, { type FastifyRequest } from 'fastify'
 import {
@@ -10,6 +11,12 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import {
+  ConnectionCreationCoordinator,
+  cancelConnectionCreationIntents,
+  cancelRestoredConnectionCreationIntents,
+  compensateConnectionCreationIntent,
+} from './connection-creation.js'
 import {
   type ConsentLifecycleOptions,
   ConsentLifecycleService,
@@ -26,6 +33,7 @@ import {
 } from './identity.js'
 import { ManualService, manualAuditDto, registerManualRoutes } from './manual-service.js'
 import { registerMappedImportRoutes } from './mapped-import.js'
+import { MerchantTaxonomyService, registerMerchantTaxonomyRoutes } from './merchant-taxonomy.js'
 import {
   type NotificationConfiguration,
   NotificationsService,
@@ -34,15 +42,19 @@ import {
 import type { Observability } from './observability.js'
 import { renderObservabilityDashboard } from './observability-dashboard.js'
 import { registerObservabilityHooks } from './observability-hooks.js'
-import { ownershipExportSchemas } from './ownership-export.js'
+import { ownershipExportSchemas, validateOwnershipExport } from './ownership-export.js'
 import { PrivacyService, registerPrivacyRoutes } from './privacy.js'
 import { Problem } from './problem.js'
+import { RecurringService, registerRecurringRoutes } from './recurring.js'
 import { type FinancialScope, scopedReply } from './request-scope.js'
 import { RulesService, registerRulesRoutes, ruleDtoSchema, ruleEventDtoSchema } from './rules.js'
 import {
   DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
   DEFAULT_NOTIFICATION_CONFIGURATION,
+  DEFAULT_SYNC_CONFIGURATION,
   DEFAULT_UNDERSTANDING_CONFIGURATION,
+  DEFAULT_UNDERSTANDING_PERSISTENCE_CONFIGURATION,
+  type RuntimeConfigurationSnapshot,
 } from './runtime-config.js'
 import { DemoService, json } from './service.js'
 import {
@@ -51,7 +63,23 @@ import {
   settingsDtoSchema,
   settingsEventDtoSchema,
 } from './settings.js'
+import type { SourceErasureHooks } from './source-erasure.js'
+import {
+  assertSourceErasureReady,
+  recordSourceFacts,
+  SourceErasureService,
+} from './source-erasure.js'
+import type { SourceErasureJournal } from './source-erasure-journal.js'
 import { registerSupportAccessRoutes, SupportAccessService } from './support-access.js'
+import type { SyncForegroundContext } from './sync-foreground.js'
+import { registerSyncRoutes } from './sync-http.js'
+import { SyncCoordinator } from './sync-jobs.js'
+import {
+  eraseUnderstandingFinancialReferences,
+  exportUnderstandingPersistence,
+  registerUnderstandingPersistenceRoutes,
+  UnderstandingPersistenceService,
+} from './understanding-persistence.js'
 import {
   registerUnderstandingRoutes,
   type UnderstandingConfiguration,
@@ -194,10 +222,18 @@ const revocationDto = z.object({
     .nullable(),
 })
 const exportDto = overviewDto.omit({ connectionLifecycles: true }).extend({
+  profile: overviewDto.shape.profile.extend({ createdAt: z.iso.datetime().optional() }),
   ...ownershipExportSchemas,
   rules: z.array(ruleDtoSchema),
   ruleEvents: z.array(ruleEventDtoSchema),
-  revocationJobs: z.array(revocationDto),
+  revocationJobs: z.array(
+    revocationDto.extend({
+      profileId: identifier.optional(),
+      providerId: identifier.optional(),
+      consentId: identifier.optional(),
+      createdAt: z.iso.datetime().optional(),
+    }),
+  ),
   manual: manualAuditDto,
   profileSettings: z.object({
     settings: settingsDtoSchema,
@@ -342,6 +378,9 @@ export interface AppOptions {
   readonly initialConnectionLifecycleConfiguration?: ConsentLifecycleOptions
   readonly understandingConfiguration?: () => Promise<UnderstandingConfiguration>
   readonly notificationConfiguration?: () => Promise<NotificationConfiguration>
+  readonly syncConfiguration?: () => Promise<RuntimeConfigurationSnapshot>
+  readonly foregroundRefresh?: (context: SyncForegroundContext) => Promise<unknown>
+  readonly sourceErasureJournal?: SourceErasureJournal
   readonly demoMode: boolean
   readonly localIdentity?: Omit<LocalIdentityOptions, 'db'>
   readonly environment?: string
@@ -364,6 +403,7 @@ export function assertDemoConfiguration(
     throw new Error('The demo API must listen on loopback')
 }
 export async function createApp(options: AppOptions) {
+  const provider = options.provider ?? new MockItalianProvider()
   if (options.localIdentity) {
     if (options.demoMode || options.profileId || options.seed)
       throw new Error('Local identity cannot use a demo profile or automatically connect sources')
@@ -380,6 +420,7 @@ export async function createApp(options: AppOptions) {
     : undefined
   const browserOrigins = new Set(options.localIdentity?.allowedOrigins ?? [...allowedOrigins])
   if (options.localIdentity) browserOrigins.add(new URL(options.localIdentity.baseURL).origin)
+  const sourceJournal = options.sourceErasureJournal
   const requestHeaders = (request: FastifyRequest) => {
     const headers = new Headers()
     for (const [name, value] of Object.entries(request.headers)) {
@@ -432,10 +473,21 @@ export async function createApp(options: AppOptions) {
     : new DemoService(
         options.db,
         options.profileId ?? 'profile_demo',
-        options.provider ?? new MockItalianProvider(),
+        provider,
         options.now,
         options.encryption,
         options.initialConnectionLifecycleConfiguration,
+        DEFAULT_RECURRING_POLICY,
+        sourceJournal && options.encryption
+          ? (db, facts, at) =>
+              recordSourceFacts(
+                db,
+                sourceJournal,
+                facts,
+                at,
+                options.encryption as ProfileEncryption,
+              )
+          : undefined,
       )
   await demoService?.bootstrap(options.seed ?? false)
   const requestServices = new WeakMap<FastifyRequest, DemoService>()
@@ -443,6 +495,32 @@ export async function createApp(options: AppOptions) {
   const connectionPolicies = new WeakMap<FastifyRequest, ConsentLifecycleOptions>()
   const understandingPolicies = new WeakMap<FastifyRequest, UnderstandingConfiguration>()
   const notificationPolicies = new WeakMap<FastifyRequest, NotificationConfiguration>()
+  const runtimePolicies = new WeakMap<FastifyRequest, RuntimeConfigurationSnapshot>()
+  const durableSync = Boolean(options.financialScope && options.syncConfiguration)
+  const sourceFactsRecorder =
+    sourceJournal && options.encryption
+      ? (db: Database, facts: Parameters<typeof recordSourceFacts>[2], at: string) =>
+          recordSourceFacts(db, sourceJournal, facts, at, options.encryption as ProfileEncryption)
+      : undefined
+  const sourceErasureHooks: SourceErasureHooks = {
+    beforeErase: (db, profileId, connectionId, at) =>
+      cancelConnectionCreationIntents(db, profileId, at, connectionId),
+    replayCreationIntents: (db, profileId, connectionId, intentIds, at) =>
+      cancelRestoredConnectionCreationIntents(db, profileId, connectionId, intentIds, at),
+    ...(options.encryption
+      ? {
+          eraseFinancialReferences: (
+            db: Database,
+            input: Parameters<typeof eraseUnderstandingFinancialReferences>[1],
+          ) =>
+            eraseUnderstandingFinancialReferences(
+              db,
+              input,
+              options.encryption as ProfileEncryption,
+            ),
+        }
+      : {}),
+  }
   type IdentityExport = Awaited<
     ReturnType<ReturnType<typeof createLocalIdentity>['exportIdentity']>
   >
@@ -457,6 +535,25 @@ export async function createApp(options: AppOptions) {
   app.addHook('onResponse', async (request, reply) => {
     if (reply.statusCode < 400) for (const event of acceptedEvents.get(request) ?? []) event()
     acceptedEvents.delete(request)
+    if (
+      durableSync &&
+      reply.statusCode < 400 &&
+      request.method === 'GET' &&
+      request.routeOptions.url === '/v1/demo'
+    ) {
+      try {
+        const principal = principals.get(request)
+        if (options.foregroundRefresh)
+          await options.foregroundRefresh({
+            profileId: principal?.profileId ?? serviceFor(request).profileId,
+            sessionId: principal?.sessionId ?? 'demo-local',
+            editor: principal ? principal.role !== 'viewer' : true,
+          })
+        else await coordinatorFor(request).recordActivity()
+      } catch {
+        options.observability?.recordFailure('internal')
+      }
+    }
   })
   const serviceFor = (request: FastifyRequest) => {
     const service = requestServices.get(request) ?? demoService
@@ -472,6 +569,39 @@ export async function createApp(options: AppOptions) {
       notificationPolicies.get(request) ?? DEFAULT_NOTIFICATION_CONFIGURATION,
     )
   }
+  const ownedExportFor = async (request: FastifyRequest) => {
+    const service = serviceFor(request)
+    const snapshot = json({
+      ...(await service.export()),
+      ...(sourceJournal && options.encryption
+        ? {
+            understandingPersistence: await exportUnderstandingPersistence(
+              service.db,
+              service.profileId,
+              options.encryption,
+            ),
+          }
+        : {}),
+      ...(sourceJournal && options.encryption
+        ? await new SourceErasureService(
+            service.db,
+            service.profileId,
+            options.encryption,
+            sourceJournal,
+            options.now,
+            sourceErasureHooks,
+          ).ownedExport()
+        : {}),
+    })
+    validateOwnershipExport(snapshot, {
+      ...(sourceJournal
+        ? {
+            verifySourceErasure: (input) => sourceJournal.verifyReceipt(input),
+          }
+        : {}),
+    })
+    return snapshot
+  }
   const publishExportReady = async (request: FastifyRequest, exportedAt: string) => {
     try {
       await notificationFor(request).publish('export_ready', `export:${exportedAt}`)
@@ -480,9 +610,117 @@ export async function createApp(options: AppOptions) {
       options.observability?.recordFailure('internal')
     }
   }
+  const recurringFor = (request: FastifyRequest) => {
+    const service = serviceFor(request)
+    return new RecurringService(service, service.recurringPolicy, async (_db, data) => {
+      const evidence: Record<string, RecurringEvidence> = {}
+      for (const resolution of data.merchantContext.resolutions)
+        evidence[resolution.transactionId] = {
+          merchantResolution: resolution.status,
+          ...(resolution.merchantId ? { merchantId: resolution.merchantId } : {}),
+        }
+      return evidence
+    })
+  }
+  const coordinatorFor = (request: FastifyRequest) => {
+    const profileId = principals.get(request)?.profileId ?? demoService?.profileId
+    const configuration = runtimePolicies.get(request)
+    if (!profileId) throw new Problem(401, 'session_invalid', 'Accedi di nuovo per continuare.')
+    if (!options.financialScope || !configuration) throw new Error('Durable sync is unavailable')
+    const scope: FinancialScope = (id, work, scopeOptions) =>
+      options.financialScope
+        ? options.financialScope(
+            id,
+            async (db) => {
+              if (sourceJournal && options.encryption)
+                await assertSourceErasureReady(db, id, sourceJournal, options.encryption)
+              return work(db)
+            },
+            scopeOptions,
+          )
+        : Promise.reject(new Error('Financial scope is unavailable'))
+    return new SyncCoordinator({
+      scope,
+      profileId,
+      provider: provider,
+      configuration,
+      ...(options.now ? { now: options.now } : {}),
+      ...(options.encryption ? { encryption: options.encryption } : {}),
+      ...(sourceFactsRecorder ? { recordSourceFacts: sourceFactsRecorder } : {}),
+      afterCompleted: async (job) => {
+        try {
+          await scope(profileId, async (db) => {
+            const service = new DemoService(
+              db,
+              profileId,
+              provider,
+              options.now,
+              options.encryption,
+              connectionPolicies.get(request),
+              configuration.values.recurring ?? DEFAULT_RECURRING_POLICY,
+              sourceFactsRecorder,
+            )
+            const notices = new NotificationsService(
+              db,
+              profileId,
+              options.now,
+              notificationPolicies.get(request) ?? DEFAULT_NOTIFICATION_CONFIGURATION,
+            )
+            if ((await service.data()).analysis.reviewItems.length)
+              await notices.publish('inbox', `sync:${job.id}`)
+            if (job.report.balances.some((item) => item.result === 'mismatch'))
+              await notices.publish('balance_mismatch', `sync-balance:${job.id}`, job.connectionId)
+          })
+        } catch {
+          options.observability?.recordFailure('internal')
+        }
+      },
+    })
+  }
+  const connectFor = async (
+    request: FastifyRequest,
+    institutionId?: string,
+    accountKind?: Account['kind'],
+  ) => {
+    if (!durableSync) return serviceFor(request).connect(institutionId, accountKind)
+    const coordinator = coordinatorFor(request)
+    const scope = coordinator.options.scope
+    const profileId = coordinator.options.profileId
+    const configuration = runtimePolicies.get(request)
+    if (!configuration) throw new Error('Connection configuration is unavailable')
+    const connection = await new ConnectionCreationCoordinator({
+      scope,
+      profileId,
+      provider: provider,
+      attemptTimeoutMs: (configuration.values.sync ?? DEFAULT_SYNC_CONFIGURATION).attemptTimeoutMs,
+      ...(options.now ? { now: options.now } : {}),
+      compensate: (value) =>
+        compensateConnectionCreationIntent(
+          options.db,
+          value,
+          options.now?.() ?? new Date().toISOString(),
+        ),
+    }).connect({
+      institutionId: institutionId ?? 'synthetic-italian',
+      accountKind: accountKind ?? 'current',
+    })
+    await coordinator.sync(connection.id)
+    return scope(profileId, (db) =>
+      new DemoService(db, profileId, provider, options.now, options.encryption).connection(
+        connection.id,
+      ),
+    )
+  }
   app.addHook('onRoute', (route) => {
     if (
       !options.financialScope ||
+      (durableSync &&
+        route.method === 'POST' &&
+        (route.url === '/v1/sync/start' ||
+          route.url === '/v1/sync/:id/resume' ||
+          route.url === '/v1/connections/:id/sync' ||
+          route.url === '/v1/connections' ||
+          route.url === '/v1/connections/mock')) ||
       !route.url.startsWith('/v1/') ||
       route.url.startsWith('/v1/auth/')
     )
@@ -506,15 +744,19 @@ export async function createApp(options: AppOptions) {
           }),
         reply,
         async (db, buffered) => {
+          if (sourceJournal && options.encryption)
+            await assertSourceErasureReady(db, profileId, sourceJournal, options.encryption)
           requestServices.set(
             request,
             new DemoService(
               db,
               profileId,
-              options.provider ?? new MockItalianProvider(),
+              provider,
               options.now,
               options.encryption,
               connectionPolicies.get(request),
+              runtimePolicies.get(request)?.values.recurring ?? DEFAULT_RECURRING_POLICY,
+              sourceFactsRecorder,
             ),
           )
           return original.call(this, request, buffered)
@@ -565,6 +807,7 @@ export async function createApp(options: AppOptions) {
       understandingPolicies.set(request, await options.understandingConfiguration())
     if (options.notificationConfiguration)
       notificationPolicies.set(request, await options.notificationConfiguration())
+    if (options.syncConfiguration) runtimePolicies.set(request, await options.syncConfiguration())
     if (identity) {
       const path = request.routeOptions.url ?? request.url.split('?')[0] ?? '/'
       const mutation = !['GET', 'HEAD'].includes(request.method)
@@ -575,6 +818,7 @@ export async function createApp(options: AppOptions) {
           ownerOnly:
             (request.method === 'DELETE' && path === '/v1/profile') ||
             (request.method === 'POST' && path === '/v1/profile/deletion') ||
+            (request.method === 'DELETE' && path.startsWith('/v1/connections/')) ||
             (mutation && path.startsWith('/v1/support-access')),
           sensitive:
             path === '/v1/export' ||
@@ -591,10 +835,12 @@ export async function createApp(options: AppOptions) {
           new DemoService(
             options.db,
             principal.profileId,
-            options.provider ?? new MockItalianProvider(),
+            provider,
             options.now,
             options.encryption,
             connectionPolicies.get(request),
+            runtimePolicies.get(request)?.values.recurring ?? DEFAULT_RECURRING_POLICY,
+            sourceFactsRecorder,
           ),
         )
       }
@@ -744,7 +990,13 @@ export async function createApp(options: AppOptions) {
   })
   registerManualRoutes(app, (request) => {
     const service = serviceFor(request)
-    return new ManualService(service.db, service.profileId, options.now, options.encryption)
+    return new ManualService(
+      service.db,
+      service.profileId,
+      options.now,
+      options.encryption,
+      sourceFactsRecorder,
+    )
   })
   registerRulesRoutes(app, async (request) => {
     const service = serviceFor(request)
@@ -768,6 +1020,17 @@ export async function createApp(options: AppOptions) {
     const service = serviceFor(request)
     return new PrivacyService(service.db, service.profileId, options.now)
   })
+  registerMerchantTaxonomyRoutes(app, (request) => {
+    const service = serviceFor(request)
+    return new MerchantTaxonomyService(
+      service.db,
+      service.profileId,
+      options.now,
+      options.encryption,
+    )
+  })
+  registerRecurringRoutes(app, async (request) => recurringFor(request))
+  if (durableSync) registerSyncRoutes(app, { coordinator: coordinatorFor, service: serviceFor })
   registerMappedImportRoutes(app, serviceFor)
   registerUnderstandingRoutes(
     app,
@@ -780,6 +1043,33 @@ export async function createApp(options: AppOptions) {
         },
       ),
   )
+  if (sourceJournal && options.encryption)
+    registerUnderstandingPersistenceRoutes(
+      app,
+      async (request) =>
+        new UnderstandingPersistenceService(
+          new UnderstandingService(
+            serviceFor(request),
+            understandingPolicies.get(request) ?? {
+              ...DEFAULT_UNDERSTANDING_CONFIGURATION,
+              version: 'bootstrap-v1',
+            },
+          ),
+          options.encryption as ProfileEncryption,
+          runtimePolicies.get(request)?.values.understandingPersistence ??
+            DEFAULT_UNDERSTANDING_PERSISTENCE_CONFIGURATION,
+          sourceJournal,
+          async (db, saved) => {
+            const service = serviceFor(request)
+            await new NotificationsService(
+              db,
+              service.profileId,
+              () => saved.capturedAt,
+              notificationPolicies.get(request) ?? DEFAULT_NOTIFICATION_CONFIGURATION,
+            ).publish('summary_ready', saved.id)
+          },
+        ),
+    )
   registerNotificationRoutes(app, async (request) => notificationFor(request))
   app.get(
     '/v1/revocations',
@@ -845,8 +1135,7 @@ export async function createApp(options: AppOptions) {
         response: { 200: connectionDto, ...errors },
       },
     },
-    async (request) =>
-      serviceFor(request).connect(request.body.institutionId, request.body.accountKind),
+    async (request) => connectFor(request, request.body.institutionId, request.body.accountKind),
   )
   if (options.observability) {
     app.get('/internal/metrics', async (_request, reply) =>
@@ -872,7 +1161,7 @@ export async function createApp(options: AppOptions) {
   app.post(
     '/v1/connections/mock',
     { schema: { body: empty, response: { 200: connectionDto, ...errors } } },
-    async (request) => serviceFor(request).connect(),
+    async (request) => connectFor(request),
   )
   app.post(
     '/v1/connections/:id/sync',
@@ -893,13 +1182,16 @@ export async function createApp(options: AppOptions) {
       },
     },
     async (request) => {
-      const report = await serviceFor(request).sync(request.params.id)
+      const report = await serviceFor(request).sync(
+        request.params.id,
+        durableSync ? coordinatorFor(request) : undefined,
+      )
       recordAccepted(request, () =>
         options.observability?.recordSync(report.rejected ? 'partial' : 'completed', report),
       )
       try {
         const service = serviceFor(request)
-        if ((await service.data()).analysis.reviewItems.length)
+        if (!durableSync && (await service.data()).analysis.reviewItems.length)
           await notificationFor(request).publish('inbox', `review-after-sync:${report.syncedAt}`)
       } catch {
         options.observability?.recordFailure('internal')
@@ -1003,9 +1295,31 @@ export async function createApp(options: AppOptions) {
   )
   app.delete(
     '/v1/connections/:id',
-    { schema: { params: connectionParams, response: { 204: z.null(), ...errors } } },
+    {
+      schema: {
+        params: connectionParams,
+        body: z.strictObject({ data: z.enum(['retain', 'erase']) }).nullish(),
+        response: { 204: z.null(), ...errors },
+      },
+    },
     async (request, reply) => {
-      await serviceFor(request).disconnect(request.params.id)
+      const service = serviceFor(request)
+      if (request.body?.data === 'erase') {
+        if (!sourceJournal || !options.encryption)
+          throw new Problem(
+            409,
+            'source_erasure_unavailable',
+            'La cancellazione della fonte non è disponibile in questo ambiente.',
+          )
+        await new SourceErasureService(
+          service.db,
+          service.profileId,
+          options.encryption,
+          sourceJournal,
+          options.now,
+          sourceErasureHooks,
+        ).erase(request.params.id)
+      } else await service.disconnect(request.params.id)
       return reply.code(204).send(null)
     },
   )
@@ -1019,8 +1333,10 @@ export async function createApp(options: AppOptions) {
     },
     async (request, reply) => {
       reply.header('Content-Disposition', 'attachment; filename="lilleri-demo-export.json"')
-      const exported = json(await serviceFor(request).export())
-      return identity ? { ...exported, identity: identityExports.get(request) } : exported
+      const exported = await ownedExportFor(request)
+      return exportDto.parse(
+        identity ? { ...exported, identity: identityExports.get(request) } : exported,
+      )
     },
   )
   for (const method of ['GET', 'POST'] as const)
@@ -1033,11 +1349,17 @@ export async function createApp(options: AppOptions) {
         response: { 200: z.unknown(), ...errors },
       },
       handler: async (request, reply) => {
-        const exported = json(await serviceFor(request).export())
+        const exported = await ownedExportFor(request)
         const snapshot = exportDto.parse(
           identity ? { ...exported, identity: identityExports.get(request) } : exported,
         )
-        const archive = await createDataExportArchive(snapshot)
+        const archive = await createDataExportArchive(snapshot, {
+          ...(sourceJournal
+            ? {
+                verifySourceErasure: (input) => sourceJournal.verifyReceipt(input),
+              }
+            : {}),
+        })
         if (method === 'POST') await publishExportReady(request, snapshot.exportedAt)
         return reply
           .type(archive.contentType)

@@ -1,123 +1,181 @@
 import { ApiError, createSettingsClient, type SettingsResponse } from '@lilleri/api-client'
 import { type BrandTheme, colors } from '@lilleri/brand'
 import {
-  formatProfileInstant,
   PROFILE_LOCALE,
+  type ProfileLocale,
   type ProfileSettings,
   type ProfileSettingsValues,
 } from '@lilleri/domain'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { money } from '@lilleri/money'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { type MessageKey, PROBLEM_MESSAGES } from './i18n'
+import { useI18n } from './i18n/context'
+import { LanguagePicker } from './LanguagePicker'
 
 interface Props {
   readonly request: <T>(path: string, init?: RequestInit) => Promise<T>
   readonly theme: BrandTheme
+  readonly resetKey?: number | string
   readonly onChanged: (settings: ProfileSettings) => Promise<void> | void
   readonly onError?: (cause: unknown) => boolean
 }
+type VisibleError = { readonly key: MessageKey } | { readonly code: string }
+interface State {
+  readonly epoch: number
+  readonly response: SettingsResponse | null
+  readonly displayName: string
+  readonly locale: ProfileLocale
+  readonly timezone: string
+  readonly busy: boolean
+  readonly error: VisibleError | null
+  readonly notice: MessageKey | null
+}
+const empty = (epoch: number): State => ({
+  epoch,
+  response: null,
+  displayName: '',
+  locale: PROFILE_LOCALE,
+  timezone: 'Europe/Rome',
+  busy: true,
+  error: null,
+  notice: null,
+})
 const zoneOptions = [
-  { value: 'Europe/Rome', label: 'Italia' },
-  { value: 'Europe/London', label: 'Londra' },
-  { value: 'America/New_York', label: 'New York' },
-  { value: 'Asia/Tokyo', label: 'Tokyo' },
-  { value: 'UTC', label: 'UTC' },
-]
+  { value: 'Europe/Rome', key: 'settings.zoneRome' },
+  { value: 'Europe/London', key: 'settings.zoneLondon' },
+  { value: 'America/New_York', key: 'settings.zoneNewYork' },
+  { value: 'Asia/Tokyo', key: 'settings.zoneTokyo' },
+  { value: 'UTC', key: null },
+] as const
 
-/** Persisted profile preferences only; no dormant model knobs or commercial purchase flow. */
-export function SettingsPanel({ request, theme, onChanged, onError }: Props) {
-  const client = useMemo(() => createSettingsClient(request), [request]),
+/** Draft display preferences; all async outcomes remain fenced to the originating session epoch. */
+export function SettingsPanel({ request, theme, resetKey = 0, onChanged, onError }: Props) {
+  const client = useMemo(() => createSettingsClient(request), [request])
+  const i18n = useI18n(),
     c = colors[theme],
     s = useMemo(() => styles(c), [c])
-  const [response, setResponse] = useState<SettingsResponse | null>(null),
-    [displayName, setDisplayName] = useState(''),
-    [timezone, setTimezone] = useState('Europe/Rome'),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null),
-    [notice, setNotice] = useState<string | null>(null)
-  const receive = useCallback((value: SettingsResponse) => {
-    setResponse(value)
-    setDisplayName(value.settings.displayName)
-    setTimezone(value.settings.timezone)
-  }, [])
-  const reportFailure = useCallback(
-    (cause: unknown) => {
-      if (!onError?.(cause)) return false
-      setResponse(null)
-      setNotice(null)
-      return true
-    },
-    [onError],
-  )
+  const identity = useRef({ request, resetKey, epoch: 0 })
+  const busyEpoch = useRef<number | null>(null)
+  if (identity.current.request !== request || identity.current.resetKey !== resetKey) {
+    identity.current = { request, resetKey, epoch: identity.current.epoch + 1 }
+    busyEpoch.current = null
+  }
+  const epoch = identity.current.epoch
+  const mounted = useRef(true)
+  const callbacks = useRef({ onChanged, onError })
+  callbacks.current = { onChanged, onError }
+  const [state, setState] = useState(() => empty(epoch))
+  const view = state.epoch === epoch ? state : empty(epoch)
+  const current = (captured: number) => mounted.current && identity.current.epoch === captured
+  const patch = (captured: number, values: Partial<State>) => {
+    if (current(captured))
+      setState((previous) => ({
+        ...(previous.epoch === captured ? previous : empty(captured)),
+        ...values,
+        epoch: captured,
+      }))
+  }
+  const receive = (captured: number, value: SettingsResponse) =>
+    patch(captured, {
+      response: value,
+      displayName: value.settings.displayName,
+      locale: value.settings.locale,
+      timezone: value.settings.timezone,
+    })
+  const reportFailure = (captured: number, cause: unknown) => {
+    if (!current(captured)) return true
+    if (!callbacks.current.onError?.(cause)) return false
+    patch(captured, { response: null, notice: null, error: null })
+    return true
+  }
+  const problem = (cause: unknown): VisibleError => {
+    const code =
+      cause instanceof ApiError && Object.hasOwn(PROBLEM_MESSAGES, cause.code)
+        ? cause.code
+        : 'request_failed'
+    return { code }
+  }
   useEffect(() => {
-    let active = true
-    setResponse(null)
-    setError(null)
-    setNotice(null)
-    setBusy(true)
-    client
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Session/request epoch fences reads; callback and display-locale changes do not restart network requests.
+  useEffect(() => {
+    const captured = identity.current.epoch
+    busyEpoch.current = captured
+    setState(empty(captured))
+    void client
       .get()
-      .then((value) => {
-        if (active) receive(value)
-      })
+      .then((value) => receive(captured, value))
       .catch((cause: unknown) => {
-        if (active && !reportFailure(cause))
-          setError('Non riesco a caricare le impostazioni. Riprova.')
+        if (!reportFailure(captured, cause))
+          patch(captured, { error: { key: 'settings.loadFailed' } })
       })
       .finally(() => {
-        if (active) setBusy(false)
+        if (current(captured)) {
+          busyEpoch.current = null
+          patch(captured, { busy: false })
+        }
       })
-    return () => {
-      active = false
-    }
-  }, [client, receive, reportFailure])
+  }, [client, resetKey])
   const refresh = async () => {
-    if (busy) return
-    setBusy(true)
-    setError(null)
-    setNotice(null)
+    const captured = epoch
+    if (!current(captured) || busyEpoch.current === captured) return
+    busyEpoch.current = captured
+    patch(captured, { busy: true, error: null, notice: null })
     try {
-      receive(await client.get())
+      const saved = await client.get()
+      if (!current(captured)) return
+      receive(captured, saved)
+      await callbacks.current.onChanged(saved.settings)
     } catch (cause) {
-      if (!reportFailure(cause)) setError('Non riesco ad aggiornare le impostazioni. Riprova.')
+      if (!reportFailure(captured, cause))
+        patch(captured, { error: { key: 'settings.refreshFailed' } })
     } finally {
-      setBusy(false)
+      if (current(captured)) {
+        busyEpoch.current = null
+        patch(captured, { busy: false })
+      }
     }
   }
   const save = async () => {
-    if (busy || !response) return
-    setBusy(true)
-    setError(null)
-    setNotice(null)
+    const captured = epoch
+    if (!current(captured) || busyEpoch.current === captured || !view.response) return
+    busyEpoch.current = captured
+    patch(captured, { busy: true, error: null, notice: null })
     const values: ProfileSettingsValues = {
-      displayName: displayName.trim(),
-      locale: PROFILE_LOCALE,
-      timezone,
+      displayName: view.displayName.trim(),
+      locale: view.locale,
+      timezone: view.timezone,
     }
     try {
-      const updated = await client.update(response.settings.revision, values)
-      receive(updated)
-      await onChanged(updated.settings)
-      setNotice('Impostazioni salvate.')
+      const updated = await client.update(view.response.settings.revision, values)
+      if (!current(captured)) return
+      receive(captured, updated)
+      await callbacks.current.onChanged(updated.settings)
+      if (current(captured)) patch(captured, { notice: 'settings.saved' })
     } catch (cause) {
-      if (reportFailure(cause)) return
+      if (reportFailure(captured, cause)) return
       if (cause instanceof ApiError && cause.code === 'settings_changed') {
         try {
-          const current = await client.get()
-          receive(current)
-          await onChanged(current.settings)
-          setError(
-            'Le impostazioni sono cambiate. Ho aggiornato i dati: controllali prima di salvare di nuovo.',
-          )
+          const saved = await client.get()
+          if (!current(captured)) return
+          receive(captured, saved)
+          await callbacks.current.onChanged(saved.settings)
+          if (current(captured)) patch(captured, { error: { key: 'settings.changed' } })
         } catch (refreshCause) {
-          if (!reportFailure(refreshCause))
-            setError('Le impostazioni sono cambiate. Non riesco ad aggiornarle: riprova.')
+          if (!reportFailure(captured, refreshCause))
+            patch(captured, { error: { key: 'settings.refreshFailed' } })
         }
-      } else
-        setError(
-          cause instanceof Error ? cause.message : 'Non riesco a salvare le impostazioni. Riprova.',
-        )
+      } else patch(captured, { error: problem(cause) })
     } finally {
-      setBusy(false)
+      if (current(captured)) {
+        busyEpoch.current = null
+        patch(captured, { busy: false })
+      }
     }
   }
   const button = (label: string, action: () => void, primary = false, selected = false) => (
@@ -125,8 +183,10 @@ export function SettingsPanel({ request, theme, onChanged, onError }: Props) {
       key={label}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: busy, selected }}
-      disabled={busy}
+      aria-disabled={view.busy}
+      aria-pressed={selected}
+      accessibilityState={{ disabled: view.busy, selected }}
+      disabled={view.busy}
       onPress={action}
       style={[s.button, primary && s.primary, selected && s.selected]}
     >
@@ -135,93 +195,92 @@ export function SettingsPanel({ request, theme, onChanged, onError }: Props) {
   )
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.heading}>
-        Profilo e formato
+      <Text accessibilityRole="header" aria-level={2} style={s.heading}>
+        {i18n.t('settings.title')}
       </Text>
-      {error && (
+      {view.error && (
         <Text accessibilityRole="alert" style={s.error}>
-          {error}
+          {'key' in view.error ? i18n.t(view.error.key) : i18n.problemMessage(view.error.code)}
         </Text>
       )}
-      {notice && (
-        <Text accessibilityLiveRegion="polite" style={s.text}>
-          {notice}
+      {view.notice && (
+        <Text accessibilityLiveRegion="polite" aria-live="polite" style={s.text}>
+          {i18n.t(view.notice)}
         </Text>
       )}
-      {busy && (
-        <ActivityIndicator
-          accessibilityLabel="Aggiornamento delle impostazioni"
-          color={c.primary}
-        />
+      {view.busy && (
+        <ActivityIndicator accessibilityLabel={i18n.t('settings.loading')} color={c.primary} />
       )}
-      {response && (
+      {view.response && (
         <View style={s.card}>
-          <Text style={s.label}>Nome del profilo</Text>
+          <Text style={s.label}>{i18n.t('settings.displayName')}</Text>
           <TextInput
-            accessibilityLabel="Nome del profilo"
-            value={displayName}
-            onChangeText={setDisplayName}
-            editable={!busy}
+            accessibilityLabel={i18n.t('settings.displayName')}
+            value={view.displayName}
+            onChangeText={(value) => patch(epoch, { displayName: value })}
+            editable={!view.busy}
             maxLength={80}
             style={s.input}
           />
-          <Text style={s.label}>Lingua e formato</Text>
-          <Text style={s.text}>Italiano · € 1.234,56</Text>
-          <Text style={s.label}>Fuso orario per gli aggiornamenti</Text>
+          <LanguagePicker
+            locale={view.locale}
+            theme={theme}
+            disabled={view.busy}
+            onChange={(locale) => patch(epoch, { locale })}
+          />
+          <Text style={s.label}>{i18n.t('settings.format')}</Text>
+          <Text
+            accessibilityLabel={i18n.accessibleMoney(money(123456n, 'EUR'))}
+            style={[s.text, s.amount]}
+          >
+            {i18n.money(money(123456n, 'EUR'))}
+          </Text>
+          <Text style={s.label}>{i18n.t('settings.zoneForUpdates')}</Text>
           <View style={s.row}>
             {zoneOptions.map((option) =>
               button(
-                option.label,
-                () => setTimezone(option.value),
+                option.key ? i18n.t(option.key) : 'UTC',
+                () => patch(epoch, { timezone: option.value }),
                 false,
-                timezone === option.value,
+                view.timezone === option.value,
               ),
             )}
           </View>
-          {!zoneOptions.some((option) => option.value === timezone) && (
-            <Text style={s.text}>Fuso attuale: {timezone}</Text>
+          {!zoneOptions.some((option) => option.value === view.timezone) && (
+            <Text style={s.text}>
+              {i18n.t('settings.currentZone', { timezone: view.timezone })}
+            </Text>
           )}
+          <Text style={s.hint}>{i18n.t('settings.zoneHelp')}</Text>
           <Text style={s.hint}>
-            Il fuso cambia la visualizzazione degli orari. Le date di contabilizzazione dei
-            movimenti restano quelle della fonte.
-          </Text>
-          <Text style={s.hint}>
-            Ultima modifica:{' '}
-            {formatProfileInstant(response.settings.updatedAt, {
-              displayName,
-              locale: PROFILE_LOCALE,
-              timezone,
+            {i18n.t('settings.lastChange', {
+              date: i18n.instant(view.response.settings.updatedAt, view.response.settings.timezone),
             })}
           </Text>
           <View style={s.row}>
             {button(
-              'Salva impostazioni',
+              i18n.t('settings.save'),
               () => {
                 void save()
               },
               true,
             )}
-            {button('Ripristina valori salvati', () => receive(response))}
+            {button(i18n.t('settings.restore'), () => {
+              if (view.response) receive(epoch, view.response)
+            })}
           </View>
         </View>
       )}
-      {button('Aggiorna impostazioni', () => {
+      {button(i18n.t('settings.refresh'), () => {
         void refresh()
       })}
-      {response?.entitlements.plan === 'closed_beta' && (
+      {view.response?.entitlements.plan === 'closed_beta' && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.title}>
-            Beta gratuita
+          <Text accessibilityRole="header" aria-level={3} style={s.title}>
+            {i18n.t('settings.freeBetaTitle')}
           </Text>
-          <Text style={s.text}>
-            Stai usando dati sintetici. Questo prototipo non vende abbonamenti e non effettua
-            addebiti.
-          </Text>
-          <Text style={s.hint}>
-            Correggere i movimenti, usare le regole, controllare le corrispondenze, gestire la
-            privacy, esportare ed eliminare i dati restano funzioni gratuite. Conti manuali e
-            importazioni CSV non hanno un limite commerciale.
-          </Text>
+          <Text style={s.text}>{i18n.t('settings.freeBetaCopy')}</Text>
+          <Text style={s.hint}>{i18n.t('settings.freeBetaCapabilities')}</Text>
         </View>
       )}
     </View>
@@ -229,6 +288,7 @@ export function SettingsPanel({ request, theme, onChanged, onError }: Props) {
 }
 function styles(c: typeof colors.light | typeof colors.dark) {
   return StyleSheet.create({
+    amount: { fontVariant: ['tabular-nums'] },
     panel: { gap: 16 },
     heading: { fontFamily: 'Newsreader', fontSize: 30, color: c.textPrimary },
     title: { fontFamily: 'Geist', fontSize: 18, fontWeight: '600', color: c.textPrimary },

@@ -7,10 +7,16 @@ import {
   type Classification,
   type Connection,
   type CurrencyCode,
+  canonicalCategoryId,
   parseDecimal,
   type Transaction,
 } from '@lilleri/domain'
-import { analyse, effectiveTransactions } from '@lilleri/engines'
+import {
+  analyse,
+  DEFAULT_RECURRING_POLICY,
+  effectiveTransactions,
+  type RecurringPolicy,
+} from '@lilleri/engines'
 import {
   discoverInstitutions,
   type FinancialDataProvider,
@@ -26,6 +32,7 @@ import {
 } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import { cancelConnectionCreationIntents } from './connection-creation.js'
 import {
   assertLifecycleAllowsRefresh,
   type ConsentLifecycleOptions,
@@ -36,9 +43,11 @@ import {
 import type { ProfileEncryption } from './encryption.js'
 import { withoutHousehold } from './financial-storage.js'
 import { ManualService, recordManualImport } from './manual-service.js'
+import { MerchantTaxonomyService } from './merchant-taxonomy.js'
 import { augmentOwnershipExport } from './ownership-export.js'
 import { PrivacyService } from './privacy.js'
 import { conflict, notFound, Problem, providerFailure } from './problem.js'
+import { RecurringService } from './recurring.js'
 import {
   cleanupExpiredObservationPayloads,
   insertSourceObservation,
@@ -51,6 +60,10 @@ import {
 } from './revocation-outbox.js'
 import { DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION } from './runtime-config.js'
 import { SettingsService } from './settings.js'
+import type { SourceFacts } from './source-erasure.js'
+import { activeSyncTransactions, syncReviewItems } from './sync-ledger.js'
+
+export type SourceFactsRecorder = (db: Database, facts: SourceFacts, at: string) => Promise<void>
 
 const id = z.string().min(1).max(200)
 const optionalText = z.string().max(500).optional()
@@ -214,6 +227,8 @@ export class DemoService {
     readonly now: () => string = () => new Date().toISOString(),
     readonly encryption?: ProfileEncryption,
     readonly connectionLifecycleConfiguration: ConsentLifecycleOptions = DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
+    readonly recurringPolicy: RecurringPolicy = DEFAULT_RECURRING_POLICY,
+    readonly recordSourceFacts?: SourceFactsRecorder,
   ) {
     if (!provider.capabilities().synthetic || !provider.capabilities().grantSpecificRevocation)
       throw new Error('The demo API requires synthetic grant-specific revocation')
@@ -318,6 +333,7 @@ export class DemoService {
   async connect(
     institutionId = 'synthetic-italian',
     accountKind: Account['kind'] = 'current',
+    deferSync = false,
   ): Promise<Connection> {
     if (hasExpandedProviderContract(this.provider)) {
       const catalogue = await this.institutions()
@@ -432,7 +448,7 @@ export class DemoService {
       }
       return { connection: value, needsSync: true }
     })
-    if (result.needsSync) await this.sync(result.connection.id)
+    if (result.needsSync && !deferSync) await this.sync(result.connection.id)
     return await this.connection(result.connection.id)
   }
   async collect(connectionId: string, grantId: string | null = null) {
@@ -495,7 +511,8 @@ export class DemoService {
       throw providerFailure()
     }
   }
-  async sync(connectionId: string) {
+  async sync(connectionId: string, coordinator?: import('./sync-jobs.js').SyncCoordinator) {
+    if (coordinator) return coordinator.sync(connectionId)
     try {
       return await this.db.transaction(async (tx) => {
         await tx
@@ -619,6 +636,33 @@ export class DemoService {
           connectionId,
           ...report,
         })
+        await this.recordSourceFacts?.(
+          tx,
+          {
+            profileId: this.profileId,
+            connectionId,
+            consentId: lifecycle.consentId,
+            accountIds: batch.normalizedAccounts.map((account) => account.id),
+            transactions: batch.canonical.map((transaction) => ({
+              id: transaction.id,
+              accountId: transaction.accountId,
+            })),
+            observations: batch.observations.map(({ record, transaction }) => ({
+              id: stableId(
+                'observation',
+                this.profileId,
+                connectionId,
+                transaction.accountId,
+                this.provider.id,
+                record.id,
+                record.status,
+                hash(record),
+              ),
+              accountId: transaction.accountId,
+            })),
+          },
+          batch.observedAt,
+        )
         return report
       })
     } catch (error) {
@@ -660,6 +704,8 @@ export class DemoService {
         this.now,
         this.encryption,
         this.connectionLifecycleConfiguration,
+        this.recurringPolicy,
+        this.recordSourceFacts,
       ).importRecords(accountId, records)
     })
   }
@@ -728,6 +774,7 @@ export class DemoService {
         )
       }
       const report = { inserted: 0, updated: 0, unchanged: 0, rejected: 0, importedAt }
+      const recordedObservations: { id: string; accountId: string }[] = []
       for (const transaction of transactions) {
         if (
           transaction.amount.amountMinor < -9_223_372_036_854_775_808n ||
@@ -757,7 +804,13 @@ export class DemoService {
           await tx
             .insert(schema.transactions)
             .values(this.encryption ? await this.encryption.encryptTransactionRow(tx, row) : row)
-          await recordManualImport(tx, transaction, importedAt, this.encryption)
+          await recordManualImport(
+            tx,
+            transaction,
+            importedAt,
+            this.encryption,
+            this.recordSourceFacts,
+          )
           report.inserted++
         }
       }
@@ -794,7 +847,32 @@ export class DemoService {
           this.encryption,
         )
         await options.afterObservation?.(tx, { index, transaction, observationId })
+        recordedObservations.push({ id: observationId, accountId })
       }
+      const [consent] = await tx
+        .select()
+        .from(schema.consents)
+        .where(
+          and(
+            eq(schema.consents.profileId, this.profileId),
+            eq(schema.consents.connectionId, account.connectionId),
+            isNull(schema.consents.revokedAt),
+          ),
+        )
+        .orderBy(desc(schema.consents.grantedAt), desc(schema.consents.id))
+        .limit(1)
+      await this.recordSourceFacts?.(
+        tx,
+        {
+          profileId: this.profileId,
+          connectionId: account.connectionId,
+          consentId: consent?.id ?? null,
+          accountIds: [accountId],
+          transactions: transactions.map((transaction) => ({ id: transaction.id, accountId })),
+          observations: recordedObservations,
+        },
+        importedAt,
+      )
       return report
     })
   }
@@ -833,10 +911,11 @@ export class DemoService {
       .from(schema.matchDecisions)
       .where(eq(schema.matchDecisions.profileId, this.profileId))
     const accounts = accountRows.map(accountFromRow)
-    const transactions: Transaction[] = []
+    const ledgerTransactions: Transaction[] = []
     // A scoped PostgreSQL transaction has one client; decrypt sequentially on that client.
     for (const row of transactionRows)
-      transactions.push(await transactionFromRow(db, row, this.encryption))
+      ledgerTransactions.push(await transactionFromRow(db, row, this.encryption))
+    const transactions = await activeSyncTransactions(db, this.profileId, ledgerTransactions)
     const privacy = new PrivacyService(db, this.profileId, this.now)
     const context = await privacy.analysisContext(db)
     const analysisOptions = {
@@ -853,15 +932,46 @@ export class DemoService {
     }
     const preliminary = analyse(accounts, transactions, analysisOptions)
     const excluded = await privacy.analysisContext(db, preliminary.classifications)
+    const merchantContext = await new MerchantTaxonomyService(
+      db,
+      this.profileId,
+      this.now,
+      this.encryption,
+    ).analysisContext(db, transactions, preliminary.classifications)
     const derived = analyse(accounts, transactions, {
       ...analysisOptions,
-      excludedFromInsights: excluded.excludedTransactionIds,
+      excludedFromInsights: [
+        ...new Set([...excluded.excludedTransactionIds, ...merchantContext.excludedTransactionIds]),
+      ],
+      userClassifications: {
+        ...analysisOptions.userClassifications,
+        ...Object.fromEntries(
+          merchantContext.assignments.map((item) => [
+            item.transactionId,
+            canonicalCategoryId(item.canonicalCode),
+          ]),
+        ),
+      },
+      merchantResolutions: Object.fromEntries(
+        merchantContext.resolutions.map((item) => [item.transactionId, item]),
+      ),
     })
     const decisionRevisions = new Map(decisions.map((item) => [item.matchId, item.revision]))
     const transactionVersions = new Map(transactions.map((item) => [item.id, item]))
     const accountContexts = new Map(accounts.map((item) => [item.id, item]))
     const analysis: RevisionedAnalysis = {
       ...derived,
+      reviewItems: [
+        ...derived.reviewItems,
+        ...(await syncReviewItems(db, this.profileId, {
+          transactions: ledgerTransactions,
+          classifications: derived.classifications,
+          excludedTransactionIds: [
+            ...excluded.excludedTransactionIds,
+            ...merchantContext.excludedTransactionIds,
+          ],
+        })),
+      ],
       matches: derived.matches.map((match) => ({
         ...match,
         revision: reconciliationRevision(
@@ -873,7 +983,7 @@ export class DemoService {
         ),
       })),
     }
-    return { accounts, transactions, analysis }
+    return { accounts, transactions, ledgerTransactions, analysis, merchantContext }
   }
   async overview() {
     return this.db.transaction((tx) => this.overviewSnapshot(tx), {
@@ -899,7 +1009,9 @@ export class DemoService {
         this.now,
         this.connectionLifecycleConfiguration,
       ).list(db),
-      ...data,
+      accounts: data.accounts,
+      transactions: data.transactions,
+      analysis: data.analysis,
     }
   }
   async page(cursor: string | undefined, limit = 25) {
@@ -1159,6 +1271,7 @@ export class DemoService {
         .where(eq(schema.profiles.id, this.profileId))
         .for('update')
       const connection = await this.connection(connectionId, tx, true)
+      await cancelConnectionCreationIntents(tx, this.profileId, this.now(), connectionId)
       if (connection.providerId !== this.provider.id)
         throw new Problem(
           409,
@@ -1275,7 +1388,13 @@ export class DemoService {
       exportVersion: 1 as const,
       exportedAt,
       ...overview,
+      profile: {
+        ...overview.profile,
+        createdAt: new Date((await this.profile(db)).createdAt).toISOString(),
+      },
+      transactions: (await this.data(db)).ledgerTransactions,
       ...(await augmentOwnershipExport(db, this.profileId, this.encryption)),
+      ...(await new RecurringService(this, this.recurringPolicy).ownedExport(db)),
       consents: consents.map(withoutHousehold),
       sourceObservations: observations,
       feedback: feedback.map(withoutHousehold),
@@ -1300,6 +1419,7 @@ export class DemoService {
         .from(schema.profiles)
         .where(eq(schema.profiles.id, this.profileId))
         .for('update')
+      await cancelConnectionCreationIntents(tx, this.profileId, this.now())
       const consents = await tx
         .select()
         .from(schema.consents)

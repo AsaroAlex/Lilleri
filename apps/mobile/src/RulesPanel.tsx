@@ -14,9 +14,17 @@ import {
   type RuleRecord,
   type TransactionKind,
 } from '@lilleri/domain'
-import { formatMoney, fromJson } from '@lilleri/money'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { fromJson } from '@lilleri/money'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import type { MessageKey } from './i18n'
+import { useI18n } from './i18n/context'
+import {
+  displayMessage,
+  displayProblem,
+  type UiMessage,
+  UiValidationError,
+} from './i18n/ui-message'
 
 interface Props {
   readonly request: <T>(path: string, init?: RequestInit) => Promise<T>
@@ -69,13 +77,13 @@ const formFrom = (rule: RuleRecord): Form => ({
   categoryId: rule.categoryId,
   priority: String(rule.priority),
 })
-const kindLabels: Record<TransactionKind, string> = {
-  expense: 'Spesa',
-  income: 'Entrata',
-  transfer: 'Trasferimento',
-  card_settlement: 'Addebito carta',
-  refund: 'Rimborso',
-  cash_withdrawal: 'Prelievo',
+const kindLabels: Record<TransactionKind, MessageKey> = {
+  expense: 'rules.expense',
+  income: 'rules.income',
+  transfer: 'rules.transfer',
+  card_settlement: 'rules.settlement',
+  refund: 'rules.refund',
+  cash_withdrawal: 'rules.withdrawal',
 }
 /** Rule drafts stay inactive until the user sees a fresh retroactive preview and applies it. */
 export function RulesPanel({
@@ -87,13 +95,16 @@ export function RulesPanel({
   onError,
   proposal,
 }: Props) {
+  const i18n = useI18n()
+  const i18nRef = useRef(i18n)
+  i18nRef.current = i18n
   const client = useMemo(() => createRulesClient(request), [request]),
     c = colors[theme],
     s = useMemo(() => styles(c), [c])
   const [rules, setRules] = useState<readonly RuleRecord[]>([]),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState<string | null>(null),
-    [notice, setNotice] = useState<string | null>(null),
+    [error, setError] = useState<UiMessage | null>(null),
+    [notice, setNotice] = useState<MessageKey | null>(null),
     [showForm, setShowForm] = useState(false),
     [editing, setEditing] = useState<RuleRecord | null>(null),
     [form, setForm] = useState<Form>(emptyForm),
@@ -119,14 +130,14 @@ export function RulesPanel({
   useEffect(() => {
     reload().catch((cause) => {
       if (handleParentError(cause)) return
-      setError('Non riesco a caricare le regole. Riprova.')
+      setError('rules.loadFailed')
     })
   }, [reload, handleParentError])
   useEffect(() => {
     if (proposal) {
       setForm({
         ...emptyForm(),
-        name: `Categoria per ${proposal.merchantKey}`,
+        name: i18nRef.current.t('rules.proposalName', { merchant: proposal.merchantKey }),
         merchantKey: proposal.merchantKey,
         categoryId: proposal.categoryId,
       })
@@ -152,19 +163,12 @@ export function RulesPanel({
         setShowForm(false)
         try {
           await reload()
-          setError(
-            'La regola o i movimenti sono cambiati. Controlla i dati e prepara una nuova anteprima.',
-          )
+          setError('rules.changed')
         } catch (refreshCause) {
           if (handleParentError(refreshCause)) return
-          setError(
-            'La regola o i movimenti sono cambiati. Non riesco ad aggiornare i dati: riprova.',
-          )
+          setError('rules.refreshFailed')
         }
-      } else
-        setError(
-          cause instanceof Error ? cause.message : 'Non riesco a salvare questa modifica. Riprova.',
-        )
+      } else setError(displayProblem(cause, 'rules.saveFailed'))
     } finally {
       setBusy(false)
     }
@@ -175,6 +179,8 @@ export function RulesPanel({
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: busy, selected }}
+      aria-disabled={busy}
+      aria-pressed={selected}
       disabled={busy}
       onPress={action}
       style={[s.button, primary && s.primary, selected && s.selected]}
@@ -233,9 +239,8 @@ export function RulesPanel({
         ...(form.kind ? { kind: form.kind } : {}),
         ...(form.direction ? { direction: form.direction } : {}),
       }
-      if (!Object.keys(conditions).length)
-        throw new Error('Scegli almeno una condizione per la regola.')
-      if (!form.name.trim()) throw new Error('Scrivi un nome per riconoscere la regola.')
+      if (!Object.keys(conditions).length) throw new UiValidationError('rules.conditionRequired')
+      if (!form.name.trim()) throw new UiValidationError('rules.nameRequired')
       const definition: RuleDefinition = {
         name: form.name.trim(),
         conditions,
@@ -253,30 +258,29 @@ export function RulesPanel({
     })
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" style={s.heading}>
-        Le tue regole
+      <Text accessibilityRole="header" aria-level={2} style={s.heading}>
+        {i18nRef.current.t('rules.title')}
       </Text>
-      <Text style={s.text}>
-        Scegli la categoria dei movimenti che rispettano tutte le condizioni. Prima di applicare,
-        controlli l’effetto sui dati già salvati. Le correzioni fatte su un singolo movimento
-        restano valide.
-      </Text>
+      <Text style={s.text}>{i18nRef.current.t('rules.help')}</Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
-          {error}
+          {displayMessage(i18n, error)}
         </Text>
       )}
       {notice && (
-        <Text accessibilityLiveRegion="polite" style={s.text}>
-          {notice}
+        <Text accessibilityLiveRegion="polite" aria-live="polite" style={s.text}>
+          {i18n.t(notice)}
         </Text>
       )}
       {busy && (
-        <ActivityIndicator accessibilityLabel="Aggiornamento delle regole" color={c.primary} />
+        <ActivityIndicator
+          accessibilityLabel={i18nRef.current.t('rules.loading')}
+          color={c.primary}
+        />
       )}
       <View style={s.row}>
         {button(
-          'Nuova regola',
+          i18nRef.current.t('rules.new'),
           () => {
             setEditing(null)
             setForm(emptyForm())
@@ -285,29 +289,27 @@ export function RulesPanel({
           },
           true,
         )}
-        {button('Aggiorna regole', () => {
+        {button(i18nRef.current.t('rules.refresh'), () => {
           void run(reload)
         })}
-        {button(showArchived ? 'Nascondi archiviate' : 'Mostra archiviate', () =>
-          setShowArchived(!showArchived),
+        {button(
+          showArchived
+            ? i18nRef.current.t('rules.hideArchived')
+            : i18nRef.current.t('rules.showArchived'),
+          () => setShowArchived(!showArchived),
         )}
       </View>
       {showForm && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.title}>
-            {editing ? 'Modifica regola' : 'Nuova regola'}
+          <Text accessibilityRole="header" aria-level={3} style={s.title}>
+            {editing ? i18nRef.current.t('rules.editRule') : i18nRef.current.t('rules.new')}
           </Text>
-          {editing?.enabled && (
-            <Text style={s.hint}>
-              Salvando la modifica, la regola torna in bozza. Dopo l’anteprima puoi applicarla di
-              nuovo.
-            </Text>
-          )}
-          {field('Nome della regola', 'name')}
+          {editing?.enabled && <Text style={s.hint}>{i18nRef.current.t('rules.draftHelp')}</Text>}
+          {field(i18nRef.current.t('rules.name'), 'name')}
           {field(
-            'Esercente esatto',
+            i18nRef.current.t('rules.merchant'),
             'merchantKey',
-            'La corrispondenza è esatta. Puoi scegliere un esercente presente nei tuoi movimenti. I servizi di pagamento richiedono anche un conto o una descrizione.',
+            i18nRef.current.t('rules.merchantHelp'),
           )}
           <View style={s.row}>
             {[
@@ -322,7 +324,9 @@ export function RulesPanel({
               .slice(0, 12)
               .map((item) =>
                 button(
-                  `Esercente: ${item.merchantName || item.merchantKey}`,
+                  i18n.t('rules.merchantChoice', {
+                    merchant: item.merchantName || item.merchantKey,
+                  }),
                   () => update('merchantKey', item.merchantKey),
                   false,
                   form.merchantKey === item.merchantKey,
@@ -330,77 +334,97 @@ export function RulesPanel({
               )}
           </View>
           {field(
-            'Descrizione',
+            i18nRef.current.t('rules.description'),
             'description',
-            'Confronto letterale, senza espressioni regolari. Lascia vuoto se non serve.',
+            i18nRef.current.t('rules.descriptionHelp'),
           )}
           <View style={s.row}>
             {button(
-              'La descrizione contiene',
+              i18nRef.current.t('rules.contains'),
               () => update('operator', 'contains'),
               false,
               form.operator === 'contains',
             )}
             {button(
-              'La descrizione è uguale',
+              i18nRef.current.t('rules.equals'),
               () => update('operator', 'equals'),
               false,
               form.operator === 'equals',
             )}
           </View>
           {field(
-            'Importo minimo in unità minime',
+            i18nRef.current.t('rules.minimum'),
             'min',
-            'Valore assoluto intero: per esempio 1,20 EUR = 120. Lascia vuoto per non fissare un limite.',
+            i18nRef.current.t('rules.minorUnitsHelp'),
           )}
-          {field('Importo massimo in unità minime', 'max')}
-          {field('Valuta del limite', 'currency')}
-          <Text style={s.label}>Conto</Text>
+          {field(i18nRef.current.t('rules.maximum'), 'max')}
+          {field(i18nRef.current.t('rules.limitCurrency'), 'currency')}
+          <Text style={s.label}>{i18nRef.current.t('rules.account')}</Text>
           <View style={s.row}>
-            {button('Qualsiasi conto', () => update('accountId', ''), false, !form.accountId)}
+            {button(
+              i18nRef.current.t('rules.anyAccount'),
+              () => update('accountId', ''),
+              false,
+              !form.accountId,
+            )}
             {accounts.map((account) =>
               button(
-                `Conto: ${account.name}`,
+                i18n.t('rules.accountChoice', { account: account.name }),
                 () => update('accountId', account.id),
                 false,
                 form.accountId === account.id,
               ),
             )}
           </View>
-          <Text style={s.label}>Tipo di movimento</Text>
+          <Text style={s.label}>{i18nRef.current.t('rules.kind')}</Text>
           <View style={s.row}>
-            {button('Qualsiasi tipo', () => update('kind', ''), false, !form.kind)}
+            {button(
+              i18nRef.current.t('rules.anyKind'),
+              () => update('kind', ''),
+              false,
+              !form.kind,
+            )}
             {(Object.keys(kindLabels) as TransactionKind[]).map((kind) =>
-              button(kindLabels[kind], () => update('kind', kind), false, form.kind === kind),
+              button(
+                i18n.t(kindLabels[kind]),
+                () => update('kind', kind),
+                false,
+                form.kind === kind,
+              ),
             )}
           </View>
-          <Text style={s.label}>Segno dell’importo</Text>
+          <Text style={s.label}>{i18nRef.current.t('rules.direction')}</Text>
           <View style={s.row}>
-            {button('Qualsiasi segno', () => update('direction', ''), false, !form.direction)}
             {button(
-              'Importo negativo',
+              i18nRef.current.t('rules.anyDirection'),
+              () => update('direction', ''),
+              false,
+              !form.direction,
+            )}
+            {button(
+              i18nRef.current.t('rules.negative'),
               () => update('direction', 'debit'),
               false,
               form.direction === 'debit',
             )}
             {button(
-              'Importo positivo',
+              i18nRef.current.t('rules.positive'),
               () => update('direction', 'credit'),
               false,
               form.direction === 'credit',
             )}
             {button(
-              'Importo zero',
+              i18nRef.current.t('rules.zero'),
               () => update('direction', 'zero'),
               false,
               form.direction === 'zero',
             )}
           </View>
-          <Text style={s.label}>Categoria da assegnare</Text>
+          <Text style={s.label}>{i18nRef.current.t('rules.category')}</Text>
           <View style={s.row}>
             {(Object.keys(CATEGORIES) as CategoryId[]).map((category) =>
               button(
-                CATEGORIES[category],
+                i18n.categoryLabel(category),
                 () => update('categoryId', category),
                 false,
                 form.categoryId === category,
@@ -408,19 +432,19 @@ export function RulesPanel({
             )}
           </View>
           {field(
-            'Priorità da 0 a 100',
+            i18nRef.current.t('rules.priority'),
             'priority',
-            'Vince la priorità più alta. Le correzioni esplicite sul movimento hanno comunque precedenza.',
+            i18nRef.current.t('rules.priorityHelp'),
           )}
           <View style={s.row}>
             {button(
-              'Salva e mostra anteprima',
+              i18nRef.current.t('rules.savePreview'),
               () => {
                 void save()
               },
               true,
             )}
-            {button('Chiudi senza salvare', () => {
+            {button(i18nRef.current.t('rules.closeDraft'), () => {
               setShowForm(false)
               setEditing(null)
             })}
@@ -429,37 +453,49 @@ export function RulesPanel({
       )}
       {preview && (
         <View style={s.card}>
-          <Text accessibilityRole="header" style={s.title}>
-            Anteprima: {preview.rule.name}
+          <Text accessibilityRole="header" aria-level={3} style={s.title}>
+            {i18nRef.current.t('rules.preview', { name: preview.rule.name })}
           </Text>
           <Text style={s.text}>
-            {preview.value.matchedTransactionIds.length} movimenti rispettano le condizioni.{' '}
-            {preview.value.affectedTransactionIds.length} cambieranno classificazione.{' '}
-            {preview.value.lockedTransactionIds.length} conservano la tua correzione.
+            {i18n.t('rules.previewCounts', {
+              matched: preview.value.matchedTransactionIds.length,
+              changed: preview.value.affectedTransactionIds.length,
+              retained: preview.value.lockedTransactionIds.length,
+            })}
           </Text>
           <Text style={s.hint}>
-            Categoria: {CATEGORIES[preview.rule.categoryId]}. Gli importi, i conti e le
-            riconciliazioni restano gli stessi. La regola attiva vale anche per i nuovi movimenti
-            corrispondenti.
+            {i18n.t('rules.previewCategory', {
+              category: i18n.categoryLabel(preview.rule.categoryId),
+            })}
           </Text>
           {preview.value.affectedTransactionIds.slice(0, 5).map((id) => {
             const transaction = transactions.find((item) => item.id === id)
             return (
-              <Text key={id} style={s.text}>
+              <Text
+                key={id}
+                style={s.text}
+                accessibilityLabel={
+                  transaction
+                    ? `${transaction.merchantName || transaction.description} · ${i18n.accessibleMoney(fromJson(transaction.amount))}`
+                    : i18nRef.current.t('rules.savedTransaction')
+                }
+              >
                 {transaction
-                  ? `${transaction.merchantName || transaction.description} · ${formatMoney(fromJson(transaction.amount))}`
-                  : 'Movimento salvato'}
+                  ? `${transaction.merchantName || transaction.description} · ${i18n.money(fromJson(transaction.amount))}`
+                  : i18nRef.current.t('rules.savedTransaction')}
               </Text>
             )
           })}
           {preview.value.affectedTransactionIds.length > 5 && (
             <Text style={s.hint}>
-              E altri {preview.value.affectedTransactionIds.length - 5} movimenti.
+              {i18n.t('rules.otherCount', {
+                count: preview.value.affectedTransactionIds.length - 5,
+              })}
             </Text>
           )}
           <View style={s.row}>
             {button(
-              'Applica questa regola',
+              i18nRef.current.t('rules.apply'),
               () => {
                 void run(async () => {
                   await client.apply(
@@ -470,12 +506,12 @@ export function RulesPanel({
                   setPreview(null)
                   await reload()
                   await onChanged()
-                  setNotice('Regola applicata. Puoi disattivarla o annullare l’ultima modifica.')
+                  setNotice('rules.applied')
                 })
               },
               true,
             )}
-            {button('Chiudi anteprima', () => setPreview(null))}
+            {button(i18nRef.current.t('rules.closePreview'), () => setPreview(null))}
           </View>
         </View>
       )}
@@ -485,70 +521,75 @@ export function RulesPanel({
           <View key={rule.id} style={s.card}>
             <Text style={s.title}>{rule.name}</Text>
             <Text style={s.text}>
-              {CATEGORIES[rule.categoryId]} ·{' '}
-              {rule.archived ? 'Archiviata' : rule.enabled ? 'Attiva' : 'Bozza / disattivata'} ·
-              priorità {rule.priority}
+              {i18n.t('rules.statusLine', {
+                category: i18n.categoryLabel(rule.categoryId),
+                status: i18n.t(
+                  rule.archived ? 'rules.archived' : rule.enabled ? 'rules.active' : 'rules.draft',
+                ),
+                priority: rule.priority,
+              })}
             </Text>
             <Text style={s.hint}>
-              Creata da te.{' '}
-              {rule.conditions.merchantKey ? `Esercente: ${rule.conditions.merchantKey}. ` : ''}
-              {rule.conditions.description
-                ? `Descrizione ${rule.conditions.description.operator === 'equals' ? 'uguale a' : 'contenente'} “${rule.conditions.description.value}”. `
+              {i18nRef.current.t('rules.owned')}{' '}
+              {rule.conditions.merchantKey
+                ? i18n.t('rules.merchantCondition', { merchant: rule.conditions.merchantKey })
                 : ''}
-              Tutte le condizioni devono corrispondere.
+              {rule.conditions.description
+                ? i18n.t(
+                    rule.conditions.description.operator === 'equals'
+                      ? 'rules.equalsCondition'
+                      : 'rules.containsCondition',
+                    { description: rule.conditions.description.value },
+                  )
+                : ''}
+              {i18nRef.current.t('rules.allConditions')}
             </Text>
             <View style={s.row}>
               {!rule.archived &&
-                button('Modifica', () => {
+                button(i18nRef.current.t('rules.edit'), () => {
                   setEditing(rule)
                   setForm(formFrom(rule))
                   setShowForm(true)
                   setPreview(null)
                 })}
               {!rule.archived &&
-                button('Mostra anteprima', () => {
+                button(i18nRef.current.t('rules.showPreview'), () => {
                   void run(async () => setPreview({ rule, value: await client.preview(rule.id) }))
                 })}
               {rule.enabled &&
-                button('Disattiva', () => {
+                button(i18nRef.current.t('rules.disable'), () => {
                   void run(async () => {
                     await client.state(rule.id, rule.revision, 'disable')
                     setPreview(null)
                     await reload()
                     await onChanged()
-                    setNotice('Regola disattivata. I movimenti conservano i loro importi.')
+                    setNotice('rules.disabled')
                   })
                 })}
               {!rule.archived &&
-                button('Archivia', () => {
+                button(i18nRef.current.t('rules.archive'), () => {
                   void run(async () => {
                     await client.state(rule.id, rule.revision, 'archive')
                     setPreview(null)
                     await reload()
                     await onChanged()
-                    setNotice('Regola archiviata. Puoi ripristinarla annullando l’ultima modifica.')
+                    setNotice('rules.archivedNotice')
                   })
                 })}
               {rule.revision > 1 &&
-                button('Annulla ultima modifica', () => {
+                button(i18nRef.current.t('rules.undo'), () => {
                   void run(async () => {
                     await client.state(rule.id, rule.revision, 'undo')
                     setPreview(null)
                     await reload()
                     await onChanged()
-                    setNotice(
-                      'Versione precedente ripristinata come bozza. Controlla una nuova anteprima per attivarla.',
-                    )
+                    setNotice('rules.undone')
                   })
                 })}
             </View>
           </View>
         ))}
-      {!rules.length && !busy && (
-        <Text style={s.hint}>
-          Nessuna regola salvata. Puoi crearne una senza cambiare subito i movimenti.
-        </Text>
-      )}
+      {!rules.length && !busy && <Text style={s.hint}>{i18nRef.current.t('rules.empty')}</Text>}
     </View>
   )
 }
@@ -556,11 +597,41 @@ function styles(c: typeof colors.light | typeof colors.dark) {
   return StyleSheet.create({
     panel: { gap: 16 },
     heading: { fontFamily: 'Newsreader', fontSize: 30, color: c.textPrimary },
-    title: { fontFamily: 'Geist', fontSize: 18, fontWeight: '600', color: c.textPrimary },
-    text: { fontFamily: 'Geist', fontSize: 16, lineHeight: 24, color: c.textPrimary },
-    hint: { fontFamily: 'Geist', fontSize: 14, lineHeight: 21, color: c.textSecondary },
-    label: { fontFamily: 'Geist', fontSize: 14, fontWeight: '600', color: c.textPrimary },
-    error: { fontFamily: 'Geist', fontSize: 16, lineHeight: 24, color: c.danger },
+    title: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 18,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    text: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 16,
+      lineHeight: 24,
+      color: c.textPrimary,
+    },
+    hint: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 14,
+      lineHeight: 21,
+      color: c.textSecondary,
+    },
+    label: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 14,
+      fontWeight: '600',
+      color: c.textPrimary,
+    },
+    error: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 16,
+      lineHeight: 24,
+      color: c.danger,
+    },
     row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     card: {
       borderWidth: 1,
@@ -592,7 +663,12 @@ function styles(c: typeof colors.light | typeof colors.dark) {
       justifyContent: 'center',
       backgroundColor: c.surfaceElevated,
     },
-    buttonText: { fontFamily: 'Geist', fontSize: 14, color: c.textPrimary },
+    buttonText: {
+      fontFamily: 'Geist',
+      fontVariant: ['tabular-nums'],
+      fontSize: 14,
+      color: c.textPrimary,
+    },
     primary: { backgroundColor: c.primary, borderColor: c.primary },
     primaryText: { color: c.onPrimary, fontWeight: '600' },
     selected: { backgroundColor: c.primarySoft, borderColor: c.primary },

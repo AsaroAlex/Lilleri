@@ -1,6 +1,12 @@
+import { createHash } from 'node:crypto'
 import type { Database } from '@lilleri/database'
 import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
+import {
+  assertConnectionCreationOwnershipReferences,
+  connectionCreationOwnershipDto,
+  connectionCreationOwnershipExport,
+} from './connection-creation-export.js'
 import { consentEvents, consentLifecycles } from './consent-lifecycle-schema.js'
 import type { ProfileEncryption } from './encryption.js'
 import { savedCsvMappingDto } from './mapped-import-dto.js'
@@ -10,6 +16,11 @@ import {
   mappedImportAuditDto,
   mappedProvenanceDto,
 } from './mapped-import-export.js'
+import { MerchantTaxonomyService } from './merchant-taxonomy.js'
+import {
+  merchantTaxonomyExportDtoSchema,
+  validateMerchantTaxonomyExport,
+} from './merchant-taxonomy-export.js'
 import {
   NOTIFICATION_TITLES,
   NotificationsService,
@@ -26,12 +37,25 @@ import {
   privacyTransactionEventDtoSchema,
   transactionPrivacyDtoSchema,
 } from './privacy.js'
+import { recurringOwnershipSchemas, validateRecurringOwnershipExport } from './recurring-export.js'
+import {
+  type SourceErasureVerifier,
+  sourceErasureOwnershipSchemas,
+  validateSourceErasureOwnershipExport,
+} from './source-erasure-export.js'
 import {
   supportApprovals,
   supportEvents,
   supportGrants,
   supportRequests,
 } from './support-access-schema.js'
+import {
+  assertSyncOwnershipReferences,
+  syncOwnershipDto,
+  syncOwnershipExport,
+} from './sync-export.js'
+import { understandingOwnershipExportDto } from './understanding-persistence-dto.js'
+import { validateUnderstandingOwnershipExport } from './understanding-persistence-validation.js'
 
 const identifier = z.string().min(1).max(256)
 const instant = z.iso.datetime({ offset: true })
@@ -271,6 +295,13 @@ export const ownershipExportSchemas = {
   privacy: privacyExport.optional(),
   notifications: exportedNotifications.optional(),
   mappedImports: exportedMappedImports.optional(),
+  merchantTaxonomy: merchantTaxonomyExportDtoSchema.optional(),
+  sync: syncOwnershipDto.optional(),
+  recurringPreferences: recurringOwnershipSchemas.recurringPreferences.optional(),
+  recurringPreferenceEvents: recurringOwnershipSchemas.recurringPreferenceEvents.optional(),
+  sourceErasures: sourceErasureOwnershipSchemas.sourceErasures.optional(),
+  connectionCreation: connectionCreationOwnershipDto.optional(),
+  understandingPersistence: understandingOwnershipExportDto.optional(),
 }
 const ownershipExport = z.strictObject(ownershipExportSchemas)
 export type OwnershipExport = z.infer<typeof ownershipExport>
@@ -342,6 +373,14 @@ export async function augmentOwnershipExport(
     privacy,
     notifications: { ...notificationData, feed: notificationFeed },
     mappedImports,
+    sync: await syncOwnershipExport(db, profileId),
+    connectionCreation: await connectionCreationOwnershipExport(db, profileId),
+    merchantTaxonomy: await new MerchantTaxonomyService(
+      db,
+      profileId,
+      undefined,
+      encryption,
+    ).exportAudit(db),
   })
 }
 
@@ -357,7 +396,7 @@ interface ExportReference {
   readonly providerRecordId?: string
 }
 interface OwnershipSnapshot {
-  readonly profile: { readonly id: string }
+  readonly profile: { readonly id: string; readonly createdAt?: string }
   readonly exportedAt: string
   readonly connections: readonly ExportReference[]
   readonly consents: readonly ExportReference[]
@@ -386,15 +425,58 @@ function window(start: string, end: string, maximum: number) {
 }
 
 /** Pure semantic checks supplement machine-readable shapes for direct ZIP callers. */
-export function validateOwnershipExport(value: Record<string, unknown>): OwnershipExport {
+export interface OwnershipExportValidationOptions {
+  readonly verifySourceErasure?: SourceErasureVerifier
+}
+export function validateOwnershipExport(
+  value: Record<string, unknown>,
+  options: OwnershipExportValidationOptions = {},
+): OwnershipExport {
   const selected: Record<string, unknown> = {}
   for (const key of Object.keys(ownershipExportSchemas))
     if (Object.hasOwn(value, key)) selected[key] = value[key]
   const parsed = ownershipExport.parse(selected)
+  const attested = validateSourceErasureOwnershipExport(
+    value as unknown as Parameters<typeof validateSourceErasureOwnershipExport>[0],
+    options.verifySourceErasure,
+  )
+  validateMerchantTaxonomyExport(value, attested)
+  validateRecurringOwnershipExport(
+    value as unknown as Parameters<typeof validateRecurringOwnershipExport>[0],
+  )
   const snapshot = value as unknown as OwnershipSnapshot
   const profileId = snapshot.profile.id
   const exportedAt = Date.parse(snapshot.exportedAt)
   if (!Number.isFinite(exportedAt)) fail()
+  if (parsed.understandingPersistence)
+    validateUnderstandingOwnershipExport(parsed.understandingPersistence, {
+      profileId,
+      accountIds: snapshot.accounts.map((row) => row.id),
+      transactionIds: snapshot.transactions.map((row) => row.id),
+      accounts: snapshot.accounts,
+      transactions: snapshot.transactions,
+      sourceReceiptIds: parsed.sourceErasures?.map((row) => row.signed.body.id) ?? [],
+      exportedAt: snapshot.exportedAt,
+      ...(snapshot.profile.createdAt ? { profileCreatedAt: snapshot.profile.createdAt } : {}),
+    } as unknown as Parameters<typeof validateUnderstandingOwnershipExport>[1])
+  if (parsed.connectionCreation)
+    assertConnectionCreationOwnershipReferences(parsed.connectionCreation, {
+      profileId,
+      exportedAt: snapshot.exportedAt,
+      connections: snapshot.connections,
+      consents: snapshot.consents,
+      revocationJobs: value.revocationJobs ?? [],
+      sourceErasureReceipts: parsed.sourceErasures?.map((row) => row.signed.body),
+    } as unknown as Parameters<typeof assertConnectionCreationOwnershipReferences>[1])
+  if (parsed.sync)
+    assertSyncOwnershipReferences(parsed.sync, {
+      profileId,
+      exportedAt: snapshot.exportedAt,
+      connections: snapshot.connections,
+      consents: snapshot.consents,
+      accounts: snapshot.accounts,
+      transactions: snapshot.transactions,
+    } as unknown as Parameters<typeof assertSyncOwnershipReferences>[1])
   const connections = unique(snapshot.connections, (row) => row.id)
   const consents = unique(snapshot.consents, (row) => row.id)
   const lifecycleRows = parsed.consentLifecycles ?? []
@@ -829,6 +911,28 @@ export function validateOwnershipExport(value: Record<string, unknown>): Ownersh
     }
     for (const event of events) if (!mappingById.has(event.mappingId)) fail()
     for (const row of provenance) {
+      const workbookOrigin = [row.fileFormat, row.workbookDigest, row.worksheet, row.headerRow]
+      if (workbookOrigin.some((field) => field !== undefined)) {
+        if (
+          workbookOrigin.some((field) => field === undefined) ||
+          row.fileFormat !== 'xlsx' ||
+          row.headerRow === undefined ||
+          row.rowNumber <= row.headerRow ||
+          row.rowNumber > 1100 ||
+          row.fileDigest !==
+            createHash('sha256')
+              .update(
+                JSON.stringify([
+                  'lilleri.xlsx-selection.v1',
+                  row.workbookDigest,
+                  row.worksheet,
+                  row.headerRow,
+                ]),
+              )
+              .digest('hex')
+        )
+          fail()
+      }
       const account = accounts.get(row.accountId),
         transaction = transactions.get(row.transactionId),
         observation = observations.get(row.observationId)
