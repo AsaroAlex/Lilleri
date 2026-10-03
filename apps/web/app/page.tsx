@@ -320,6 +320,7 @@ export default function Page() {
       <footer className="site-footer wrap">
         <span>Lilleri · 2026</span>
         <span>Prototipo in sviluppo · Dati dimostrativi</span>
+        <a href="/piani">Gratis e Plus</a>
         <a href="#privacy">Privacy del prototipo</a>
       </footer>
     </>

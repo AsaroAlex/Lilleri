@@ -21,10 +21,14 @@
     "format:check": "biome format .",
     "lint:configuration": "node tools/lint-operational-configuration.mjs",
     "test:configuration-lint": "node --test tools/lint-operational-configuration.test.mjs",
-    "check": "biome check . && pnpm test:configuration-lint && pnpm lint:configuration && turbo run typecheck test",
+    "check": "biome check . && pnpm test:configuration-lint && pnpm lint:configuration && pnpm test:bootstrap && turbo run typecheck test",
     "check:fix": "biome check --write .",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
-    "prepare": "simple-git-hooks || true"
+    "prepare": "simple-git-hooks || true",
+    "dev:zero": "node tools/bootstrap/run.mjs --prepare",
+    "check:zero": "node tools/bootstrap/run.mjs --check",
+    "economics:zero": "node tools/bootstrap/report.mjs",
+    "test:bootstrap": "node --test tools/bootstrap/bootstrap.test.mjs"
   },
   "devDependencies": {
     "@babel/parser": "7.29.9",

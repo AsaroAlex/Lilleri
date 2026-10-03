@@ -44,6 +44,8 @@ jobs:
         run: pnpm exec biome ci .
       - name: Typecheck
         run: pnpm typecheck
+      - name: Zero-investment bootstrap and economics
+        run: pnpm test:bootstrap
       - name: Unit tests
         run: pnpm test
       - name: Integration tests (PostgreSQL)

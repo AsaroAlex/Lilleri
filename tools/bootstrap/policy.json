@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "mode": "local-synthetic",
+  "initialInvestmentCents": 0,
+  "externalServicesBudgetCents": 0,
+  "freeExpires": false,
+  "bankConnectionsEnabled": false,
+  "externalInferenceEnabled": false,
+  "checkoutEnabled": false,
+  "pricesForTesting": { "monthlyCents": 699, "annualCents": 6999 },
+  "minimumCashCoverageMonths": 12
+}
