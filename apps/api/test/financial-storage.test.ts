@@ -21,6 +21,7 @@ import { csvMappingEvents, savedCsvMappings } from '../src/mapped-import-schema.
 
 type App = Awaited<ReturnType<typeof createApp>>
 interface Snapshot {
+  accounts: { id: string }[]
   transactions: {
     id: string
     description: string
@@ -76,7 +77,9 @@ async function fixture(encrypted: boolean, seed = true, crypto = encryption) {
 async function exportSnapshot(app: App): Promise<Snapshot> {
   const response = await app.inject({ url: '/v1/export' })
   expect(response.statusCode, response.payload).toBe(200)
-  return response.json<Snapshot>()
+  const snapshot = response.json<Snapshot>()
+  // Encryption can change database row order; compare every account field by stable identity.
+  return { ...snapshot, accounts: snapshot.accounts.toSorted((a, b) => a.id.localeCompare(b.id)) }
 }
 async function manualAccount(app: App) {
   const response = await app.inject({
