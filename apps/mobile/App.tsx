@@ -1977,6 +1977,7 @@ function styles(c: ThemeColors) {
       maxWidth: 1100,
       alignSelf: 'center',
       flexDirection: 'row',
+      flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 24,
@@ -1986,7 +1987,13 @@ function styles(c: ThemeColors) {
       borderColor: c.border,
     },
     logo: { width: 122, height: 40 },
-    headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center', flexShrink: 1 },
+    headerActions: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 8,
+      alignItems: 'center',
+      flexShrink: 1,
+    },
     demoBadge: {
       fontFamily: 'GeistMedium',
       fontSize: tokens.typography.scale.caption.size,
@@ -2357,6 +2364,7 @@ function styles(c: ThemeColors) {
     exportText: { fontFamily: 'Geist', fontSize: 12, lineHeight: 18, color: c.textSecondary },
     tabBar: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
       backgroundColor: c.surfaceElevated,
       borderTopWidth: 1,
       borderColor: c.border,
@@ -2366,7 +2374,9 @@ function styles(c: ThemeColors) {
       gap: 2,
     },
     tab: {
-      flex: 1,
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: 'auto',
       minWidth: 48,
       alignItems: 'center',
       justifyContent: 'center',

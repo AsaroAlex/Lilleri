@@ -149,14 +149,22 @@ originale e owned JSON/ZIP11file. La continuazione aggiunge:
 - Sync44 e creation17 e maintenance12 per driver; source/encryption/restore42 perdriver,
  4 HTTPsource routing e5 compiledCLI recovery; understanding persistence16 perdriver.
 - Browser corrente: financial17/auth16/understanding9/persistence12/connection9/privacy10/
-  notifications7/mapped9/XLSX7/merchant10/i18n7 pass:113 gruppi,0 page errors.
-  Cache App10 pass:123 gruppi totali. Accessibilità IT+EN/durable10 prosegue. Non trasformare
-  pass storici o standalonecache12/focus8 in acceptance finale App ancora da eseguire.
+  notifications7/mapped9/XLSX7/merchant10/i18n7/cacheApp10/durable10 pass:
+  133 gruppi di flussi,0 page errors. Accessibilità: gli stessi13 casi passano in
+  italiano e inglese,0JS/0writes; testo DOM200% su Home320px, non zoom/native.
+  Durable LAST ha completato230 finestre con11 gesti UI,0 preflight resume, retain
+  verificato e successivo erase della sola banca sintetica; ZIP completo verificato.
+  Non aggiungere ripetizioni per lingua o standalonecache12/focus8 ai133 flussi.
 - Auth passkey probe actualregister/signin più negativi UV/origin/replay/key/revokesession.
   Virtual CTAP2 Chromium, non prova dispositivo. Auth fixture separata con31 migrazioni.
 - Frozen38scenari/51tx pass; separate requirement25cases4/18/3. Nessuna accuracy empirica.
 - Actualdev:zero readiness API3191/Expolocalhost8181,5conti/35tx strings/CORS; check/economics
   pass. Next current build / e /piani HTTP200; rebuild dopo nuove aggiunte remote.
+- Startup finale `pnpm dev`: Next3000 `/` e `/piani`, API3001 `/health` e `/v1/demo`,
+  Expo localhost8081 HTTP200. Nuovo archivio indipendente5conti/35tx EUR/GBP exact.
+  Override non segreti in `/workspace/.lilleri-validation/cloud-ready-runtime.env`;
+  dati/vault/journal fuori checkout, vecchi archivi preservati. Prove startup/browser
+  `continuation-cloud-ready-start-proof.json` e `continuation-cloud-ready-browser.json`.
 - Audit produzione2HIGH/0MODERATE/0CRITICAL: node-forge1.4.0/braces3.0.3 senza patch
   riportata. Nessun clean gate/signing/native/KMS/legal/realbank acceptance.
 - Prove/log fuori checkout `/workspace/.lilleri-validation`, riferimenti in STATUS.
@@ -169,18 +177,22 @@ Checkpoint integrato e pushato `e10f10672072cef05927de07ae434c4f69718538`.
 Vecchi generated Next dev types corrotti preservati fuori checkout; typegen ufficiale
 e fulltypecheck pass senza cambiare scope. API GitHub Actions403: CIremota non verificata.
 
-## Cloud e chiusura attiva
+## Cloud e punto stabile
 
-Cloud draft7 salvato e readback exact installer/start, repository/networkpreset/secrets/
+Cloud draft8 salvato e readback exact installer/start, repository/networkpreset/secrets/
 runtime requirements preservati. Strumenti disponibili solo read/update draft: user
 ha autorizzato publication, ma non c’è comando callable per pubblicare. Non dichiarare
-pubblicato o restore nuovo task. Finire browser/check dopo ultimi livelli ARIA,
-aggiornare prove, fare commit/push normale del punto stabile e verificare remoto.
+pubblicato o restore nuovo task. Check23/build10/mobile35 pass dopo live announcements
+e reflow200%; browser finali conclusi e prove aggiornate. Checkpoint precedenti pushati
+`e10f106` e `0dda407`; leggere HEAD/remoto per il commit finale di reflow e acceptance.
 
 DemoAPI3004 e Metro8082 per accettazione; authAPI3005/static5173 su archivio diverso;
-Next3006 e previewzero3191/8181 separati. Writer sul demo sequenziali; durable-sync
-sourceerase helper va LAST e può richiedere nuovo archivio per budget legittimi.
-Non alterare policy/budget per far passare helper. Preservare fixture prima di cambiare.
+tutti i writer browser chiusi. Il demo3004 conserva l’erasure finale della banca e
+gli altri dati; non riseminarlo. Preview corrente `pnpm dev` su3000/3001/8081 usa il
+nuovo archivio `cloud-ready-demo-20261003-final`, con vault indipendente
+`cloud-ready-demo-keys-20261003-final` e journal sibling. I vecchi Next3006 e
+previewzero3191/8181 sono stati fermati; riavviarli solo se necessari. Un task futuro
+deve verificare processi/porte e non assumere un restore già validato.
 
 ## Lavoro residuo reale
 
