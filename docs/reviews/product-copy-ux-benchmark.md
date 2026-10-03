@@ -46,9 +46,14 @@ The shared checkout is actively being changed by the main chat. The publication 
 
 The uncommitted sync, XLSX, merchant, recurrence, offline, localisation and privacy integrations remain with the main chat. Their partial files and known open review findings are not evidence of completed functionality and are not included in this publication. CSV imports remain the file format supported by the published app.
 
-Exact publication verification so far:
+Exact publication verification:
 
 - Frozen-lockfile installation passed.
 - `pnpm check` passed: Biome, operational-configuration tests/guard, all workspace typechecks and 550 unit/API tests. Three PostgreSQL-specific tests were skipped in the local PGlite run; the PR CI will run its PostgreSQL integration job separately.
 - `git diff --check` passed; the browser helpers also pass Node syntax checks.
-- Production builds, fresh browser checks and remote CI are pending. The PR must not be merged until those checks finish.
+- The full production build passed: default Next/Turbopack and a fresh Expo web export. The final desktop navigation label also passed the mobile typecheck and fresh export.
+- 17 existing financial browser checks and 9 existing mapped-CSV checks passed against an isolated synthetic archive. They verify actual writes, stale-command denial, exact amounts, duplicate prevention, settings, export and clearing volatile import state.
+- 22 landing/Home navigation checks passed on the final export: keyboard actions, real destinations, hosted-origin demo messaging, zero-review fallback, themes and 320/390/650/900/1440 px layouts. No JavaScript errors or attempted writes occurred in these read-only navigation checks. The zero-review case injects only display data in the browser.
+- The browser proxy served this clone's fresh export at an already allowed loopback origin and forwarded API requests to this clone's isolated synthetic API. The main chat's running services and archive were not used.
+- The first remote CI run exposed an existing rollback assertion that depended on PostgreSQL row order. The assertion now sorts complete records by ID before comparing them; counts, amounts, timestamps and every other field remain checked. This is a test-only correction, with no application/API change.
+- Remote CI and merge status are tracked in [PR #1](https://github.com/AsaroAlex/Lilleri/pull/1). Merge requires successful checks on the latest PR head.

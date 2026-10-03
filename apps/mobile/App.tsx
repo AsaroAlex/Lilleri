@@ -597,6 +597,7 @@ export default function App() {
               <Pressable
                 key={destination}
                 accessibilityRole="button"
+                accessibilityLabel={`${destination}${destination === 'Da controllare' ? `, ${reviewCount} elementi` : ''}`}
                 accessibilityState={{ selected: tab === destination }}
                 onPress={() => go(destination)}
                 style={[s.railTab, tab === destination && s.selectedTab]}
