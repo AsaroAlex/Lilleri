@@ -15,9 +15,9 @@ const newsreader = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Lilleri — I tuoi soldi, in ordine.',
+  title: 'Lilleri — Capisci le spese. Ritrova il quadro.',
   description:
-    'Un progetto per capire i tuoi movimenti, riconoscere le ricorrenze e mantenere il controllo. In sviluppo, con dati dimostrativi.',
+    'Entrate, spese e movimenti in un quadro chiaro. Correggi le categorie, controlla gli abbinamenti ed esplora Lilleri nella demo locale con dati dimostrativi.',
   robots: { index: false, follow: false },
 }
 

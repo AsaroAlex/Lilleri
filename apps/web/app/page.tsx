@@ -1,4 +1,5 @@
 import Image from 'next/image'
+import DemoLink from './demo-link'
 import ThemeButton from './theme-button'
 
 function Signature({ small = false }: { small?: boolean }) {
@@ -35,8 +36,9 @@ export default function Page() {
           />
         </a>
         <nav aria-label="Navigazione principale">
-          <a href="#come-funziona">Il progetto</a>
+          <a href="#come-funziona">Come funziona</a>
           <a href="#privacy">I tuoi dati</a>
+          <a href="#domande">Domande</a>
         </nav>
         <ThemeButton />
       </header>
@@ -44,31 +46,35 @@ export default function Page() {
         <section className="hero wrap" aria-labelledby="hero-title">
           <div className="hero-copy">
             <p className="eyebrow">
-              <span className="status-dot" /> Un progetto in sviluppo
+              <span className="status-dot" /> Finanze personali · Demo disponibile
             </p>
             <h1 id="hero-title">
-              I tuoi soldi,
+              Capisci le spese.
               <br />
-              <em>in ordine.</em>
+              <em>Ritrova il quadro.</em>
             </h1>
             <p className="hero-intro">
-              Un bonifico qui. Una carta là.
-              <br />
-              Lilleri nasce per mettere insieme i movimenti e aiutarti a capire cosa succede.
+              Guarda entrate, spese e movimenti nello stesso posto. Correggi le categorie, controlla
+              gli abbinamenti e scopri cosa si ripete ogni mese.
             </p>
-            <a className="button primary" href="#come-funziona">
-              Scopri il progetto <span aria-hidden="true">↗</span>
-            </a>
+            <div className="hero-actions">
+              <a className="button primary" href="#demo">
+                Esplora la demo <span aria-hidden="true">↓</span>
+              </a>
+              <a className="text-link" href="#come-funziona">
+                Guarda come funziona <span aria-hidden="true">→</span>
+              </a>
+            </div>
             <p className="hero-note">
-              Per ora, un prototipo con dati dimostrativi.
-              <br />I collegamenti bancari reali non sono disponibili.
+              Parti da dati dimostrativi, senza credenziali bancarie.
+              <br />I collegamenti a banche reali non sono ancora disponibili.
             </p>
             <Signature />
           </div>
           <figure className="hero-figure">
             <div className="figure-label">
-              <span>Una visione più chiara</span>
-              <span>01 — Esempio</span>
+              <span>La tua panoramica</span>
+              <span>Esempio</span>
             </div>
             <div className="ledger">
               <div className="ledger-top">
@@ -88,8 +94,9 @@ export default function Page() {
                 />
                 <span>Dati dimostrativi</span>
               </div>
-              <p className="ledger-label">Ogni movimento ha il suo posto.</p>
+              <p className="ledger-label">Spese in questo esempio</p>
               <p className="ledger-amount">€ 42,50</p>
+              <p className="ledger-context">Il trasferimento tra conti non è una seconda spesa.</p>
               <div className="ledger-row">
                 <div className="merchant-mark">S</div>
                 <div>
@@ -111,13 +118,13 @@ export default function Page() {
                   ?
                 </span>
                 <div>
-                  <strong>Quando c’è un dubbio, scegli tu.</strong>
-                  <span>Una proposta spiegata. Una correzione possibile.</span>
+                  <strong>Un abbinamento da controllare</strong>
+                  <span>Confronta i movimenti, poi conferma o rifiuta.</span>
                 </div>
               </div>
               <div className="ledger-foot">
                 <Signature small />
-                <span>Le fonti restano visibili.</span>
+                <span>Importi, date e fonti visibili.</span>
               </div>
             </div>
             <figcaption>Importi e movimenti illustrativi. Nessun conto reale.</figcaption>
@@ -126,61 +133,106 @@ export default function Page() {
         <section className="manifesto" id="come-funziona" aria-labelledby="project-title">
           <div className="wrap manifesto-grid">
             <div>
-              <p className="eyebrow">Meno rumore. Più senso.</p>
+              <p className="eyebrow">Come funziona</p>
               <h2 id="project-title">
-                Un movimento,
+                Segui il denaro.
                 <br />
-                <em>una volta sola.</em>
+                <em>Passo dopo passo.</em>
               </h2>
             </div>
             <div className="manifesto-copy">
               <p>
-                La stessa spesa può comparire in posti diversi. Un addebito carta può sembrare una
-                seconda uscita. Un trasferimento può confondersi con una spesa.
+                Un pagamento con la carta, il suo addebito sul conto, un trasferimento tra i tuoi
+                conti: possono sembrare tre spese. Lilleri ti aiuta a capire quali movimenti sono
+                collegati e quali devono restare separati.
               </p>
               <p>
-                Stiamo costruendo Lilleri per distinguere queste storie, conservare le fonti e
-                chiederti una conferma quando gli indizi non bastano.
+                Parti dai dati della demo oppure aggiungi un conto manuale. Cerca i movimenti,
+                assegna le categorie e controlla le proposte prima di confermarle.
               </p>
               <p className="quiet">
-                Il prototipo permette di provare questo percorso su dati sintetici. L’automazione e
-                la copertura bancaria saranno da verificare prima del lancio.
+                Le proposte mostrano le loro ragioni. Le tue correzioni restano salvate e puoi
+                annullare le decisioni sugli abbinamenti.
               </p>
             </div>
           </div>
         </section>
-        <section className="steps wrap" aria-label="Come stiamo progettando Lilleri">
+        <section className="steps wrap" aria-label="Cosa puoi fare con Lilleri">
           <article>
             <span className="step-number">01</span>
-            <h3>Una vista d’insieme.</h3>
+            <h3>Vedi entrate e spese</h3>
             <p>
-              Saldi e spese, separati per valuta. Il periodo dei dati e l’ultimo aggiornamento
-              sempre accanto agli importi.
+              Ritrova conti e movimenti nella panoramica. Confronta le entrate con le spese,
+              controllando il periodo e la data di aggiornamento. Ogni valuta resta separata.
             </p>
             <Signature small />
           </article>
           <article>
             <span className="step-number">02</span>
-            <h3>Il perché, a portata.</h3>
+            <h3>Controlla e correggi</h3>
             <p>
-              Proposte di categoria e corrispondenze tra movimenti mostrano gli indizi da cui
-              nascono.
+              Apri un movimento per vedere la descrizione originale e la categoria. Nella sezione Da
+              controllare trovi gli abbinamenti che richiedono una tua scelta.
             </p>
             <Signature small />
           </article>
           <article>
             <span className="step-number">03</span>
-            <h3>L’ultima parola è tua.</h3>
+            <h3>Riduci il lavoro ripetuto</h3>
             <p>
-              Correggi un movimento o scegli la categoria per i prossimi acquisti dallo stesso
-              esercente.
+              Applica una categoria ai prossimi acquisti dallo stesso esercente. Crea le tue regole
+              e consulta le possibili ricorrenze, con date e importi indicati come stime.
             </p>
             <Signature small />
           </article>
         </section>
+        <section className="demo-section wrap" id="demo" aria-labelledby="demo-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Prova il percorso</p>
+              <h2 id="demo-title">
+                Inizia da <em>un movimento.</em>
+              </h2>
+            </div>
+            <p>
+              La demo contiene esempi da esplorare. Puoi anche aggiungere un conto manuale e provare
+              l’importazione con dati inventati.
+            </p>
+          </div>
+          <ol className="demo-path">
+            <li>
+              <span className="step-number" aria-hidden="true">
+                01
+              </span>
+              <h3>Guarda la Home</h3>
+              <p>Controlla il riepilogo, i conti e gli ultimi movimenti.</p>
+            </li>
+            <li>
+              <span className="step-number" aria-hidden="true">
+                02
+              </span>
+              <h3>Apri Da controllare</h3>
+              <p>Leggi le ragioni di un abbinamento. Conferma, rifiuta o torna indietro.</p>
+            </li>
+            <li>
+              <span className="step-number" aria-hidden="true">
+                03
+              </span>
+              <h3>Aggiungi i tuoi esempi</h3>
+              <p>In Movimenti, scegli Importa o aggiungi per creare un conto manuale.</p>
+            </li>
+          </ol>
+          <div className="demo-access" id="demo-instructions">
+            <DemoLink />
+            <p className="quiet">
+              La demo si apre sul computer su cui hai avviato Lilleri. È un prototipo locale, con
+              dati dimostrativi; nessun conto bancario reale viene collegato.
+            </p>
+          </div>
+        </section>
         <section className="privacy wrap" id="privacy" aria-labelledby="privacy-title">
           <div className="privacy-heading">
-            <p className="eyebrow">Controllo, prima di tutto.</p>
+            <p className="eyebrow">Dati e privacy</p>
             <h2 id="privacy-title">
               I tuoi dati.
               <br />
@@ -189,30 +241,79 @@ export default function Page() {
           </div>
           <div className="privacy-detail">
             <p>
-              Nella demo puoi esportare i dati, scollegare la fonte simulata o eliminare il profilo
-              dimostrativo. Scollegare ferma gli aggiornamenti; eliminare rimuove anche lo storico.
+              Scarica una copia dei tuoi dati quando vuoi. Scegli quali movimenti escludere dalle
+              analisi e quali avvisi ricevere. Puoi cambiare queste preferenze dall’app.
             </p>
             <ul>
-              <li>Nessuna credenziale bancaria richiesta.</li>
-              <li>Nessun collegamento a banche reali disponibile.</li>
-              <li>Nessun dato inviato a un servizio di AI esterno dal prototipo.</li>
+              <li>Esporta lo storico in JSON o in un archivio ZIP con CSV e JSON.</li>
+              <li>Scollega una fonte per fermare gli aggiornamenti e conservare lo storico.</li>
+              <li>Elimina il profilo per rimuovere anche conti, movimenti e correzioni.</li>
             </ul>
             <p className="quiet">
-              Prima di un servizio reale serviranno un fornitore verificato, un’informativa completa
-              e controlli di sicurezza validati. Questa pagina presenta il progetto, non un servizio
-              bancario.
+              Il prototipo non invia i dati a un servizio di AI esterno. L’accesso a banche reali
+              resta in sviluppo: la demo non richiede credenziali bancarie.
             </p>
           </div>
+        </section>
+        <section className="faq wrap" id="domande" aria-labelledby="faq-title">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Prima di iniziare</p>
+              <h2 id="faq-title">
+                Le domande <em>più pratiche.</em>
+              </h2>
+            </div>
+            <p>Cosa puoi provare oggi e cosa aspettarti dai dati che vedi.</p>
+          </div>
+          <details>
+            <summary>Posso collegare la mia banca?</summary>
+            <p>
+              Non ancora. Puoi esplorare la fonte dimostrativa, aggiungere conti manuali e importare
+              file di prova. Il collegamento a banche reali sarà disponibile solo dopo
+              l’integrazione e la verifica del fornitore.
+            </p>
+          </details>
+          <details>
+            <summary>Come aggiungo un conto o importo i movimenti?</summary>
+            <p>
+              Apri Movimenti e scegli Importa o aggiungi. Per un file con colonne diverse dal
+              formato standard, scegli Importa file. Seleziona il conto, associa le colonne e
+              controlla l’anteprima prima di confermare l’importazione.
+            </p>
+          </details>
+          <details>
+            <summary>Un trasferimento viene contato come spesa?</summary>
+            <p>
+              Un trasferimento riconosciuto tra i tuoi conti viene escluso dai totali di spesa. Se
+              il collegamento tra due movimenti è incerto, Lilleri lo propone in Da controllare: sei
+              tu a confermarlo o rifiutarlo.
+            </p>
+          </details>
+          <details>
+            <summary>Le ricorrenze indicano addebiti certi?</summary>
+            <p>
+              No. Sono possibili ricorrenze ricavate dai movimenti disponibili. Le prossime date e
+              gli importi sono stime e non confermano un contratto o un pagamento futuro.
+            </p>
+          </details>
+          <details>
+            <summary>Posso esportare o eliminare i dati?</summary>
+            <p>
+              Sì, dalla sezione Privacy. Scollegare una fonte conserva i movimenti già recuperati.
+              Eliminare il profilo rimuove anche lo storico e non può essere annullato: esporta
+              prima i dati che vuoi conservare.
+            </p>
+          </details>
         </section>
         <section className="closing wrap">
           <Signature />
           <p>
-            Un po’ di ordine.
+            Parti da quello
             <br />
-            <em>Un po’ più di spazio.</em>
+            <em>che vuoi capire.</em>
           </p>
-          <a className="button secondary" href="#come-funziona">
-            Rileggi il progetto <span aria-hidden="true">↑</span>
+          <a className="button primary" href="#demo">
+            Esplora la demo <span aria-hidden="true">↑</span>
           </a>
         </section>
       </main>

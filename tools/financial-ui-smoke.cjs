@@ -154,7 +154,7 @@ const matchCard = (page) =>
       409,
     )
     assert.equal(conflict.value.code, 'reconciliation_changed')
-    await other.getByText(/Questa corrispondenza è cambiata. Ho aggiornato i dati/).waitFor()
+    await other.getByText(/Questa corrispondenza è cambiata. I dati sono aggiornati/).waitFor()
     assert.equal(staleWrites, 1, 'Conflict must not replay the decision')
     let current = await overview()
     assert.equal(
@@ -297,9 +297,7 @@ const matchCard = (page) =>
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date())
     await page.getByRole('textbox', { name: 'Nome del conto', exact: true }).fill(accountName)
     await page.getByRole('textbox', { name: 'Saldo iniziale', exact: true }).fill('100,25')
-    await page
-      .getByRole('textbox', { name: 'Data di inizio tracciamento', exact: true })
-      .fill(today)
+    await page.getByRole('textbox', { name: 'Data del saldo iniziale', exact: true }).fill(today)
     const beforeManual = await overview()
     const createdAccount = await responseFrom(
       page,

@@ -28,6 +28,7 @@ import { ConnectionsPanel } from './ConnectionsPanel'
 import { ImportManualPanel } from './ImportManualPanel'
 import { MappedImportPanel } from './MappedImportPanel'
 import { PrivacyControlsPanel } from './PrivacyControlsPanel'
+import { HomeQuickActions } from './src/HomeQuickActions'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
 import { NotificationsPanel } from './src/NotificationsPanel'
 import { RulesPanel } from './src/RulesPanel'
@@ -305,9 +306,9 @@ export default function App() {
           }
           setError(
             matchChanged
-              ? 'Questa corrispondenza è cambiata. Ho aggiornato i dati: controllala di nuovo prima di scegliere.'
+              ? 'Questa corrispondenza è cambiata. I dati sono aggiornati: confronta di nuovo i movimenti prima di confermare.'
               : categoryChanged
-                ? 'Questo movimento è cambiato. Ho aggiornato i dati: controlla di nuovo la categoria prima di salvarla.'
+                ? 'Questo movimento è cambiato. I dati sono aggiornati: controlla la categoria prima di salvarla di nuovo.'
                 : cause.message,
           )
         } catch (refreshFailure) {
@@ -558,7 +559,7 @@ export default function App() {
       <SafeAreaView style={s.root}>
         <View style={s.loader}>
           <ActivityIndicator color={c.primary} />
-          <Text style={s.body}>Sto preparando la demo.</Text>
+          <Text style={s.body}>Prepariamo la tua panoramica.</Text>
         </View>
       </SafeAreaView>
     )
@@ -591,7 +592,7 @@ export default function App() {
       <View style={[s.shell, wide && s.wideShell]}>
         {wide && (
           <View style={s.rail}>
-            <Text style={s.railLabel}>IL TUO QUADRO</Text>
+            <Text style={s.railLabel}>LE TUE FINANZE</Text>
             {tabs.map((destination, index) => (
               <Pressable
                 key={destination}
@@ -623,9 +624,9 @@ export default function App() {
         >
           <View style={s.pageHeading}>
             <View style={s.headingCopy}>
-              <Text style={s.eyebrow}>IL PROTOTIPO LILLERI</Text>
+              <Text style={s.eyebrow}>LE TUE FINANZE</Text>
               <Text accessibilityRole="header" style={s.heading}>
-                {selected ? 'Il movimento' : tab === 'Home' ? 'Un quadro più chiaro.' : tab}
+                {selected ? 'Dettaglio movimento' : tab === 'Home' ? 'Panoramica' : tab}
               </Text>
             </View>
             {!erased && (
@@ -640,8 +641,8 @@ export default function App() {
             )}
           </View>
           <Text style={s.demoIntro}>
-            Una demo locale con un profilo sintetico. Non servono credenziali bancarie; nessuna
-            banca reale è collegata.
+            Dati di prova, nessuna banca collegata. Puoi aggiungere conti manuali e importare
+            movimenti.
           </Text>
           {localIdentityMode && (
             <LocalIdentityPanel
@@ -1054,6 +1055,15 @@ export default function App() {
                 c={c}
                 s={s}
               />
+              <HomeQuickActions
+                theme={theme}
+                reviewCount={reviewCount}
+                disabled={!!busy}
+                onAdd={() => setManage('import')}
+                onReview={() => go('Da controllare')}
+                onTransactions={() => go('Movimenti')}
+                onSummary={() => setManage('understanding')}
+              />
               <View style={s.sectionHeader}>
                 <Text accessibilityRole="header" style={s.sectionTitle}>
                   I conti nell’esempio
@@ -1099,7 +1109,7 @@ export default function App() {
               <View style={s.actions}>
                 <Button label="Regole" onPress={() => setManage('rules')} quiet c={c} s={s} />
                 <Button
-                  label="CSV personalizzato"
+                  label="Importa file"
                   onPress={() => setManage('mapped-import')}
                   quiet
                   c={c}
@@ -1282,8 +1292,8 @@ export default function App() {
           ) : tab === 'Ricorrenti' ? (
             <>
               <Text style={s.body}>
-                Possibili ricorrenze riconosciute nello storico dimostrativo. Le prossime date e gli
-                importi sono stime: non confermano un contratto o un addebito futuro.
+                Ritrova le spese che sembrano ripetersi. Confronta gli importi e i movimenti usati
+                per riconoscerle. Le prossime date sono stime, non addebiti confermati.
               </Text>
               {data.analysis.recurring.map((series) => {
                 const transactions = series.transactionIds
