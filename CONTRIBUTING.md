@@ -4,7 +4,7 @@ Read [PROJECT_STATE.md](PROJECT_STATE.md), [STATUS](docs/STATUS.md), [BRIEF](doc
 
 ## Toolchain and startup
 
-Use Node 22.12+ and pnpm 10; the package manager is pinned to pnpm 10.28.0. This workspace optionally provides:
+Use Node 22.12+ and pnpm 10; the package manager is pinned to pnpm 10.28.0. This workspace optionally provides (activate it for Git commits too: hooks invoke pnpm):
 
 ```bash
 . /workspace/.lilleri-toolchain/env.sh
@@ -25,7 +25,7 @@ PGlite persists synthetic data at `.lilleri/data` by default and applies the sam
 PGLITE_PATH=/tmp/lilleri-new-demo pnpm dev
 ```
 
-The API requires `DEMO_MODE=1`, rejects `NODE_ENV=production`, and permits only loopback hosts. Keep this guard. A physical device's loopback is that device; do not open the unauthenticated demo on a public/LAN host to make a native preview work. Simulator/device support needs a separate reviewed development arrangement and actual device checks.
+The default API requires `DEMO_MODE=1`; opt-in synthetic browser identity instead requires `LOCAL_AUTH_MODE=1` and `DEMO_MODE=0` (see [local identity](docs/architecture/local-identity.md)). Both reject `NODE_ENV=production`, and permits only loopback hosts. Keep this guard. A physical device's loopback is that device; do not open the unauthenticated demo on a public/LAN host to make a native preview work. Simulator/device support needs a separate reviewed development arrangement and actual device checks.
 
 ## Optional local PostgreSQL
 
@@ -62,7 +62,7 @@ Migration checksums reject editing an already-applied migration; add a reviewed 
 The existing cloud verification used a separately provisioned disposable PostgreSQL 16.15 test database on 127.0.0.1:55432. If that test database is available, run:
 
 ```bash
-PG_TEST_DATABASE_URL=postgres://lilleri:lilleri@127.0.0.1:55432/lilleri_test pnpm test:integration
+PG_TEST_DATABASE_URL=postgres://lilleri:lilleri@127.0.0.1:55432/lilleri_execution_20261003 pnpm test:integration
 ```
 
 This command assumes that exact local test service/database already exists. It does not create it, and the demo Compose service uses a different port/user/database. In another workspace supply your own disposable test database URL using **`PG_TEST_DATABASE_URL`**, not `TEST_DATABASE_URL`. Integration tests create synthetic profiles and clean them up; never point them at a production or valuable database. [STATUS](docs/STATUS.md) records the evidence and CI limitations.
@@ -83,13 +83,19 @@ python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/mobile/dist
 
 Keep the demo API running on 3001 for the exported Expo browser prototype. Stop the Expo dev server before using 8081 for the static export. Native device execution, VoiceOver/TalkBack, store builds and real-provider behaviour need separate evidence.
 
+## Local maintenance and browser evidence
+
+Revocation retries run on the API's own database handle; see [outbox operations](docs/operations/revocation-outbox.md). Never open a persistent PGlite store from a second process while the API owns it. Standalone workers require a separate supported PostgreSQL connection. Payload retention and scoped archive-export contracts are documented beside their implementation.
+
+Reproducible browser scripts in `tools` require Playwright plus a Chromium executable in the tooling environment. They are development evidence, not app runtime dependencies, and use only disposable synthetic stores. Read each script's prerequisites before running it; a baseline count does not apply after manual imports modify the fixture. Native/device tests remain separate.
+
 ## Implementation conventions
 
 - Use strict TypeScript, ESM and `import type`; packages use `@lilleri/*`. Domain and pure engines must not import vendor payloads or call external services.
 - Money is integer minor units as `bigint` plus currency. Use `@lilleri/money`; serialise bigint as decimal strings across JSON boundaries. Never perform ledger arithmetic with floating point.
 - Financial booking/value dates are valid `YYYY-MM-DD` calendar dates persisted as SQL `DATE`; instants are validated timestamp values. Derive local calendar periods with the profile timezone (`Europe/Rome` for this prototype), never by treating every date as midnight UTC.
 - Keep source identity, observations, canonical revisions, user corrections and inference separate. Same amount/merchant/date is insufficient duplicate evidence. Explicit correction/rule wins over automatic classification; ambiguous structural matches go to review.
-- Preserve profile scope in queries, mutations and references. Current demo identity is server-selected; production authentication/authorization is a separate release requirement.
+- Preserve profile scope in queries, mutations and references. Demo identity is server-selected; opt-in local identity verifies sessions and derives membership on the server. Both modes are synthetic-only. Production authentication/recovery/authorization remains a separate release requirement.
 - Fixtures are synthetic. No credentials, IBANs, real receipts/exports or personal financial screenshots in code/tests/docs; scope confidential evidence through the appropriate reviewed process.
 - Source/capability, confidence, freshness and estimation claims must follow actual implementation/evidence. Correctness, correction/learning, privacy/security, retained-data access, export and deletion cannot become paid entitlements.
 - Add meaningful invariant/adversarial tests for changed financial or tenant behaviour. Documentation and cosmetic edits need appropriate verification, not tests that merely mirror wording.

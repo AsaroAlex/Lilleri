@@ -2,7 +2,9 @@
 
 **Project:** Lilleri, Italy-first PFM; proposed recipient route subject to counsel/provider approval.
 **Review date:** 2026-10-02. **Retained evidence dates:** 2026-10-02; publication/access metadata in §11 preserved.
-**Status:** proposed schedule and acceptance tests. No operational erasure or key-management capability is established by this document.
+**Status:** proposed production schedule with bounded synthetic implementation evidence below. No production erasure or key-management capability is established by this document.
+
+**Synthetic implementation evidence (2026-10-03):** the local demo now separates immutable source-observation metadata from raw successful-ingest content in `observation_payloads`. Migration `0006` preserves existing observation IDs and starts expiry at their original ingest instant plus 720 hours, without resetting the clock during upgrade. Provider sync and CSV import attach content only when observation metadata is first inserted; replay cannot recreate an expired/deleted payload. The scoped export excludes raw content at or after expiry even when physical cleanup has not run. Explicit local maintenance deletes at most 100 rows by default (validated range 1–1,000), scoped to one profile, without changing its canonical ledger. Source/account/profile cascades also remove content. Eight dedicated tests passed with PGlite; the same run with the PostgreSQL driver passed seven shared retention scenarios plus the intentionally PGlite legacy-upgrade scenario. This is synthetic local evidence, not a deployed daily expiry job, approved real-data retention period, processor deletion, backup erasure or key-management claim. The 90-day exception and quarantine policy remain unimplemented.
 
 ## How to read this document
 

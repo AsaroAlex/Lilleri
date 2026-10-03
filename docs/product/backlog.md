@@ -97,7 +97,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 | E01.1 | Sign-up with e-mail verification, passkey first, password + TOTP fallback, 18+ attestation, T&Cs acceptance as one explicit action | `K-CONTRACT`, `K-AGE` consent events logged with text version; one ask per screen | P0 | M | E00 | AU-1 |
 | E01.2 | Biometric lock, session list with revoke, 90-day session expiry, re-auth before export/deletion/disconnect | Sessions expire; re-auth enforced; events logged | P0 | S | E01.1 | AU-2 |
 | E01.3 | Minimal profile (display name, locale, country) and explicit non-collection | No contacts/location/IDs; country IT fixed at launch | P0 | S | E01.1 | AU-3 |
-| E01.4 | In-app and web-link account deletion with 7-day cool-off, provider revocation, crypto-shredding, confirmation | Flow per `DR` §5.1; deletion certificate generated | P0 | M | E01.1, E18.3, E24.2 | AU-4 |
+| E01.4 | In-app and web-link account deletion without a mandatory waiting period, durable provider revocation, validated key destruction and confirmation | Flow per `DR` §5.1; deletion certificate generated | P0 | M | E01.1, E18.3, E24.2 | AU-4 |
 
 ### E02 Connections & consent — P0, XL
 
@@ -110,7 +110,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 | E02.5 | Institution picker with per-institution, per-account-type coverage status and manual fallback | Statuses from configuration; "Non ancora collegabile — aggiungi il saldo a mano" path to E05.4 | P0 | M | E02.1, E26.1 | CO-2 |
 | E02.6 | Consent service: `consent_event` append-only store, `connection` state machine (active / expiring / expired / revoked_* / error_* / paused), source-of-truth per type | Invariants per `CM` §4.4; every feature gate reads the service | P0 | M | E00.3 | CO-3; `CM` §4 |
 | E02.7 | "Collegamenti" screen: status, expiry and days left, last update, accounts masked, actions Rinnova / Aggiorna ora / Metti in pausa / Scollega with data choice | Every action writes a consent event; provider-side revocation reflected within one refresh | P0 | M | E02.6 | CO-3 |
-| E02.8 | Renewal cadence 150/170/178, "Rinnova tutti", expired = "in pausa" copy, late-renewal gap detection with CSV offer | Timeline per `CM` §5.2; reminders stop on renewal | P0 | M | E02.6, E12, E17 | CO-4 |
+| E02.8 | Renewal reminders at configurable offsets before the provider-derived consent expiry or required renewal action, "Rinnova tutti", expired = "in pausa" copy, late-renewal gap detection with CSV offer | Distinguish consent/SCA/session/token dates per `CM` §5.2; no universal 180-day lifetime or fixed day-from-grant cadence; unknown dates never become invented deadlines; reminders stop on renewal or disconnect | P0 | M | E02.6, E12, E17 | CO-4 |
 | E02.9 | Free-envelope enforcement at connect time (1 institution, ≤ 2 accounts) with contextual message | Cap enforced; manual/import unlimited; paused accounts keep history | P0 | S | E23.1 | CO-5 |
 
 ### E03 Sync engine & ingestion identity — P0, XL
@@ -151,7 +151,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 |---|---|---|---|---|---|---|
 | E06.1 | Domain model: `account`, `transaction` (bigint minor units, currency, scale, three `date` columns, status, encrypted raw description, normalised description, counterparty hash, codes, category/canonical/kind/confidence/tier/taxonomy_version, parent, locked fields, version), `link`, `ledger_event`, household tenancy with RLS ENABLE + FORCE and CI cross-household test | Schema and tests per `RC` §4.2, §6; `scope` attribute reserved | P0 | L | E00.2 | TX-4, XD-1–XD-3, HH-0 |
 | E06.2 | Combined transactions list by day with account chips, status badges, transfer pairs rendered once, settlements linked, month totals excluding transfer legs, filters | it-IT amounts, Unicode minus, tabular figures | P0 | M | E06.1, E21.1 | TX-1 |
-| E06.3 | Transaction detail: normalised and raw descriptor, dates, kind, category with "why", links with evidence sentences, history with per-event undo, all feedback actions | Raw never destroyed | P0 | M | E06.1, E10.1 | TX-2 |
+| E06.3 | Transaction detail: normalised and raw descriptor, dates, kind, category with "why", links with evidence sentences, history with per-event undo, all feedback actions | Canonical provenance retained; raw payload expires under the current retention schedule | P0 | M | E06.1, E10.1 | TX-2 |
 | E06.4 | Search (merchant, raw, notes, amount with comma) with p95 ≤ 300 ms server and instant on the 90-day cache | Scoped to the household | P0 | S | E06.1, E20.1 | TX-3 |
 | E06.5 | FX: original amount/currency and provider rate kept; dated ECB/Frankfurter fallback with `fx_source` | Scenario 17 passes | P0 | S | E06.1 | TX-4 |
 
@@ -228,7 +228,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 | E13.4 | CARD_SETTLEMENT typing and exclusion from spend (bank-side descriptors, CBI 45), "addebito carta — dettaglio non collegato" state | Scenario 10 (typing part) passes | P0 | S | E07.4 | RE-4 (1) |
 | E13.5 | Provider deletion / reversal handling: booked user-edited row → NEEDS_REVIEW; CNCL/RJCT → reversed with link; descriptor-based reversal proposed | Scenario 23 passes | P0 | S | E03.5, E12.1 | RE-9 |
 | E13.6 | Evidence records on every link and decision, Italian sentence renderer, per-`sync_run` batch undo | Every automated link reversible until user-confirmed | P0 | M | E06.1 | RE-10 |
-| E13.7 | The 25 reconciliation fixture scenarios as CI acceptance tests (incl. DST dates, month boundary, overdraft, retry) | All green before M1 | P0 | M | E25.2 | RE-10 |
+| E13.7 | Versioned catalogue of all 25 reconciliation scenarios, with capability/story/priority mapping and executable acceptance tests for the implemented subset (incl. DST dates, month boundary, overdraft, retry) | Local delivery reports only executed supported cases; applicable P0 assertions must pass before cleared beta; P1/P2/Later cases remain explicitly expected-unsupported until implemented, never counted as feature PASS; missing P0 behaviour remains open | P0 | M | E25.2 | RE-10 |
 
 ### E14 Recurring & subscriptions — P0 (detection), P1 (alerts), L
 
@@ -257,7 +257,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 
 | ID | Story | Acceptance criteria (abbrev.) | Priority | Size | Depends | PRD |
 |---|---|---|---|---|---|---|
-| E17.1 | Service push types (inbox non-empty batched, consent 170/178, mismatch, expired/paused, summary ready) without payload; quiet hours; per-type toggles; in-context OS permission ask | "Hai 3 movimenti da rivedere"; no amounts in push | P0 | M | E02.8, E12.1 | NO-1 |
+| E17.1 | Service push types (inbox non-empty batched, consent reminders at configurable provider-expiry-relative offsets, mismatch, expired/paused, summary ready) without payload; quiet hours; per-type toggles; in-context OS permission ask | "Hai 3 movimenti da rivedere"; no amounts in push; consent reminders follow E02.8, without universal day numbers | P0 | M | E02.8, E12.1 | NO-1 |
 | E17.2 | Marketing consent (`C-MARKETING`) as a separate, off-by-default toggle and suppression list | Never mixed with service push | P1 | S | E18.4 | NO-1 |
 
 ### E18 Privacy dashboard, export, deletion, retention — P0, L
@@ -325,7 +325,7 @@ Evidence dates/FACT labels below are inherited from source research, including i
 | ID | Story | Acceptance criteria (abbrev.) | Priority | Size | Depends | PRD |
 |---|---|---|---|---|---|---|
 | E25.1 | Labelled Italian eval set v1 (3,000–5,000 rows; stratified by bank/kind/merchant frequency; ≥ 30 per leaf; double annotation; null/abstain, injection, pending/booked, settlement subsets; frozen test split) seeded from Banana fixtures, CBI table and consented M0/M1 data (pseudonymised) | Versioned; never trained on the test split | P0 | L | E07.1, E10.4 | XD-5 |
-| E25.2 | Reconciliation fixtures: the 25 scenarios as data + expected outcomes; DST and month-boundary cases | Used by E13.7 | P0 | M | — | XD-5 |
+| E25.2 | Reconciliation fixture catalogue: all 25 scenarios as data + intended outcomes, linked story/priority and supported/incomplete/expected-unsupported status; DST and month-boundary cases | E13.7 executes the supported subset and retains unfinished P0 as open; unsupported P1/P2/Later outcomes are capability limits, not passing implementation evidence | P0 | M | — | XD-5 |
 | E25.3 | Evaluation runner: per-category precision/recall/F1, hierarchical credit, auto-rate / auto-error / review-rate per decision type and tier, cost per 1,000, latency, schema-failure rate, calibration plots; weekly drift run per bank | Dashboards in E00.4 | P0 | M | E25.1, E11.1 | §6 |
 | E25.4 | Weekly 200-row consented live audit workflow with double annotation and adjudication | Audit results feed S5–S7 | P0 | S | E25.3 | `mvp.md` §5 |
 | E25.5 | Prompt-injection and quiet-set guardrail test suites (Italian and English payloads) | Label stability asserted; no insight references the quiet set | P0 | S | E09.5, E15.1 | AC-3, CA-3 |

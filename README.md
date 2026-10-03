@@ -1,6 +1,6 @@
 # Lilleri
 
-Lilleri is an Italy-first personal-finance project. The current repository is a **local prototype with synthetic financial data**: a mock provider, persistent API, deterministic reconciliation/classification, a Review Inbox and correction replay. The product ambition is to organise supported financial sources with less manual work; no real bank is connected by this setup.
+Lilleri is an Italy-first personal-finance project. The current repository is a **local prototype with synthetic financial data**: a mock provider, persistent API, deterministic reconciliation/classification, a Review Inbox, versioned rules, manual accounts/import, correction replay and optional local browser identity. The product ambition is to organise supported financial sources with less manual work; no real bank is connected by this setup.
 
 See [delivery status and evidence](docs/STATUS.md), [project memory](PROJECT_STATE.md), [the founder’s brief](docs/BRIEF.md) and [documentation map](docs/README.md).
 
@@ -31,6 +31,10 @@ PGLITE_PATH=/tmp/lilleri-fresh-demo pnpm dev
 
 The local API rejects production configuration and non-loopback binding. Physical-device banking/mobile behaviour is unverified; the browser export does not validate native iOS/Android. Detailed optional PostgreSQL and test commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Optional local identity
+
+For synthetic browser sign-up, sessions, passkeys and TOTP, use the explicitly opt-in [local identity workflow](docs/architecture/local-identity.md). Set `DEMO_MODE=0`, `LOCAL_AUTH_MODE=1`, `EXPO_PUBLIC_LOCAL_AUTH_MODE=1` and matching localhost API/client origins. Supply a stable `LOCAL_AUTH_SECRET` securely in the process environment; no secret is included in the repository. Signup starts with an empty owned profile and connects no source automatically. Production and non-loopback binding remain refused.
+
 ## Quality commands
 
 ```bash
@@ -42,7 +46,7 @@ pnpm test:integration
 pnpm build
 ```
 
-`pnpm check` combines Biome lint/format, typecheck and unit suites; the API suite uses PGlite by default. `pnpm build` includes a Next production build and an **Expo web export**, not native store binaries. Local checks passed 149 distinct synthetic cases, real-PostgreSQL integration, both web builds, 16 browser-flow groups and 2 targeted rendering groups; open audit findings and full visual/accessibility, native and user-study limits are recorded in [STATUS](docs/STATUS.md).
+`pnpm check` combines Biome lint/format, typecheck and unit suites; the API suite uses PGlite by default. `pnpm build` includes a Next production build and an **Expo web export**, not native store binaries. Current executed test counts, both database-driver results, browser evidence and open dependency findings are recorded in [STATUS](docs/STATUS.md). The complete future backlog remains distinct from the local slice; [execution plan](docs/product/execution-plan.md) tracks remaining software and external gates.
 
 ## Repository map
 
@@ -61,4 +65,4 @@ pnpm build
 | `docs` | Research, product/business, brand/design, architecture/ADRs, security and compliance |
 | `tools` | Research orchestration history and brand-rendering tooling; historical workflow paths are not startup commands |
 
-Trust, data correctness and security precede conversion. **Gratis / Plus** is the proposed launch ladder; pricing and live-source access remain hypotheses/gated. Authentication, real-bank access, production encryption/backup controls, household sharing, external AI, billing and store releases require further implementation and external review. Read [SECURITY.md](SECURITY.md) before changing the demo boundary.
+Trust, data correctness and security precede conversion. **Gratis / Plus** is the proposed launch ladder; pricing and live-source access remain hypotheses/gated. Local browser sessions/passkeys/TOTP are opt-in and synthetic-only; production identity/recovery, real-bank access, encryption/backup controls, household sharing, external AI, billing and store releases require further implementation and external review. Read [SECURITY.md](SECURITY.md) before changing the demo boundary.

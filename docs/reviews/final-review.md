@@ -1,7 +1,9 @@
 # Final review — synthetic financial walking skeleton
 
 **Date:** 2026-10-02 · **Mandate:** [BRIEF](../BRIEF.md), trust and correctness before automation.
-**Current verdict:** PASS WITH CONDITIONS for the local synthetic walking skeleton; the final refund-command and browser DELETE regressions are closed. Two dependency advisories remain open. Real-data beta and production remain blocked.
+**Initial-delivery verdict (2026-10-02):** PASS WITH CONDITIONS for the local synthetic walking skeleton; the final refund-command and browser DELETE regressions are closed. Two dependency advisories remain open. Real-data beta and production remain blocked.
+
+This is the retained initial review. [Continuation review](continuation-review.md) and [current status](../STATUS.md) supersede its implementation inventory and dependency snapshot; its historical results remain dated.
 
 ## Scope and independence
 

@@ -1,128 +1,132 @@
 # PROJECT STATE — Lilleri
 
-> Memoria operativa corrente. Mandato in `docs/BRIEF.md`; consegna e limiti in
-> `docs/STATUS.md`. Se stato e repository divergono, vale il repository.
+> Memoria operativa corrente. Mandato in `docs/BRIEF.md`; prove e limiti in
+> `docs/STATUS.md`; tutti gli epic in `docs/product/execution-plan.md`.
+> Se stato e sorgenti divergono, valgono sorgenti e verifiche effettive.
 
-## Mandato e vincoli
+## Mandato persistente
 
-Fondamenta PFM Italy-first: CONNECT → SYNC → UNDERSTAND → CORRECT ONLY WHEN NECESSARY →
-LEARN → AUTOMATE. I 37 deliverable iniziali hanno documentazione e una prima implementazione
-eseguibile con dati sintetici. Il futuro MVP con banche reali non è completato.
+Il fondatore ha chiesto di eseguire tutto il piano del repository. I 37 deliverable
+iniziali hanno una base documentata ed eseguibile; non equivalgono al completamento
+del futuro MVP P0, launch P1, expansion P2 e Later. Proseguire autonomamente sul
+lavoro tecnico locale. Non inventare accesso sandbox, contratti, autorizzazioni,
+calibrazione, coverage, prove utenti o gate di produzione.
 
-- Nome Lilleri, scope @lilleri/*; documenti inglesi, copy prodotto italiano.
+- Lilleri, scope @lilleri/*; documenti inglesi e copy prodotto italiano.
 - Fiducia > correttezza > sicurezza > semplicità > automazione > affidabilità > privacy.
-- FACT / ASSUMPTION / HYPOTHESIS / DECISION / UNKNOWN e fonti; niente prezzi, coverage,
-  licenze, controlli security o risultati utenti inventati. Review indipendenti, decisioni motivate.
-- Mai credenziali bancarie, PAN, dati personali reali, segreti nel repo o scraping fragile.
-- Money bigint + valuta, niente somme cross-currency senza FX. Provider date DATE,
-  istanti UTC; visualizzazione/calendario del profilo Europe/Rome.
-- Branch claude/admiring-hypatia-yzh6nq, commit/push frequenti; niente PR senza richiesta
-  e niente force push. Non riusare URL/attribuzioni della vecchia sessione Claude.
-- Cloud già isolato: riusare checkout, niente worktree senza richiesta.
+- FACT / ASSUMPTION / HYPOTHESIS / DECISION / UNKNOWN con fonti e date.
+- Mai credenziali bancarie, PAN, dati personali reali, segreti nel repo o scraping.
+- Money bigint con valuta, JSON stringhe esatte; niente somme cross-currency senza FX.
+  Date finanziarie SQL DATE; instanti UTC; calendario del profilo con timezone IANA.
+- Branch `claude/admiring-hypatia-yzh6nq`, commit/push normali e frequenti; niente
+  force push o PR senza richiesta. Checkout già isolato: niente worktree non richiesto.
 - Aggiornare questa memoria dopo decisioni/verifiche senza annunciarlo salvo problemi.
 
-## Ambiente e startup verificati
+## Ambiente e startup
 
-- Checkout /workspace/Lilleri, Debian 13 x86_64; ogni shell:
-  `. /workspace/.lilleri-toolchain/env.sh`. Node 22.22.0, pnpm 10.28.0, Python 3.12.14.
-- Toolchain/cache fuori checkout. Root e toolkit tools/brand-render hanno install frozen separati.
-- Script install/setup rieseguito completamente con exit 0: install, pnpm check, pnpm build.
-  Install/start cloud aggiornati e salvati come draft; nessun nuovo segreto o egress aggiunto.
-  Non dichiarare pubblicazione o ripristino in un nuovo task verificati.
-- pnpm dev compila API/client/brand e avvia API 127.0.0.1:3001, Next 127.0.0.1:3000,
-  Expo localhost:8081 (qui IPv6 ::1). HTTP readiness e overview con 5 conti e 35 movimenti verificati.
-  Con CI=1 Expo disabilita reload; senza CI usare sviluppo normale.
-- API solo DEMO_MODE=1 e loopback, rifiuta NODE_ENV=production. Default PGlite persistente
-  .lilleri/data ignorato; usare PGLITE_PATH separato per prove, non cancellare archivi esistenti.
-  Erasure crea tombstone e overview 404, niente reseed silenzioso.
-- Turbo propaga cache XDG/PG_TEST_DATABASE_URL; DevTools RN può usare fallback incluso
-  se il download non disponibile: non è una dipendenza di readiness.
-- Docker disponibile; PostgreSQL 16.15 reale testato su lilleri-resume-pg, 127.0.0.1:55432,
-  database sintetico lilleri_test. Processi/daemon/container non sono garantiti nel prossimo task.
-- Git proxy HTTPS funziona; riusare autenticazione piattaforma senza estrarre token.
-- Vecchi run wf_* non disponibili; tools/workflows/*.js sono specifiche, non programmi Node.
+- Checkout `/workspace/Lilleri`, Debian 13 x86_64. Ogni shell:
+  `. /workspace/.lilleri-toolchain/env.sh`. Node 22.22.0, pnpm 10.28.0.
+- Toolchain/cache fuori checkout. Store `/workspace/.lilleri-cache/pnpm-store`;
+  root e `tools/brand-render` hanno frozen install separati. Non usare il pnpm di
+  sistema durante la ricreazione della toolchain: aspettare install e riattivare.
+- `pnpm dev` precompila API/client/brand e dipendenze; avvia Next su 127.0.0.1:3000,
+  Expo su localhost:8081 (qui IPv6::1), API su 127.0.0.1:3001. Readiness HTTP 200 e
+  fixture iniziale 5 conti/35 movimenti, EUR/GBP separati e money strings verificate.
+- Expo dev/build usano `--clear`: cambiare modalità auth/demo o API URL senza
+  pulire Metro ha prodotto una variante client sbagliata, riprodotta e corretta.
+  Nei comandi Expo diretti usare `--clear`; Turbo lega la cache alle variabili pubbliche.
+- Default DEMO_MODE=1; alternativa LOCAL_AUTH_MODE=1 con DEMO_MODE=0. Entrambe
+  rifiutano produzione e non-loopback. Auth locale richiede LOCAL_AUTH_SECRET
+  stabile di almeno 32 caratteri nel processo, mai log/repo; client con
+  EXPO_PUBLIC_LOCAL_AUTH_MODE=1 e API URL localhost coerenti per cookie Strict.
+  Signup crea un profilo vuoto e non connette fonti automaticamente.
+- PGlite default `.lilleri/data` ignorato: NON cancellare archivi. Usare un nuovo
+  PGLITE_PATH esterno per prove. Erasure demo persiste tombstone e overview 404, no reseed.
+- API/shared sorgenti compilate: watch monitora dist, quindi ricompilare. Processi
+  non garantiti nel task successivo. Non aprire PGlite da due processi.
+- API esegue pump revoche e retention sul proprio handle, anche in auth locale.
+  Worker separati solo PostgreSQL sintetico; documentazione in `docs/operations`.
+- PostgreSQL 16.15 nel container `lilleri-resume-pg`, loopback 55432. DB finale
+  `lilleri_execution_20261003`: tutte le 12 migrazioni finali/frozen. Vecchio `lilleri_test`
+  conserva un checksum draft 0010: NON cambiarne history/checksum né allentare guard.
+  Se una migrazione ancora non committata cambia dopo applicazione, creare un DB nuovo.
+- Docker/daemon/processi non garantiti per il task futuro. Git proxy HTTPS funziona;
+  riusare autenticazione piattaforma senza estrarre token.
+- Install/start cloud salvati come draft: revisione in STATUS. Salvataggio non
+  dimostra pubblicazione o restore in task fresco. Nessun egress/segreto da aggiungere
+  per il fallback DevTools; nessuna chiave bancaria necessaria alla demo.
 
-## Fasi iniziali e decisioni
+## Implementazione effettiva, 2026-10-03
 
-- Fasi 0/1: ricerca esistente e compliance/prodotto/business revisionati; gate A/C non validati
-  commercialmente; B studiato, dati reali bloccati. Unknown/source dates restano espliciti.
-- Fase 2: brand B “li”, palette T3 carta/vino, GeistUI/importi, Newsreader, GeistMono.
-  Asset originali/font OFL/fonti/checksum, token TS/JSON/CSS e guide.80 coppie di contrasto e 61 asset verificati.
-  Review browser con screenshot; native/assistive tech/utenti/clearance legale non verificati.
-- Fase 3: 9 architecture docs, proposte, ADR 0001–0018, security/STRIDE/incident review.
-  Modular monolith Fastify/PostgreSQL/Drizzle/PGlite, Expo/Next; niente Redis/LLM obbligatori.
-  Gate D accettato per mock; E condizionato al perimetro sintetico, non per produzione.
-- Fase 4: domain/provider/engines/database/API/client/Expo/Next implementati e verificati.
-- Fase 5: review finale, STATUS/README/CONTRIBUTING/SECURITY, evidenze e quality gates
-  completati per la consegna iniziale sintetica; matrice release completa resta distinta.
-- Ladder Gratis/Plus; Famiglia Later fino sharing reale, Pro professionale futuro.
-  Prezzi/30-day preview non rinnovante sono ipotesi/spec, non billing implementato.
-  Launch Plus-only, offers revenue 0: Base GP −79.49 €/1k MAU prima minimi/fissi, non sostenibilità provata.
+- Fondamenta: money/date/domain, provider mock, ingest atomico/idempotente,
+  riconciliazione conservativa, correzioni sticky/undo, ricorrenze stimate, overview
+  per valuta, Expo/Next e brand B “li”/T3 carta-vino/font OFL. Evidenza storica: 80 contrasti / 61 asset.
+- Match revision SHA256 vincolata a profilo, candidato, algoritmo/evidenza, counter,
+  leg revisions e struttura conto. Stale 409 senza scritture, ABA/concorrenti protetti.
+- Payload raw separati da provenance immutabile, TTL originale 720 ore; replay non
+  prolunga né ricrea contenuto. Export omette scaduti prima della pulizia. Pump
+  limitato/equo/nonoverlap, stop pulito e status aggregato. Non retention di produzione.
+- Outbox revoca sopravvive erasure; denial/tombstone/job atomici. Grant-specific
+  capability, claim committato prima I/O, lease/fenced ack/timeout/retry bounded;
+  regrant bloccato in attesa di acknowledgement. Non scheduler bancario completo.
+- Better Auth locale: membership derivata server, sessione DB a ogni richiesta,
+  UV passkey con prova Chromium virtuale, TOTP/recovery one-use, 90 giorni/sessionlist/revoke,
+  age/draftterms acceptance, step-up di 5 minuti per JSON/ZIP export/disconnect/delete,
+  quote auth locali atomiche. Identity/finance erase stessa transazione.
+  Email reale, recovery di produzione e fattori nativi non consegnati.
+- Regole categoria con condizioni strutturate, versioni, draft/preview/apply/disable/
+  archive/undo come draft; token vincolato a dati/policy, conflitti richiedono review.
+  Conti manuali con opening balance, entrate/uscite, correzione saldo, reversal/audit
+  e command receipts idempotenti. CSV canonico bounded preview/import/reimport atomico.
+- Settings modificano davvero nome/timezone; locale it-IT, revisioni e audit. Pure
+  Gratis/Plus/free-beta entitlements: correctness/privacy/ownership sempre gratuiti.
+  Nessun billing, trial o enforcement live-cap finto.
+- ZIP locale: 11 file CSV/JSON/eventi/schema/manifest, money stringhe esatte e CSV
+  safety prefix solo sui testi rischiosi; JSON originale lossless. Limite 32 MiB esplicito.
+  JSON export resta disponibile; nessun link pubblico o delivery job inventato.
+- Runner originale sintetico frozen, 38 scenari / 51 movimenti, metriche con denominatori
+  espliciti/null e astensione separata. Non corpus rappresentativo, calibrazione o live audit.
+- App integra auth/regole/manual/import/settings. Epoche identità fermano risposte
+  tardive dopo logout/renewal/principal change e vecchi 401; segreti enrollment solo
+  memoria effimera, broadcast tra schede. Step-up richiede un nuovo gesto, no auto-replay.
 
-## Software effettivo
+## Verifiche finali
 
-- Money minor units bigint, JSON string esatta, formatter accessibile; EUR/GBP separati.
-- Domain date-only/DST/taxonomy; catalogo UI compatto, non CRUD categorie completo.
-- Provider port/mock italiano pagine da 7, validazione/identità stabile, CSV bounded strict.
-  I nomi fixture non sono banche integrate.
-- Engines pending/booked, duplicate/transfer/card/cash/refund conservativi, evidenza/versione,
-  override/undo, sticky correzioni, recurring come stima, summary per valuta.
-  Amount/date/merchant soli non cancellano movimenti; rimborsi eleggibili entro bound.
-- Database: 4 migrazioni SHA256, Drizzle driver PGlite/pg,13 FK scoped, osservazioni immutabili all’UPDATE,
-  batch atomici e tombstone. Non è una prova di ruoli/RLS/restore produzione.
-- API trusted demo profile, Host/Origin guard, OpenAPI DTO, sync idempotente, revisioni,
-  feedback once/merchant, match decisions, CSV/cursor, revoke/regrant/export/cascade delete.
-  Conferme impossibili tornano 409 senza decisione/legs salvati.
-- Expo Home review prima totali, search/detail/categoryscope/undo, matchreview, recurring,
-  privacy/refresh/disconnect/regrant/download/delete confermati, light/dark. Date finanziarie
-  preservate; instanti Europe/Rome; merchant vuoto usa descrizione originale, evidenza italiana.
-- Next landing responsive onesta sullo sviluppo, asset/font locali e tema manuale.
-- Client tipi condivisi; Content-Type JSON solo con body, DELETE vuoti non falliscono Fastify.
-  Generazione automatica/drift del client ancora futuro; watch API monitora dist, ricompilare sorgenti.
+- 264 casi distinti: 167 core (money 63, domain 35, providers 19, engines 50) + 97 API.
+  `pnpm check`: 22 task; `pnpm build`: 10 task, Next ed Expo WEB. Installer completo
+  eseguito con exit 0; frozen root/brand e renderer Sharp 16×16 passati.
+- 97 API ripetuti nella vera suite PostgreSQL tramite Turbo: 8 task, integrazione senza
+  cache. Stessi casi, non contarli due volte. Legacy/reopen restano PGlite dove previsto.
+- PG: 12 SHA migrations ripetute,16 FK composite,2 trigger immutabili. Ruolo test
+  owner/superuser: nessuna prova RLS/TLS/KMS/PITR/restore di produzione.
+- Browser finale: 17 gruppi finanziari e 16 auth locale, 0 errori JS; reflow 320 px.
+  Auth finale esportato con `--clear` e provato su API finale/nuovo archivio sintetico.
+  Probe UV passkey separato ripetuto contro API compilata finale: denials corretti.
+  Storici 16 + 2 render groups del 2026-10-02 restano evidenza datata; native/assistive tech/utenti non verificati.
+- Runner: 38 scenari / 51 movimenti, annotazioni 51/51 e 13/13 relazioni su toy set dell’autore;
+  errori automatici osservati 0/46 categorie e 0/6 relazioni. Nessuna accuracy reale inferita.
+- Audit prod 2026-10-03: 2 HIGH (node-forge 1.4.0, braces 3.0.3), 0 MODERATE, nessuna patch
+  riportata. UUID mitigato solo xcode3.0.1>uuid11.1.1: CommonJS/PBX/buffer verificati,
+  non native iOS/signing. SECURITY conserva triage; non audit pulito.
+- Scan storica redatta di 84 file non è scan completa/history; remote CI non dichiarata eseguita.
 
-## Verifiche
+## Piano residuo
 
-- pnpm check: Biome+typecheck/test,22 task riusciti;149 casi distinti:
-  money 63, domain 19, providers 18, engines 35, API 14.
-- Frozen install, pnpm lint/format:check, git diff --check passati. Next-generated next-env.d.ts
-  escluso Biome perché framework lo riscrive; TypeScript controlla comunque l'app.
-- pnpm build: 10 task riusciti: Next produzione ed Expo WEB export. Native non verificato.
-- API PGlite 14/14 e PostgreSQL reale 14/14 con PG_TEST_DATABASE_URL propagato da Turbo,
-  integrazione senza cache. Gli stessi 14 test non contano due volte nel totale 149.
-- PG reale 16.15: migrazioni repeat/SHA/FK e UPDATE observation respinto P0001.
-  Il caso persist/reopen usa PGlite su disco anche nella suite configurata PostgreSQL.
-- Chromium:16 gruppi funzionali,0 errori JS: categoria/undo/merchant, matchundo/reject/confirm,
-  sync invariati/ID/correzioni, JSON download, revoca con storico, regrant stessiID, erase 204
-  +overview 404, errori iniettati/retry, valute separate, reflow 320/390. Solo archivio temporaneo.
-- Verifica mirata successiva su sorgenti finali via pnpm dev:2 gruppi passati, nav a 320 px hitrect
-  circa 60.8×64, documento italiano, descriptor fallback/evidenza umana, light/dark Expo;
-  Next ledger 14/12 px e dark attivato davvero (data-theme/body/screenshot).
-- docs/design/visual-quality-gate.md: screenshot/review indipendente, non certificazione UX.
-  docs/reviews/final-review.md: review security/invarianti, non pentest/studio con utenti.
+`docs/product/execution-plan.md` conta tutti i 40 epic e le acceptance ancora aperte.
+Ordine: configurazione/observability/ruoli/RLS/encryption/restore → consent/sync budget/
+resume/gap/balance → merchant/taxonomy/correction/privacy → recurring/insight mensili/
+safe-to-spend/mapper → offline/i18n/a11y/native → valutazione rappresentativa/
+calibrazione/automation. I gate esterni non sospendono lavoro tecnico indipendente.
 
-## Limiti e prossime azioni
+Sandbox solo con accesso ufficiale emesso; pilot reale solo dopo contratto/route legale,
+DPIA/processori/security e consenso partecipanti. Naming clearance, coverage/fees,
+WTP/sostenibilità non provati. P1 billing/release e P2/Later Famiglia/chat/OCR/offers
+richiedono proprie dipendenze ed evidenze. Nessun deployment, charge, PR o collegamento
+reale autorizzato da queste prove sintetiche.
 
-- pnpm audit --prod exit 1: node-forge 1.4.0 HIGH senza patch indicata e uuid 7.0.3 MODERATE
-  via tooling Expo. Uso/triage in SECURITY; non dichiarare audit pulito o gate produzione passato.
-  Nessun override/fork silenzioso. Gitleaks/trufflehog assenti: scan redatto di 84 file senza candidati
-  non è scan completa/della storia Git. Remote CI non dichiarata eseguita.
-- Native, VoiceOver/TalkBack, DynamicType/zoom, store e utenti non verificati.
-- Auth/membership/sessioni/passkeys/recovery, KMS/encryption/roles/RLS, jobs/outbox/retention,
-  PITR/restore, processorrights e incidentdrills progettati, non consegnati.
-- Split/shared/reimbursement/FX, CRUD categorie/regole, customtaxonomy UX, notifiche/insight
-  persistenti e billing richiedono nuovi invarianti e implementazione/test.
-- Provider sandbox/coverage/fees/contratti/route legale/DPIA/Article9/processori e clearance
-  trademark/domain richiedono accesso/verifica umana; nessun segreto in chat.
-- Prossimo lavoro: mantenere demo/invarianti, chiudere advisory con release supportate/triage,
-  auth/isolation/recovery e jobs/retention con prove; device/accessibilità. Sandbox ufficiale solo
-  con permission/accesso effettivi, pilot reale aspetta gate legali/security. Non rifare ricerca,
-  brand o architettura consegnati né usare il mock come prova commerciale.
+## Git
 
-## Git e aggiornamento
-
-Remote concorrente 72ec8b6 integrato senza reset/perdita con merge 0234761, già inviato.
-Core/imports/brand/architettura commit precedenti; backend 1ac257b, apps/startup 5a1f473.
-Finali documenti/evidenze nello stesso branch; verificare remote e integrare nuovi commit
-senza force. Nessuna PR creata/richiesta.
-
-2026-10-02 — consegna iniziale/fondamenta sintetiche completate; release reale ancora gated.
+Software della continuazione salvato in `4fe6c6d`; documenti/stato nel commit successivo.
+Base precedente `c4bea21d123521be234698a119301ae9bbc613b8`; remote concorrente storico
+72ec8b6 integrato con 0234761 senza reset/perdita. Continuazione salvata nello stesso
+branch; verificare remote prima push e integrare cambi concorrenti senza force.

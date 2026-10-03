@@ -11,10 +11,11 @@ brand, design, security, compliance and business documentation. Start with
 | --- | --- | --- |
 | Status | `STATUS.md` | Executive summary, what is implemented, open questions, next steps |
 | Research | `research/` | Market, competitors, pain points, open-banking providers, raw research notes |
-| Product | `product/` | Vision, personas, jobs-to-be-done, PRD, MVP, backlog, metrics, roadmap, pre-mortem |
+| Product | `product/` | Vision, personas, jobs-to-be-done, PRD, MVP, backlog, metrics, roadmap, execution plan, pre-mortem |
 | Brand | `brand/` | Brand strategy, naming analysis, identity, visual language, guidelines, tone of voice, assets |
 | Design | `design/` | Design principles, design system, user flows, wireframes |
 | Architecture | `architecture/` | System architecture, domain model, data pipeline, API, observability, cost architecture |
+| Operations | `operations/` | Local revocation/retention workers and synthetic evaluation |
 | ADR | `adr/` | Architecture decision records (template in `0000-adr-template.md`) |
 | Security | `security/` | Threat model (STRIDE), security architecture, incident response |
 | Compliance | `compliance/` | Regulatory landscape, privacy model, consent model, data retention, legal open questions |

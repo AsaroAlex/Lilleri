@@ -1,0 +1,27 @@
+# Local profile settings and capability policy
+
+Status: implemented for local synthetic data on 2026-10-03. This is not a launched commercial offer, production receipt verification or a completed Settings epic.
+
+## Persisted preferences
+
+`GET /v1/settings` returns `{settings, entitlements}`. `PATCH /v1/settings` requires the complete values `{displayName, locale, timezone, revision}`. The profile comes from the application's trusted demo configuration or the verified local session/membership resolver. A request header, query or body cannot select another profile. In identity mode the shared route gate denies unauthenticated access and viewer mutations.
+
+The only supported UI locale is `it-IT`. The default display timezone is `Europe/Rome`; valid IANA zones and UTC can be saved. Display name and timezone update the actual profile used by financial overview responses. The standalone Settings panel offers explicit supported zone choices, shows instant formatting and displays the synthetic free beta. It exposes no inactive automation setting, numeric confidence threshold, model name, trial or purchase button. Profile timezone changes UTC-instant presentation; booked/authorised calendar dates, money, currencies and financial decisions remain unchanged.
+
+The same profile row lock used by ingestion and corrections protects preferences. Revision starts at 1 for an existing profile without an explicit settings row. A meaningful edit writes the profile, revision and an immutable audit event in one transaction. Stale edits return `409 settings_changed` before writing; unchanged values at the current revision create no event. The panel refetches after a conflict and requires a new save gesture. It never automatically replays a stale command. Its error callback lets the parent immediately clear sensitive cached state when the session becomes invalid.
+
+Migration `0012_profile_settings.sql` adds `profile_settings` and `profile_settings_events`. Events reject UPDATE. The financial JSON export includes `profileSettings: {settings, events}` from the same scoped snapshot; deleting the profile cascades both tables. The local audit retains display-name history until profile erasure. Production retention, rights-log obligations and encrypted storage still require the production privacy/security implementation; these local tables do not establish that implementation.
+
+## Pure capability entitlements
+
+The domain `resolveEntitlements` function maps stable capability IDs to Gratis, Plus and the synthetic `closed_beta` mode. Correctness, correction, personal learning, rules, custom categories, evidence, undo, security, privacy, consent disconnection, export, deletion, manual accounts and supported CSV imports stay available in every lifecycle state and at the exact expiry boundary. Permission is distinct from feature availability: granting a capability does not implement an absent parser or security control. Household sharing, financial chat, receipt OCR and account-data offers remain off.
+
+Future authoritative Plus input must come from a trusted server adapter. Active and grace grants, and cancellation until the verified period end, permit source breadth; pending, expired and refunded states do not. This implementation has no receipt adapter, client-paid flag, billing SDK, checkout, card collection or automatic charge. The API currently supplies only `closed_beta`, which has no preview timer or paid status. The proposed non-renewing preview and real purchase remain separate unimplemented stories.
+
+`admitSource` checks a future live-bank connection's account/institution union against explicit versioned configuration. Reconnecting the same account consumes no additional slot. The local configuration disables live connectivity and records the conditional Gratis hypothesis of one institution and two accounts. Plus limits must be explicitly supplied from contracted/tested policy; unknown limits fail closed instead of becoming an unlimited promise. Manual, CSV and synthetic inputs bypass the commercial source envelope. A downgrade can deny additional future live connections, but this pure function never deletes or hides retained accounts/ledger data or disables their free actions. No live-bank caller exists in the current synthetic API, and all demo fixture accounts remain available.
+
+## Verification and remaining scope
+
+Sixteen domain tests cover lifecycle states, exact expiry, future source admission/reconnect, manual/CSV/synthetic account envelopes, absent live/Plus configuration and timezone/DST formatting. Eight API integration tests cover persisted actual-profile updates, unchanged multi-currency financial facts, audit/export, competing revisions, stale/no-op edits, foreign selectors, strict validation, immutable audit/profile-erasure cascade and on-disk reopen. PostgreSQL and browser results belong to the final integrated verification record, not this implementation note.
+
+E23.1 has a pure local capability implementation. E02.9 live connect-time enforcement requires an actual approved live provider and configured envelope. E19 remains partial: the full information architecture and behaviour-backed automation controls are not completed by profile name/zone settings. E21 remains partial: a persisted Italian preference and exact formatter do not provide an ICU message catalogue or English UI. Native authentication/device behaviour, verified e-mail delivery, live banking, billing, legal review and real accuracy calibration remain gated.
