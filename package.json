@@ -37,6 +37,9 @@
     "commit-msg": "node scripts/check-commit-msg.mjs \"$1\""
   },
   "pnpm": {
+    "overrides": {
+      "xcode@3.0.1>uuid": "11.1.1"
+    },
     "onlyBuiltDependencies": [
       "simple-git-hooks",
       "esbuild",

@@ -22,7 +22,13 @@ export interface MoneyDto {
 }
 export type TransactionDto = JsonValue<Transaction>
 export type AccountDto = JsonValue<Account>
-export type AnalysisDto = JsonValue<Analysis>
+export type ReconciliationMatchDto = JsonValue<Analysis['matches'][number]> & {
+  /** Opaque SHA-256 token covering the decision version and source evidence. */
+  readonly revision: string
+}
+export type AnalysisDto = Omit<JsonValue<Analysis>, 'matches'> & {
+  readonly matches: readonly ReconciliationMatchDto[]
+}
 export interface Page<T> {
   readonly items: readonly T[]
   readonly nextCursor: string | null
@@ -47,11 +53,12 @@ export class ApiError extends Error {
 }
 
 export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) {
-  const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+  const responseFor = async (path: string, init: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(init.headers)
     if (init.body !== undefined && init.body !== null && !headers.has('Content-Type'))
       headers.set('Content-Type', 'application/json')
     const response = await fetcher(`${baseUrl.replace(/\/$/, '')}${path}`, {
+      credentials: 'include',
       ...init,
       headers,
     })
@@ -67,6 +74,10 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
       }
       throw new ApiError(response.status, code, detail)
     }
+    return response
+  }
+  const request = async <T>(path: string, init: RequestInit = {}): Promise<T> => {
+    const response = await responseFor(path, init)
     if (response.status === 204) return undefined as T
     return (await response.json()) as T
   }
@@ -99,14 +110,18 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
         `/v1/transactions/${encodeURIComponent(transactionId)}/classification`,
         { method: 'PATCH', body: JSON.stringify({ categoryId, scope, revision }) },
       ),
-    decideMatch: (matchId: string, state: 'confirmed' | 'rejected' | 'undone') =>
-      request<JsonValue<Analysis>>(`/v1/reconciliation/${encodeURIComponent(matchId)}`, {
+    decideMatch: (matchId: string, state: 'confirmed' | 'rejected' | 'undone', revision: string) =>
+      request<AnalysisDto>(`/v1/reconciliation/${encodeURIComponent(matchId)}`, {
         method: 'PATCH',
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state, revision }),
       }),
     disconnect: (connectionId: string) =>
       request<void>(`/v1/connections/${encodeURIComponent(connectionId)}`, { method: 'DELETE' }),
     exportData: () => request<unknown>('/v1/export'),
+    exportArchive: async () => {
+      const response = await responseFor('/v1/export/archive')
+      return new Uint8Array(await response.arrayBuffer())
+    },
     importCsv: (accountId: string, csv: string) =>
       request<{
         inserted: number
@@ -118,3 +133,14 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     erase: () => request<void>('/v1/profile', { method: 'DELETE' }),
   }
 }
+
+export {
+  createManualClient,
+  type ManualAccountDto,
+  type ManualBalanceEventDto,
+  type ManualEntryDto,
+  manualRequestId,
+} from './manual.js'
+export { createRulesClient } from './rules.js'
+
+export * from './settings.js'

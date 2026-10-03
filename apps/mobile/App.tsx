@@ -1,4 +1,5 @@
 import {
+  ApiError,
   createApiClient,
   type DemoOverview,
   type MoneyDto,
@@ -23,9 +24,19 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import { ImportManualPanel } from './ImportManualPanel'
+import { LocalIdentityPanel } from './src/LocalIdentityPanel'
+import { RulesPanel } from './src/RulesPanel'
+import { SettingsPanel } from './src/SettingsPanel'
 
-declare const process: { env: { EXPO_PUBLIC_API_URL?: string } }
-const api = createApiClient(process.env.EXPO_PUBLIC_API_URL ?? 'http://127.0.0.1:3001')
+declare const process: {
+  env: { EXPO_PUBLIC_API_URL?: string; EXPO_PUBLIC_LOCAL_AUTH_MODE?: string }
+}
+const localIdentityMode = process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1'
+const apiBaseUrl =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (localIdentityMode ? 'http://localhost:3001' : 'http://127.0.0.1:3001')
+const api = createApiClient(apiBaseUrl)
 const tabs = ['Home', 'Movimenti', 'Da controllare', 'Ricorrenti', 'Privacy'] as const
 type Tab = (typeof tabs)[number]
 type ThemeColors = typeof colors.light | typeof colors.dark
@@ -57,6 +68,8 @@ const name = (transaction: TransactionDto) =>
 
 const evidenceLabels: Readonly<Record<string, string>> = {
   'sticky-user-correction': 'Hai corretto la categoria di questo movimento.',
+  'equal-priority-rule-conflict':
+    'Due tue regole propongono categorie diverse: scegli quella corretta.',
   'no-deterministic-match': 'Gli indizi disponibili non bastano per scegliere una categoria.',
   'same-account': 'I movimenti riguardano lo stesso conto.',
   'provider-related-transaction': 'La fonte collega esplicitamente i due movimenti.',
@@ -142,6 +155,7 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [retrievedAt, setRetrievedAt] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [manage, setManage] = useState<'rules' | 'import' | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'review'>('all')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [category, setCategory] = useState<CategoryId>('uncategorised')
@@ -154,6 +168,51 @@ export default function App() {
   >(null)
   const [exported, setExported] = useState<string | null>(null)
   const [erased, setErased] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
+  const [reauthenticationRequested, setReauthenticationRequested] = useState(false)
+  const [sessionLostVersion, setSessionLostVersion] = useState(0)
+  const identityEpoch = useRef(0)
+  const clearFinancialState = useCallback((options?: { preserveNavigation: boolean }) => {
+    identityEpoch.current++
+    setSignedIn(false)
+    setData(null)
+    setRetrievedAt(null)
+    setDetailId(null)
+    setConfirm(null)
+    setExported(null)
+    setUndoCategory(null)
+    setNotice(null)
+    setError(null)
+    setBusy(null)
+    setLoading(false)
+    setQuery('')
+    setManage(null)
+    if (!options?.preserveNavigation) setTab('Home')
+    setReauthenticationRequested(false)
+    setCategory('uncategorised')
+    setScope('once')
+  }, [])
+  const identityFailure = useCallback(
+    (cause: unknown) => {
+      if (!localIdentityMode || !(cause instanceof ApiError) || cause.status !== 401) return false
+      if (cause.code === 'reauthentication_required') {
+        setReauthenticationRequested(true)
+        setConfirm(null)
+        setError('Conferma la tua identità, poi scegli di nuovo l’azione.')
+      } else {
+        clearFinancialState()
+        setSessionLostVersion((version) => version + 1)
+      }
+      return true
+    },
+    [clearFinancialState],
+  )
+  // Child requests keep the callbacks from the render that started them.
+  const renderedIdentityEpoch = identityEpoch.current
+  const panelIdentityFailure = useCallback(
+    (cause: unknown) => renderedIdentityEpoch !== identityEpoch.current || identityFailure(cause),
+    [renderedIdentityEpoch, identityFailure],
+  )
   const scroll = useRef<ScrollView>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: These state changes reveal the relevant route, confirmation, or feedback at the top of the screen.
   useEffect(() => {
@@ -161,39 +220,102 @@ export default function App() {
   }, [tab, detailId, confirm, notice, error])
 
   const refresh = useCallback(async () => {
+    const epoch = identityEpoch.current
     setLoading(true)
     setError(null)
     try {
       const overview = await api.overview()
+      if (epoch !== identityEpoch.current) return
       setData(overview)
+      if (localIdentityMode) setSignedIn(true)
       setRetrievedAt(new Date().toISOString())
     } catch (cause) {
+      if (epoch !== identityEpoch.current || identityFailure(cause)) return
       setError(
         cause instanceof Error && cause.name === 'ApiError'
           ? cause.message
           : 'Le informazioni non sono disponibili. Verifica che il servizio della demo sia avviato e riprova.',
       )
     } finally {
-      setLoading(false)
+      if (epoch === identityEpoch.current) setLoading(false)
     }
-  }, [])
+  }, [identityFailure])
   useEffect(() => {
     void refresh()
   }, [refresh])
+  const refreshAfterChange = useCallback(async () => {
+    const epoch = identityEpoch.current
+    try {
+      const overview = await api.overview()
+      if (epoch !== identityEpoch.current) return
+      setData(overview)
+      setRetrievedAt(new Date().toISOString())
+    } catch (cause) {
+      if (epoch === identityEpoch.current) identityFailure(cause)
+      throw cause
+    }
+  }, [identityFailure])
 
-  const mutate = async (key: string, action: () => Promise<unknown>, success: string) => {
+  const mutate = async (
+    key: string,
+    action: () => Promise<unknown>,
+    success: string,
+    conflictTarget: 'match' | 'category' | null = null,
+  ) => {
     if (busy) return false
+    const epoch = identityEpoch.current
     setBusy(key)
     setError(null)
     setNotice(null)
     try {
       await action()
+      if (epoch !== identityEpoch.current) return false
       const overview = await api.overview()
+      if (epoch !== identityEpoch.current) return false
       setData(overview)
       setRetrievedAt(new Date().toISOString())
       setNotice(success)
       return true
     } catch (cause) {
+      if (epoch !== identityEpoch.current || identityFailure(cause)) return false
+      if (cause instanceof ApiError && cause.status === 409) {
+        setNotice(null)
+        const matchChanged = conflictTarget === 'match' && cause.code === 'reconciliation_changed'
+        const categoryChanged = conflictTarget === 'category' && cause.code === 'conflict'
+        try {
+          // Refresh evidence once; never replay the rejected action with a new revision.
+          const overview = await api.overview()
+          if (epoch !== identityEpoch.current) return false
+          setData(overview)
+          setRetrievedAt(new Date().toISOString())
+          if (categoryChanged) {
+            setCategory(
+              overview.analysis.classifications.find((item) => item.transactionId === detailId)
+                ?.categoryId ?? 'uncategorised',
+            )
+            setScope('once')
+            setUndoCategory(null)
+          }
+          setError(
+            matchChanged
+              ? 'Questa corrispondenza è cambiata. Ho aggiornato i dati: controllala di nuovo prima di scegliere.'
+              : categoryChanged
+                ? 'Questo movimento è cambiato. Ho aggiornato i dati: controlla di nuovo la categoria prima di salvarla.'
+                : cause.message,
+          )
+        } catch (refreshFailure) {
+          if (epoch !== identityEpoch.current || identityFailure(refreshFailure)) return false
+          const subject = matchChanged
+            ? 'Questa corrispondenza è cambiata.'
+            : categoryChanged
+              ? 'Questo movimento è cambiato.'
+              : cause.message
+          setError(
+            `${subject} Non sono riuscito ad aggiornare i dati. Quelli precedenti restano visibili: riprova ad aggiornarli prima di scegliere.`,
+          )
+        }
+        return false
+      }
       setError(
         cause instanceof Error && cause.name === 'ApiError'
           ? cause.message
@@ -201,7 +323,7 @@ export default function App() {
       )
       return false
     } finally {
-      setBusy(null)
+      if (epoch === identityEpoch.current) setBusy(null)
     }
   }
 
@@ -229,7 +351,9 @@ export default function App() {
     ? `${date(dates[0])} – ${date(dates[dates.length - 1])}`
     : 'Nessun periodo disponibile'
   const activeConnections =
-    data?.connections.filter((connection) => connection.status === 'active') ?? []
+    data?.connections.filter(
+      (connection) => connection.status === 'active' && connection.providerId !== 'local-manual',
+    ) ?? []
   const reviewCount = data?.analysis.reviewItems.length ?? 0
   const orderedMatches = [...(data?.analysis.matches ?? [])].sort((first, second) => {
     const awaiting = (state: string) => (state === 'suggested' || state === 'undone' ? 0 : 1)
@@ -252,6 +376,7 @@ export default function App() {
     setTab(destination)
     setDetailId(null)
     setConfirm(null)
+    setManage(null)
   }
 
   const transactionRow = (transaction: TransactionDto) => {
@@ -311,6 +436,7 @@ export default function App() {
       scope === 'merchant'
         ? 'Categoria aggiornata. La scelta vale anche per i prossimi acquisti dallo stesso esercente.'
         : 'Categoria aggiornata per questo movimento.',
+      'category',
     )
     if (saved) {
       setUndoCategory(scope === 'once' ? { id: selected.id, category: previous } : null)
@@ -326,15 +452,19 @@ export default function App() {
         'undo-category',
         () => api.correct(transaction.id, undoCategory.category, 'once', transaction.revision),
         'Categoria precedente ripristinata.',
+        'category',
       ))
     )
       setUndoCategory(null)
   }
   const exportData = async () => {
+    const epoch = identityEpoch.current
     setBusy('export')
     setError(null)
     try {
-      const payload = JSON.stringify(await api.exportData(), null, 2)
+      const result = await api.exportData()
+      if (epoch !== identityEpoch.current) return
+      const payload = JSON.stringify(result, null, 2)
       setExported(payload)
       setNotice(
         'Esportazione pronta. Il file contiene il profilo dimostrativo, le fonti e lo storico disponibile.',
@@ -348,9 +478,31 @@ export default function App() {
         URL.revokeObjectURL(url)
       }
     } catch (cause) {
+      if (epoch !== identityEpoch.current || identityFailure(cause)) return
       setError(cause instanceof Error ? cause.message : 'Esportazione non disponibile. Riprova.')
     } finally {
-      setBusy(null)
+      if (epoch === identityEpoch.current) setBusy(null)
+    }
+  }
+  const exportArchive = async () => {
+    const epoch = identityEpoch.current
+    setBusy('export')
+    setError(null)
+    try {
+      const archive = await api.exportArchive()
+      if (epoch !== identityEpoch.current) return
+      const url = URL.createObjectURL(new Blob([archive], { type: 'application/zip' }))
+      const anchor = document.createElement('a')
+      anchor.href = url
+      anchor.download = 'lilleri-dati-dimostrativi.zip'
+      anchor.click()
+      URL.revokeObjectURL(url)
+      setNotice('Archivio pronto. Il download contiene CSV, JSON, eventi e schema dei dati.')
+    } catch (cause) {
+      if (epoch !== identityEpoch.current || identityFailure(cause)) return
+      setError(cause instanceof Error ? cause.message : 'Archivio non disponibile. Riprova.')
+    } finally {
+      if (epoch === identityEpoch.current) setBusy(null)
     }
   }
   const confirmAction = async () => {
@@ -365,10 +517,16 @@ export default function App() {
       )
         setConfirm(null)
     } else {
+      const epoch = identityEpoch.current
       setBusy('erase')
       setError(null)
       try {
         await api.erase()
+        if (epoch !== identityEpoch.current) return
+        if (localIdentityMode) {
+          clearFinancialState()
+          setSessionLostVersion((version) => version + 1)
+        }
         setData(null)
         setErased(true)
         setConfirm(null)
@@ -376,13 +534,14 @@ export default function App() {
         setExported(null)
         setNotice(null)
       } catch (cause) {
+        if (epoch !== identityEpoch.current || identityFailure(cause)) return
         setError(
           cause instanceof Error
             ? cause.message
             : 'Non siamo riusciti a eliminare i dati. Riprova.',
         )
       } finally {
-        setBusy(null)
+        if (epoch === identityEpoch.current) setBusy(null)
       }
     }
   }
@@ -477,6 +636,27 @@ export default function App() {
             Una demo locale con un profilo sintetico. Non servono credenziali bancarie; nessuna
             banca reale è collegata.
           </Text>
+          {localIdentityMode && (
+            <LocalIdentityPanel
+              baseUrl={apiBaseUrl}
+              theme={theme}
+              visible={!signedIn || tab === 'Privacy' || reauthenticationRequested}
+              sessionLostVersion={sessionLostVersion}
+              reauthenticationRequested={reauthenticationRequested}
+              onSignedIn={async () => {
+                setSignedIn(true)
+                setErased(false)
+                await refresh()
+              }}
+              onSignedOut={(reason) =>
+                clearFinancialState({ preserveNavigation: reason === 'session-renewed' })
+              }
+              onReauthenticated={() => {
+                setReauthenticationRequested(false)
+                setError(null)
+              }}
+            />
+          )}
           {fontError && (
             <Text accessibilityRole="alert" style={s.errorText}>
               Il carattere di Lilleri non è disponibile. Puoi continuare con il carattere del
@@ -485,11 +665,11 @@ export default function App() {
           )}
           {error && (
             <View accessibilityRole="alert" style={s.errorBanner}>
-              <Text style={s.strong}>Non siamo riusciti ad aggiornare i dati.</Text>
+              <Text style={s.strong}>Controlla prima di continuare.</Text>
               <Text style={s.body}>{error}</Text>
               {data && (
                 <Text style={s.caption}>
-                  I dati precedenti restano visibili. Recuperati {datetime(retrievedAt)}.
+                  Dati visualizzati: recuperati {datetime(retrievedAt)}.
                 </Text>
               )}
               <Button
@@ -571,10 +751,12 @@ export default function App() {
               </Text>
               <Text style={s.body}>
                 Il profilo locale è stato rimosso. Nessun conto bancario reale è stato coinvolto.
-                Per iniziare una nuova demo, prepara un nuovo archivio locale dal servizio.
+                {localIdentityMode
+                  ? 'Puoi creare un nuovo account locale per iniziare con un profilo sintetico vuoto.'
+                  : 'Per iniziare una nuova demo, prepara un nuovo archivio locale dal servizio.'}
               </Text>
             </View>
-          ) : !data ? (
+          ) : localIdentityMode && !signedIn ? null : !data ? (
             <View style={s.card}>
               {loading ? (
                 <>
@@ -593,6 +775,35 @@ export default function App() {
                 </>
               )}
             </View>
+          ) : manage ? (
+            <>
+              <Button
+                label="← Torna ai movimenti"
+                onPress={() => setManage(null)}
+                quiet
+                c={c}
+                s={s}
+              />
+              {manage === 'rules' ? (
+                <RulesPanel
+                  request={api.request}
+                  accounts={data.accounts}
+                  transactions={data.transactions}
+                  theme={theme}
+                  onChanged={refreshAfterChange}
+                  onError={panelIdentityFailure}
+                />
+              ) : (
+                <ImportManualPanel
+                  overview={data}
+                  theme={theme}
+                  request={api.request}
+                  importCsv={api.importCsv}
+                  onChanged={refreshAfterChange}
+                  onError={panelIdentityFailure}
+                />
+              )}
+            </>
           ) : selected ? (
             <>
               <Button
@@ -816,6 +1027,16 @@ export default function App() {
             </>
           ) : tab === 'Movimenti' ? (
             <>
+              <View style={s.actions}>
+                <Button label="Regole" onPress={() => setManage('rules')} quiet c={c} s={s} />
+                <Button
+                  label="Importa o aggiungi"
+                  onPress={() => setManage('import')}
+                  quiet
+                  c={c}
+                  s={s}
+                />
+              </View>
               <Text style={s.caption}>
                 {sorted.length} movimenti · {history}
               </Text>
@@ -919,8 +1140,9 @@ export default function App() {
                           onPress={() =>
                             void mutate(
                               match.id,
-                              () => api.decideMatch(match.id, 'confirmed'),
+                              () => api.decideMatch(match.id, 'confirmed', match.revision),
                               'Corrispondenza confermata. I totali sono stati ricalcolati.',
+                              'match',
                             )
                           }
                           disabled={!!busy}
@@ -932,8 +1154,9 @@ export default function App() {
                           onPress={() =>
                             void mutate(
                               match.id,
-                              () => api.decideMatch(match.id, 'rejected'),
+                              () => api.decideMatch(match.id, 'rejected', match.revision),
                               'Proposta rifiutata. I movimenti restano distinti.',
+                              'match',
                             )
                           }
                           quiet
@@ -948,8 +1171,9 @@ export default function App() {
                         onPress={() =>
                           void mutate(
                             match.id,
-                            () => api.decideMatch(match.id, 'undone'),
+                            () => api.decideMatch(match.id, 'undone', match.revision),
                             'Decisione annullata. Puoi controllare nuovamente gli indizi.',
+                            'match',
                           )
                         }
                         quiet
@@ -1027,6 +1251,12 @@ export default function App() {
             </>
           ) : (
             <>
+              <SettingsPanel
+                request={api.request}
+                theme={theme}
+                onChanged={refreshAfterChange}
+                onError={panelIdentityFailure}
+              />
               <View style={s.card}>
                 <Text accessibilityRole="header" style={s.sectionTitle}>
                   I dati di questa demo
@@ -1046,63 +1276,65 @@ export default function App() {
               <Text accessibilityRole="header" style={s.sectionTitle}>
                 La fonte simulata
               </Text>
-              {data.connections.map((connection) => (
-                <View style={s.card} key={connection.id}>
-                  <Text style={s.strong}>
-                    Archivio dimostrativo ·{' '}
-                    {connection.status === 'active'
-                      ? 'Attivo'
-                      : connection.status === 'revoked'
-                        ? 'Scollegato'
-                        : connection.status === 'expired'
-                          ? 'Scaduto'
-                          : 'Aggiornamento non riuscito'}
-                  </Text>
-                  <Text style={s.caption}>
-                    Ultimo aggiornamento della fonte: {datetime(connection.lastSyncedAt)}
-                  </Text>
-                  <Text style={s.caption}>
-                    Durata di accesso: non applicabile alla fonte simulata.
-                  </Text>
-                  <View style={s.actions}>
-                    {connection.status === 'active' ? (
-                      <>
-                        <Button
-                          label="Aggiorna fonte simulata"
-                          onPress={() =>
-                            void mutate(
-                              'sync',
-                              async () => {
-                                const result = await api.sync(connection.id)
-                                setNotice(
-                                  `Fonte aggiornata: ${result.inserted} nuovi, ${result.updated} modificati, ${result.unchanged} invariati.`,
-                                )
-                                return result
-                              },
-                              'Fonte simulata aggiornata. I movimenti già presenti non vengono duplicati.',
-                            )
-                          }
-                          disabled={!!busy}
-                          c={c}
-                          s={s}
-                        />
-                        <Button
-                          label="Scollega fonte"
-                          onPress={() => setConfirm({ type: 'disconnect', id: connection.id })}
-                          quiet
-                          disabled={!!busy}
-                          c={c}
-                          s={s}
-                        />
-                      </>
-                    ) : (
-                      <Text style={s.body}>
-                        Gli aggiornamenti sono fermi. Lo storico resta disponibile.
-                      </Text>
-                    )}
+              {data.connections
+                .filter((connection) => connection.providerId !== 'local-manual')
+                .map((connection) => (
+                  <View style={s.card} key={connection.id}>
+                    <Text style={s.strong}>
+                      Archivio dimostrativo ·{' '}
+                      {connection.status === 'active'
+                        ? 'Attivo'
+                        : connection.status === 'revoked'
+                          ? 'Scollegato'
+                          : connection.status === 'expired'
+                            ? 'Scaduto'
+                            : 'Aggiornamento non riuscito'}
+                    </Text>
+                    <Text style={s.caption}>
+                      Ultimo aggiornamento della fonte: {datetime(connection.lastSyncedAt)}
+                    </Text>
+                    <Text style={s.caption}>
+                      Durata di accesso: non applicabile alla fonte simulata.
+                    </Text>
+                    <View style={s.actions}>
+                      {connection.status === 'active' ? (
+                        <>
+                          <Button
+                            label="Aggiorna fonte simulata"
+                            onPress={() =>
+                              void mutate(
+                                'sync',
+                                async () => {
+                                  const result = await api.sync(connection.id)
+                                  setNotice(
+                                    `Fonte aggiornata: ${result.inserted} nuovi, ${result.updated} modificati, ${result.unchanged} invariati.`,
+                                  )
+                                  return result
+                                },
+                                'Fonte simulata aggiornata. I movimenti già presenti non vengono duplicati.',
+                              )
+                            }
+                            disabled={!!busy}
+                            c={c}
+                            s={s}
+                          />
+                          <Button
+                            label="Scollega fonte"
+                            onPress={() => setConfirm({ type: 'disconnect', id: connection.id })}
+                            quiet
+                            disabled={!!busy}
+                            c={c}
+                            s={s}
+                          />
+                        </>
+                      ) : (
+                        <Text style={s.body}>
+                          Gli aggiornamenti sono fermi. Lo storico resta disponibile.
+                        </Text>
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
               {!activeConnections.length && (
                 <Button
                   label="Attiva fonte simulata"
@@ -1133,6 +1365,16 @@ export default function App() {
                   c={c}
                   s={s}
                 />
+                {Platform.OS === 'web' && (
+                  <Button
+                    label="Scarica archivio ZIP"
+                    onPress={() => void exportArchive()}
+                    disabled={!!busy}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                )}
                 {exported && (
                   <>
                     <Text accessibilityLiveRegion="polite" style={s.caption}>
@@ -1170,7 +1412,9 @@ export default function App() {
           <View style={s.pageEnd}>
             <Text style={s.caption}>Lilleri · Prototipo in sviluppo</Text>
             <Text style={s.caption}>
-              Le funzioni bancarie reali e l’accesso con un account personale non sono disponibili.
+              {localIdentityMode
+                ? 'Accesso locale per dati sintetici. I collegamenti bancari reali non sono disponibili.'
+                : 'Le funzioni bancarie reali e l’accesso con un account personale non sono disponibili.'}
             </Text>
           </View>
         </ScrollView>

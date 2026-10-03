@@ -1,4 +1,11 @@
-import type { Account, CategoryId, Transaction, TransactionKind } from '@lilleri/domain'
+import type {
+  Account,
+  CategoryId,
+  RuleConditions,
+  RuleDefinition,
+  Transaction,
+  TransactionKind,
+} from '@lilleri/domain'
 import { sql } from 'drizzle-orm'
 import {
   bigint,
@@ -10,6 +17,7 @@ import {
   pgTable,
   primaryKey,
   text,
+  timestamp,
   unique,
 } from 'drizzle-orm/pg-core'
 
@@ -132,13 +140,13 @@ export const observations = pgTable(
     status: text('status').notNull(),
     contentHash: text('content_hash').notNull(),
     observedAt: text('observed_at').notNull(),
-    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
   },
   (t) => [
     foreignKey({
       columns: [t.profileId, t.connectionId, t.accountId],
       foreignColumns: [accounts.profileId, accounts.connectionId, accounts.id],
     }).onDelete('cascade'),
+    unique('source_observations_profile_id').on(t.profileId, t.id),
     unique('observations_identity').on(
       t.profileId,
       t.connectionId,
@@ -187,8 +195,12 @@ export const matchDecisions = pgTable(
     matchId: text('match_id').notNull(),
     state: text('state').$type<'confirmed' | 'rejected' | 'undone'>().notNull(),
     decidedAt: text('decided_at').notNull(),
+    revision: integer('revision').notNull().default(1),
   },
-  (t) => [primaryKey({ columns: [t.profileId, t.matchId] })],
+  (t) => [
+    primaryKey({ columns: [t.profileId, t.matchId] }),
+    check('match_decisions_positive_revision', sql`${t.revision} > 0`),
+  ],
 )
 export const syncRuns = pgTable(
   'sync_runs',
@@ -230,5 +242,104 @@ export const matchDecisionLegs = pgTable(
       columns: [t.profileId, t.transactionId],
       foreignColumns: [transactions.profileId, transactions.id],
     }).onDelete('cascade'),
+  ],
+)
+
+/** Minimal provider routing survives local erasure until acknowledgement or operator resolution. */
+export const revocationJobs = pgTable(
+  'revocation_jobs',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    connectionId: text('connection_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    consentId: text('consent_id').notNull(),
+    state: text('state').$type<'pending' | 'running' | 'completed' | 'failed'>().notNull(),
+    attempts: integer('attempts').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+    nextAttemptAt: text('next_attempt_at').notNull(),
+    deadlineAt: text('deadline_at').notNull(),
+    leaseToken: text('lease_token'),
+    leaseExpiresAt: text('lease_expires_at'),
+    completedAt: text('completed_at'),
+    lastErrorCode: text('last_error_code').$type<
+      'provider_unavailable' | 'provider_unknown' | 'deadline_exceeded' | 'attempts_exhausted'
+    >(),
+  },
+  (t) => [
+    unique('revocation_jobs_consent').on(t.profileId, t.connectionId, t.consentId),
+    check('revocation_jobs_attempts', sql`${t.attempts} >= 0`),
+    check(
+      'revocation_jobs_state',
+      sql`${t.state} IN ('pending', 'running', 'completed', 'failed')`,
+    ),
+    check(
+      'revocation_jobs_lease',
+      sql`(${t.state} = 'running') = (${t.leaseToken} IS NOT NULL AND ${t.leaseExpiresAt} IS NOT NULL)`,
+    ),
+  ],
+)
+
+export const observationPayloads = pgTable(
+  'observation_payloads',
+  {
+    profileId: text('profile_id').notNull(),
+    observationId: text('observation_id').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
+    payload: jsonb('payload').$type<Record<string, unknown>>().notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.profileId, t.observationId] }),
+    foreignKey({
+      columns: [t.profileId, t.observationId],
+      foreignColumns: [observations.profileId, observations.id],
+    }).onDelete('cascade'),
+  ],
+)
+
+export const classificationRules = pgTable(
+  'classification_rules',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    conditions: jsonb('conditions').$type<RuleConditions>().notNull(),
+    categoryId: text('category_id').$type<CategoryId>().notNull(),
+    priority: integer('priority').notNull(),
+    enabled: text('enabled').$type<'yes' | 'no'>().notNull().default('no'),
+    archived: text('archived').$type<'yes' | 'no'>().notNull().default('no'),
+    revision: integer('revision').notNull().default(1),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    unique('classification_rules_profile_id').on(t.profileId, t.id),
+    check('classification_rules_positive_revision', sql`${t.revision} > 0`),
+  ],
+)
+export const ruleEvents = pgTable(
+  'rule_events',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    ruleId: text('rule_id').notNull(),
+    revision: integer('revision').notNull(),
+    action: text('action')
+      .$type<'created' | 'edited' | 'applied' | 'disabled' | 'archived' | 'undone'>()
+      .notNull(),
+    before: jsonb('before').$type<
+      (RuleDefinition & { enabled: boolean; archived: boolean }) | null
+    >(),
+    affectedTransactionIds: jsonb('affected_transaction_ids').$type<readonly string[]>().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [
+    foreignKey({
+      columns: [t.profileId, t.ruleId],
+      foreignColumns: [classificationRules.profileId, classificationRules.id],
+    }).onDelete('cascade'),
+    unique('rule_events_revision').on(t.profileId, t.ruleId, t.revision),
   ],
 )

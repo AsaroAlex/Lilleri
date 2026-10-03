@@ -13,6 +13,9 @@ import {
   type Transaction,
 } from '@lilleri/domain'
 import { money } from '@lilleri/money'
+import { ruleMatches } from './rules.js'
+
+export { ruleMatches } from './rules.js'
 
 export const ENGINE_VERSION = 'deterministic-v1'
 export interface AnalysisOptions {
@@ -57,23 +60,36 @@ export function classify(transaction: Transaction, options: AnalysisOptions = {}
       explanation: 'Categoria scelta da te per questo movimento.',
       evidence: ['sticky-user-correction'],
     }
-  const rule = [...(options.rules ?? [])]
+  const matchingRules = [...(options.rules ?? [])]
     .filter(
       (rule) =>
-        rule.enabled &&
-        rule.profileId === transaction.profileId &&
-        rule.merchantKey === transaction.merchantKey,
+        rule.enabled && rule.profileId === transaction.profileId && ruleMatches(transaction, rule),
     )
-    .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))[0]
+    .sort((a, b) => b.priority - a.priority || a.id.localeCompare(b.id))
+  const rule = matchingRules[0]
+  const ruleConflict =
+    rule &&
+    matchingRules.some(
+      (other) =>
+        other.id !== rule.id &&
+        other.priority === rule.priority &&
+        other.categoryId !== rule.categoryId,
+    )
   if (rule)
     return {
       ...base,
       categoryId: rule.categoryId,
       source: 'rule',
-      needsReview: false,
+      needsReview: Boolean(ruleConflict),
       confidence: 1,
-      explanation: 'La tua regola ha la precedenza.',
-      evidence: [`rule:${rule.id}`],
+      explanation: ruleConflict
+        ? 'Due regole con la stessa priorità indicano categorie diverse. Controlla le regole prima di confermare.'
+        : 'La tua regola ha la precedenza.',
+      evidence: [
+        `rule:${rule.id}`,
+        ...(rule.revision === undefined ? [] : [`rule-revision:${rule.revision}`]),
+        ...(ruleConflict ? ['equal-priority-rule-conflict'] : []),
+      ],
     }
   const preference = options.preferences?.find(
     (item) =>

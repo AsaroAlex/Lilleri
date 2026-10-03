@@ -7,6 +7,8 @@ export { parseBankCsv } from './csv.js'
 export interface ProviderContext {
   readonly profileId: string
   readonly connectionId: string
+  /** Consent generation. Required for durable revocation; never revoke a newer grant. */
+  readonly grantId?: string
 }
 export interface ProviderAccount {
   readonly id: string
@@ -42,6 +44,7 @@ export interface FinancialDataProvider {
     readonly accountInformation: true
     readonly payments: false
     readonly synthetic: boolean
+    readonly grantSpecificRevocation: boolean
   }
   createConnection(
     context: ProviderContext,
@@ -165,14 +168,21 @@ export class MockItalianProvider implements FinancialDataProvider {
   readonly id = 'mock-italian'
   readonly #revoked = new Set<string>()
   readonly #failOnce = new Set<string>()
+  readonly #grants = new Map<string, string | null>()
   readonly #fixture: readonly ProviderTransaction[]
   constructor(fixture: readonly ProviderTransaction[] = ITALIAN_TRANSACTIONS) {
     this.#fixture = fixture
   }
   capabilities() {
-    return { accountInformation: true, payments: false, synthetic: true } as const
+    return {
+      accountInformation: true,
+      payments: false,
+      synthetic: true,
+      grantSpecificRevocation: true,
+    } as const
   }
   async createConnection(context: ProviderContext) {
+    this.#grants.set(context.connectionId, context.grantId ?? null)
     this.#revoked.delete(context.connectionId)
     return { consentExpiresAt: '2027-03-31T23:59:59Z', redirectUrl: null }
   }
@@ -247,6 +257,12 @@ export class MockItalianProvider implements FinancialDataProvider {
     }
   }
   async disconnect(context: ProviderContext) {
+    if (
+      context.grantId !== undefined &&
+      this.#grants.has(context.connectionId) &&
+      this.#grants.get(context.connectionId) !== context.grantId
+    )
+      return
     this.#revoked.add(context.connectionId)
   }
   #check(context: ProviderContext) {

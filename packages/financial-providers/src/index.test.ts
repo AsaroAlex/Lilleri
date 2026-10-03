@@ -80,6 +80,7 @@ describe('synthetic provider contract', () => {
       accountInformation: true,
       payments: false,
       synthetic: true,
+      grantSpecificRevocation: true,
     })
   })
   it('supports retry after a temporary failure and enforces revocation', async () => {
@@ -91,5 +92,15 @@ describe('synthetic provider contract', () => {
     await expect(provider.listAccounts(context)).rejects.toThrow('revoked')
     await provider.createConnection(context)
     await expect(provider.listAccounts(context)).resolves.toHaveLength(5)
+  })
+  it('an old consent revocation cannot revoke a replacement grant', async () => {
+    const provider = new MockItalianProvider()
+    await provider.createConnection({ ...context, grantId: 'consent-old' })
+    await provider.disconnect({ ...context, grantId: 'consent-old' })
+    await provider.createConnection({ ...context, grantId: 'consent-new' })
+    await provider.disconnect({ ...context, grantId: 'consent-old' })
+    await expect(provider.listAccounts(context)).resolves.toHaveLength(5)
+    await provider.disconnect({ ...context, grantId: 'consent-new' })
+    await expect(provider.listAccounts(context)).rejects.toThrow('revoked')
   })
 })

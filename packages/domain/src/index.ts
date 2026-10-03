@@ -1,7 +1,9 @@
 export * from './calendar-date.js'
+export * from './entitlements.js'
+export * from './profile-settings.js'
 export * from './taxonomy.js'
 
-import type { Money } from '@lilleri/money'
+import type { CurrencyCode, Money } from '@lilleri/money'
 
 export type { CurrencyCode, Money, MoneyJson } from '@lilleri/money'
 export { fromJson, money, parseDecimal, toJson } from '@lilleri/money'
@@ -138,13 +140,52 @@ export function isCategoryId(value: string): value is CategoryId {
   return Object.hasOwn(CATEGORIES, value)
 }
 
+/** Bounded AND conditions. Amount bounds are absolute integer minor units, never floats. */
+export interface RuleConditions {
+  readonly merchantKey?: string
+  readonly description?: { readonly operator: 'equals' | 'contains'; readonly value: string }
+  readonly amount?: {
+    readonly currency: CurrencyCode
+    readonly minMinor?: string
+    readonly maxMinor?: string
+  }
+  readonly accountId?: string
+  readonly kind?: TransactionKind
+  readonly direction?: 'debit' | 'credit' | 'zero'
+}
+export interface RuleDefinition {
+  readonly name: string
+  readonly conditions: RuleConditions
+  readonly categoryId: CategoryId
+  readonly priority: number
+}
+export interface RuleRecord extends RuleDefinition {
+  readonly id: string
+  readonly profileId: string
+  readonly enabled: boolean
+  readonly archived: boolean
+  readonly revision: number
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+export interface RulePreview {
+  readonly ruleId: string
+  readonly revision: number
+  readonly previewRevision: string
+  readonly affectedTransactionIds: readonly string[]
+  readonly matchedTransactionIds: readonly string[]
+  readonly lockedTransactionIds: readonly string[]
+}
 export interface Rule {
   readonly id: string
   readonly profileId: string
-  readonly merchantKey: string
+  /** Legacy exact-merchant condition retained for existing pure-engine callers. */
+  readonly merchantKey?: string
+  readonly conditions?: RuleConditions
   readonly categoryId: CategoryId
   readonly priority: number
   readonly enabled: boolean
+  readonly revision?: number
 }
 export interface Preference {
   readonly profileId: string

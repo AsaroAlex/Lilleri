@@ -22,7 +22,19 @@ import {
 } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import { ManualService, recordManualImport } from './manual-service.js'
 import { conflict, notFound, Problem, providerFailure } from './problem.js'
+import {
+  cleanupExpiredObservationPayloads,
+  insertSourceObservation,
+  sourceObservationsForExport,
+} from './retention.js'
+import {
+  assertNoOutstandingRevocation,
+  enqueueRevocation,
+  revocationsForProfile,
+} from './revocation-outbox.js'
+import { SettingsService } from './settings.js'
 
 const id = z.string().min(1).max(200)
 const optionalText = z.string().max(500).optional()
@@ -102,6 +114,48 @@ const hash = (value: unknown) =>
     .digest('hex')
 const transactionHash = ({ revision: _revision, observedAt: _observedAt, ...value }: Transaction) =>
   hash(value)
+export type RevisionedAnalysis = Omit<Analysis, 'matches'> & {
+  readonly matches: readonly (Analysis['matches'][number] & { readonly revision: string })[]
+}
+function reconciliationRevision(
+  profileId: string,
+  match: Analysis['matches'][number],
+  decisionRevision: number,
+  transactions: ReadonlyMap<string, Transaction>,
+  accounts: ReadonlyMap<string, Account>,
+): string {
+  const legs = [...match.transactionIds].sort().map((id) => {
+    const transaction = transactions.get(id)
+    if (!transaction) throw new Error('Reconciliation refers to a missing canonical transaction')
+    const account = accounts.get(transaction.accountId)
+    if (!account) throw new Error('Reconciliation refers to a missing canonical account')
+    return {
+      id,
+      revision: transaction.revision,
+      account: {
+        id: account.id,
+        profileId: account.profileId,
+        connectionId: account.connectionId,
+        providerAccountId: account.providerAccountId,
+        kind: account.kind,
+        currency: account.balance.currency,
+      },
+    }
+  })
+  // Bind user decisions and source versions; observation/freshness timestamps are excluded.
+  return hash({
+    format: 'reconciliation-revision-v1',
+    profileId,
+    matchId: match.id,
+    decisionRevision,
+    algorithmVersion: match.algorithmVersion,
+    type: match.type,
+    state: match.state,
+    confidence: match.confidence,
+    evidence: [...match.evidence].sort(),
+    legs,
+  })
+}
 function accountFromRow(row: typeof schema.accounts.$inferSelect): Account {
   const { balanceMinor, currency: code, ...rest } = row
   return { ...rest, balance: { amountMinor: balanceMinor, currency: code } }
@@ -131,8 +185,8 @@ export class DemoService {
     readonly provider: FinancialDataProvider,
     readonly now: () => string = () => new Date().toISOString(),
   ) {
-    if (!provider.capabilities().synthetic)
-      throw new Error('The demo API accepts synthetic providers only')
+    if (!provider.capabilities().synthetic || !provider.capabilities().grantSpecificRevocation)
+      throw new Error('The demo API requires synthetic grant-specific revocation')
   }
   async bootstrap(seed = false) {
     if (
@@ -238,10 +292,16 @@ export class DemoService {
       }
       // Regranting the synthetic connection keeps canonical account and transaction identities.
       const connectionId = existing?.id ?? `connection_${randomUUID()}`,
+        consentId = `consent_${randomUUID()}`,
         createdAt = this.now()
+      await assertNoOutstandingRevocation(tx, this.profileId, connectionId)
       let grant: Awaited<ReturnType<FinancialDataProvider['createConnection']>>
       try {
-        grant = await this.provider.createConnection({ profileId: this.profileId, connectionId })
+        grant = await this.provider.createConnection({
+          profileId: this.profileId,
+          connectionId,
+          grantId: consentId,
+        })
       } catch {
         throw providerFailure()
       }
@@ -275,7 +335,7 @@ export class DemoService {
           ),
         )
       await tx.insert(schema.consents).values({
-        id: `consent_${randomUUID()}`,
+        id: consentId,
         profileId: this.profileId,
         connectionId,
         purpose: 'account_information',
@@ -358,6 +418,12 @@ export class DemoService {
           .where(eq(schema.profiles.id, this.profileId))
           .for('update')
         const connection = await this.connection(connectionId, tx, true)
+        if (connection.providerId !== this.provider.id)
+          throw new Problem(
+            409,
+            'manual_source',
+            'Questo conto è aggiornato con inserimenti o importazioni manuali.',
+          )
         await this.assertConsent(connection, tx)
         // Hold the profile/connection lock during collection: an older request cannot overwrite a newer response.
         const batch = await this.collect(connectionId)
@@ -377,9 +443,9 @@ export class DemoService {
         }
         for (const { record, transaction } of batch.observations) {
           const contentHash = hash(record)
-          await tx
-            .insert(schema.observations)
-            .values({
+          await insertSourceObservation(
+            tx,
+            {
               id: stableId(
                 'observation',
                 this.profileId,
@@ -398,9 +464,9 @@ export class DemoService {
               status: record.status,
               contentHash,
               observedAt: batch.observedAt,
-              payload: record as unknown as Record<string, unknown>,
-            })
-            .onConflictDoNothing()
+            },
+            record as unknown as Record<string, unknown>,
+          )
         }
         for (const transaction of batch.canonical) {
           const [existing] = await tx
@@ -500,6 +566,15 @@ export class DemoService {
       }
       const report = { inserted: 0, updated: 0, unchanged: 0, rejected: 0, importedAt }
       for (const transaction of transactions) {
+        if (
+          transaction.amount.amountMinor < -9_223_372_036_854_775_808n ||
+          transaction.amount.amountMinor > 9_223_372_036_854_775_807n
+        )
+          throw new Problem(
+            422,
+            'invalid_csv',
+            'Un importo CSV supera il limite rappresentabile. Nessuna riga è stata importata.',
+          )
         const [existing] = await tx
           .select()
           .from(schema.transactions)
@@ -516,6 +591,7 @@ export class DemoService {
         if (existing) report.unchanged++
         else {
           await tx.insert(schema.transactions).values(transactionRow(transaction))
+          await recordManualImport(tx, transaction, importedAt)
           report.inserted++
         }
       }
@@ -523,9 +599,9 @@ export class DemoService {
         const transaction = transactions[index]
         if (!transaction) throw conflict()
         const contentHash = hash(record)
-        await tx
-          .insert(schema.observations)
-          .values({
+        await insertSourceObservation(
+          tx,
+          {
             id: stableId(
               'observation',
               this.profileId,
@@ -544,9 +620,9 @@ export class DemoService {
             status: record.status,
             contentHash,
             observedAt: importedAt,
-            payload: record as unknown as Record<string, unknown>,
-          })
-          .onConflictDoNothing()
+          },
+          record as unknown as Record<string, unknown>,
+        )
       }
       return report
     })
@@ -572,13 +648,23 @@ export class DemoService {
       .select()
       .from(schema.preferences)
       .where(eq(schema.preferences.profileId, this.profileId))
+    const rules = (
+      await db
+        .select()
+        .from(schema.classificationRules)
+        .where(eq(schema.classificationRules.profileId, this.profileId))
+    ).map((rule) => ({
+      ...rule,
+      enabled: rule.enabled === 'yes' && rule.archived === 'no',
+    }))
     const decisions = await db
       .select()
       .from(schema.matchDecisions)
       .where(eq(schema.matchDecisions.profileId, this.profileId))
     const accounts = accountRows.map(accountFromRow),
       transactions = transactionRows.map(transactionFromRow)
-    const analysis = analyse(accounts, transactions, {
+    const derived = analyse(accounts, transactions, {
+      rules,
       preferences,
       userClassifications: Object.fromEntries(
         feedback.map((item) => [item.transactionId, item.categoryId]),
@@ -588,6 +674,22 @@ export class DemoService {
         ...additionalMatchOverrides,
       },
     })
+    const decisionRevisions = new Map(decisions.map((item) => [item.matchId, item.revision]))
+    const transactionVersions = new Map(transactions.map((item) => [item.id, item]))
+    const accountContexts = new Map(accounts.map((item) => [item.id, item]))
+    const analysis: RevisionedAnalysis = {
+      ...derived,
+      matches: derived.matches.map((match) => ({
+        ...match,
+        revision: reconciliationRevision(
+          this.profileId,
+          match,
+          decisionRevisions.get(match.id) ?? 0,
+          transactionVersions,
+          accountContexts,
+        ),
+      })),
+    }
     return { accounts, transactions, analysis }
   }
   async overview() {
@@ -718,7 +820,11 @@ export class DemoService {
       return classification
     })
   }
-  async decide(matchId: string, state: 'confirmed' | 'rejected' | 'undone'): Promise<Analysis> {
+  async decide(
+    matchId: string,
+    state: 'confirmed' | 'rejected' | 'undone',
+    expectedRevision: string,
+  ): Promise<RevisionedAnalysis> {
     return this.db.transaction(async (tx) => {
       await this.profile(tx)
       await tx
@@ -729,6 +835,25 @@ export class DemoService {
       const { transactions, analysis } = await this.data(tx)
       const match = analysis.matches.find((item) => item.id === matchId)
       if (!match) throw notFound()
+      if (match.revision !== expectedRevision)
+        throw new Problem(
+          409,
+          'reconciliation_changed',
+          'Il collegamento è cambiato. Aggiorna i dati, controlla i movimenti e riprova.',
+        )
+      const [decision] = await tx
+        .select()
+        .from(schema.matchDecisions)
+        .where(
+          and(
+            eq(schema.matchDecisions.profileId, this.profileId),
+            eq(schema.matchDecisions.matchId, matchId),
+          ),
+        )
+        .for('update')
+      if (decision?.revision === 2_147_483_647)
+        throw conflict('La decisione non può essere aggiornata.')
+      const nextRevision = (decision?.revision ?? 0) + 1
       if (state === 'confirmed') {
         const consumes = (type: string) =>
           [
@@ -805,10 +930,16 @@ export class DemoService {
         throw conflict('Questo collegamento non può essere confermato con i movimenti attuali.')
       await tx
         .insert(schema.matchDecisions)
-        .values({ profileId: this.profileId, matchId, state, decidedAt: this.now() })
+        .values({
+          profileId: this.profileId,
+          matchId,
+          state,
+          decidedAt: this.now(),
+          revision: nextRevision,
+        })
         .onConflictDoUpdate({
           target: [schema.matchDecisions.profileId, schema.matchDecisions.matchId],
-          set: { state, decidedAt: this.now() },
+          set: { state, decidedAt: this.now(), revision: nextRevision },
         })
       await tx
         .delete(schema.matchDecisionLegs)
@@ -825,7 +956,7 @@ export class DemoService {
           transactionId,
         })),
       )
-      return proposed
+      return (await this.data(tx)).analysis
     })
   }
   async disconnect(connectionId: string) {
@@ -835,7 +966,34 @@ export class DemoService {
         .from(schema.profiles)
         .where(eq(schema.profiles.id, this.profileId))
         .for('update')
-      await this.connection(connectionId, tx, true)
+      const connection = await this.connection(connectionId, tx, true)
+      if (connection.providerId !== this.provider.id)
+        throw new Problem(
+          409,
+          'manual_source',
+          'Questo conto non ha un collegamento bancario da revocare.',
+        )
+      const consents = await tx
+        .select()
+        .from(schema.consents)
+        .where(
+          and(
+            eq(schema.consents.profileId, this.profileId),
+            eq(schema.consents.connectionId, connectionId),
+          ),
+        )
+        .orderBy(desc(schema.consents.grantedAt), desc(schema.consents.id))
+      for (const consent of consents)
+        await enqueueRevocation(
+          tx,
+          {
+            profileId: this.profileId,
+            connectionId,
+            providerId: connection.providerId,
+            consentId: consent.id,
+          },
+          this.now(),
+        )
       await tx
         .update(schema.connections)
         .set({ status: 'revoked' })
@@ -856,12 +1014,11 @@ export class DemoService {
           ),
         )
     })
-    // Local consent denial commits first. A failed remote acknowledgement cannot enable sync.
-    try {
-      await this.provider.disconnect({ profileId: this.profileId, connectionId })
-    } catch {
-      /* Synthetic provider acknowledgement can be retried by another disconnect. */
-    }
+    // Provider I/O belongs to the bounded background pump; local denial returns promptly.
+  }
+  async revocations() {
+    await this.profile()
+    return { revocations: await revocationsForProfile(this.db, this.profileId) }
   }
   async export() {
     return this.db.transaction((tx) => this.exportSnapshot(tx), {
@@ -869,16 +1026,18 @@ export class DemoService {
       accessMode: 'read only',
     })
   }
+  /** Explicit bounded local maintenance; no public production scheduler is implied. */
+  async cleanupExpiredPayloads(limit = 100) {
+    return cleanupExpiredObservationPayloads(this.db, this.profileId, this.now(), limit)
+  }
   async exportSnapshot(db: Database) {
+    const exportedAt = this.now()
     const overview = await this.overviewSnapshot(db)
     const consents = await db
       .select()
       .from(schema.consents)
       .where(eq(schema.consents.profileId, this.profileId))
-    const observations = await db
-      .select()
-      .from(schema.observations)
-      .where(eq(schema.observations.profileId, this.profileId))
+    const observations = await sourceObservationsForExport(db, this.profileId, exportedAt)
     const feedback = await db
       .select()
       .from(schema.feedback)
@@ -899,9 +1058,23 @@ export class DemoService {
       .select()
       .from(schema.matchDecisionLegs)
       .where(eq(schema.matchDecisionLegs.profileId, this.profileId))
+    const rules = (
+      await db
+        .select()
+        .from(schema.classificationRules)
+        .where(eq(schema.classificationRules.profileId, this.profileId))
+    ).map((rule) => ({
+      ...rule,
+      enabled: rule.enabled === 'yes',
+      archived: rule.archived === 'yes',
+    }))
+    const ruleEvents = await db
+      .select()
+      .from(schema.ruleEvents)
+      .where(eq(schema.ruleEvents.profileId, this.profileId))
     return {
       exportVersion: 1 as const,
-      exportedAt: this.now(),
+      exportedAt,
       ...overview,
       consents,
       sourceObservations: observations,
@@ -910,33 +1083,43 @@ export class DemoService {
       matchDecisions,
       matchDecisionLegs,
       syncRuns,
+      rules,
+      ruleEvents,
+      manual: await new ManualService(db, this.profileId, this.now).exportAudit(db),
+      profileSettings: await new SettingsService(db, this.profileId, this.now).exportAudit(db),
+      revocationJobs: await revocationsForProfile(db, this.profileId),
     }
   }
-  async erase() {
-    const connections = await this.db.transaction(async (tx) => {
+  async erase(afterErase?: (db: Database) => Promise<void>) {
+    await this.db.transaction(async (tx) => {
       await this.profile(tx)
       await tx
         .select()
         .from(schema.profiles)
         .where(eq(schema.profiles.id, this.profileId))
         .for('update')
-      const connections = await tx
+      const consents = await tx
         .select()
-        .from(schema.connections)
-        .where(eq(schema.connections.profileId, this.profileId))
+        .from(schema.consents)
+        .where(eq(schema.consents.profileId, this.profileId))
+        .orderBy(desc(schema.consents.grantedAt), desc(schema.consents.id))
+      for (const consent of consents)
+        await enqueueRevocation(
+          tx,
+          {
+            profileId: this.profileId,
+            connectionId: consent.connectionId,
+            providerId: consent.provider,
+            consentId: consent.id,
+          },
+          this.now(),
+        )
       await tx
         .insert(schema.profileTombstones)
         .values({ profileId: this.profileId, erasedAt: this.now() })
         .onConflictDoNothing()
       await tx.delete(schema.profiles).where(eq(schema.profiles.id, this.profileId))
-      return connections
+      await afterErase?.(tx)
     })
-    for (const connection of connections) {
-      try {
-        await this.provider.disconnect({ profileId: this.profileId, connectionId: connection.id })
-      } catch {
-        /* Local erasure and denial remain effective. */
-      }
-    }
   }
 }

@@ -12,6 +12,7 @@ import {
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { assertDemoConfiguration, createApp } from '../src/app.js'
+import { processNextRevocation } from '../src/revocation-outbox.js'
 
 let handle: DatabaseHandle
 const profileIds: string[] = []
@@ -19,7 +20,14 @@ const apps: Awaited<ReturnType<typeof createApp>>[] = []
 const appFor = async (provider = new MockItalianProvider(), seed = true) => {
   const profileId = `test_${randomUUID()}`
   profileIds.push(profileId)
-  const app = await createApp({ db: handle.db, demoMode: true, profileId, provider, seed })
+  const app = await createApp({
+    db: handle.db,
+    demoMode: true,
+    profileId,
+    provider,
+    seed,
+    now: () => '2026-10-03T12:00:00.000Z',
+  })
   apps.push(app)
   return { app, profileId }
 }
@@ -27,6 +35,20 @@ const overview = async (app: Awaited<ReturnType<typeof createApp>>) => {
   const response = await app.inject({ url: '/v1/demo' })
   expect(response.statusCode, response.payload).toBe(200)
   return response.json()
+}
+interface MatchSnapshot {
+  readonly id: string
+  readonly revision: string
+  readonly state: 'confirmed' | 'suggested' | 'rejected' | 'undone'
+  readonly type: string
+  readonly algorithmVersion: string
+  readonly evidence: readonly string[]
+  readonly transactionIds: readonly string[]
+}
+function snapshotMatch(analysis: { readonly matches: readonly MatchSnapshot[] }, id: string) {
+  const match = analysis.matches.find((item) => item.id === id)
+  if (!match) throw new Error(`Expected match ${id} in analysis`)
+  return match
 }
 class MutableProvider extends MockItalianProvider {
   records: readonly ProviderTransaction[] = ITALIAN_TRANSACTIONS
@@ -90,6 +112,7 @@ describe('profile-scoped synthetic financial API', () => {
     }
     const current = await overview(app)
     expect(current.transactions).toEqual(initial.transactions)
+    expect(current.analysis.matches).toEqual(initial.analysis.matches)
     const exported = (await app.inject({ url: '/v1/export' })).json()
     expect(exported.sourceObservations).toHaveLength(ITALIAN_TRANSACTIONS.length)
     expect(exported.syncRuns).toHaveLength(3)
@@ -302,7 +325,7 @@ describe('profile-scoped synthetic financial API', () => {
         await b.app.inject({
           method: 'PATCH',
           url: `/v1/reconciliation/${encodeURIComponent(initialA.analysis.matches[0].id)}`,
-          payload: { state: 'rejected' },
+          payload: { state: 'rejected', revision: initialA.analysis.matches[0].revision },
         })
       ).statusCode,
     ).toBe(404)
@@ -333,19 +356,228 @@ describe('profile-scoped synthetic financial API', () => {
       initialB.transactions,
     )
   })
+  test('simultaneous opposite reconciliation decisions accept one revision and preserve only the winner', async () => {
+    const { app, profileId } = await appFor(),
+      initial = await overview(app)
+    const match = initial.analysis.matches.find(
+      (item: { type: string }) => item.type === 'internal_transfer',
+    )
+    const commands = ['undone', 'rejected'] as const
+    const responses = await Promise.all(
+      commands.map((state) =>
+        app.inject({
+          method: 'PATCH',
+          url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+          payload: { state, revision: match.revision },
+        }),
+      ),
+    )
+    expect(responses.map((response) => response.statusCode).sort()).toEqual([200, 409])
+    const winnerIndex = responses.findIndex((response) => response.statusCode === 200)
+    const winner = responses[winnerIndex]
+    const loser = responses.find((response) => response.statusCode === 409)
+    if (!winner || !loser) throw new Error('Expected exactly one winner and one stale command')
+    expect(loser.json().code).toBe('reconciliation_changed')
+    const winningMatch = snapshotMatch(winner.json(), match.id)
+    expect(winningMatch.state).toBe(commands[winnerIndex])
+    expect(winningMatch.revision).not.toBe(match.revision)
+    const current = await overview(app)
+    expect(current.analysis).toEqual(winner.json())
+    const decisions = await handle.db
+      .select()
+      .from(schema.matchDecisions)
+      .where(eq(schema.matchDecisions.profileId, profileId))
+    expect(decisions).toMatchObject([
+      { matchId: match.id, state: commands[winnerIndex], revision: 1 },
+    ])
+    const legs = await handle.db
+      .select()
+      .from(schema.matchDecisionLegs)
+      .where(eq(schema.matchDecisionLegs.profileId, profileId))
+    expect(legs.map((leg) => leg.transactionId).sort()).toEqual([...match.transactionIds].sort())
+    const stale = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'confirmed', revision: match.revision },
+    })
+    expect(stale.statusCode, stale.payload).toBe(409)
+    expect((await overview(app)).analysis).toEqual(current.analysis)
+  })
+  test('a changed source leg invalidates a reconciliation token while unrelated changes preserve it', async () => {
+    const provider = new MutableProvider(),
+      { app, profileId } = await appFor(provider),
+      initial = await overview(app)
+    const match = initial.analysis.matches.find(
+      (item: { type: string }) => item.type === 'internal_transfer',
+    )
+    const connectionId = initial.connections[0].id
+    provider.records = provider.records.map((record) =>
+      record.id === 'coop' ? { ...record, description: 'COOP descrizione aggiornata' } : record,
+    )
+    const unrelatedSync = await app.inject({
+      method: 'POST',
+      url: `/v1/connections/${connectionId}/sync`,
+      payload: {},
+    })
+    expect(unrelatedSync.statusCode, unrelatedSync.payload).toBe(200)
+    expect(unrelatedSync.json()).toMatchObject({ inserted: 0, updated: 1 })
+    expect(snapshotMatch((await overview(app)).analysis, match.id).revision).toBe(match.revision)
+    provider.records = provider.records.map((record) =>
+      record.id === 'transfer-out'
+        ? { ...record, description: 'Giroconto descrizione aggiornata' }
+        : record,
+    )
+    const relatedSync = await app.inject({
+      method: 'POST',
+      url: `/v1/connections/${connectionId}/sync`,
+      payload: {},
+    })
+    expect(relatedSync.statusCode, relatedSync.payload).toBe(200)
+    expect(relatedSync.json()).toMatchObject({ inserted: 0, updated: 1 })
+    const refreshed = await overview(app)
+    const changed = snapshotMatch(refreshed.analysis, match.id)
+    expect(changed.transactionIds).toEqual(match.transactionIds)
+    expect(changed.revision).not.toBe(match.revision)
+    const stale = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'rejected', revision: match.revision },
+    })
+    expect(stale.statusCode, stale.payload).toBe(409)
+    expect(stale.json().code).toBe('reconciliation_changed')
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisions)
+        .where(eq(schema.matchDecisions.profileId, profileId)),
+    ).toEqual([])
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisionLegs)
+        .where(eq(schema.matchDecisionLegs.profileId, profileId)),
+    ).toEqual([])
+    expect((await overview(app)).analysis).toEqual(refreshed.analysis)
+    const fresh = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'rejected', revision: changed.revision },
+    })
+    expect(fresh.statusCode, fresh.payload).toBe(200)
+    expect(snapshotMatch(fresh.json(), match.id).state).toBe('rejected')
+    expect(snapshotMatch(fresh.json(), match.id).revision).not.toBe(changed.revision)
+  })
+  test('account structure changes invalidate match tokens while balance freshness does not', async () => {
+    class AccountChangingProvider extends MockItalianProvider {
+      changedKind = false
+      changedBalance = false
+      override async listAccounts(context: ProviderContext) {
+        const accounts = await super.listAccounts(context)
+        return accounts.map((account) => ({
+          ...account,
+          kind: account.id === 'carta' && this.changedKind ? ('current' as const) : account.kind,
+          balance: account.id === 'carta' && this.changedBalance ? '-200.00' : account.balance,
+        }))
+      }
+    }
+    const provider = new AccountChangingProvider()
+    const { app, profileId } = await appFor(provider)
+    const initial = await overview(app)
+    const match = initial.analysis.matches.find(
+      (item: MatchSnapshot) => item.type === 'card_settlement',
+    )
+    expect(match).toBeDefined()
+    const sync = async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: `/v1/connections/${initial.connections[0].id}/sync`,
+        payload: {},
+      })
+      expect(response.statusCode, response.payload).toBe(200)
+      expect(response.json()).toMatchObject({ updated: 0, inserted: 0 })
+      return overview(app)
+    }
+    provider.changedBalance = true
+    const balanceOnly = await sync()
+    expect(snapshotMatch(balanceOnly.analysis, match.id).revision).toBe(match.revision)
+    provider.changedKind = true
+    const structural = await sync()
+    expect(structural.transactions).toEqual(initial.transactions)
+    const changed = snapshotMatch(structural.analysis, match.id)
+    expect(changed.revision).not.toBe(match.revision)
+    const stale = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'undone', revision: match.revision },
+    })
+    expect(stale.statusCode, stale.payload).toBe(409)
+    expect(stale.json().code).toBe('reconciliation_changed')
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisions)
+        .where(eq(schema.matchDecisions.profileId, profileId)),
+    ).toEqual([])
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisionLegs)
+        .where(eq(schema.matchDecisionLegs.profileId, profileId)),
+    ).toEqual([])
+    const accepted = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'undone', revision: changed.revision },
+    })
+    expect(accepted.statusCode, accepted.payload).toBe(200)
+  })
+  test('reconciliation requests require a lowercase 64-character revision before any write', async () => {
+    const { app, profileId } = await appFor(),
+      initial = await overview(app),
+      match = initial.analysis.matches[0]
+    for (const payload of [
+      { state: 'rejected' },
+      { state: 'rejected', revision: 1 },
+      { state: 'rejected', revision: '' },
+      { state: 'rejected', revision: 'a'.repeat(63) },
+      { state: 'rejected', revision: 'a'.repeat(65) },
+      { state: 'rejected', revision: 'A'.repeat(64) },
+      { state: 'rejected', revision: 'z'.repeat(64) },
+      { state: 'rejected', revision: match.revision, unexpected: true },
+    ]) {
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+        payload,
+      })
+      expect(response.statusCode, response.payload).toBe(400)
+    }
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisions)
+        .where(eq(schema.matchDecisions.profileId, profileId)),
+    ).toEqual([])
+    expect((await overview(app)).analysis).toEqual(initial.analysis)
+  })
   test('match undo, rejection and confirm decisions persist through resync and include stable legs', async () => {
     const { app } = await appFor(),
       initial = await overview(app)
     const match = initial.analysis.matches.find(
       (item: { type: string }) => item.type === 'internal_transfer',
     )
+    let revision = match.revision
     for (const state of ['undone', 'rejected', 'confirmed']) {
       const decision = await app.inject({
         method: 'PATCH',
         url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
-        payload: { state },
+        payload: { state, revision },
       })
       expect(decision.statusCode, decision.payload).toBe(200)
+      const updated = snapshotMatch(decision.json(), match.id)
+      expect(updated.revision).toMatch(/^[a-f0-9]{64}$/)
+      expect(updated.revision).not.toBe(revision)
+      revision = updated.revision
       expect(
         decision.json().matches.find((item: { id: string }) => item.id === match.id).state,
       ).toBe(state)
@@ -358,7 +590,28 @@ describe('profile-scoped synthetic financial API', () => {
         (await overview(app)).analysis.matches.find((item: { id: string }) => item.id === match.id)
           .state,
       ).toBe(state)
+      expect(snapshotMatch((await overview(app)).analysis, match.id).revision).toBe(revision)
     }
+    // Returning to the initial state still has a new token: an old tab cannot exploit ABA.
+    expect(revision).not.toBe(match.revision)
+    const stale = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'undone', revision: match.revision },
+    })
+    expect(stale.statusCode, stale.payload).toBe(409)
+    expect(stale.json().code).toBe('reconciliation_changed')
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisions)
+        .where(
+          and(
+            eq(schema.matchDecisions.profileId, initial.profile.id),
+            eq(schema.matchDecisions.matchId, match.id),
+          ),
+        ),
+    ).toMatchObject([{ state: 'confirmed', revision: 3 }])
     const legs = await handle.db
       .select()
       .from(schema.matchDecisionLegs)
@@ -408,9 +661,10 @@ describe('profile-scoped synthetic financial API', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
-      payload: { state: 'confirmed' },
+      payload: { state: 'confirmed', revision: match.revision },
     })
     expect(response.statusCode, response.payload).toBe(409)
+    expect(response.json().code).toBe('conflict')
     expect((await overview(app)).analysis).toEqual(initial.analysis)
     expect(
       await handle.db
@@ -424,6 +678,25 @@ describe('profile-scoped synthetic financial API', () => {
         .from(schema.matchDecisionLegs)
         .where(eq(schema.matchDecisionLegs.profileId, profileId)),
     ).toEqual([])
+    const rejected = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'rejected', revision: match.revision },
+    })
+    expect(rejected.statusCode, rejected.payload).toBe(200)
+    const saved = (await app.inject({ url: '/v1/export' })).json()
+    const rejectedMatch = snapshotMatch(rejected.json(), match.id)
+    const retry = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'confirmed', revision: rejectedMatch.revision },
+    })
+    expect(retry.statusCode, retry.payload).toBe(409)
+    expect(retry.json().code).toBe('conflict')
+    const unchanged = (await app.inject({ url: '/v1/export' })).json()
+    expect(unchanged.matchDecisions).toEqual(saved.matchDecisions)
+    expect(unchanged.matchDecisionLegs).toEqual(saved.matchDecisionLegs)
+    expect(unchanged.analysis).toEqual(saved.analysis)
   })
   test('a refund referencing an excluded duplicate purchase cannot be confirmed or persist decision legs', async () => {
     const provider = new MutableProvider()
@@ -465,9 +738,10 @@ describe('profile-scoped synthetic financial API', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
-      payload: { state: 'confirmed' },
+      payload: { state: 'confirmed', revision: match.revision },
     })
     expect(response.statusCode, response.payload).toBe(409)
+    expect(response.json().code).toBe('conflict')
     expect((await overview(app)).analysis).toEqual(initial.analysis)
     expect(
       await handle.db
@@ -483,7 +757,8 @@ describe('profile-scoped synthetic financial API', () => {
     ).toEqual([])
   })
   test('consent revocation blocks sync; reconnect preserves accounts, transactions, balances and consent history', async () => {
-    const { app } = await appFor(),
+    const provider = new MockItalianProvider()
+    const { app } = await appFor(provider),
       initial = await overview(app),
       connectionId = initial.connections[0].id
     expect(
@@ -499,6 +774,15 @@ describe('profile-scoped synthetic financial API', () => {
       ).statusCode,
     ).toBe(409)
     expect((await overview(app)).transactions).toEqual(initial.transactions)
+    const waiting = await app.inject({ method: 'POST', url: '/v1/connections/mock', payload: {} })
+    expect(waiting.statusCode, waiting.payload).toBe(409)
+    expect(waiting.json().code).toBe('revocation_pending')
+    expect(
+      await processNextRevocation(handle.db, [provider], {
+        profileId: initial.profile.id,
+        now: () => '2026-10-03T12:00:00.000Z',
+      }),
+    ).toMatchObject({ state: 'completed' })
     const reconnect = await app.inject({ method: 'POST', url: '/v1/connections/mock', payload: {} })
     expect(reconnect.statusCode, reconnect.payload).toBe(200)
     expect(reconnect.json().id).toBe(connectionId)
@@ -565,6 +849,14 @@ describe('profile-scoped synthetic financial API', () => {
     })
     expect(preflight.statusCode).toBe(204)
     expect(preflight.headers['access-control-allow-origin']).toBe('http://localhost:3000')
+    expect(preflight.headers['access-control-allow-credentials']).toBe('true')
+    const browserOverview = await app.inject({
+      url: '/v1/demo',
+      headers: { origin: 'http://localhost:8081' },
+    })
+    expect(browserOverview.statusCode).toBe(200)
+    expect(browserOverview.headers['access-control-allow-origin']).toBe('http://localhost:8081')
+    expect(browserOverview.headers['access-control-allow-credentials']).toBe('true')
     expect(
       (await app.inject({ url: '/openapi.json' })).json().paths[
         '/v1/transactions/{id}/classification'
@@ -636,6 +928,17 @@ describe('profile-scoped synthetic financial API', () => {
       url: `/v1/transactions/${row.id}/classification`,
       payload: { categoryId: 'travel', scope: 'once', revision: row.revision },
     })
+    const corrected = await overview(app)
+    const match = corrected.analysis.matches.find(
+      (item: { type: string }) => item.type === 'internal_transfer',
+    )
+    const decided = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'rejected', revision: match.revision },
+    })
+    expect(decided.statusCode, decided.payload).toBe(200)
+    const savedMatch = snapshotMatch(decided.json(), match.id)
     await app.close()
     await database.close()
     database = await openDatabase({ driver: 'pglite', path })
@@ -648,6 +951,24 @@ describe('profile-scoped synthetic financial API', () => {
         (item: { transactionId: string }) => item.transactionId === row.id,
       ),
     ).toMatchObject({ categoryId: 'travel', source: 'user' })
+    expect(snapshotMatch(after.analysis, match.id)).toEqual(savedMatch)
+    expect((await app.inject({ url: '/v1/export' })).json().matchDecisions).toMatchObject([
+      { matchId: match.id, state: 'rejected', revision: 1 },
+    ])
+    const stale = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'undone', revision: match.revision },
+    })
+    expect(stale.statusCode, stale.payload).toBe(409)
+    expect(stale.json().code).toBe('reconciliation_changed')
+    const undone = await app.inject({
+      method: 'PATCH',
+      url: `/v1/reconciliation/${encodeURIComponent(match.id)}`,
+      payload: { state: 'undone', revision: savedMatch.revision },
+    })
+    expect(undone.statusCode, undone.payload).toBe(200)
+    expect(snapshotMatch(undone.json(), match.id).revision).not.toBe(savedMatch.revision)
     await app.close()
     await database.close()
     await rm(path, { recursive: true, force: true })

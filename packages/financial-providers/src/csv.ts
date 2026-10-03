@@ -51,6 +51,8 @@ export function parseBankCsv(input: string, accountId: string): ProviderTransact
   const identities = new Set<string>()
   return rows.map((fields, index) => {
     if (fields.length !== 7) throw new Error(`Wrong column count at row ${index + 2}`)
+    if (fields.some((field) => field.includes('\u0000')))
+      throw new Error(`Invalid NUL character at row ${index + 2}`)
     const [
       id = '',
       date = '',

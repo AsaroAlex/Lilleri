@@ -4,23 +4,32 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "DEMO_MODE=1 node --watch dist/server.js",
+    "dev": "DEMO_MODE=${DEMO_MODE:-1} node --watch dist/server.js",
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:integration": "vitest run"
+    "test:integration": "vitest run",
+    "worker:revocations": "DEMO_MODE=1 node dist/revocation-worker.js run",
+    "worker:revocation-status": "DEMO_MODE=1 node dist/revocation-worker.js status",
+    "worker:retention": "node dist/retention-worker.js run",
+    "worker:retention-status": "node dist/retention-worker.js status",
+    "worker:retention-watch": "node dist/retention-worker.js watch"
   },
   "dependencies": {
+    "@better-auth/passkey": "1.7.7",
+    "@better-auth/utils": "0.4.2",
+    "@fastify/swagger": "9.9.1",
     "@lilleri/database": "workspace:*",
     "@lilleri/domain": "workspace:*",
     "@lilleri/engines": "workspace:*",
     "@lilleri/financial-providers": "workspace:*",
-    "@fastify/swagger": "9.9.1",
+    "better-auth": "1.7.7",
+    "drizzle-orm": "0.45.3",
     "fastify": "5.12.5",
     "fastify-type-provider-zod": "7.0.0",
-    "zod": "4.6.5",
-    "drizzle-orm": "0.45.3"
+    "fflate": "0.8.3",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",

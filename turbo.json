@@ -11,7 +11,8 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_LOCAL_AUTH_MODE"]
     },
     "typecheck": {
       "dependsOn": ["^build"],
@@ -33,6 +34,10 @@
       "persistent": true,
       "passThroughEnv": [
         "DEMO_MODE",
+        "LOCAL_AUTH_MODE",
+        "LOCAL_AUTH_BASE_URL",
+        "LOCAL_AUTH_SECRET",
+        "EXPO_PUBLIC_LOCAL_AUTH_MODE",
         "API_HOST",
         "API_PORT",
         "DATABASE_URL",
@@ -40,7 +45,11 @@
         "EXPO_PUBLIC_API_URL",
         "EXPO_OFFLINE",
         "EXPO_NO_TELEMETRY",
-        "CI"
+        "CI",
+        "PAYLOAD_RETENTION_ENABLED",
+        "PAYLOAD_RETENTION_INTERVAL_MS",
+        "PAYLOAD_RETENTION_PROFILE_LIMIT",
+        "PAYLOAD_RETENTION_PAYLOAD_LIMIT"
       ]
     },
     "clean": {
