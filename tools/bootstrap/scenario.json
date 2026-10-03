@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "monthlySubscribers": 0,
+  "annualSubscribers": 0,
+  "freeUsers": 0,
+  "cashAvailableAfterObligationsCents": 0,
+  "monthlyPriceCents": 699,
+  "annualPriceCents": 6999,
+  "vatBasisPoints": 2200,
+  "paymentFeeBasisPoints": 150,
+  "billingFeeBasisPoints": 70,
+  "paymentFixedFeeCents": 25,
+  "refundReserveBasisPoints": 1000,
+  "fixedMonthlyCostCents": 0,
+  "paidUserMonthlyCostCents": 0,
+  "freeUserMonthlyCostCents": 0,
+  "unknownCosts": [
+    "commercial hosting and backups",
+    "accounting, tax administration and business setup",
+    "support and acquisition",
+    "provider setup, cash invoice and contractual commitment"
+  ],
+  "bank": {
+    "monthlyNetInvoiceCents": null,
+    "monthlyCashInvoiceCents": null,
+    "setupCashCents": null,
+    "commitmentMonths": null,
+    "writtenQuoteVerified": false,
+    "licenceRouteVerified": false,
+    "productionReady": false,
+    "billingAndPaidBenefitReady": false
+  }
+}

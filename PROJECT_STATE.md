@@ -138,6 +138,15 @@ CSV canonico, settings/entitlements free-beta, revocation outbox, raw TTL origin
 - Remote CI, native/assistive technology/utenti, TLS/KMS/PITR/processor/legale non
   dichiarati passati. Archivio fixture attuale contiene dati sintetici aggiunti dai test.
 
+## Lancio con investimento iniziale zero
+
+Decisione attuale in `docs/business/zero-investment-launch.md`: Gratis permanente
+manuale/import; niente nuovo canone bancario o checkout nel prototipo. Gli strumenti
+`dev:zero`, `check:zero`, `economics:zero` e la pagina `/piani` sono una consegna
+separata sul codice pubblicato, senza dipendere dal batch sync/XLSX/offline in corso.
+Il calcolatore distingue ricavi riconosciuti e cassa realmente disponibile; non
+attiva servizi. Prove della consegna in `docs/reviews/zero-investment-launch.md`.
+
 ## Piano residuo e prossima continuazione
 
 Tutte le40righe E00–E39 restano in execution-plan con acceptance effettive.

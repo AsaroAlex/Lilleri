@@ -31,6 +31,18 @@ PGLITE_PATH=/tmp/lilleri-fresh-demo pnpm dev
 
 The local API rejects production configuration and non-loopback binding. Physical-device banking/mobile behaviour is unverified; the browser export does not validate native iOS/Android. Detailed optional PostgreSQL and test commands are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Zero-investment workflow
+
+The [zero-investment launch decision](docs/business/zero-investment-launch.md) keeps Gratis permanent and postpones paid bank access until collected revenue can fund it. No bank subscription or checkout is activated. The [bootstrap tools](tools/bootstrap/README.md) use the existing synthetic prototype with separate ports and a separate archive:
+
+```bash
+pnpm economics:zero
+pnpm check:zero
+pnpm dev:zero
+```
+
+`dev:zero` builds local packages and starts only the API (127.0.0.1:3191) and Expo browser preview (localhost:8181), with embedded PGlite, offline Expo and no inherited service credentials. Install the locked dependencies first using the normal setup above. This is a local synthetic demonstration, not a commercially deployed service or permission to import personal bank records. Commercial setup, infrastructure, support and time still require costing. Test prices are hypotheses; the prototype charges nobody. The proposed free/paid boundary is available on the project site's `/piani` page.
+
 ## Available local flows
 
 - **Home:** observed monthly totals and their transaction evidence; safe-to-spend uses explicit account selection, a visible horizon and per-currency buffers. Unknown source coverage, balance meaning or private liabilities can make the estimate unavailable.

@@ -1,5 +1,7 @@
 # Lilleri pricing analysis — research anchors and testable prices
 
+> **Current launch decision, 2026-10-03:** [Zero-investment launch](zero-investment-launch.md) supersedes the launch proposal below. The current synthetic beta is entirely free without expiry. Future Plus test prices are €6.99/month or €69.99/year, with no live SKU or checkout. Paid bank access must first be delivered, contracted and funded from collected unrestricted cash. The older €4.99/€39.99 cases remain historical sensitivities, not the active launch choice.
+
 **Review date:** 2026-10-02. **Evidence:** external claims and URLs below are inherited from the research; this review rechecks document consistency and arithmetic, not live vendor terms or legal clearance. Source verification dates belong to the cited research. FACT labels there retain the original limitations. All prices, conversion, usage, costs and projections proposed here are ASSUMPTIONS or HYPOTHESES; DECISION means a reversible internal planning choice.
 
 **Delivery boundary (DECISION):** local mock → official sandbox → legally cleared, contracted, consented real-data beta → store launch → later capabilities. Requirements and budgets do not prove implementation. No real-bank keys, bank credentials, purchase, contract, counsel opinion or store billing are obtained by these documents.

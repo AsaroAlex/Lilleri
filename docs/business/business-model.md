@@ -1,5 +1,7 @@
 # Lilleri business model — guarded Gratis, Plus, and later options
 
+> **Current launch decision, 2026-10-03:** the founder requires zero initial investment. [Zero-investment launch](zero-investment-launch.md) takes precedence over the launch subsidy and price hypotheses below: permanent manual/import Gratis; current synthetic beta entirely free; bank automation only after implementation and collected funds cover a verified contract. No live-bank free tier, preview cost or provider minimum is committed. Historical scenarios below remain comparison material.
+
 **Review date:** 2026-10-02. **Evidence:** external claims and URLs below are inherited from the research; this review rechecks document consistency and arithmetic, not live vendor terms or legal clearance. Source verification dates belong to the cited research. FACT labels there retain the original limitations. All prices, conversion, usage, costs and projections proposed here are ASSUMPTIONS or HYPOTHESES; DECISION means a reversible internal planning choice.
 
 **Delivery boundary (DECISION):** local mock → official sandbox → legally cleared, contracted, consented real-data beta → store launch → later capabilities. Requirements and budgets do not prove implementation. No real-bank keys, bank credentials, purchase, contract, counsel opinion or store billing are obtained by these documents.
