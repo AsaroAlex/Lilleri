@@ -77,7 +77,7 @@ const issueLabels: Readonly<Record<string, string>> = {
   invalid_status: 'Il valore dello stato non corrisponde alle associazioni scelte.',
   duplicate_review_required: 'Controlla le righe uguali e scegli se mantenerle tutte.',
   generated_file_identity:
-    'Mancano identificatori della fonte: l’identità dipende dal contenuto del file. Un file diverso richiede un nuovo confronto.',
+    'Il file non contiene un codice univoco per ogni movimento. Confrontiamo il contenuto e la posizione delle righe: se cambi il file, controlla di nuovo i possibili duplicati.',
   literal_formula_text:
     'Una cella simile a una formula sarà conservata come testo, senza eseguirla.',
   value_date_provenance:
@@ -305,7 +305,7 @@ export function MappedImportPanel({
             ? 'La modifica è stata salvata, ma non riesco ad aggiornare i dati. Ricarica prima di continuare.'
             : cause instanceof Error
               ? cause.message
-              : 'La richiesta non è confermata. Per un’importazione incerta riprova con la stessa anteprima: conserva la stessa identità.',
+              : 'Non sappiamo ancora se l’importazione è stata completata. Riprova dalla stessa anteprima per evitare un doppio inserimento.',
         )
     } finally {
       if (current(epoch)) {
@@ -606,12 +606,12 @@ export function MappedImportPanel({
   return (
     <View style={s.panel}>
       <Text accessibilityRole="header" style={s.title}>
-        Importa CSV con associazioni
+        Importa movimenti da file
       </Text>
       <Text style={s.body}>
-        Scegli il conto, leggi le intestazioni e associa le colonne. Il saldo di un conto a mano
-        cambia solo con i nuovi movimenti importati; il saldo di una fonte collegata resta quello
-        comunicato dalla fonte.
+        Scegli conto e file, indica quali colonne contengono data, descrizione e importo, poi
+        controlla l’anteprima. I nuovi movimenti aggiornano il saldo dei conti manuali; il saldo dei
+        conti collegati resta quello comunicato dalla fonte.
       </Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>

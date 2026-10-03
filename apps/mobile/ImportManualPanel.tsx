@@ -207,7 +207,7 @@ export function ImportManualPanel({
         setError(
           cause instanceof Error
             ? cause.message
-            : 'La modifica non è confermata. Riprova con gli stessi dati: la richiesta conserva la sua identità.',
+            : 'Non sappiamo ancora se la modifica è stata salvata. Riprova con gli stessi dati per evitare un doppio inserimento.',
         )
     } finally {
       if (mounted.current) setBusy(false)
@@ -402,10 +402,12 @@ export function ImportManualPanel({
   )
   return (
     <View style={s.root}>
-      <Text style={s.heading}>Conti a mano e file</Text>
+      <Text accessibilityRole="header" aria-level={2} style={s.heading}>
+        Conti manuali e importazione
+      </Text>
       <Text style={s.body}>
-        Contanti, portafogli e conti non collegati. Gli importi restano nella valuta del conto; i
-        saldi dichiarati e le loro correzioni hanno uno storico.
+        Tieni traccia di contanti, carte e conti non collegati. Crea un conto, aggiungi un movimento
+        o importa un CSV. Ogni importo resta nella valuta del conto.
       </Text>
       <View style={s.row}>
         {(Object.keys(modeLabels) as Mode[]).map((key) => (
@@ -481,7 +483,7 @@ export function ImportManualPanel({
           </View>
           {field('Valuta ISO del conto', newCurrency, setNewCurrency, 'EUR')}
           {field('Saldo iniziale', openingAmount, setOpeningAmount, '0,00')}
-          {field('Data di inizio tracciamento', openingOn, setOpeningOn, 'YYYY-MM-DD')}
+          {field('Data del saldo iniziale', openingOn, setOpeningOn, 'YYYY-MM-DD')}
           {button(
             'Crea conto locale',
             () => {
@@ -492,7 +494,7 @@ export function ImportManualPanel({
         </View>
       ) : mode === 'csv' ? (
         <View style={s.card}>
-          <Text style={s.title}>Importa un CSV con identità stabili</Text>
+          <Text style={s.title}>Importa movimenti da un CSV</Text>
           <Text style={s.body}>
             Fino a 1.000 righe e 256 KiB. È supportato questo formato CSV, con virgole tra le
             colonne, importi con punto decimale e date YYYY-MM-DD. Mantieni lo stesso id quando

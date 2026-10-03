@@ -153,8 +153,10 @@ describe('profile-scoped synthetic financial API', () => {
     })
     expect(dangling.statusCode, dangling.payload).toBe(502)
     const after = (await app.inject({ url: '/v1/export' })).json()
+    const byId = (rows: { id: string }[]) =>
+      [...rows].sort((left, right) => left.id.localeCompare(right.id))
     for (const key of ['accounts', 'transactions', 'connections', 'sourceObservations', 'syncRuns'])
-      expect(after[key]).toEqual(before[key])
+      expect(byId(after[key])).toEqual(byId(before[key]))
     provider.records = ITALIAN_TRANSACTIONS
     const retry = await app.inject({
       method: 'POST',

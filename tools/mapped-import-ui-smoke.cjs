@@ -53,10 +53,8 @@ async function responseFrom(page, path, method, action, expected = 200) {
 }
 async function openPanel(page) {
   await button(page, 'Movimenti').click()
-  await responseFrom(page, '/v1/import-mappings', 'GET', () =>
-    button(page, 'CSV personalizzato').click(),
-  )
-  await page.getByRole('heading', { name: 'Importa CSV con associazioni', exact: true }).waitFor()
+  await responseFrom(page, '/v1/import-mappings', 'GET', () => button(page, 'Importa file').click())
+  await page.getByRole('heading', { name: 'Importa movimenti da file', exact: true }).waitFor()
 }
 async function selectColumn(page, field, header) {
   const escaped = field.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -375,7 +373,7 @@ async function noOverflow(page, name) {
     await preview(page)
     await noOverflow(page, '320px mapped CSV preview')
     const panel = page
-      .getByRole('heading', { name: 'Importa CSV con associazioni', exact: true })
+      .getByRole('heading', { name: 'Importa movimenti da file', exact: true })
       .locator('..')
     for (const control of await panel
       .locator('[role="button"], [role="radio"], [role="checkbox"]')
@@ -423,12 +421,10 @@ async function noOverflow(page, name) {
     await page.waitForTimeout(250)
     assert.equal(await page.getByText('Vecchia richiesta sintetica', { exact: false }).count(), 0)
     assert.equal(
-      await page
-        .getByRole('heading', { name: 'Importa CSV con associazioni', exact: true })
-        .count(),
+      await page.getByRole('heading', { name: 'Importa movimenti da file', exact: true }).count(),
       0,
     )
-    await button(page, 'CSV personalizzato').click()
+    await button(page, 'Importa file').click()
     assert.equal(await csvField(page).inputValue(), '')
     assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
     assert.deepEqual(report.pageErrors, [])
