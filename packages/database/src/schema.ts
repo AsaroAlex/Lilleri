@@ -21,8 +21,16 @@ import {
   unique,
 } from 'drizzle-orm/pg-core'
 
+const householdColumn = () => text('household_id').notNull().default('')
+
+export const households = pgTable('households', {
+  id: text('id').primaryKey(),
+  createdAt: text('created_at').notNull(),
+})
+
 export const profiles = pgTable('profiles', {
   id: text('id').primaryKey(),
+  householdId: householdColumn(),
   name: text('name').notNull(),
   timezone: text('timezone').notNull(),
   createdAt: text('created_at').notNull(),
@@ -31,6 +39,7 @@ export const connections = pgTable(
   'connections',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -46,6 +55,7 @@ export const consents = pgTable(
   'consents',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     connectionId: text('connection_id').notNull(),
     purpose: text('purpose').$type<'account_information'>().notNull(),
@@ -65,6 +75,7 @@ export const accounts = pgTable(
   'accounts',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     connectionId: text('connection_id').notNull(),
     providerAccountId: text('provider_account_id').notNull(),
@@ -89,12 +100,14 @@ export const transactions = pgTable(
   'transactions',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     accountId: text('account_id').notNull(),
     connectionId: text('connection_id').notNull(),
     providerId: text('provider_id').notNull(),
     providerTransactionId: text('provider_transaction_id').notNull(),
     revision: integer('revision').notNull(),
+    scope: text('scope').$type<'personal' | 'business'>().notNull().default('personal'),
     source: text('source').$type<Transaction['source']>().notNull(),
     status: text('status').$type<Transaction['status']>().notNull(),
     amountMinor: bigint('amount_minor', { mode: 'bigint' }).notNull(),
@@ -132,6 +145,7 @@ export const observations = pgTable(
   'source_observations',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     connectionId: text('connection_id').notNull(),
     accountId: text('account_id').notNull(),
@@ -161,6 +175,7 @@ export const observations = pgTable(
 export const feedback = pgTable(
   'classification_feedback',
   {
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     transactionId: text('transaction_id').notNull(),
     categoryId: text('category_id').$type<CategoryId>().notNull(),
@@ -178,6 +193,7 @@ export const feedback = pgTable(
 export const preferences = pgTable(
   'preferences',
   {
+    householdId: householdColumn(),
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -189,6 +205,7 @@ export const preferences = pgTable(
 export const matchDecisions = pgTable(
   'match_decisions',
   {
+    householdId: householdColumn(),
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
@@ -206,6 +223,7 @@ export const syncRuns = pgTable(
   'sync_runs',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     connectionId: text('connection_id').notNull(),
     inserted: integer('inserted').notNull(),
@@ -222,12 +240,14 @@ export const syncRuns = pgTable(
   ],
 )
 export const profileTombstones = pgTable('profile_tombstones', {
+  householdId: householdColumn(),
   profileId: text('profile_id').primaryKey(),
   erasedAt: text('erased_at').notNull(),
 })
 export const matchDecisionLegs = pgTable(
   'match_decision_legs',
   {
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     matchId: text('match_id').notNull(),
     transactionId: text('transaction_id').notNull(),
@@ -250,6 +270,7 @@ export const revocationJobs = pgTable(
   'revocation_jobs',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     connectionId: text('connection_id').notNull(),
     providerId: text('provider_id').notNull(),
@@ -283,6 +304,7 @@ export const revocationJobs = pgTable(
 export const observationPayloads = pgTable(
   'observation_payloads',
   {
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     observationId: text('observation_id').notNull(),
     expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'string' }).notNull(),
@@ -301,9 +323,11 @@ export const classificationRules = pgTable(
   'classification_rules',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id')
       .notNull()
       .references(() => profiles.id, { onDelete: 'cascade' }),
+    scope: text('scope').$type<'personal' | 'business'>().notNull().default('personal'),
     name: text('name').notNull(),
     conditions: jsonb('conditions').$type<RuleConditions>().notNull(),
     categoryId: text('category_id').$type<CategoryId>().notNull(),
@@ -323,6 +347,7 @@ export const ruleEvents = pgTable(
   'rule_events',
   {
     id: text('id').primaryKey(),
+    householdId: householdColumn(),
     profileId: text('profile_id').notNull(),
     ruleId: text('rule_id').notNull(),
     revision: integer('revision').notNull(),
@@ -342,4 +367,17 @@ export const ruleEvents = pgTable(
     }).onDelete('cascade'),
     unique('rule_events_revision').on(t.profileId, t.ruleId, t.revision),
   ],
+)
+
+/** Reserved personal-account membership; sharing is deliberately not enabled. */
+export const accountMembers = pgTable(
+  'account_members',
+  {
+    householdId: householdColumn(),
+    accountId: text('account_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    role: text('role').$type<'owner' | 'editor' | 'viewer'>().notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.householdId, table.accountId, table.profileId] })],
 )

@@ -3,6 +3,7 @@ import { type Database, schema } from '@lilleri/database'
 import { type FinancialDataProvider, stableId } from '@lilleri/financial-providers'
 import { and, asc, eq, inArray, lte, or } from 'drizzle-orm'
 import { Problem } from './problem.js'
+import { DEFAULT_RUNTIME_CONFIGURATION } from './runtime-config.js'
 
 export type RevocationJob = typeof schema.revocationJobs.$inferSelect
 export interface RevocationTarget {
@@ -32,9 +33,11 @@ const clock = (options: RevocationOptions) => {
 const timeAfter = (now: string, duration: number) =>
   new Date(Date.parse(now) + duration).toISOString()
 const bounds = (options: RevocationOptions) => {
-  const leaseMs = options.leaseMs ?? 30_000
-  const maxAttempts = options.maxAttempts ?? 8
-  const attemptTimeoutMs = options.attemptTimeoutMs ?? Math.min(10_000, leaseMs)
+  const leaseMs = options.leaseMs ?? DEFAULT_RUNTIME_CONFIGURATION.revocation.leaseMs
+  const maxAttempts = options.maxAttempts ?? DEFAULT_RUNTIME_CONFIGURATION.revocation.maxAttempts
+  const attemptTimeoutMs =
+    options.attemptTimeoutMs ??
+    Math.min(DEFAULT_RUNTIME_CONFIGURATION.revocation.attemptTimeoutMs, leaseMs)
   if (!Number.isInteger(leaseMs) || leaseMs < 1000 || leaseMs > 300_000)
     throw new Error('Revocation lease must be between 1 and 300 seconds')
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 20)
@@ -263,9 +266,28 @@ export async function drainRevocations(
 }
 
 export interface RevocationPumpOptions extends RevocationOptions {
+  readonly enabled?: boolean
   readonly intervalMs?: number
   readonly batchLimit?: number
   readonly onStorageFailure?: () => void
+  readonly configuration?: () => Promise<RevocationPumpConfiguration>
+}
+export interface RevocationPumpConfiguration {
+  readonly enabled: boolean
+  readonly intervalMs: number
+  readonly batchLimit: number
+  readonly leaseMs: number
+  readonly maxAttempts: number
+  readonly attemptTimeoutMs: number
+}
+function checkedPumpConfiguration(value: RevocationPumpConfiguration) {
+  if (typeof value.enabled !== 'boolean') throw new Error('Revocation enabled must be a boolean')
+  if (!Number.isInteger(value.intervalMs) || value.intervalMs < 100 || value.intervalMs > 60_000)
+    throw new Error('Revocation pump interval must be between 100 ms and 60 seconds')
+  if (!Number.isInteger(value.batchLimit) || value.batchLimit < 1 || value.batchLimit > 20)
+    throw new Error('Revocation pump batch must be between 1 and 20')
+  bounds(value)
+  return { ...value }
 }
 
 /** Shares the API handle (required for PGlite) and never overlaps its own bounded batches. */
@@ -274,13 +296,13 @@ export function createRevocationPump(
   providers: readonly FinancialDataProvider[],
   options: RevocationPumpOptions = {},
 ) {
-  const intervalMs = options.intervalMs ?? 1000
-  const batchLimit = options.batchLimit ?? 4
-  if (!Number.isInteger(intervalMs) || intervalMs < 100 || intervalMs > 60_000)
-    throw new Error('Revocation pump interval must be between 100 ms and 60 seconds')
-  if (!Number.isInteger(batchLimit) || batchLimit < 1 || batchLimit > 20)
-    throw new Error('Revocation pump batch must be between 1 and 20')
-  bounds(options)
+  let settings = checkedPumpConfiguration({
+    ...DEFAULT_RUNTIME_CONFIGURATION.revocation,
+    ...(options.enabled === undefined ? {} : { enabled: options.enabled }),
+    ...(options.intervalMs === undefined ? {} : { intervalMs: options.intervalMs }),
+    ...(options.batchLimit === undefined ? {} : { batchLimit: options.batchLimit }),
+    ...bounds(options),
+  })
   for (const provider of providers) {
     const capabilities = provider.capabilities()
     if (!capabilities.synthetic || !capabilities.grantSpecificRevocation)
@@ -289,12 +311,22 @@ export function createRevocationPump(
   let stopped = false
   let current: Promise<void> | null = null
   let storageFailures = 0
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const schedule = () => {
+    if (stopped) return
+    timer = setTimeout(tick, settings.intervalMs)
+    timer.unref()
+  }
   const tick = () => {
     if (stopped || current) return
+    timer = undefined
     current = (async () => {
       try {
-        for (let index = 0; index < batchLimit && !stopped; index += 1) {
-          if (!(await processNextRevocation(db, providers, options))) break
+        if (options.configuration)
+          settings = checkedPumpConfiguration(await options.configuration())
+        if (!settings.enabled || stopped) return
+        for (let index = 0; index < settings.batchLimit && !stopped; index += 1) {
+          if (!(await processNextRevocation(db, providers, { ...options, ...settings }))) break
         }
       } catch {
         storageFailures += 1
@@ -305,16 +337,15 @@ export function createRevocationPump(
       .catch(() => undefined)
       .finally(() => {
         current = null
+        schedule()
       })
   }
-  const timer = setInterval(tick, intervalMs)
-  timer.unref()
   tick()
   return {
     status: () => ({ stopped, running: current !== null, storageFailures }),
     stop: async () => {
       stopped = true
-      clearInterval(timer)
+      if (timer !== undefined) clearTimeout(timer)
       await current
     },
   }

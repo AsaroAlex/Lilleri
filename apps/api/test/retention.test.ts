@@ -12,11 +12,30 @@ import {
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createApp } from '../src/app.js'
+import { ConsentLifecycleService } from '../src/consent-lifecycle.js'
+import { consentEvents, consentLifecycles } from '../src/consent-lifecycle-schema.js'
+import { MappedImportService } from '../src/mapped-import.js'
+import {
+  csvMappingEvents,
+  mappedImportProvenance,
+  savedCsvMappings,
+} from '../src/mapped-import-schema.js'
+import { NotificationsService } from '../src/notifications.js'
+import { notificationEvents, notifications } from '../src/notifications-schema.js'
+import { PRIVACY_DISCLOSURES, PrivacyService } from '../src/privacy.js'
+import {
+  privacyPermissionEvents,
+  profilePrivacyEvents,
+  transactionPrivacyEvents,
+} from '../src/privacy-schema.js'
 import {
   cleanupExpiredObservationPayloads,
   RAW_PAYLOAD_RETENTION_MS,
   sourceObservationsForExport,
 } from '../src/retention.js'
+import { DemoService } from '../src/service.js'
+import { SupportAccessService } from '../src/support-access.js'
+import { supportEvents, supportGrants } from '../src/support-access-schema.js'
 
 let handle: DatabaseHandle
 const profiles: string[] = []
@@ -296,6 +315,169 @@ describe('bounded synthetic source payload retention', () => {
     expect(after.accounts).toEqual([])
     expect(await payloads(other.profileId)).toHaveLength(1)
     expect((await exported(other.app)).transactions).toHaveLength(1)
+  })
+
+  test('source erasure removes its immutable audit descendants and preserves independent profile history until profile erasure', async () => {
+    const own = await fixture()
+    const other = await fixture()
+    const initial = await exported(own.app)
+    const otherBefore = await exported(other.app)
+    const connectionId = initial.connections[0].id as string
+    const accountId = initial.transactions[0].accountId as string
+    const transactionId = initial.transactions[0].id as string
+    const now = () => ingestedAt
+    const privacy = new PrivacyService(handle.db, own.profileId, now)
+    await privacy.updateRulesOnly(1, true)
+    await privacy.updateTransaction(transactionId, 1, { quiet: true, private: false })
+    const permission = (await privacy.permissions()).find((row) => row.purpose === 'N-SERVICE')
+    if (!permission) throw new Error('Missing synthetic notification disclosure')
+    const disclosure = PRIVACY_DISCLOSURES['N-SERVICE']
+    await privacy.setPermission('N-SERVICE', permission.revision, {
+      action: 'granted',
+      textVersion: disclosure.textVersion,
+      textHash: disclosure.textHash,
+      noticeVersion: disclosure.noticeVersion,
+      vendorListVersion: disclosure.vendorListVersion,
+    })
+    await new SupportAccessService(handle.db, own.profileId, now).grant({
+      ticketId: 'TKT_SYNTHETIC001',
+      reason: 'data_rights',
+      durationMinutes: 5,
+    })
+    const lifecycle = new ConsentLifecycleService(handle.db, own.profileId, own.provider, now)
+    await lifecycle.pause(connectionId, (await lifecycle.get(connectionId)).revision)
+    const notices = new NotificationsService(handle.db, own.profileId, now)
+    const prefs = await notices.preferences()
+    await notices.updatePreferences(prefs.revision, {
+      types: prefs.types,
+      quietHours: { ...prefs.quietHours, enabled: false },
+    })
+    const sourceNotice = await notices.publish(
+      'connection_paused',
+      `pause:${connectionId}`,
+      connectionId,
+    )
+    const securityNotice = await notices.publish('security_notice', `synthetic:${own.profileId}`)
+    expect(sourceNotice).toBeTruthy()
+    expect(securityNotice).toBeTruthy()
+    const mapped = new MappedImportService(
+      new DemoService(handle.db, own.profileId, own.provider, now),
+    )
+    const saved = await mapped.create({
+      accountId,
+      name: 'Synthetic source erasure mapping',
+      mapping: {
+        format: 'lilleri.csv-mapping.v1',
+        delimiter: ';',
+        numberLocale: 'it-IT',
+        dateFormat: 'dd/MM/yyyy',
+        defaultCurrency: 'EUR',
+        columns: { bookedOn: 'Data', amount: 'Importo', description: 'Descrizione' },
+      },
+    })
+    const input = {
+      accountId,
+      mappingId: saved.id,
+      csv: 'Data;Importo;Descrizione\n03/10/2026;-1,23;Synthetic source erasure\n',
+    }
+    const preview = await mapped.preview(input)
+    expect(preview.errors).toEqual([])
+    expect(
+      await mapped.commit({
+        ...input,
+        previewRevision: preview.previewRevision,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: false,
+      }),
+    ).toMatchObject({ inserted: 1 })
+    const boundTables = [
+      consentEvents,
+      consentLifecycles,
+      schema.consents,
+      schema.accounts,
+      schema.transactions,
+      schema.observations,
+      schema.observationPayloads,
+      savedCsvMappings,
+      csvMappingEvents,
+      mappedImportProvenance,
+      transactionPrivacyEvents,
+    ] as const
+    for (const table of boundTables)
+      expect(
+        await handle.db.select().from(table).where(eq(table.profileId, own.profileId)),
+      ).not.toHaveLength(0)
+    for (const table of [
+      consentEvents,
+      csvMappingEvents,
+      mappedImportProvenance,
+      notificationEvents,
+    ])
+      await expect(
+        handle.db.delete(table).where(eq(table.profileId, own.profileId)),
+      ).rejects.toMatchObject({
+        cause: { message: expect.stringMatching(/append-only|immutable/) },
+      })
+    const profileTables = [
+      profilePrivacyEvents,
+      privacyPermissionEvents,
+      supportGrants,
+      supportEvents,
+    ] as const
+    const profileHistory = []
+    for (const table of profileTables)
+      profileHistory.push(
+        await handle.db.select().from(table).where(eq(table.profileId, own.profileId)),
+      )
+    const survivingNotices = await handle.db
+      .select()
+      .from(notificationEvents)
+      .where(
+        and(
+          eq(notificationEvents.profileId, own.profileId),
+          eq(notificationEvents.notificationId, securityNotice as string),
+        ),
+      )
+    await handle.withProfile(own.profileId, (db) =>
+      db
+        .delete(schema.connections)
+        .where(
+          and(
+            eq(schema.connections.profileId, own.profileId),
+            eq(schema.connections.id, connectionId),
+          ),
+        ),
+    )
+    for (const table of boundTables)
+      expect(
+        await handle.db.select().from(table).where(eq(table.profileId, own.profileId)),
+      ).toEqual([])
+    for (const [index, table] of profileTables.entries())
+      expect(
+        await handle.db.select().from(table).where(eq(table.profileId, own.profileId)),
+      ).toEqual(profileHistory[index])
+    const remainingEvents = await handle.db
+      .select()
+      .from(notificationEvents)
+      .where(eq(notificationEvents.profileId, own.profileId))
+    expect(remainingEvents.filter((row) => row.notificationId === sourceNotice)).toEqual([])
+    expect(remainingEvents.filter((row) => row.notificationId === securityNotice)).toEqual(
+      survivingNotices,
+    )
+    expect(remainingEvents.filter((row) => row.notificationId === null)).toHaveLength(1)
+    expect(
+      await handle.db
+        .select()
+        .from(notifications)
+        .where(eq(notifications.id, sourceNotice as string)),
+    ).toEqual([])
+    expect(await exported(other.app)).toEqual(otherBefore)
+    expect((await own.app.inject({ method: 'DELETE', url: '/v1/profile' })).statusCode).toBe(204)
+    for (const table of [...profileTables, notifications, notificationEvents])
+      expect(
+        await handle.db.select().from(table).where(eq(table.profileId, own.profileId)),
+      ).toEqual([])
+    expect(await exported(other.app)).toEqual(otherBefore)
   })
 })
 

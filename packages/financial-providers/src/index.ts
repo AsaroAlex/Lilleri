@@ -1,12 +1,23 @@
 import { createHash } from 'node:crypto'
 import { type Account, dateOnly, type Transaction, type TransactionKind } from '@lilleri/domain'
 import { type CurrencyCode, parseDecimal } from '@lilleri/money'
+import type {
+  FinancialDataProviderV2,
+  InstitutionPage,
+  ProviderAuthorization,
+  ProviderConnectionGrant,
+  ProviderDiscoveryMetadata,
+} from './contracts.js'
 
+export * from './contracts.js'
 export { parseBankCsv } from './csv.js'
+export * from './csv-mapper.js'
 
 export interface ProviderContext {
   readonly profileId: string
   readonly connectionId: string
+  /** Selected institution identity from the provider's validated catalogue. */
+  readonly institutionId?: string
   /** Consent generation. Required for durable revocation; never revoke a newer grant. */
   readonly grantId?: string
 }
@@ -164,7 +175,7 @@ export function normalizeTransaction(
 }
 
 /** Synthetic fixture only: these names do not imply supported bank integrations. */
-export class MockItalianProvider implements FinancialDataProvider {
+export class MockItalianProvider implements FinancialDataProviderV2 {
   readonly id = 'mock-italian'
   readonly #revoked = new Set<string>()
   readonly #failOnce = new Set<string>()
@@ -181,10 +192,97 @@ export class MockItalianProvider implements FinancialDataProvider {
       grantSpecificRevocation: true,
     } as const
   }
-  async createConnection(context: ProviderContext) {
+  discoveryMetadata(): ProviderDiscoveryMetadata {
+    return {
+      providerId: this.id,
+      environment: 'synthetic',
+      coverageVersion: 'mock-italian/2026-10-03/1',
+      pagination: { maxPageSize: 1, maxPages: 1, maxCursorBytes: 32 },
+      refresh: {
+        userPresent: 'supported',
+        unattendedBudget: {
+          requests: 4,
+          windowSeconds: 86400,
+          evidenceReference: 'synthetic-fixture-refresh-policy/1',
+        },
+      },
+      renewal: 'supported',
+    }
+  }
+  async listInstitutions(cursor: string | null = null): Promise<InstitutionPage> {
+    if (cursor !== null) throw new Error('Invalid institution cursor')
+    return {
+      coverageVersion: this.discoveryMetadata().coverageVersion,
+      institutions: [
+        {
+          id: 'synthetic-italian',
+          providerId: this.id,
+          name: 'Istituto dimostrativo — dati sintetici',
+          countryCode: 'IT',
+          accountTypes: (['current', 'savings', 'card', 'cash'] as const).map((kind) => ({
+            kind,
+            availability: 'available',
+            evidence: {
+              status: 'synthetic',
+              environment: 'synthetic',
+              reference: `mock-italian-fixture/${kind}/1`,
+              checkedAt: '2026-10-03T00:00:00Z',
+            },
+            historyFrom: this.#historyFrom(kind),
+          })),
+        },
+      ],
+      nextCursor: null,
+    }
+  }
+  #historyFrom(kind: Account['kind']): string | null {
+    const accountIds =
+      kind === 'current'
+        ? ['conto', 'gbp']
+        : kind === 'savings'
+          ? ['risparmio']
+          : kind === 'card'
+            ? ['carta']
+            : ['cash']
+    const dates = this.#fixture
+      .filter((record) => accountIds.includes(record.accountId) && record.bookedOn)
+      .map((record) => record.bookedOn as string)
+      .sort()
+    return dates[0] ?? null
+  }
+  #authorization(): ProviderAuthorization {
+    return {
+      providerId: this.id,
+      institutionId: 'synthetic-italian',
+      state: 'active',
+      consentExpiresAt: '2027-03-31T23:59:59Z',
+      scaDueAt: null,
+      providerSessionExpiresAt: null,
+      tokenExpiresAt: null,
+      requiredActions: [
+        {
+          action: 'renew_consent',
+          method: 'in_place',
+          dueAt: '2027-03-31T23:59:59Z',
+          evidenceReference: 'synthetic-fixture-consent-term/1',
+        },
+      ],
+    }
+  }
+  async createConnection(context: ProviderContext): Promise<ProviderConnectionGrant> {
+    if (context.institutionId !== undefined && context.institutionId !== 'synthetic-italian')
+      throw new Error('Unknown synthetic institution')
     this.#grants.set(context.connectionId, context.grantId ?? null)
     this.#revoked.delete(context.connectionId)
-    return { consentExpiresAt: '2027-03-31T23:59:59Z', redirectUrl: null }
+    return {
+      consentExpiresAt: '2027-03-31T23:59:59Z',
+      redirectUrl: null,
+      authorization: this.#authorization(),
+    }
+  }
+  async renewConnection(context: ProviderContext): Promise<ProviderConnectionGrant> {
+    this.#check(context)
+    return this.createConnection(context)
   }
   failNextRefresh(connectionId: string) {
     this.#failOnce.add(connectionId)
@@ -248,8 +346,10 @@ export class MockItalianProvider implements FinancialDataProvider {
     cursor: string | null = null,
   ): Promise<ProviderPage> {
     this.#check(context)
+    if (cursor !== null && !/^(0|[1-9]\d*)$/u.test(cursor)) throw new Error('Invalid cursor')
     const offset = cursor === null ? 0 : Number(cursor)
-    if (!Number.isInteger(offset) || offset < 0) throw new Error('Invalid cursor')
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset % 7 !== 0)
+      throw new Error('Invalid cursor')
     const items = this.#fixture.filter((record) => record.accountId === accountId)
     return {
       transactions: items.slice(offset, offset + 7),
@@ -267,6 +367,12 @@ export class MockItalianProvider implements FinancialDataProvider {
   }
   #check(context: ProviderContext) {
     if (this.#revoked.has(context.connectionId)) throw new Error('Consent revoked')
+    if (
+      context.grantId !== undefined &&
+      this.#grants.has(context.connectionId) &&
+      this.#grants.get(context.connectionId) !== context.grantId
+    )
+      throw new Error('Consent generation is stale')
   }
 }
 

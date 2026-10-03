@@ -12,7 +12,7 @@ Build the API and its workspace dependencies using the existing root build comma
 DEMO_MODE=1 pnpm --filter @lilleri/api worker:revocations
 ```
 
-The command exits after at most 20 claims by default. `REVOCATION_BATCH_LIMIT` accepts integers from 1 to 100. `DATABASE_URL` selects PostgreSQL; otherwise `PGLITE_PATH` selects the same local store as the API. A separate PostgreSQL worker can run while the API is open. Close the API before opening the same PGlite filesystem store from a separate process.
+The command requires a trusted synthetic PostgreSQL `DATABASE_URL`, exactly one local mode and a nonproduction environment. Any `PGLITE_PATH` is rejected; the API's same-handle pump remains the supported PGlite path. The worker reads the [audited runtime configuration](runtime-configuration.md), with at most four claims per batch by default. `REVOCATION_BATCH_LIMIT` is a validated bootstrap input from 1 to 20; it cannot override an already persisted document. A separate PostgreSQL worker can run while the API is open.
 
 Use trusted configuration to restrict a batch or inspect one profile, including an erased synthetic profile:
 
@@ -20,7 +20,7 @@ Use trusted configuration to restrict a batch or inspect one profile, including 
 DEMO_MODE=1 REVOCATION_PROFILE_ID=profile_demo pnpm --filter @lilleri/api worker:revocation-status
 ```
 
-The status command requires `REVOCATION_PROFILE_ID`. HTTP `GET /v1/revocations` uses the API's trusted current profile and rejects an erased profile. Workers have no public HTTP dispatch endpoint. Output contains opaque job/connection IDs, state, attempts and safe error codes; it does not include financial records, credentials or provider exception text. Exit code 2 from a batch means at least one claimed request reached terminal failure.
+The status command requires `REVOCATION_PROFILE_ID`. Worker output includes configuration revision and aggregate counts by state, excluding routing identifiers, financial records, credentials and provider exception text. HTTP `GET /v1/revocations` retains detailed status scoped to the API's trusted current profile and rejects an erased profile. Workers have no public HTTP dispatch endpoint. Exit code 2 from a batch means at least one claimed request reached terminal failure, or a safe configuration/database failure code was emitted.
 
 ## Delivery contract
 
@@ -30,7 +30,7 @@ The status command requires `REVOCATION_PROFILE_ID`. HTTP `GET /v1/revocations` 
 - A timeout does not prove that an underlying provider request has stopped. Retries can overlap an earlier indeterminate attempt. Acknowledgement is fenced by the current lease token; provider effects are fenced by consent generation. A late revoke for an old generation cannot revoke a newer synthetic grant.
 - `pending`, `running` and terminal `failed` requests prevent regrant of that connection. Once acknowledgement completes, regrant preserves canonical account/transaction IDs and creates a new consent generation.
 - Local erasure removes financial rows and records its restore tombstone before dispatch. Dispatch never creates a profile, account, transaction or consent.
-- Disconnect and erasure return after committing local denial; they do not wait for provider I/O. The API server runs an automatic pump against its own handle, with a one-second timer and at most four claims per batch. Batches never overlap. Shutdown stops new claims and waits for the current bounded attempt before closing the database. `createApp` used in tests does not start a background worker implicitly.
+- Disconnect and erasure return after committing local denial; they do not wait for provider I/O. The API server runs an automatic pump against its own handle, initially with a one-second timer and at most four claims per batch. It reads the authoritative runtime revision before each batch; a paused pump polls for re-enable, and a configuration read failure prevents provider work. Batches never overlap, and the next interval starts after completion. Shutdown stops new claims and waits for the current bounded attempt before closing the database. `createApp` used in tests does not start a background worker implicitly.
 - Future-dated retries wait for a later pump tick or explicit batch; the command does not spin or sleep until they become due. The same-handle pump permits automatic retry with the default PGlite store; a second process must not open that store concurrently.
 
 ## Failure handling

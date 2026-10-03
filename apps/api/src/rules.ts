@@ -14,6 +14,8 @@ import { and, asc, desc, eq } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import type { ProfileEncryption } from './encryption.js'
+import { PrivacyService } from './privacy.js'
 import { notFound, Problem } from './problem.js'
 
 const identifier = z.string().min(1).max(256)
@@ -130,11 +132,14 @@ const changed = () =>
     'rule_changed',
     'La regola o i movimenti sono cambiati. Aggiorna l’anteprima prima di applicare.',
   )
-const toRule = (row: typeof schema.classificationRules.$inferSelect): RuleRecord => ({
-  ...row,
-  enabled: row.enabled === 'yes',
-  archived: row.archived === 'yes',
-})
+const toRule = (row: typeof schema.classificationRules.$inferSelect): RuleRecord => {
+  const { householdId: _householdId, scope: _scope, ...fields } = row
+  return {
+    ...fields,
+    enabled: row.enabled === 'yes',
+    archived: row.archived === 'yes',
+  }
+}
 const snapshot = (rule: RuleRecord) => ({
   name: rule.name,
   conditions: rule.conditions,
@@ -169,6 +174,7 @@ export class RulesService {
     readonly db: Database,
     readonly profileId: string,
     readonly now: () => string = () => new Date().toISOString(),
+    readonly encryption?: ProfileEncryption,
   ) {}
   async lock(db: Database) {
     const [profile] = await db
@@ -386,10 +392,12 @@ export class RulesService {
       .where(eq(schema.preferences.profileId, this.profileId))
       .orderBy(asc(schema.preferences.merchantKey))
     const rules = await this.list(db)
+    const privacy = await new PrivacyService(db, this.profileId, this.now).analysisContext(db)
     const candidate = { ...rule, enabled: true }
     const options = {
       rules,
       preferences,
+      globalDictionaryEnabled: privacy.globalDictionaryEnabled,
       userClassifications: Object.fromEntries(
         feedback.map((item) => [item.transactionId, item.categoryId]),
       ),
@@ -402,7 +410,9 @@ export class RulesService {
       affectedTransactionIds: string[] = [],
       lockedTransactionIds: string[] = []
     for (const row of rows) {
-      const transaction = transactionFromRow(row)
+      const transaction = transactionFromRow(
+        this.encryption ? await this.encryption.decryptTransactionRow(db, row) : row,
+      )
       if (!ruleMatches(transaction, candidate)) continue
       matchedTransactionIds.push(row.id)
       if (Object.hasOwn(options.userClassifications, row.id)) {
@@ -418,6 +428,7 @@ export class RulesService {
       profileId: this.profileId,
       ruleId: id,
       ruleRevision: rule.revision,
+      privacy,
       rows: rows.map((row) => ({
         id: row.id,
         revision: row.revision,

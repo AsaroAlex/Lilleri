@@ -5,6 +5,7 @@ import { MockItalianProvider } from '@lilleri/financial-providers'
 import { and, eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createApp } from '../src/app.js'
+import { PrivacyService } from '../src/privacy.js'
 import { RulesService, registerRulesRoutes } from '../src/rules.js'
 import { DemoService } from '../src/service.js'
 
@@ -41,6 +42,54 @@ afterAll(async () => {
   if (handle) await handle.close()
 })
 describe('profile-scoped explicit rule preview and commands', () => {
+  test('changing rules-only invalidates an existing preview and preserves the ledger', async () => {
+    const { service, demo, profileId } = await fixture()
+    const before = await demo.data()
+    const rule = await service.create(definition)
+    const preview = await service.preview(rule.id)
+    const privacy = new PrivacyService(handle.db, profileId, demo.now)
+    const settings = await privacy.readSettings()
+    await privacy.updateRulesOnly(settings.revision, true)
+    await expect(
+      service.apply(rule.id, rule.revision, preview.previewRevision),
+    ).rejects.toMatchObject({ status: 409 })
+    const after = await demo.data()
+    expect(after.transactions).toEqual(before.transactions)
+    expect(after.accounts).toEqual(before.accounts)
+    expect(
+      after.analysis.classifications.find(
+        (item) =>
+          item.transactionId === before.transactions.find((row) => row.merchantKey === 'coop')?.id,
+      ),
+    ).toMatchObject({ source: 'review' })
+    const refreshed = await service.preview(rule.id)
+    await service.apply(rule.id, rule.revision, refreshed.previewRevision)
+    expect(
+      (await demo.data()).analysis.classifications.some((item) => item.source === 'rule'),
+    ).toBe(true)
+  })
+  test('quiet choices invalidate preview and remove attention without deleting financial records', async () => {
+    const { service, demo, profileId } = await fixture()
+    const before = await demo.data()
+    const row = before.transactions.find((item) =>
+      before.analysis.reviewItems.some((review) => review.transactionIds.includes(item.id)),
+    )
+    if (!row) throw new Error('Expected review fixture')
+    const rule = await service.create(definition)
+    const preview = await service.preview(rule.id)
+    const privacy = new PrivacyService(handle.db, profileId, demo.now)
+    const flags = await privacy.transaction(row.id)
+    await privacy.updateTransaction(row.id, flags.revision, { quiet: true, private: true })
+    await expect(
+      service.apply(rule.id, rule.revision, preview.previewRevision),
+    ).rejects.toMatchObject({ status: 409 })
+    const after = await demo.data()
+    expect(after.transactions).toEqual(before.transactions)
+    expect(after.accounts).toEqual(before.accounts)
+    expect(
+      after.analysis.reviewItems.every((review) => !review.transactionIds.includes(row.id)),
+    ).toBe(true)
+  })
   test('draft creation requires preview and apply; never rewrites money; replay remains durable', async () => {
     const { service, demo } = await fixture(),
       before = await demo.data(),

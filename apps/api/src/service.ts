@@ -12,17 +12,32 @@ import {
 } from '@lilleri/domain'
 import { analyse, effectiveTransactions } from '@lilleri/engines'
 import {
+  discoverInstitutions,
   type FinancialDataProvider,
+  hasExpandedProviderContract,
+  institutionPickerDecision,
   normalizeAccount,
   normalizeTransaction,
   type ProviderAccount,
   type ProviderTransaction,
   parseBankCsv,
   stableId,
+  validateProviderConnectionGrant,
 } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, gt, isNull } from 'drizzle-orm'
 import { z } from 'zod'
+import {
+  assertLifecycleAllowsRefresh,
+  type ConsentLifecycleOptions,
+  ConsentLifecycleService,
+  recordConsentGranted,
+  recordConsentRevoked,
+} from './consent-lifecycle.js'
+import type { ProfileEncryption } from './encryption.js'
+import { withoutHousehold } from './financial-storage.js'
 import { ManualService, recordManualImport } from './manual-service.js'
+import { augmentOwnershipExport } from './ownership-export.js'
+import { PrivacyService } from './privacy.js'
 import { conflict, notFound, Problem, providerFailure } from './problem.js'
 import {
   cleanupExpiredObservationPayloads,
@@ -34,6 +49,7 @@ import {
   enqueueRevocation,
   revocationsForProfile,
 } from './revocation-outbox.js'
+import { DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION } from './runtime-config.js'
 import { SettingsService } from './settings.js'
 
 const id = z.string().min(1).max(200)
@@ -157,11 +173,23 @@ function reconciliationRevision(
   })
 }
 function accountFromRow(row: typeof schema.accounts.$inferSelect): Account {
-  const { balanceMinor, currency: code, ...rest } = row
+  const { balanceMinor, currency: code, householdId: _householdId, ...rest } = row
   return { ...rest, balance: { amountMinor: balanceMinor, currency: code } }
 }
-function transactionFromRow(row: typeof schema.transactions.$inferSelect): Transaction {
-  const { amountMinor, currency: code, contentHash: _contentHash, ...rest } = row
+async function transactionFromRow(
+  db: Database,
+  stored: typeof schema.transactions.$inferSelect,
+  encryption?: ProfileEncryption,
+): Promise<Transaction> {
+  const row = encryption ? await encryption.decryptTransactionRow(db, stored) : stored
+  const {
+    amountMinor,
+    currency: code,
+    contentHash: _contentHash,
+    householdId: _householdId,
+    scope: _scope,
+    ...rest
+  } = row
   return { ...rest, amount: { amountMinor, currency: code } }
 }
 function accountRow(account: Account) {
@@ -184,6 +212,8 @@ export class DemoService {
     readonly profileId: string,
     readonly provider: FinancialDataProvider,
     readonly now: () => string = () => new Date().toISOString(),
+    readonly encryption?: ProfileEncryption,
+    readonly connectionLifecycleConfiguration: ConsentLifecycleOptions = DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
   ) {
     if (!provider.capabilities().synthetic || !provider.capabilities().grantSpecificRevocation)
       throw new Error('The demo API requires synthetic grant-specific revocation')
@@ -238,7 +268,7 @@ export class DemoService {
       )
     const [connection] = await (lock ? query.for('update') : query)
     if (!connection) throw notFound()
-    return connection
+    return withoutHousehold(connection)
   }
   async assertConsent(connection: Connection, db = this.db) {
     const [consent] = await db
@@ -263,8 +293,50 @@ export class DemoService {
         'consent_inactive',
         'Il collegamento è stato revocato o è scaduto. Crea un nuovo collegamento dimostrativo.',
       )
+    return assertLifecycleAllowsRefresh(db, this.profileId, connection.id, this.now())
   }
-  async connect(): Promise<Connection> {
+  async institutions() {
+    const provider = this.provider
+    if (!hasExpandedProviderContract(provider))
+      return {
+        mode: 'synthetic' as const,
+        providerId: provider.id,
+        environment: 'synthetic' as const,
+        institutions: [],
+      }
+    try {
+      return {
+        mode: 'synthetic' as const,
+        providerId: provider.id,
+        environment: provider.discoveryMetadata().environment,
+        institutions: await discoverInstitutions(provider),
+      }
+    } catch {
+      throw providerFailure()
+    }
+  }
+  async connect(
+    institutionId = 'synthetic-italian',
+    accountKind: Account['kind'] = 'current',
+  ): Promise<Connection> {
+    if (hasExpandedProviderContract(this.provider)) {
+      const catalogue = await this.institutions()
+      const institution = catalogue.institutions.find((row) => row.id === institutionId)
+      if (
+        !institution ||
+        !institutionPickerDecision(institution, accountKind, 'synthetic').connectable
+      )
+        throw new Problem(
+          422,
+          'institution_unavailable',
+          'Questa fonte non è verificata per il tipo di conto richiesto. Puoi aggiungerlo a mano o importare un CSV.',
+        )
+    } else if (institutionId !== 'synthetic-italian')
+      throw new Problem(
+        422,
+        'institution_unavailable',
+        'Questa fonte non è disponibile nell’ambiente dimostrativo.',
+      )
     const result = await this.db.transaction(async (tx) => {
       await this.profile(tx)
       await tx
@@ -279,6 +351,7 @@ export class DemoService {
           and(
             eq(schema.connections.profileId, this.profileId),
             eq(schema.connections.providerId, this.provider.id),
+            eq(schema.connections.institutionId, institutionId),
           ),
         )
         .orderBy(asc(schema.connections.createdAt))
@@ -301,6 +374,7 @@ export class DemoService {
           profileId: this.profileId,
           connectionId,
           grantId: consentId,
+          institutionId,
         })
       } catch {
         throw providerFailure()
@@ -315,7 +389,7 @@ export class DemoService {
         id: connectionId,
         profileId: this.profileId,
         providerId: this.provider.id,
-        institutionId: 'synthetic-italian',
+        institutionId,
         status: 'active',
         createdAt: existing?.createdAt ?? createdAt,
         lastSyncedAt: existing?.lastSyncedAt ?? null,
@@ -344,13 +418,25 @@ export class DemoService {
         revokedAt: null,
         provider: this.provider.id,
       })
+      if (hasExpandedProviderContract(this.provider)) {
+        const discovery = this.provider.discoveryMetadata()
+        const validated = validateProviderConnectionGrant(grant, discovery)
+        await recordConsentGranted(
+          tx,
+          this.profileId,
+          connectionId,
+          consentId,
+          { discovery, authorization: validated.authorization },
+          createdAt,
+        )
+      }
       return { connection: value, needsSync: true }
     })
     if (result.needsSync) await this.sync(result.connection.id)
     return await this.connection(result.connection.id)
   }
-  async collect(connectionId: string) {
-    const context = { profileId: this.profileId, connectionId },
+  async collect(connectionId: string, grantId: string | null = null) {
+    const context = { profileId: this.profileId, connectionId, ...(grantId ? { grantId } : {}) },
       observedAt = this.now()
     try {
       await this.provider.refreshConnection(context)
@@ -424,9 +510,9 @@ export class DemoService {
             'manual_source',
             'Questo conto è aggiornato con inserimenti o importazioni manuali.',
           )
-        await this.assertConsent(connection, tx)
+        const lifecycle = await this.assertConsent(connection, tx)
         // Hold the profile/connection lock during collection: an older request cannot overwrite a newer response.
-        const batch = await this.collect(connectionId)
+        const batch = await this.collect(connectionId, lifecycle.consentId)
         const report = {
           inserted: 0,
           updated: 0,
@@ -466,6 +552,7 @@ export class DemoService {
               observedAt: batch.observedAt,
             },
             record as unknown as Record<string, unknown>,
+            this.encryption,
           )
         }
         for (const transaction of batch.canonical) {
@@ -480,7 +567,10 @@ export class DemoService {
             )
             .for('update')
           if (!existing) {
-            await tx.insert(schema.transactions).values(transactionRow(transaction))
+            const row = transactionRow(transaction)
+            await tx
+              .insert(schema.transactions)
+              .values(this.encryption ? await this.encryption.encryptTransactionRow(tx, row) : row)
             report.inserted++
             continue
           }
@@ -498,7 +588,14 @@ export class DemoService {
           }
           await tx
             .update(schema.transactions)
-            .set(transactionRow({ ...transaction, revision: existing.revision + 1 }))
+            .set(
+              this.encryption
+                ? await this.encryption.encryptTransactionRow(
+                    tx,
+                    transactionRow({ ...transaction, revision: existing.revision + 1 }),
+                  )
+                : transactionRow({ ...transaction, revision: existing.revision + 1 }),
+            )
             .where(
               and(
                 eq(schema.transactions.profileId, this.profileId),
@@ -546,15 +643,81 @@ export class DemoService {
         )
         .for('update')
       if (!account) throw notFound()
-      const importedAt = this.now(),
-        context = { profileId: this.profileId, connectionId: account.connectionId }
-      let records: readonly ProviderTransaction[], transactions: readonly Transaction[]
+      let records: readonly ProviderTransaction[]
       try {
         records = parseBankCsv(csv, account.providerAccountId)
-        if (!records.length || records.some((record) => record.currency !== account.currency))
+      } catch {
+        throw new Problem(
+          422,
+          'invalid_csv',
+          'Il CSV non è valido. Controlla le colonne, gli importi, le date e la valuta del conto.',
+        )
+      }
+      return new DemoService(
+        tx,
+        this.profileId,
+        this.provider,
+        this.now,
+        this.encryption,
+        this.connectionLifecycleConfiguration,
+      ).importRecords(accountId, records)
+    })
+  }
+  /** Trusted parsers provide exact records directly; original mapped cells stay in the source payload. */
+  async importRecords(
+    accountId: string,
+    records: readonly ProviderTransaction[],
+    options: {
+      readonly sourcePayloads?: readonly Record<string, unknown>[]
+      readonly afterObservation?: (
+        db: Database,
+        row: {
+          readonly index: number
+          readonly transaction: Transaction
+          readonly observationId: string
+        },
+      ) => Promise<void>
+    } = {},
+  ) {
+    return this.db.transaction(async (tx) => {
+      await tx
+        .select()
+        .from(schema.profiles)
+        .where(eq(schema.profiles.id, this.profileId))
+        .for('update')
+      const [account] = await tx
+        .select()
+        .from(schema.accounts)
+        .where(
+          and(eq(schema.accounts.profileId, this.profileId), eq(schema.accounts.id, accountId)),
+        )
+        .for('update')
+      if (!account) throw notFound()
+      const importedAt = this.now(),
+        context = { profileId: this.profileId, connectionId: account.connectionId }
+      let transactions: readonly Transaction[]
+      try {
+        if (
+          !records.length ||
+          records.length > 1000 ||
+          records.some(
+            (record) =>
+              record.currency !== account.currency ||
+              !record.id ||
+              record.id.length > 200 ||
+              record.id.includes('\u0000'),
+          ) ||
+          new Set(records.map((record) => record.id)).size !== records.length ||
+          (options.sourcePayloads && options.sourcePayloads.length !== records.length)
+        )
           throw new Error('Empty CSV or wrong currency')
         transactions = records.map((record) => ({
-          ...normalizeTransaction('csv-import', context, record, importedAt),
+          ...normalizeTransaction(
+            'csv-import',
+            context,
+            { ...record, source: 'csv', accountId: account.providerAccountId },
+            importedAt,
+          ),
           accountId,
         }))
       } catch {
@@ -590,28 +753,34 @@ export class DemoService {
           )
         if (existing) report.unchanged++
         else {
-          await tx.insert(schema.transactions).values(transactionRow(transaction))
-          await recordManualImport(tx, transaction, importedAt)
+          const row = transactionRow(transaction)
+          await tx
+            .insert(schema.transactions)
+            .values(this.encryption ? await this.encryption.encryptTransactionRow(tx, row) : row)
+          await recordManualImport(tx, transaction, importedAt, this.encryption)
           report.inserted++
         }
       }
       for (const [index, record] of records.entries()) {
         const transaction = transactions[index]
         if (!transaction) throw conflict()
-        const contentHash = hash(record)
+        const sourcePayload =
+          options.sourcePayloads?.[index] ?? (record as unknown as Record<string, unknown>)
+        const contentHash = hash(sourcePayload)
+        const observationId = stableId(
+          'observation',
+          this.profileId,
+          account.connectionId,
+          accountId,
+          'csv-import',
+          record.id,
+          record.status,
+          contentHash,
+        )
         await insertSourceObservation(
           tx,
           {
-            id: stableId(
-              'observation',
-              this.profileId,
-              account.connectionId,
-              accountId,
-              'csv-import',
-              record.id,
-              record.status,
-              contentHash,
-            ),
+            id: observationId,
             profileId: this.profileId,
             connectionId: account.connectionId,
             accountId,
@@ -621,8 +790,10 @@ export class DemoService {
             contentHash,
             observedAt: importedAt,
           },
-          record as unknown as Record<string, unknown>,
+          sourcePayload,
+          this.encryption,
         )
+        await options.afterObservation?.(tx, { index, transaction, observationId })
       }
       return report
     })
@@ -653,7 +824,7 @@ export class DemoService {
         .select()
         .from(schema.classificationRules)
         .where(eq(schema.classificationRules.profileId, this.profileId))
-    ).map((rule) => ({
+    ).map(({ householdId: _householdId, scope: _scope, ...rule }) => ({
       ...rule,
       enabled: rule.enabled === 'yes' && rule.archived === 'no',
     }))
@@ -661,9 +832,14 @@ export class DemoService {
       .select()
       .from(schema.matchDecisions)
       .where(eq(schema.matchDecisions.profileId, this.profileId))
-    const accounts = accountRows.map(accountFromRow),
-      transactions = transactionRows.map(transactionFromRow)
-    const derived = analyse(accounts, transactions, {
+    const accounts = accountRows.map(accountFromRow)
+    const transactions: Transaction[] = []
+    // A scoped PostgreSQL transaction has one client; decrypt sequentially on that client.
+    for (const row of transactionRows)
+      transactions.push(await transactionFromRow(db, row, this.encryption))
+    const privacy = new PrivacyService(db, this.profileId, this.now)
+    const context = await privacy.analysisContext(db)
+    const analysisOptions = {
       rules,
       preferences,
       userClassifications: Object.fromEntries(
@@ -673,6 +849,13 @@ export class DemoService {
         ...Object.fromEntries(decisions.map((item) => [item.matchId, item.state])),
         ...additionalMatchOverrides,
       },
+      globalDictionaryEnabled: context.globalDictionaryEnabled,
+    }
+    const preliminary = analyse(accounts, transactions, analysisOptions)
+    const excluded = await privacy.analysisContext(db, preliminary.classifications)
+    const derived = analyse(accounts, transactions, {
+      ...analysisOptions,
+      excludedFromInsights: excluded.excludedTransactionIds,
     })
     const decisionRevisions = new Map(decisions.map((item) => [item.matchId, item.revision]))
     const transactionVersions = new Map(transactions.map((item) => [item.id, item]))
@@ -708,7 +891,14 @@ export class DemoService {
     return {
       mode: 'synthetic' as const,
       profile: { id: profile.id, name: profile.name, timezone: profile.timezone },
-      connections,
+      connections: connections.map(withoutHousehold),
+      connectionLifecycles: await new ConsentLifecycleService(
+        db,
+        this.profileId,
+        this.provider,
+        this.now,
+        this.connectionLifecycleConfiguration,
+      ).list(db),
       ...data,
     }
   }
@@ -742,7 +932,9 @@ export class DemoService {
       )
       .orderBy(asc(schema.transactions.id))
       .limit(limit + 1)
-    const items = rows.slice(0, limit).map(transactionFromRow)
+    const items: Transaction[] = []
+    for (const row of rows.slice(0, limit))
+      items.push(await transactionFromRow(this.db, row, this.encryption))
     return {
       items,
       nextCursor:
@@ -1013,6 +1205,7 @@ export class DemoService {
             isNull(schema.consents.revokedAt),
           ),
         )
+      await recordConsentRevoked(tx, this.profileId, connectionId, this.now())
     })
     // Provider I/O belongs to the bounded background pump; local denial returns promptly.
   }
@@ -1032,12 +1225,18 @@ export class DemoService {
   }
   async exportSnapshot(db: Database) {
     const exportedAt = this.now()
-    const overview = await this.overviewSnapshot(db)
+    const { connectionLifecycles: _computedLifecycles, ...overview } =
+      await this.overviewSnapshot(db)
     const consents = await db
       .select()
       .from(schema.consents)
       .where(eq(schema.consents.profileId, this.profileId))
-    const observations = await sourceObservationsForExport(db, this.profileId, exportedAt)
+    const observations = await sourceObservationsForExport(
+      db,
+      this.profileId,
+      exportedAt,
+      this.encryption,
+    )
     const feedback = await db
       .select()
       .from(schema.feedback)
@@ -1063,7 +1262,7 @@ export class DemoService {
         .select()
         .from(schema.classificationRules)
         .where(eq(schema.classificationRules.profileId, this.profileId))
-    ).map((rule) => ({
+    ).map(({ householdId: _householdId, scope: _scope, ...rule }) => ({
       ...rule,
       enabled: rule.enabled === 'yes',
       archived: rule.archived === 'yes',
@@ -1076,16 +1275,19 @@ export class DemoService {
       exportVersion: 1 as const,
       exportedAt,
       ...overview,
-      consents,
+      ...(await augmentOwnershipExport(db, this.profileId, this.encryption)),
+      consents: consents.map(withoutHousehold),
       sourceObservations: observations,
-      feedback,
-      preferences,
-      matchDecisions,
-      matchDecisionLegs,
-      syncRuns,
+      feedback: feedback.map(withoutHousehold),
+      preferences: preferences.map(withoutHousehold),
+      matchDecisions: matchDecisions.map(withoutHousehold),
+      matchDecisionLegs: matchDecisionLegs.map(withoutHousehold),
+      syncRuns: syncRuns.map(withoutHousehold),
       rules,
-      ruleEvents,
-      manual: await new ManualService(db, this.profileId, this.now).exportAudit(db),
+      ruleEvents: ruleEvents.map(withoutHousehold),
+      manual: await new ManualService(db, this.profileId, this.now, this.encryption).exportAudit(
+        db,
+      ),
       profileSettings: await new SettingsService(db, this.profileId, this.now).exportAudit(db),
       revocationJobs: await revocationsForProfile(db, this.profileId),
     }
@@ -1114,6 +1316,7 @@ export class DemoService {
           },
           this.now(),
         )
+      await this.encryption?.stageErasure(tx, this.profileId)
       await tx
         .insert(schema.profileTombstones)
         .values({ profileId: this.profileId, erasedAt: this.now() })

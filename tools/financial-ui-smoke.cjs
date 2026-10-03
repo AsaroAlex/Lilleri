@@ -198,7 +198,7 @@ const matchCard = (page) =>
     await page.getByRole('textbox', { name: 'Nome della regola', exact: true }).fill(name)
     await page.getByRole('textbox', { name: 'Esercente esatto', exact: true }).fill('netflix')
     await page.getByRole('textbox', { name: 'Priorità da 0 a 100', exact: true }).fill('90')
-    await button(page, 'Salute').click()
+    await button(page, 'Acquisti').click()
     const created = await responseFrom(
       page,
       '/v1/rules',
@@ -227,7 +227,7 @@ const matchCard = (page) =>
     const netflix = beforeRules.transactions.filter((item) => item.merchantKey === 'netflix')
     assert.ok(netflix.length >= 3)
     for (const transaction of netflix) {
-      assert.equal(classification(afterRule, transaction.id).categoryId, 'health')
+      assert.equal(classification(afterRule, transaction.id).categoryId, 'shopping')
       assert.equal(classification(afterRule, transaction.id).source, 'rule')
     }
     assert.deepEqual(financial(afterRule), financial(beforeRules))
@@ -263,7 +263,7 @@ const matchCard = (page) =>
       definition: {
         name,
         conditions: { merchantKey: 'netflix' },
-        categoryId: 'health',
+        categoryId: 'shopping',
         priority: 89,
       },
     })
@@ -561,7 +561,7 @@ const matchCard = (page) =>
     const archiveResponsePending = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname === '/v1/export/archive' &&
-        response.request().method() === 'GET',
+        response.request().method() === 'POST',
     )
     await button(page, 'Scarica archivio ZIP').click()
     const archiveResponse = await archiveResponsePending

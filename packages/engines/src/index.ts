@@ -16,6 +16,7 @@ import { money } from '@lilleri/money'
 import { ruleMatches } from './rules.js'
 
 export { ruleMatches } from './rules.js'
+export * from './understanding.js'
 
 export const ENGINE_VERSION = 'deterministic-v1'
 export interface AnalysisOptions {
@@ -23,6 +24,9 @@ export interface AnalysisOptions {
   readonly preferences?: readonly Preference[]
   readonly userClassifications?: Readonly<Record<string, CategoryId>>
   readonly matchOverrides?: Readonly<Record<string, ReconciliationMatch['state']>>
+  readonly globalDictionaryEnabled?: boolean
+  /** User-declared exclusions affect attention and summaries; financial records remain owned/exportable. */
+  readonly excludedFromInsights?: readonly string[]
 }
 
 const GLOBAL_MERCHANTS: Readonly<Record<string, CategoryId>> = {
@@ -129,7 +133,9 @@ export function classify(transaction: Transaction, options: AnalysisOptions = {}
     }
   }
   const category =
-    transaction.merchantKey && Object.hasOwn(GLOBAL_MERCHANTS, transaction.merchantKey)
+    options.globalDictionaryEnabled !== false &&
+    transaction.merchantKey &&
+    Object.hasOwn(GLOBAL_MERCHANTS, transaction.merchantKey)
       ? GLOBAL_MERCHANTS[transaction.merchantKey]
       : undefined
   if (category)
@@ -570,7 +576,20 @@ export function analyse(
       throw new Error('Canonical transaction currency differs from its account')
   }
   const matches = reconcile(accounts, transactions, options)
-  const classifications = transactions.map((transaction) => classify(transaction, options))
+  const excluded = new Set(options.excludedFromInsights ?? [])
+  // Exclude the linked refund too: hiding only its purchase would imply negative spending.
+  for (const match of matches)
+    if (
+      match.type === 'refund' &&
+      match.state === 'confirmed' &&
+      match.transactionIds.some((id) => excluded.has(id))
+    )
+      for (const id of match.transactionIds) excluded.add(id)
+  const classifications = transactions.map((transaction) => ({
+    ...classify(transaction, options),
+    ...(excluded.has(transaction.id) ? { needsReview: false } : {}),
+  }))
+  const insightTransactions = transactions.filter((transaction) => !excluded.has(transaction.id))
   const visible = new Set(
     effectiveTransactions(transactions, matches)
       .filter((transaction) => transaction.status === 'booked')
@@ -587,7 +606,10 @@ export function analyse(
         matchId: null,
       })),
     ...matches
-      .filter((match) => match.state === 'suggested')
+      .filter(
+        (match) =>
+          match.state === 'suggested' && !match.transactionIds.some((id) => excluded.has(id)),
+      )
       .map((match) => ({
         id: `reconciliation:${match.id}`,
         transactionIds: match.transactionIds,
@@ -600,7 +622,7 @@ export function analyse(
     matches,
     classifications,
     reviewItems,
-    recurring: detectRecurring(transactions, matches),
-    summaries: summarize(accounts, transactions, matches),
+    recurring: detectRecurring(insightTransactions, matches),
+    summaries: summarize(accounts, insightTransactions, matches),
   }
 }

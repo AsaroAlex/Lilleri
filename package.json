@@ -2,7 +2,7 @@
   "name": "lilleri",
   "version": "0.0.0",
   "private": true,
-  "description": "Lilleri \u2014 connect your accounts once, your finances organise themselves.",
+  "description": "Lilleri — connect your accounts once, your finances organise themselves.",
   "license": "UNLICENSED",
   "packageManager": "pnpm@10.28.0",
   "engines": {
@@ -19,12 +19,15 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "check": "biome check . && turbo run typecheck test",
+    "lint:configuration": "node tools/lint-operational-configuration.mjs",
+    "test:configuration-lint": "node --test tools/lint-operational-configuration.test.mjs",
+    "check": "biome check . && pnpm test:configuration-lint && pnpm lint:configuration && turbo run typecheck test",
     "check:fix": "biome check --write .",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "prepare": "simple-git-hooks || true"
   },
   "devDependencies": {
+    "@babel/parser": "7.29.9",
     "@biomejs/biome": "2.5.15",
     "@types/node": "^22.19.0",
     "simple-git-hooks": "2.14.0",

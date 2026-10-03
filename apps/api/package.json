@@ -24,6 +24,8 @@
     "@lilleri/domain": "workspace:*",
     "@lilleri/engines": "workspace:*",
     "@lilleri/financial-providers": "workspace:*",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/sdk-trace-base": "2.11.0",
     "better-auth": "1.7.7",
     "drizzle-orm": "0.45.3",
     "fastify": "5.12.5",

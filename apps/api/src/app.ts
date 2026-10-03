@@ -1,5 +1,5 @@
 import swagger from '@fastify/swagger'
-import type { Database } from '@lilleri/database'
+import { type Database, ProfileScopeError } from '@lilleri/database'
 import { CATEGORIES } from '@lilleri/domain'
 import { type FinancialDataProvider, MockItalianProvider } from '@lilleri/financial-providers'
 import Fastify, { type FastifyRequest } from 'fastify'
@@ -10,11 +10,40 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import {
+  type ConsentLifecycleOptions,
+  ConsentLifecycleService,
+  consentLifecycleDto,
+  registerConsentLifecycleRoutes,
+} from './consent-lifecycle.js'
 import { createDataExportArchive } from './data-export.js'
-import { createLocalIdentity, type LocalIdentityOptions } from './identity.js'
+import { createDeletionCertificate, DELETION_CERTIFICATE_SCHEMA } from './deletion-restore.js'
+import type { ProfileEncryption } from './encryption.js'
+import {
+  createLocalIdentity,
+  type FinancialPrincipal,
+  type LocalIdentityOptions,
+} from './identity.js'
 import { ManualService, manualAuditDto, registerManualRoutes } from './manual-service.js'
+import { registerMappedImportRoutes } from './mapped-import.js'
+import {
+  type NotificationConfiguration,
+  NotificationsService,
+  registerNotificationRoutes,
+} from './notifications.js'
+import type { Observability } from './observability.js'
+import { renderObservabilityDashboard } from './observability-dashboard.js'
+import { registerObservabilityHooks } from './observability-hooks.js'
+import { ownershipExportSchemas } from './ownership-export.js'
+import { PrivacyService, registerPrivacyRoutes } from './privacy.js'
 import { Problem } from './problem.js'
+import { type FinancialScope, scopedReply } from './request-scope.js'
 import { RulesService, registerRulesRoutes, ruleDtoSchema, ruleEventDtoSchema } from './rules.js'
+import {
+  DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
+  DEFAULT_NOTIFICATION_CONFIGURATION,
+  DEFAULT_UNDERSTANDING_CONFIGURATION,
+} from './runtime-config.js'
 import { DemoService, json } from './service.js'
 import {
   registerSettingsRoutes,
@@ -22,6 +51,12 @@ import {
   settingsDtoSchema,
   settingsEventDtoSchema,
 } from './settings.js'
+import { registerSupportAccessRoutes, SupportAccessService } from './support-access.js'
+import {
+  registerUnderstandingRoutes,
+  type UnderstandingConfiguration,
+  UnderstandingService,
+} from './understanding-service.js'
 
 const categories = z.enum(
   Object.keys(CATEGORIES) as [keyof typeof CATEGORIES, ...(keyof typeof CATEGORIES)[]],
@@ -141,6 +176,7 @@ const overviewDto = z.object({
   mode: z.literal('synthetic'),
   profile: z.object({ id: z.string(), name: z.string(), timezone: z.string() }),
   connections: z.array(connectionDto),
+  connectionLifecycles: z.array(consentLifecycleDto),
   accounts: z.array(accountDto),
   transactions: z.array(transactionDto),
   analysis: analysisDto,
@@ -157,7 +193,8 @@ const revocationDto = z.object({
     .enum(['provider_unavailable', 'provider_unknown', 'deadline_exceeded', 'attempts_exhausted'])
     .nullable(),
 })
-const exportDto = overviewDto.extend({
+const exportDto = overviewDto.omit({ connectionLifecycles: true }).extend({
+  ...ownershipExportSchemas,
   rules: z.array(ruleDtoSchema),
   ruleEvents: z.array(ruleEventDtoSchema),
   revocationJobs: z.array(revocationDto),
@@ -287,11 +324,22 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:3000',
   'http://localhost:8081',
   'http://127.0.0.1:8081',
+  'http://localhost:8082',
+  'http://127.0.0.1:8082',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ])
 export interface AppOptions {
   readonly db: Database
+  /** Trusted server-derived financial profile scope; the server always supplies this. */
+  readonly financialScope?: FinancialScope
+  readonly observability?: Observability
+  readonly encryption?: ProfileEncryption
+  readonly reloadObservability?: () => Promise<void>
+  readonly connectionLifecycleConfiguration?: () => Promise<ConsentLifecycleOptions>
+  readonly initialConnectionLifecycleConfiguration?: ConsentLifecycleOptions
+  readonly understandingConfiguration?: () => Promise<UnderstandingConfiguration>
+  readonly notificationConfiguration?: () => Promise<NotificationConfiguration>
   readonly demoMode: boolean
   readonly localIdentity?: Omit<LocalIdentityOptions, 'db'>
   readonly environment?: string
@@ -346,6 +394,8 @@ export async function createApp(options: AppOptions) {
   }).withTypeProvider<ZodTypeProvider>()
   app.setValidatorCompiler(validatorCompiler)
   app.setSerializerCompiler(serializerCompiler)
+  if (options.reloadObservability) app.addHook('onRequest', options.reloadObservability)
+  if (options.observability) registerObservabilityHooks(app, options.observability)
   await app.register(swagger, {
     openapi: {
       info: {
@@ -382,14 +432,98 @@ export async function createApp(options: AppOptions) {
         options.profileId ?? 'profile_demo',
         options.provider ?? new MockItalianProvider(),
         options.now,
+        options.encryption,
+        options.initialConnectionLifecycleConfiguration,
       )
   await demoService?.bootstrap(options.seed ?? false)
   const requestServices = new WeakMap<FastifyRequest, DemoService>()
+  const principals = new WeakMap<FastifyRequest, FinancialPrincipal>()
+  const connectionPolicies = new WeakMap<FastifyRequest, ConsentLifecycleOptions>()
+  const understandingPolicies = new WeakMap<FastifyRequest, UnderstandingConfiguration>()
+  const notificationPolicies = new WeakMap<FastifyRequest, NotificationConfiguration>()
+  type IdentityExport = Awaited<
+    ReturnType<ReturnType<typeof createLocalIdentity>['exportIdentity']>
+  >
+  const identityExports = new WeakMap<FastifyRequest, IdentityExport>()
+  const acceptedEvents = new WeakMap<FastifyRequest, (() => void)[]>()
+  const afterCommit = new WeakMap<FastifyRequest, (() => Promise<void>)[]>()
+  const recordAccepted = (request: FastifyRequest, event: () => void) => {
+    const events = acceptedEvents.get(request) ?? []
+    events.push(event)
+    acceptedEvents.set(request, events)
+  }
+  app.addHook('onResponse', async (request, reply) => {
+    if (reply.statusCode < 400) for (const event of acceptedEvents.get(request) ?? []) event()
+    acceptedEvents.delete(request)
+  })
   const serviceFor = (request: FastifyRequest) => {
-    const service = demoService ?? requestServices.get(request)
+    const service = requestServices.get(request) ?? demoService
     if (!service) throw new Problem(401, 'session_invalid', 'Accedi di nuovo per continuare.')
     return service
   }
+  const notificationFor = (request: FastifyRequest) => {
+    const service = serviceFor(request)
+    return new NotificationsService(
+      service.db,
+      service.profileId,
+      options.now,
+      notificationPolicies.get(request) ?? DEFAULT_NOTIFICATION_CONFIGURATION,
+    )
+  }
+  const publishExportReady = async (request: FastifyRequest, exportedAt: string) => {
+    try {
+      await notificationFor(request).publish('export_ready', `export:${exportedAt}`)
+    } catch {
+      // A content-free notice must not take away an otherwise available ownership export.
+      options.observability?.recordFailure('internal')
+    }
+  }
+  app.addHook('onRoute', (route) => {
+    if (
+      !options.financialScope ||
+      !route.url.startsWith('/v1/') ||
+      route.url.startsWith('/v1/auth/')
+    )
+      return
+    const original = route.handler
+    route.handler = async function (request, reply) {
+      const principal = principals.get(request)
+      const profileId = principal?.profileId ?? demoService?.profileId
+      if (!profileId) throw new Problem(401, 'session_invalid', 'Accedi di nuovo per continuare.')
+      const scope = options.financialScope
+      if (!scope) throw new Error('Financial scope is unavailable')
+      return scopedReply(
+        (callback) =>
+          scope(profileId, callback, {
+            ...(request.method === 'GET' ? { isolationLevel: 'repeatable read' } : {}),
+            ...(((request.method === 'DELETE' && route.url === '/v1/profile') ||
+              (request.method === 'POST' && route.url === '/v1/profile/deletion')) &&
+            principal
+              ? { identityUserId: principal.userId }
+              : {}),
+          }),
+        reply,
+        async (db, buffered) => {
+          requestServices.set(
+            request,
+            new DemoService(
+              db,
+              profileId,
+              options.provider ?? new MockItalianProvider(),
+              options.now,
+              options.encryption,
+              connectionPolicies.get(request),
+            ),
+          )
+          return original.call(this, request, buffered)
+        },
+        async () => {
+          for (const effect of afterCommit.get(request) ?? []) await effect()
+          afterCommit.delete(request)
+        },
+      )
+    }
+  })
   app.addHook('onRequest', async (request, reply) => {
     const host = request.headers.host
     if (host) {
@@ -423,6 +557,12 @@ export async function createApp(options: AppOptions) {
     }
     reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff')
     if (request.method === 'OPTIONS') return reply.code(204).send(null)
+    if (options.connectionLifecycleConfiguration)
+      connectionPolicies.set(request, await options.connectionLifecycleConfiguration())
+    if (options.understandingConfiguration)
+      understandingPolicies.set(request, await options.understandingConfiguration())
+    if (options.notificationConfiguration)
+      notificationPolicies.set(request, await options.notificationConfiguration())
     if (identity) {
       const path = request.routeOptions.url ?? request.url.split('?')[0] ?? '/'
       const mutation = !['GET', 'HEAD'].includes(request.method)
@@ -430,13 +570,20 @@ export async function createApp(options: AppOptions) {
       if (path.startsWith('/v1/') && !path.startsWith('/v1/auth/')) {
         const principal = await identity.financialPrincipal(requestHeaders(request), {
           mutation,
-          ownerOnly: request.method === 'DELETE' && path === '/v1/profile',
+          ownerOnly:
+            (request.method === 'DELETE' && path === '/v1/profile') ||
+            (request.method === 'POST' && path === '/v1/profile/deletion') ||
+            (mutation && path.startsWith('/v1/support-access')),
           sensitive:
             path === '/v1/export' ||
             path === '/v1/export/archive' ||
+            (request.method === 'POST' && path === '/v1/profile/deletion') ||
             (request.method === 'DELETE' &&
               (path === '/v1/profile' || path.startsWith('/v1/connections/'))),
         })
+        principals.set(request, principal)
+        if (path === '/v1/export' || path === '/v1/export/archive')
+          identityExports.set(request, await identity.exportIdentity(requestHeaders(request)))
         requestServices.set(
           request,
           new DemoService(
@@ -444,6 +591,8 @@ export async function createApp(options: AppOptions) {
             principal.profileId,
             options.provider ?? new MockItalianProvider(),
             options.now,
+            options.encryption,
+            connectionPolicies.get(request),
           ),
         )
       }
@@ -452,25 +601,27 @@ export async function createApp(options: AppOptions) {
   app.setErrorHandler((error, request, reply) => {
     const failure = error as { validation?: unknown; statusCode?: number }
     const problem =
-      error instanceof Problem
-        ? error
-        : new Problem(
-            failure.validation || failure.statusCode === 400
-              ? 400
-              : failure.statusCode === 413
-                ? 413
-                : 500,
-            failure.validation
-              ? 'invalid_request'
-              : failure.statusCode === 413
-                ? 'request_too_large'
-                : 'request_failed',
-            failure.validation || failure.statusCode === 400
-              ? 'La richiesta non è valida.'
-              : failure.statusCode === 413
-                ? 'La richiesta supera il limite consentito.'
-                : 'Il servizio non è disponibile. Riprova tra poco.',
-          )
+      error instanceof ProfileScopeError
+        ? new Problem(404, 'not_found', 'La risorsa richiesta non è disponibile.')
+        : error instanceof Problem
+          ? error
+          : new Problem(
+              failure.validation || failure.statusCode === 400
+                ? 400
+                : failure.statusCode === 413
+                  ? 413
+                  : 500,
+              failure.validation
+                ? 'invalid_request'
+                : failure.statusCode === 413
+                  ? 'request_too_large'
+                  : 'request_failed',
+              failure.validation || failure.statusCode === 400
+                ? 'La richiesta non è valida.'
+                : failure.statusCode === 413
+                  ? 'La richiesta supera il limite consentito.'
+                  : 'Il servizio non è disponibile. Riprova tra poco.',
+            )
     reply
       .code(problem.status)
       .type('application/problem+json')
@@ -585,18 +736,49 @@ export async function createApp(options: AppOptions) {
       },
     )
   }
-  registerSettingsRoutes(
+  registerSettingsRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new SettingsService(service.db, service.profileId, options.now)
+  })
+  registerManualRoutes(app, (request) => {
+    const service = serviceFor(request)
+    return new ManualService(service.db, service.profileId, options.now, options.encryption)
+  })
+  registerRulesRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new RulesService(service.db, service.profileId, options.now, options.encryption)
+  })
+  registerConsentLifecycleRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new ConsentLifecycleService(
+      service.db,
+      service.profileId,
+      service.provider,
+      options.now,
+      connectionPolicies.get(request) ?? DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION,
+    )
+  })
+  registerSupportAccessRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new SupportAccessService(service.db, service.profileId, options.now)
+  })
+  registerPrivacyRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new PrivacyService(service.db, service.profileId, options.now)
+  })
+  registerMappedImportRoutes(app, serviceFor)
+  registerUnderstandingRoutes(
     app,
-    async (request) => new SettingsService(options.db, serviceFor(request).profileId, options.now),
+    async (request) =>
+      new UnderstandingService(
+        serviceFor(request),
+        understandingPolicies.get(request) ?? {
+          ...DEFAULT_UNDERSTANDING_CONFIGURATION,
+          version: 'bootstrap-v1',
+        },
+      ),
   )
-  registerManualRoutes(
-    app,
-    (request) => new ManualService(options.db, serviceFor(request).profileId, options.now),
-  )
-  registerRulesRoutes(
-    app,
-    async (request) => new RulesService(options.db, serviceFor(request).profileId, options.now),
-  )
+  registerNotificationRoutes(app, async (request) => notificationFor(request))
   app.get(
     '/v1/revocations',
     { schema: { response: { 200: z.object({ revocations: z.array(revocationDto) }), ...errors } } },
@@ -612,6 +794,69 @@ export async function createApp(options: AppOptions) {
     async () => ({ status: 'ok' as const, mode: 'synthetic' as const }),
   )
   app.get('/openapi.json', async () => app.swagger())
+  const institutionDto = z.object({
+    id: z.string(),
+    providerId: z.string(),
+    name: z.string(),
+    countryCode: z.string(),
+    accountTypes: z.array(
+      z.object({
+        kind: z.enum(['current', 'card', 'cash', 'savings']),
+        availability: z.enum(['available', 'unavailable', 'unknown']),
+        evidence: z.object({
+          status: z.enum(['synthetic', 'verified', 'unverified', 'unknown']),
+          environment: z.enum(['synthetic', 'sandbox', 'live']),
+          reference: z.string().nullable(),
+          checkedAt: z.string().nullable(),
+        }),
+        historyFrom: z.string().nullable(),
+      }),
+    ),
+  })
+  app.get(
+    '/v1/institutions',
+    {
+      schema: {
+        response: {
+          200: z.object({
+            mode: z.literal('synthetic'),
+            providerId: z.string(),
+            environment: z.enum(['synthetic', 'sandbox', 'live']),
+            institutions: z.array(institutionDto),
+          }),
+          ...errors,
+        },
+      },
+    },
+    async (request) => json(await serviceFor(request).institutions()),
+  )
+  app.post(
+    '/v1/connections',
+    {
+      schema: {
+        body: z
+          .object({
+            institutionId: identifier,
+            accountKind: z.enum(['current', 'card', 'cash', 'savings']),
+          })
+          .strict(),
+        response: { 200: connectionDto, ...errors },
+      },
+    },
+    async (request) =>
+      serviceFor(request).connect(request.body.institutionId, request.body.accountKind),
+  )
+  if (options.observability) {
+    app.get('/internal/metrics', async (_request, reply) =>
+      reply.type('text/plain; version=0.0.4').send(options.observability?.renderPrometheus()),
+    )
+    app.get('/internal/observability', async (_request, reply) => {
+      if (!options.observability) throw new Error('Observability is unavailable')
+      return reply
+        .type('text/html; charset=utf-8')
+        .send(renderObservabilityDashboard(options.observability))
+    })
+  }
   app.get(
     '/v1/demo',
     {
@@ -645,7 +890,20 @@ export async function createApp(options: AppOptions) {
         },
       },
     },
-    async (request) => serviceFor(request).sync(request.params.id),
+    async (request) => {
+      const report = await serviceFor(request).sync(request.params.id)
+      recordAccepted(request, () =>
+        options.observability?.recordSync(report.rejected ? 'partial' : 'completed', report),
+      )
+      try {
+        const service = serviceFor(request)
+        if ((await service.data()).analysis.reviewItems.length)
+          await notificationFor(request).publish('inbox', `review-after-sync:${report.syncedAt}`)
+      } catch {
+        options.observability?.recordFailure('internal')
+      }
+      return report
+    },
   )
   app.post(
     '/v1/imports/csv',
@@ -702,15 +960,18 @@ export async function createApp(options: AppOptions) {
         response: { 200: classificationDto, ...errors },
       },
     },
-    async (request) =>
-      json(
-        await serviceFor(request).correct(
-          request.params.id,
-          request.body.categoryId,
-          request.body.scope,
-          request.body.revision,
-        ),
-      ),
+    async (request) => {
+      const classification = await serviceFor(request).correct(
+        request.params.id,
+        request.body.categoryId,
+        request.body.scope,
+        request.body.revision,
+      )
+      recordAccepted(request, () =>
+        options.observability?.recordDecision('classification', 'corrected', 'user'),
+      )
+      return json(classification)
+    },
   )
   app.patch(
     '/v1/reconciliation/:id',
@@ -726,14 +987,17 @@ export async function createApp(options: AppOptions) {
         response: { 200: analysisDto, ...errors },
       },
     },
-    async (request) =>
-      json(
-        await serviceFor(request).decide(
-          request.params.id,
-          request.body.state,
-          request.body.revision,
-        ),
-      ),
+    async (request) => {
+      const analysis = await serviceFor(request).decide(
+        request.params.id,
+        request.body.state,
+        request.body.revision,
+      )
+      recordAccepted(request, () =>
+        options.observability?.recordDecision('reconciliation', request.body.state, 'user'),
+      )
+      return json(analysis)
+    },
   )
   app.delete(
     '/v1/connections/:id',
@@ -754,47 +1018,91 @@ export async function createApp(options: AppOptions) {
     async (request, reply) => {
       reply.header('Content-Disposition', 'attachment; filename="lilleri-demo-export.json"')
       const exported = json(await serviceFor(request).export())
-      return identity
-        ? { ...exported, identity: await identity.exportIdentity(requestHeaders(request)) }
-        : exported
+      return identity ? { ...exported, identity: identityExports.get(request) } : exported
     },
   )
-  app.get(
-    '/v1/export/archive',
-    {
+  for (const method of ['GET', 'POST'] as const)
+    app.route({
+      method,
+      url: '/v1/export/archive',
       schema: {
         summary: 'Download a bounded scoped ZIP containing CSV, JSON, events and JSON Schema',
+        ...(method === 'POST' ? { body: empty } : {}),
         response: { 200: z.unknown(), ...errors },
       },
+      handler: async (request, reply) => {
+        const exported = json(await serviceFor(request).export())
+        const snapshot = exportDto.parse(
+          identity ? { ...exported, identity: identityExports.get(request) } : exported,
+        )
+        const archive = await createDataExportArchive(snapshot)
+        if (method === 'POST') await publishExportReady(request, snapshot.exportedAt)
+        return reply
+          .type(archive.contentType)
+          .header('Content-Disposition', `attachment; filename="${archive.filename}"`)
+          .send(archive.body)
+      },
+    })
+  const eraseOwnedProfile = async (request: FastifyRequest) => {
+    // The onRequest hook already captured the verified sensitive owner before the SQL scope.
+    const principal = principals.get(request)
+    if (identity && principal?.role !== 'owner')
+      throw new Problem(404, 'not_found', 'La risorsa richiesta non è disponibile.')
+    const service = serviceFor(request)
+    await service.erase(
+      identity && principal ? (db) => identity.eraseIdentity(principal, db) : undefined,
+    )
+    return service.profileId
+  }
+  const destroyKey = async (profileId: string) => {
+    if (!options.encryption) return 'not_configured' as const
+    try {
+      await options.encryption.finalizeErasure(profileId)
+      return 'destroyed_local_adapter' as const
+    } catch {
+      options.observability?.recordFailure('internal')
+      return 'pending' as const
+    }
+  }
+  app.post(
+    '/v1/profile/deletion',
+    {
+      schema: { body: empty, response: { 200: DELETION_CERTIFICATE_SCHEMA, ...errors } },
     },
     async (request, reply) => {
-      const exported = json(await serviceFor(request).export())
-      const snapshot = exportDto.parse(
-        identity
-          ? { ...exported, identity: await identity.exportIdentity(requestHeaders(request)) }
-          : exported,
-      )
-      const archive = await createDataExportArchive(snapshot)
-      return reply
-        .type(archive.contentType)
-        .header('Content-Disposition', `attachment; filename="${archive.filename}"`)
-        .send(archive.body)
+      const profileId = await eraseOwnedProfile(request)
+      // The scoped reply holds this object until the post-commit certificate is populated.
+      const certificate = {} as z.infer<typeof DELETION_CERTIFICATE_SCHEMA>
+      const finish = async () =>
+        Object.assign(
+          certificate,
+          await createDeletionCertificate(options.db, profileId, {
+            ...(options.now ? { now: options.now } : {}),
+            keyErasure: await destroyKey(profileId),
+          }),
+        )
+      if (options.financialScope)
+        afterCommit.set(request, [
+          async () => {
+            await finish()
+          },
+        ])
+      else await finish()
+      return reply.send(certificate)
     },
   )
   app.delete(
     '/v1/profile',
     { schema: { response: { 204: z.null(), ...errors } } },
     async (request, reply) => {
-      const principal = identity
-        ? await identity.financialPrincipal(requestHeaders(request), {
-            mutation: true,
-            sensitive: true,
-            ownerOnly: true,
-          })
-        : undefined
-      await serviceFor(request).erase(
-        identity && principal ? (db) => identity.eraseIdentity(principal, db) : undefined,
-      )
+      const profileId = await eraseOwnedProfile(request)
+      if (options.financialScope)
+        afterCommit.set(request, [
+          async () => {
+            await destroyKey(profileId)
+          },
+        ])
+      else await destroyKey(profileId)
       return reply.code(204).send(null)
     },
   )

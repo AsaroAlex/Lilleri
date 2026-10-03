@@ -24,10 +24,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native'
+import { ConnectionsPanel } from './ConnectionsPanel'
 import { ImportManualPanel } from './ImportManualPanel'
+import { MappedImportPanel } from './MappedImportPanel'
+import { PrivacyControlsPanel } from './PrivacyControlsPanel'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
+import { NotificationsPanel } from './src/NotificationsPanel'
 import { RulesPanel } from './src/RulesPanel'
 import { SettingsPanel } from './src/SettingsPanel'
+import { UnderstandingPanel } from './UnderstandingPanel'
 
 declare const process: {
   env: { EXPO_PUBLIC_API_URL?: string; EXPO_PUBLIC_LOCAL_AUTH_MODE?: string }
@@ -155,7 +160,9 @@ export default function App() {
   const [notice, setNotice] = useState<string | null>(null)
   const [retrievedAt, setRetrievedAt] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [manage, setManage] = useState<'rules' | 'import' | null>(null)
+  const [manage, setManage] = useState<
+    'rules' | 'import' | 'mapped-import' | 'connections' | 'understanding' | 'notifications' | null
+  >(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'review'>('all')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [category, setCategory] = useState<CategoryId>('uncategorised')
@@ -784,7 +791,62 @@ export default function App() {
                 c={c}
                 s={s}
               />
-              {manage === 'rules' ? (
+              {manage === 'mapped-import' ? (
+                <MappedImportPanel
+                  overview={data}
+                  theme={theme}
+                  request={api.request}
+                  resetKey={renderedIdentityEpoch}
+                  onChanged={refreshAfterChange}
+                  onError={panelIdentityFailure}
+                />
+              ) : manage === 'notifications' ? (
+                <NotificationsPanel
+                  theme={theme}
+                  request={api.request}
+                  resetKey={renderedIdentityEpoch}
+                  onError={panelIdentityFailure}
+                  onOpenPrivacy={() => {
+                    setManage(null)
+                    go('Privacy')
+                  }}
+                  onOpenDestination={(destination) => {
+                    if (destination.screen === 'connections') setManage('connections')
+                    else {
+                      setManage(null)
+                      go(
+                        destination.screen === 'inbox'
+                          ? 'Da controllare'
+                          : destination.screen === 'overview'
+                            ? 'Home'
+                            : 'Privacy',
+                      )
+                    }
+                  }}
+                />
+              ) : manage === 'understanding' ? (
+                <UnderstandingPanel
+                  overview={data}
+                  theme={theme}
+                  request={api.request}
+                  resetKey={renderedIdentityEpoch}
+                  onError={panelIdentityFailure}
+                  onOpenTransaction={(id) => {
+                    setManage(null)
+                    setDetailId(id)
+                  }}
+                />
+              ) : manage === 'connections' ? (
+                <ConnectionsPanel
+                  overview={data}
+                  theme={theme}
+                  api={api}
+                  resetKey={renderedIdentityEpoch}
+                  onRefresh={refreshAfterChange}
+                  onManualFallback={() => setManage('import')}
+                  onError={panelIdentityFailure}
+                />
+              ) : manage === 'rules' ? (
                 <RulesPanel
                   request={api.request}
                   accounts={data.accounts}
@@ -981,10 +1043,17 @@ export default function App() {
                 )}
                 <Text style={s.summaryNote}>
                   Le valute restano separate. I movimenti in attesa sono indicati a parte; le
-                  corrispondenze confermate evitano i doppi conteggi.
+                  corrispondenze confermate evitano i doppi conteggi. Gli indicatori escludono i
+                  movimenti riservati e i loro rimborsi collegati.
                 </Text>
                 <Text style={s.caption}>Ultimo recupero {datetime(retrievedAt)}</Text>
               </View>
+              <Button
+                label="Riepilogo mensile e disponibilità"
+                onPress={() => setManage('understanding')}
+                c={c}
+                s={s}
+              />
               <View style={s.sectionHeader}>
                 <Text accessibilityRole="header" style={s.sectionTitle}>
                   I conti nell’esempio
@@ -1029,6 +1098,13 @@ export default function App() {
             <>
               <View style={s.actions}>
                 <Button label="Regole" onPress={() => setManage('rules')} quiet c={c} s={s} />
+                <Button
+                  label="CSV personalizzato"
+                  onPress={() => setManage('mapped-import')}
+                  quiet
+                  c={c}
+                  s={s}
+                />
                 <Button
                   label="Importa o aggiungi"
                   onPress={() => setManage('import')}
@@ -1251,6 +1327,26 @@ export default function App() {
             </>
           ) : (
             <>
+              <Button
+                label="Avvisi di servizio"
+                onPress={() => setManage('notifications')}
+                c={c}
+                s={s}
+              />
+              <Button
+                label="Collegamenti e fonti"
+                onPress={() => setManage('connections')}
+                c={c}
+                s={s}
+              />
+              <PrivacyControlsPanel
+                overview={data}
+                theme={theme}
+                request={api.request}
+                resetKey={renderedIdentityEpoch}
+                onChanged={refreshAfterChange}
+                onError={panelIdentityFailure}
+              />
               <SettingsPanel
                 request={api.request}
                 theme={theme}

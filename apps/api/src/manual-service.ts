@@ -17,6 +17,8 @@ import { and, asc, eq } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import type { ProfileEncryption } from './encryption.js'
+import { manualReasonContext } from './financial-storage.js'
 import { manualAccounts, manualBalanceEvents, manualCommands } from './manual-schema.js'
 import { notFound, Problem } from './problem.js'
 import { insertSourceObservation } from './retention.js'
@@ -225,6 +227,7 @@ export class ManualService {
     readonly db: Database,
     readonly profileId: string,
     readonly now: () => string = () => new Date().toISOString(),
+    readonly encryption?: ProfileEncryption,
   ) {}
   async lock(db: Database) {
     const [profile] = await db
@@ -306,9 +309,19 @@ export class ManualService {
   ) {
     // The command FK is deferred to commit by the migration; financial state and immutable audit stay atomic.
     const id = `manual_event_${randomUUID()}`
-    await db
-      .insert(manualBalanceEvents)
-      .values({ ...input, id, profileId: this.profileId, requestId: key })
+    await db.insert(manualBalanceEvents).values({
+      ...input,
+      id,
+      profileId: this.profileId,
+      requestId: key,
+      reason: this.encryption
+        ? await this.encryption.encryptText(
+            db,
+            manualReasonContext(this.profileId, id),
+            input.reason,
+          )
+        : input.reason,
+    })
     return id
   }
   async list() {
@@ -480,12 +493,15 @@ export class ManualService {
       }
       const { amount, ...fields } = transaction,
         contentHash = transactionHash(transaction)
-      await tx.insert(schema.transactions).values({
+      const row = {
         ...fields,
         amountMinor: amount.amountMinor,
         currency: amount.currency,
         contentHash,
-      })
+      }
+      await tx
+        .insert(schema.transactions)
+        .values(this.encryption ? await this.encryption.encryptTransactionRow(tx, row) : row)
       await insertSourceObservation(
         tx,
         {
@@ -500,6 +516,7 @@ export class ManualService {
           observedAt: now,
         },
         { ...body },
+        this.encryption,
       )
       const accountRevision = await this.writeBalance(tx, account.id, state.revision, balance, now)
       await this.event(tx, body.requestId, {
@@ -582,7 +599,17 @@ export class ManualService {
         const balance = bounded(account.balanceMinor - row.amountMinor),
           nextRevision = row.revision + 1
         if (nextRevision > 2_147_483_646) throw changed()
-        const { amountMinor, currency, contentHash: _hash, ...rest } = row
+        const decrypted = this.encryption
+          ? await this.encryption.decryptTransactionRow(tx, row)
+          : row
+        const {
+          amountMinor,
+          currency,
+          contentHash: _hash,
+          householdId: _householdId,
+          scope: _scope,
+          ...rest
+        } = decrypted
         const transaction: Transaction = {
           ...rest,
           revision: nextRevision,
@@ -611,6 +638,7 @@ export class ManualService {
             observedAt: now,
           },
           { transactionId: id, requestId: body.requestId, reason: body.reason, status: 'reversed' },
+          this.encryption,
         )
         const accountRevision = await this.writeBalance(
           tx,
@@ -837,16 +865,27 @@ export class ManualService {
       .from(manualBalanceEvents)
       .where(eq(manualBalanceEvents.profileId, this.profileId))
       .orderBy(asc(manualBalanceEvents.accountId), asc(manualBalanceEvents.accountRevision))
+    const exportedEvents = []
+    for (const row of balanceEvents) {
+      exportedEvents.push({
+        ...row,
+        reason: this.encryption
+          ? await this.encryption.decryptText(
+              db,
+              manualReasonContext(this.profileId, row.id),
+              row.reason,
+            )
+          : row.reason,
+        beforeMinor: row.beforeMinor.toString(),
+        afterMinor: row.afterMinor.toString(),
+      })
+    }
     return {
       accountStates: accountStates.map((row) => ({
         ...row,
         openingBalanceMinor: row.openingBalanceMinor.toString(),
       })),
-      balanceEvents: balanceEvents.map((row) => ({
-        ...row,
-        beforeMinor: row.beforeMinor.toString(),
-        afterMinor: row.afterMinor.toString(),
-      })),
+      balanceEvents: exportedEvents,
     }
   }
   async history(id: string) {
@@ -863,11 +902,22 @@ export class ManualService {
             ),
           )
           .orderBy(asc(manualBalanceEvents.accountRevision))
-        return rows.map((row) => ({
-          ...row,
-          beforeMinor: row.beforeMinor.toString(),
-          afterMinor: row.afterMinor.toString(),
-        }))
+        const events = []
+        for (const row of rows) {
+          events.push({
+            ...row,
+            reason: this.encryption
+              ? await this.encryption.decryptText(
+                  tx,
+                  manualReasonContext(this.profileId, row.id),
+                  row.reason,
+                )
+              : row.reason,
+            beforeMinor: row.beforeMinor.toString(),
+            afterMinor: row.afterMinor.toString(),
+          })
+        }
+        return events
       },
       { isolationLevel: 'repeatable read', accessMode: 'read only' },
     )
@@ -938,8 +988,13 @@ export function registerManualRoutes(
 }
 
 /** Preserve atomic CSV ingestion: never call outside the canonical insert transaction. */
-export function recordManualImport(db: Database, transaction: Transaction, importedAt: string) {
-  return new ManualService(db, transaction.profileId, () => importedAt).recordImported(
+export function recordManualImport(
+  db: Database,
+  transaction: Transaction,
+  importedAt: string,
+  encryption?: ProfileEncryption,
+) {
+  return new ManualService(db, transaction.profileId, () => importedAt, encryption).recordImported(
     db,
     transaction,
     importedAt,

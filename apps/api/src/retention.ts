@@ -1,5 +1,7 @@
 import { type Database, schema } from '@lilleri/database'
 import { and, asc, eq, gt, inArray, lte } from 'drizzle-orm'
+import { EncryptionFailure, type ProfileEncryption } from './encryption.js'
+import { payloadContext, withoutHousehold } from './financial-storage.js'
 
 /** The synthetic successful-ingest policy has no automatic exception/extension. */
 export const RAW_PAYLOAD_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
@@ -16,6 +18,7 @@ export async function insertSourceObservation(
   db: Database,
   observation: typeof schema.observations.$inferInsert,
   payload: Record<string, unknown>,
+  encryption?: ProfileEncryption,
 ): Promise<boolean> {
   const expiresAt = new Date(
     Date.parse(instant(observation.observedAt)) + RAW_PAYLOAD_RETENTION_MS,
@@ -30,13 +33,26 @@ export async function insertSourceObservation(
     profileId: observation.profileId,
     observationId: inserted.id,
     expiresAt,
-    payload,
+    payload: encryption
+      ? {
+          _lilleriEncrypted: await encryption.encryptJson(
+            db,
+            payloadContext(observation.profileId, inserted.id),
+            payload,
+          ),
+        }
+      : payload,
   })
   return true
 }
 
 /** Metadata remains exportable; expired raw content is excluded even before physical cleanup. */
-export async function sourceObservationsForExport(db: Database, profileId: string, now: string) {
+export async function sourceObservationsForExport(
+  db: Database,
+  profileId: string,
+  now: string,
+  encryption?: ProfileEncryption,
+) {
   const current = instant(now)
   const rows = await db
     .select({ observation: schema.observations, content: schema.observationPayloads })
@@ -51,11 +67,26 @@ export async function sourceObservationsForExport(db: Database, profileId: strin
     )
     .where(eq(schema.observations.profileId, profileId))
     .orderBy(asc(schema.observations.id))
-  return rows.map(({ observation, content }) =>
-    content
-      ? { ...observation, payload: content.payload, payloadExpiresAt: instant(content.expiresAt) }
-      : observation,
-  )
+  const results = []
+  for (const { observation, content } of rows) {
+    const metadata = withoutHousehold(observation)
+    if (!content) {
+      results.push(metadata)
+      continue
+    }
+    let payload = content.payload
+    if (encryption) {
+      if (Object.keys(payload).length !== 1 || typeof payload._lilleriEncrypted !== 'string')
+        throw new EncryptionFailure()
+      payload = await encryption.decryptJson<Record<string, unknown>>(
+        db,
+        payloadContext(profileId, observation.id),
+        payload._lilleriEncrypted,
+      )
+    }
+    results.push({ ...metadata, payload, payloadExpiresAt: instant(content.expiresAt) })
+  }
+  return results
 }
 
 /** One scoped, bounded local cleanup batch. A caller schedules/repeats it explicitly. */

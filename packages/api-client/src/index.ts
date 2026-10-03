@@ -41,6 +41,99 @@ export interface DemoOverview {
   readonly connections: readonly Connection[]
   readonly analysis: AnalysisDto
 }
+export type ConnectionAccountKind = Account['kind']
+export type ConnectionCoverageStatus = 'synthetic' | 'verified' | 'unverified' | 'unknown'
+export interface ConnectionInstitutionDto {
+  readonly id: string
+  readonly providerId: string
+  readonly name: string
+  readonly countryCode: string
+  readonly accountTypes: readonly {
+    readonly kind: ConnectionAccountKind
+    readonly availability: 'available' | 'unavailable' | 'unknown'
+    readonly evidence: {
+      readonly status: ConnectionCoverageStatus
+      readonly environment: 'synthetic' | 'sandbox' | 'live'
+      readonly reference: string | null
+      readonly checkedAt: string | null
+    }
+    readonly historyFrom: string | null
+  }[]
+}
+export interface ConnectionInstitutionCatalogueDto {
+  readonly mode: 'synthetic'
+  readonly providerId: string
+  readonly environment: 'synthetic' | 'sandbox' | 'live'
+  readonly institutions: readonly ConnectionInstitutionDto[]
+}
+export interface ConnectionAuthorizationDto {
+  readonly providerId: string
+  readonly institutionId: string
+  readonly state: 'active' | 'requires_action' | 'expired' | 'revoked' | 'unknown'
+  readonly consentExpiresAt: string | null
+  readonly scaDueAt: string | null
+  readonly providerSessionExpiresAt: string | null
+  readonly tokenExpiresAt: string | null
+  readonly requiredActions: readonly {
+    readonly action: 'renew_consent' | 'perform_sca' | 'renew_session' | 'reconnect'
+    readonly method: 'redirect' | 'in_place' | 'new_connection'
+    readonly dueAt: string | null
+    readonly evidenceReference: string
+  }[]
+}
+export interface ConnectionProviderMetadataDto {
+  readonly providerId: string
+  readonly environment: 'synthetic' | 'sandbox' | 'live'
+  readonly coverageVersion: string
+  readonly pagination: {
+    readonly maxPageSize: number
+    readonly maxPages: number
+    readonly maxCursorBytes: number
+  }
+  readonly refresh: {
+    readonly userPresent: 'supported' | 'unsupported' | 'unknown'
+    readonly unattendedBudget: {
+      readonly requests: number
+      readonly windowSeconds: number
+      readonly evidenceReference: string
+    } | null
+  }
+  readonly renewal: 'supported' | 'unsupported' | 'unknown'
+}
+export interface ConnectionLifecycleDto {
+  readonly profileId: string
+  readonly connectionId: string
+  readonly consentId: string | null
+  readonly revision: number
+  readonly state: 'active' | 'expiring' | 'expired' | 'revoked' | 'error' | 'paused' | 'unknown'
+  readonly paused: boolean
+  readonly source: 'provider' | 'legacy'
+  readonly authorization: ConnectionAuthorizationDto
+  readonly providerMetadata: ConnectionProviderMetadataDto | null
+  readonly updatedAt: string
+  readonly lastSyncedAt: string | null
+  readonly blockedReason: string | null
+}
+export interface ConnectionConsentEventDto {
+  readonly id: string
+  readonly profileId: string
+  readonly connectionId: string
+  readonly consentId: string
+  readonly revision: number
+  readonly action:
+    | 'granted'
+    | 'renewed'
+    | 'paused'
+    | 'resumed'
+    | 'revoked'
+    | 'provider_error'
+    | 'provider_recovered'
+    | 'legacy_imported'
+  readonly source: 'provider' | 'user' | 'legacy'
+  readonly authorization: ConnectionAuthorizationDto
+  readonly providerMetadata: ConnectionProviderMetadataDto | null
+  readonly occurredAt: string
+}
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -85,6 +178,35 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     request,
     overview: (signal?: AbortSignal) => request<DemoOverview>('/v1/demo', signal ? { signal } : {}),
     connectMock: () => request<Connection>('/v1/connections/mock', { method: 'POST', body: '{}' }),
+    institutions: () => request<ConnectionInstitutionCatalogueDto>('/v1/institutions'),
+    connectInstitution: (institutionId: string, accountKind: ConnectionAccountKind) =>
+      request<Connection>('/v1/connections', {
+        method: 'POST',
+        body: JSON.stringify({ institutionId, accountKind }),
+      }),
+    connectionLifecycle: (connectionId: string) =>
+      request<ConnectionLifecycleDto>(
+        `/v1/connections/${encodeURIComponent(connectionId)}/lifecycle`,
+      ),
+    connectionConsentEvents: (connectionId: string) =>
+      request<readonly ConnectionConsentEventDto[]>(
+        `/v1/connections/${encodeURIComponent(connectionId)}/consent-events`,
+      ),
+    pauseConnection: (connectionId: string, revision: number) =>
+      request<ConnectionLifecycleDto>(`/v1/connections/${encodeURIComponent(connectionId)}/pause`, {
+        method: 'POST',
+        body: JSON.stringify({ revision }),
+      }),
+    resumeConnection: (connectionId: string, revision: number) =>
+      request<ConnectionLifecycleDto>(
+        `/v1/connections/${encodeURIComponent(connectionId)}/resume`,
+        { method: 'POST', body: JSON.stringify({ revision }) },
+      ),
+    renewConnection: (connectionId: string, revision: number) =>
+      request<ConnectionLifecycleDto>(`/v1/connections/${encodeURIComponent(connectionId)}/renew`, {
+        method: 'POST',
+        body: JSON.stringify({ revision }),
+      }),
     sync: (connectionId: string) =>
       request<{
         inserted: number
@@ -119,7 +241,10 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
       request<void>(`/v1/connections/${encodeURIComponent(connectionId)}`, { method: 'DELETE' }),
     exportData: () => request<unknown>('/v1/export'),
     exportArchive: async () => {
-      const response = await responseFor('/v1/export/archive')
+      const response = await responseFor('/v1/export/archive', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
       return new Uint8Array(await response.arrayBuffer())
     },
     importCsv: (accountId: string, csv: string) =>
@@ -134,6 +259,8 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
 }
 
+export type ApiClient = ReturnType<typeof createApiClient>
+
 export {
   createManualClient,
   type ManualAccountDto,
@@ -141,6 +268,6 @@ export {
   type ManualEntryDto,
   manualRequestId,
 } from './manual.js'
+export * from './mapped-import.js'
 export { createRulesClient } from './rules.js'
-
 export * from './settings.js'

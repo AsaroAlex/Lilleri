@@ -304,6 +304,85 @@ describe('adversarial financial invariants', () => {
 })
 
 describe('classification precedence and feedback', () => {
+  it('rules-only disables dictionary classification and preserves explicit corrections', () => {
+    expect(classify(txn('a'), { globalDictionaryEnabled: false })).toMatchObject({
+      categoryId: 'uncategorised',
+      source: 'review',
+      needsReview: true,
+    })
+    expect(
+      classify(txn('a'), {
+        globalDictionaryEnabled: false,
+        userClassifications: { a: 'health' },
+      }),
+    ).toMatchObject({ categoryId: 'health', source: 'user', needsReview: false })
+  })
+  it('rules-only preserves owned rules and merchant preferences', () => {
+    expect(
+      classify(txn('a'), {
+        globalDictionaryEnabled: false,
+        rules: [
+          {
+            id: 'r',
+            profileId: 'p',
+            merchantKey: 'coop',
+            categoryId: 'shopping',
+            enabled: true,
+            priority: 1,
+          },
+        ],
+      }),
+    ).toMatchObject({ categoryId: 'shopping', source: 'rule' })
+    expect(
+      classify(txn('a'), {
+        globalDictionaryEnabled: false,
+        preferences: [{ profileId: 'p', merchantKey: 'coop', categoryId: 'food' }],
+      }),
+    ).toMatchObject({ categoryId: 'food', source: 'preference' })
+  })
+  it('quiet exclusions retain exact balances and owned classifications while suppressing attention and spend', () => {
+    const rows = [txn('quiet', { merchantKey: 'unknown' }), txn('visible')]
+    const result = analyse([account()], rows, { excludedFromInsights: ['quiet'] })
+    expect(result.classifications).toHaveLength(2)
+    expect(result.classifications.find((item) => item.transactionId === 'quiet')?.needsReview).toBe(
+      false,
+    )
+    expect(result.reviewItems).toEqual([])
+    expect(result.summaries[0]).toMatchObject({
+      balance: money(-500n, 'EUR'),
+      spend: money(1000n, 'EUR'),
+      transactionCount: 1,
+    })
+    expect(rows[0]?.amount.amountMinor).toBe(-1000n)
+  })
+  it('quiet observations do not generate a recurring estimate', () => {
+    const rows = ['2026-07-31', '2026-08-31', '2026-09-30'].map((bookedOn, index) =>
+      txn(`private${index}`, {
+        bookedOn,
+        merchantKey: 'netflix',
+      }),
+    )
+    expect(analyse([account()], rows).recurring).toHaveLength(1)
+    expect(analyse([account()], rows, { excludedFromInsights: ['private1'] }).recurring).toEqual([])
+  })
+  it('a refund of a quiet purchase does not imply negative spending or income', () => {
+    const rows = [
+      txn('purchase'),
+      txn('refund', {
+        kind: 'refund',
+        amount: money(1000n, 'EUR'),
+        relatedTransactionId: 'purchase',
+      }),
+    ]
+    const result = analyse([account()], rows, { excludedFromInsights: ['purchase'] })
+    expect(result.matches[0]?.state).toBe('confirmed')
+    expect(result.classifications).toHaveLength(2)
+    expect(result.summaries[0]).toMatchObject({
+      income: money(0n, 'EUR'),
+      spend: money(0n, 'EUR'),
+      balance: money(-500n, 'EUR'),
+    })
+  })
   it('sticky one-shot correction wins over rules on the same transaction', () => {
     expect(
       classify(txn('a'), {

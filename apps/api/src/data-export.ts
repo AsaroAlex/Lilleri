@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { CANONICAL_CATEGORIES, CATEGORIES, parseDecimal } from '@lilleri/domain'
 import { strToU8, zip } from 'fflate'
+import { ownershipExportJsonSchema, validateOwnershipExport } from './ownership-export.js'
 import { Problem } from './problem.js'
 
 type RecordValue = Record<string, unknown>
@@ -201,6 +202,11 @@ function normalizedSnapshot(input: unknown) {
     }
   }
   for (const row of list(analysis.recurring)) money(row.expectedAmount)
+  try {
+    validateOwnershipExport(snapshot)
+  } catch {
+    throw invalid()
+  }
   return snapshot
 }
 
@@ -342,6 +348,28 @@ function events(snapshot: RecordValue) {
   append('manual_balance', list(record(snapshot.manual).balanceEvents), 'createdAt')
   append('profile_settings', list(record(snapshot.profileSettings).events), 'createdAt')
   append('sync_run', list(snapshot.syncRuns), 'syncedAt')
+  if (snapshot.privacy) {
+    const privacyEvents = record(record(snapshot.privacy).events)
+    append('privacy_profile', list(privacyEvents.settings), 'occurredAt')
+    append('privacy_transaction', list(privacyEvents.transactions), 'occurredAt')
+    append('privacy_permission', list(privacyEvents.permissions), 'occurredAt')
+  }
+  if (snapshot.notifications)
+    append('notification', list(record(snapshot.notifications).events), 'occurredAt')
+  if (snapshot.mappedImports) {
+    const imports = record(snapshot.mappedImports)
+    append('csv_mapping', list(imports.events), 'createdAt')
+    append('mapped_import_provenance', list(imports.provenance), 'createdAt')
+  }
+  if (snapshot.consentEvents)
+    append('consent_lifecycle', list(snapshot.consentEvents), 'occurredAt')
+  if (snapshot.supportAccess) {
+    const support = record(snapshot.supportAccess)
+    append('support_grant_record', list(support.grants), 'grantedAt')
+    append('support_request_record', list(support.requests), 'requestedAt')
+    append('support_approval_record', list(support.approvals), 'approvedAt')
+    append('support_access', list(support.events), 'occurredAt')
+  }
   for (const row of list(snapshot.consents)) {
     output.push({ type: 'consent_granted', occurredAt: timestamp(row.grantedAt), data: row })
     if (row.revokedAt !== null)
@@ -726,6 +754,7 @@ export const DATA_EXPORT_SCHEMA = {
           }),
         ),
         identity: reference('identity'),
+        ...ownershipExportJsonSchema,
       },
       [
         'exportVersion',
@@ -758,7 +787,7 @@ La copia completa e senza modifiche del testo è data.json. Gli importi sono str
 
 transactions.csv e links.csv sono viste tabellari. Per evitare formule involontarie, alcune celle di testo hanno un apostrofo aggiunto davanti. Il testo originale resta in data.json. Gli importi CSV restano cifre intere esatte: nel foglio di calcolo importa amount_minor come testo per evitare arrotondamenti automatici di numeri grandi. Non rimuovere gli apostrofi prima di aprire il CSV in un foglio di calcolo.
 
-accounts.json, rules.json, categories.json, consents.json ed events.jsonl conservano dati e provenienza. Gli eventi descrivono le registrazioni disponibili e non un’intera cronologia delle operazioni future o esterne. I contenuti grezzi già scaduti non sono inclusi; i loro metadati possono restare disponibili.
+accounts.json, rules.json, categories.json, consents.json ed events.jsonl conservano dati e provenienza. Gli eventi descrivono le registrazioni disponibili e non un’intera cronologia delle operazioni future o esterne. I contenuti grezzi già scaduti non sono inclusi; i loro metadati possono restare disponibili. Se presenti, consentLifecycles e consentEvents in data.json conservano stato e storia persistenti del consenso; terms contiene solo condizioni e scadenze del fornitore, senza credenziali. supportAccess conserva i permessi di assistenza e la relativa storia con identificativi pseudonimi degli operatori. privacy conserva impostazioni, quiet/private, preferenze locali e prove delle scelte; non attesta l’attivazione di servizi esterni o notifiche del dispositivo. notifications include preferenze, storia di tutti gli avvisi e feed consegnato completo. mappedImports include mappe CSV, revisioni e provenienza con data valuta normalizzata; i campi grezzi restano soggetti alla conservazione dei contenuti sorgente. In events.jsonl i fatti support_*_record e mapped_import_provenance restano distinti dagli eventi effettivi support_access, consent_lifecycle, privacy_*, notification e csv_mapping.
 
 manifest.json descrive i file, le colonne CSV, le versioni e i digest SHA-256. schema.json descrive data.json. I digest servono a controllare che i file non cambino all’interno dell’archivio, non sono una firma digitale.
 

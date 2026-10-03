@@ -1,6 +1,7 @@
 import { type Database, schema } from '@lilleri/database'
 import { and, asc, count, gt, lte } from 'drizzle-orm'
 import { cleanupExpiredObservationPayloads, retentionInstant } from './retention.js'
+import { DEFAULT_RUNTIME_CONFIGURATION } from './runtime-config.js'
 
 export interface RetentionConfiguration {
   readonly enabled: boolean
@@ -8,12 +9,8 @@ export interface RetentionConfiguration {
   readonly profileLimit: number
   readonly payloadLimit: number
 }
-export const DEFAULT_RETENTION_CONFIGURATION: RetentionConfiguration = {
-  enabled: true,
-  intervalMs: 60_000,
-  profileLimit: 20,
-  payloadLimit: 100,
-}
+export const DEFAULT_RETENTION_CONFIGURATION: RetentionConfiguration =
+  DEFAULT_RUNTIME_CONFIGURATION.payloadRetention
 function boundedInteger(value: number, minimum: number, maximum: number, name: string) {
   if (!Number.isInteger(value) || value < minimum || value > maximum)
     throw new Error(`${name} must be an integer between ${minimum} and ${maximum}`)
@@ -170,13 +167,15 @@ export interface RetentionPumpOptions {
   readonly report?: (status: RetentionStatus) => void
   /** Deterministic fault/latency injection; normal callers use the real SQL batch. */
   readonly batch?: typeof runRetentionBatch
+  /** Read the authoritative revision before every batch, including while temporarily disabled. */
+  readonly configuration?: () => Promise<RetentionConfiguration>
 }
 export function createRetentionPump(
   db: Database,
   configuration: RetentionConfiguration = DEFAULT_RETENTION_CONFIGURATION,
   options: RetentionPumpOptions = {},
 ) {
-  const settings = validateRetentionConfiguration(configuration)
+  let settings = validateRetentionConfiguration(configuration)
   const now = options.now ?? (() => new Date().toISOString())
   const timer = options.timer ?? systemTimer
   const batch = options.batch ?? runRetentionBatch
@@ -221,7 +220,7 @@ export function createRetentionPump(
     return snapshot()
   }
   const schedule = () => {
-    if (stopped || !settings.enabled) return
+    if (stopped || (!settings.enabled && !options.configuration)) return
     token = timer.setTimeout(() => {
       token = undefined
       void runNow()
@@ -229,12 +228,35 @@ export function createRetentionPump(
   }
   const runNow = (): Promise<RetentionStatus> => {
     if (active) return active
-    if (stopped || !settings.enabled) return status()
+    if (stopped || (!settings.enabled && !options.configuration)) return status()
     if (token !== undefined) timer.clearTimeout(token)
     token = undefined
     const work = async () => {
       try {
         checkedAt = retentionInstant(now())
+        if (options.configuration) {
+          settings = validateRetentionConfiguration(await options.configuration())
+          current = { ...current, enabled: settings.enabled }
+        }
+        if (!settings.enabled) {
+          current = {
+            ...current,
+            checkedAt,
+            lastRunAt: checkedAt,
+            lastOutcome: 'disabled',
+            deletedLastRun: 0,
+            profilesVisitedLastRun: 0,
+            failedProfilesLastRun: 0,
+            errorCode: null,
+          }
+          const reported = { ...(await status()), running: false }
+          try {
+            await options.report?.(reported)
+          } catch {
+            /* A reporter cannot prevent future configuration checks. */
+          }
+          return reported
+        }
         const result = await batch(db, settings, checkedAt, cursor)
         cursor = result.cursor
         current = {
@@ -283,6 +305,6 @@ export function createRetentionPump(
     token = undefined
     await active
   }
-  if (settings.enabled) void runNow()
+  if (settings.enabled || options.configuration) void runNow()
   return { runNow, status, stop }
 }
