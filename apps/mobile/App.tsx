@@ -929,14 +929,9 @@ function AppSurface({
             />
           )}
           {fontError && (
-            <Text
-              accessibilityRole="alert"
-              aria-live="assertive"
-              aria-atomic={true}
-              style={s.errorText}
-            >
-              {t('app.fontUnavailable')}
-            </Text>
+            <AccessibleStatus urgent>
+              <Text style={s.errorText}>{t('app.fontUnavailable')}</Text>
+            </AccessibleStatus>
           )}
           {offlineSnapshot && (
             <AccessibleStatus style={s.notice}>

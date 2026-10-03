@@ -10,6 +10,7 @@ import {
   type ViewProps,
 } from 'react-native'
 import { useWebDialogFocus } from './useWebDialogFocus'
+import { webElement } from './web-focus'
 
 export function AccessibleHeading({
   level,
@@ -22,9 +23,15 @@ export function AccessibleStatus({
   urgent = false,
   ...props
 }: ViewProps & { readonly urgent?: boolean }) {
+  const root = useRef<View | null>(null)
+  useEffect(() => {
+    // RN Web 0.21 drops aria-atomic; keep the explicit live-region DOM contract.
+    if (Platform.OS === 'web') webElement(root.current)?.setAttribute('aria-atomic', 'true')
+  }, [])
   return (
     <View
       {...props}
+      ref={root}
       role={urgent ? 'alert' : 'status'}
       accessibilityLiveRegion={urgent ? 'assertive' : 'polite'}
       aria-live={urgent ? 'assertive' : 'polite'}

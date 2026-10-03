@@ -79,7 +79,7 @@ aggiunge correttamente `--clear` al launcher Expo. Nessun file di migrazione app
   solo unattended autorizzato. Worker/operator separati solo PostgreSQL sintetico.
   Creation recovery parte a startup e dopo batch anche senza job; stop drena intenti.
 - PG16.15 container `lilleri-resume-pg`, loopback55432. Database finale corrente
-  `lilleri_continuation_final_20261003b`:31 migrazioni frozen/checksum verificati.
+  `lilleri_continuation_signed_final_20261003`:31 migrazioni frozen/checksum verificati.
   Il vecchio `lilleri_test` contiene checksum draft0010: preservare e usare DB nuovo.
 - Docker/servizi non garantiti in task futuro. Riutilizzare autenticazione HTTPS Git
   della piattaforma senza estrarre token. Nessuna credenziale bancaria cloud richiesta.
@@ -138,13 +138,13 @@ originale e owned JSON/ZIP11file. La continuazione aggiunge:
 ## Verifiche correnti
 
 - 847 casi Vitest distinti:361 core(money63/domain42/engine142/provider114),451 API,
-  35 mobile. Ultimo full prima delle2 nuove regressioni:defaultAPI446pass/3skip; PG448pass/1skip. Caso secondocluster passa
+  35 mobile. Full corrente defaultAPI448pass/3skip; PG450pass/1skip. Caso secondocluster passa
   separatamente nella prova RLS16/16 con cluster/socket omonimi realmente separati e
   login non-owner indipendenti:14 casi PG e2 guard fixture PGlite. Ripetizioni driver non aggiungono casi.
 - 41 gruppi Node distinti fuori Vitest: configurationAST4/copyAST3/evaluation19/bootstrap15.
   Guard consumer16 e copy13UI mantengono scansioni statiche reali.
 - Installer esatto exit0 frozenroot+brand, pnpmcheck23task/build10task Next+Expo--clear.
-  PG full37file/419s exit0; tutte31migrazioni SHA uguali tra SQL e file, 1–22 immutate.
+  PG full37file/359.77s exit0; tutte31migrazioni SHA uguali tra SQL e file, 1–22 immutate.
   Prova aggiuntiva9 gruppi FORCE RLS su24 tabelle finanziarie nuove/storiche.
 - Sync44 e creation17 e maintenance12 per driver; source/encryption/restore42 perdriver,
  4 HTTPsource routing e5 compiledCLI recovery; understanding persistence16 perdriver.
@@ -164,7 +164,10 @@ originale e owned JSON/ZIP11file. La continuazione aggiunge:
 Due nuove regressioni actualHTTP CSV/XLSX con clock che avanza hanno riprodotto409
 source_erasure_changed: outer command firmava a t1 dopo inner import a t2>t1.
 Producer corretto cattura un solo at per import/audit/provenance/facts; modulo23/23
-su entrambi i driver. Nessun guard source o migrazione cambiato. Full suite847 in repeat.
+su entrambi i driver. Nessun guard source o migrazione cambiato. Full suite847/installer/check23/build10 pass.
+Checkpoint integrato e pushato `e10f10672072cef05927de07ae434c4f69718538`.
+Vecchi generated Next dev types corrotti preservati fuori checkout; typegen ufficiale
+e fulltypecheck pass senza cambiare scope. API GitHub Actions403: CIremota non verificata.
 
 ## Cloud e chiusura attiva
 

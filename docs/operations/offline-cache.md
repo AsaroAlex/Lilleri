@@ -85,4 +85,17 @@ network loss cannot restore that copy. It performs no source deletion on the ser
 the report distinguishes this intercepted request from unexpected writes and compares
 the actual server financial snapshot before and after the run.
 
+The current App run passed **10/10 groups**, with zero uncaught page errors and zero
+unexpected writes. Evidence is saved in
+`/workspace/.lilleri-validation/continuation-offline-ui.json` and its `.log` companion.
+The sole intended DELETE was intercepted locally, with `{data:'erase'}`, and never
+forwarded. Actual encrypted IndexedDB storage, read-only controls, timed expiry,
+online revalidation, source-erasure failure followed by network loss, reload refusal,
+HTTP 500 refusal and HTTP 401 invalidation were exercised. Expiry used Chromium's
+virtual clock. The shared economic invariant compares every transaction, all account
+facts and complete analysis. It permits only monotonic, nonfuture freshness updates
+on already confirmed `mock-italian` accounts; local account timestamps cannot change.
+The first attempt is retained separately: all nine functional groups passed, and the
+original byte-exact snapshot comparison detected those automatic mock freshness dates.
+
 The unit suite uses actual WebCrypto, deterministic clock and delayed-storage ports. The standalone browser harness compiles the current production cache modules into a temporary directory, serves only that independent fixture on loopback and exercises real Chromium IndexedDB/WebCrypto. It contacts no financial API and writes no shared financial archive. It checks ciphertext-only storage, non-exportable keys, exact money, original summary, actual session expiry, reload refusal, the five identity boundaries, clock rollback, GCM/AAD corruption, delayed read/write fencing, valid-ciphertext replay refusal, bounds, native unavailability, automatic expiry and the production canceled-storage lease. Its JSON report contains check names and error categories only; the default path is `/tmp/lilleri-offline-cache-browser.json`.

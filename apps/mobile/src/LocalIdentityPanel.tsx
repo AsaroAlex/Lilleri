@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native'
-import { AccessibleDialog } from './accessibility/AccessibilityPrimitives'
+import { AccessibleDialog, AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { useI18n } from './i18n/context'
 import {
   createLocalIdentityClient,
@@ -379,20 +379,14 @@ export function LocalIdentityPanel({
         <ActivityIndicator accessibilityLabel={t('identityPanel.checking')} color={c.primary} />
       )}
       {error && (
-        <Text accessibilityRole="alert" aria-live="assertive" aria-atomic={true} style={s.error}>
-          {error}
-        </Text>
+        <AccessibleStatus urgent>
+          <Text style={s.error}>{error}</Text>
+        </AccessibleStatus>
       )}
       {notice && (
-        <Text
-          role="status"
-          aria-live="polite"
-          aria-atomic={true}
-          accessibilityLiveRegion="polite"
-          style={s.success}
-        >
-          {notice}
-        </Text>
+        <AccessibleStatus>
+          <Text style={s.success}>{notice}</Text>
+        </AccessibleStatus>
       )}
       {busy && <ActivityIndicator accessibilityLabel={t('identityPanel.busy')} color={c.primary} />}
       {!checking && !session && !secondFactorPending && (

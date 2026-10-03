@@ -229,6 +229,7 @@ async function main() {
       })
       .waitFor()
     await page.waitForFunction((expected) => document.documentElement.lang === expected, locale)
+    await button(text('Aggiorna', 'Refresh')).waitFor()
     assert.equal(await mainHeading().count(), 1)
     assert.equal(await page.getByRole('main').count(), 1)
     pass('saved locale, one main landmark and one H1')
@@ -249,6 +250,7 @@ async function main() {
       'page',
     )
     assert.equal(await button('Home').getAttribute('aria-current'), null)
+    await button(text('Tutti', 'All')).waitFor()
     assert.equal(await page.locator('[aria-pressed="true"]').count(), 1)
     await page
       .getByRole('textbox', {
@@ -293,7 +295,12 @@ async function main() {
       await page.evaluate(() => document.activeElement.dataset.testid),
       'confirmation-cancel',
     )
-    assert.equal(await button('Home').evaluate((el) => !!el.closest('[inert]')), true)
+    assert.equal(
+      await page
+        .getByRole('button', { name: 'Home', exact: true, includeHidden: true })
+        .evaluate((el) => !!el.closest('[inert]')),
+      true,
+    )
     await page.keyboard.press('Tab')
     assert.equal(
       await page.evaluate(() => document.activeElement.getAttribute('aria-label')),
