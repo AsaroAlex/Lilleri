@@ -1464,12 +1464,14 @@ function AppSurface({
                             {amount(summary.spend)}
                           </Text>
                         </View>
-                        <View style={s.summaryDetails}>
-                          <View style={s.metric}>
+                        <View
+                          style={[s.summaryDetails, windowWidth < 600 && s.narrowSummaryDetails]}
+                        >
+                          <View style={[s.metric, windowWidth < 600 && s.narrowMetric]}>
                             <Text style={s.caption}>{t('app.bookedIncome')}</Text>
                             <Text style={s.mediumAmount}>{amount(summary.income)}</Text>
                           </View>
-                          <View style={s.metric}>
+                          <View style={[s.metric, windowWidth < 600 && s.narrowMetric]}>
                             <Text style={s.caption}>{t('app.pendingBalance')}</Text>
                             <Text style={s.mediumAmount}>{amount(summary.pending)}</Text>
                           </View>
@@ -2190,7 +2192,7 @@ function styles(c: ThemeColors) {
       lineHeight: 16,
       color: c.textSecondary,
       borderLeftWidth: 2,
-      borderColor: c.primary,
+      borderColor: c.borderStrong,
       paddingHorizontal: 10,
       paddingVertical: 5,
       flexShrink: 1,
@@ -2379,7 +2381,9 @@ function styles(c: ThemeColors) {
       flexShrink: 1,
     },
     summaryDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingTop: 8 },
+    narrowSummaryDetails: { flexDirection: 'column', gap: 12 },
     metric: { gap: 4, minWidth: 110, flex: 1 },
+    narrowMetric: { flex: 0, minWidth: 0 },
     summaryNote: {
       fontFamily: 'Geist',
       fontSize: 12,
