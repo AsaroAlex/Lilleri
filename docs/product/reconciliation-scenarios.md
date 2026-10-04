@@ -1,6 +1,6 @@
 # Reconciliation acceptance catalogue v1
 
-**Snapshot:** 2026-10-03. **Version:** `reconciliation-scenarios-v1`.
+**Snapshot:** 2026-10-04. **Version:** `reconciliation-scenarios-v1`.
 
 The machine-readable [catalogue](../../packages/engines/src/reconciliation-scenarios.ts)
 preserves all 25 numbers and intended outcomes from
@@ -17,17 +17,27 @@ guard is never feature acceptance. All evidence is synthetic local behavior; it 
 not establish real-provider coverage, representative quality, native acceptance or a
 cleared beta.
 
+## 2026-10-04 integration boundary
+
+The matrix below records the implemented roadmap increment while retaining the v1
+requirement statuses: **4 supported / 18 incomplete / 3 expected unsupported**.
+The machine-readable v1 catalogue's capability descriptions predate this increment;
+its whole-case acceptance has not been independently promoted. New API/integration
+proof is linked below rather than treated as automatic completion of a scenario.
+Fuel/tolerance stages, own-IBAN evidence, full field-lock/action detail, batch undo
+and the explicitly later features remain unfinished.
+
 ## Requirement matrix
 
 | # | Original scenario / priority | Stories | Status | Actual scope and remaining acceptance |
 |---|---|---|---|---|
-| 1 | Pending → booked, same amount / P0 | E03.4, E13.1 | Incomplete | Same-ID updates and explicit exact-money replacement work; complete carried edits and first-seen lifecycle for distinct IDs remain. |
-| 2 | Pending → booked, changed amount / P0 | E13.1 | Incomplete | Explicit changed-amount linkage requests review and preserves the hold. Tolerance/fuel stages and amount-change history remain. |
-| 3 | Pending never books / P0 | E03.4, E13.1 | Incomplete | Missing source records retain conservative reservation. Provider-specific expired-hold/cancellation/fuel handling remains. |
+| 1 | Pending → booked, same amount / P0 | E03.4, E13.1 | Incomplete | Same- and distinct-ID replacements retain original first-seen/amount history and compatible category/private/quiet corrections; explicit bridge undo persists across refetch. Whole-case acceptance promotion remains pending in v1. |
+| 2 | Pending → booked, changed amount / P0 | E13.1 | Incomplete | Explicit changed-amount linkage records original/replacement money and preserves the hold until revisioned accept; undo restores it. Versioned tolerance/fuel matching and whole-case acceptance remain. |
+| 3 | Pending never books / P0 | E03.4, E13.1 | Incomplete | Absence retains conservative reservation. Explicit exact linked expiration/cancellation/reversal has immutable terminal history; unproved or partial reversal cannot release the hold. Provider-specific fuel/expiry semantics and whole-case acceptance remain. |
 | 4 | Duplicate provider row on resync / P0 | E03.2–.3, E13.2 | Supported | Same-source stable-ID replay preserves canonical rows, revisions and immutable source observations. Sync audit runs remain separate. |
-| 5 | Reconsent with ID churn / P0 | E03.2, E13.2 | Incomplete | Scope-stable explicit IDs work; changed provider IDs still need fingerprint/ordinal identity and an audit event. |
-| 6 | Two identical coffees / P0 | E03.2, E13.2 | Incomplete | Distinct explicit IDs remain two purchases. No-ID ordinal identity across provider refetches remains. |
-| 7 | CSV + bank duplicate / P0 | E05.3, E13.2 | Incomplete | Exact same-day candidates require review unless a unique shared reference proves the link. Full fingerprint/seven-day fuzzy import matching and linked receipt counts remain. |
+| 5 | Reconsent with ID churn / P0 | E03.2, E13.2 | Incomplete | Actual in-place renewal can alias a uniquely proved new provider ID to the canonical row, preserving corrections and immutable identity audit. Ambiguous renewal stops atomically; whole-case acceptance promotion remains pending in v1. |
+| 6 | Two identical coffees / P0 | E03.2, E13.2 | Incomplete | No-ID fingerprint/ordinals preserve distinct purchases across complete pagination, reordering and refetch. Unknown/incomplete coverage cannot establish identity; whole-case acceptance promotion remains pending in v1. |
+| 7 | CSV + bank duplicate / P0 | E05.3, E13.2 | Incomplete | Seven-day same-account/currency/exact-money candidates allow different descriptors and require an explicit row choice. Linked receipt/source audit and ordinary duplicate undo survive retry/raw expiry. Broader automatic fuzzy/supersession policy and whole-case acceptance remain. |
 | 8 | Internal transfer, both legs / P0 | E13.3, E13.6 | Incomplete | Reciprocal source account links plus exact amount/reference prove the pair; revisioned decisions/undo persist. Own-IBAN/code evidence and broader acceptance remain. |
 | 9 | Internal transfer, missing leg / P0 | E13.3 | Incomplete | The engine never invents a second leg. An own-IBAN registry and explicit single-leg provenance remain. |
 | 10 | Card settlement / P0 typing, P1 period linking | E13.4, E28.4 | Incomplete | A source-declared settlement is excluded from spending without a card account. Verified broader typing and statement-period/subset-sum/retroactive links remain. |
@@ -37,13 +47,13 @@ cleared beta.
 | 14 | Variable recurring payment / P0 | E14.1 | Supported | Explicit creditor/mandate groups changing descriptors; calendar cadence, exact median and configured variability bands produce an estimate. |
 | 15 | Subscription price-increase alert / P1 | E14.3, E29 | Expected unsupported | Observed variability exists; no measured alert producer/dedup/preference is claimed. |
 | 16 | Merchant rename/descriptor change / P0 | E07.1, E07.3, E10.2 | Incomplete | Private aliases retain identity/source text. Verified bank patterns, frozen fingerprints and legacy-rule migration remain. |
-| 17 | Multi-currency/FX / P0 | E06.5, E13.3 | Incomplete | Exact currencies stay separate; amounts alone never create FX or a cross-currency transfer. Original/billed money and dated rate/source provenance remain. |
+| 17 | Multi-currency/FX / P0 | E06.5, E13.3 | Incomplete | Original/billed minor amounts, literal dated rates and source versions are encrypted, visible in detail and retained in ownership export. Missing evidence stays unknown; conflicting source evidence leaves canonical money unchanged. Complete cross-currency transfer proof and whole-case acceptance remain. |
 | 18 | Timezone/month boundary / P0 | E06.1, E15.1, E13.7 | Supported | A declared provider date stays in its declared month in both Rome and UTC; profile calendars select the current month separately. |
 | 19 | DST / P0 | E03.1, E13.7 | Incomplete | Date-only invariants and UTC quota arithmetic work; explicit acquisition acceptance at both Rome DST transitions remains. |
 | 20 | Negative balance/overdraft / P0 | E06.2, E05.4, E16.1 | Incomplete | Signed exact balances and available-cash shortfall remain signed; balance facts alone create no income. Complete linked card-liability presentation remains. |
 | 21 | Provider retry/partial page / P0 | E03.5–.6 | Supported | Durable bounded checkpoints resume without duplicate financial application, extra refresh for a valid checkpoint, partial freshness or deletion claims. |
-| 22 | Consent expiration/history gap / P0 | E02.8, E03.6, E05.3 | Incomplete | Generation fences, long-gap catch-up and history-gap attention work. Exact unavailable interval, direct CSV recovery and complete overlap dedup remain. |
-| 23 | Source deletes edited booking / P0 | E03.5, E13.5 | Incomplete | Two complete absences preserve the row/edits and raise Inbox attention. Keep-as-manual/remove and full reversal lifecycle remain. |
+| 22 | Consent expiration/history gap / P0 | E02.8, E03.6, E05.3 | Incomplete | Completed declared coverage/consent events disclose exact unrecovered intervals and route to account-specific CSV recovery. Unknown/partial or incomplete multi-account evidence stays unverified; imports do not prove completeness. Whole-case overlap/renewal acceptance remains. |
+| 23 | Source deletes edited booking / P0 | E03.5, E13.5 | Incomplete | Two complete absences preserve edited canonical facts and enable revisioned keep-manual/remove/undo. Search and 90-day history share those decisions; removed facts remain reviewable/exportable. Complete reversal/source-reappearance whole-case acceptance remains. |
 | 24 | Back-dated booking / P0 | E03.5, E15.1 | Incomplete | Trailing refetch and original-month arithmetic work. Explicit twenty-day late-booking acquisition and durable late-booked event remain. |
 | 25 | ATM → cash wallet / P1 | E28.3 | Incomplete | Proved two-leg cash pairs work and no absent wallet credit is invented. Code-driven wallet creation/untracked remainder remains. |
 
@@ -60,9 +70,10 @@ balance-mismatch issue never proves complete provider balance semantics.
 
 The [40-epic execution plan](execution-plan.md) also retains independent local P0
 work outside this catalogue: complete feedback/field locks and rule actions/stages,
-original-money/dated FX provenance, scoped server search and an authoritative
-90-day read projection, verified bank/code patterns, fitted calibration/runtime
-policy consumers, exact consent-gap recovery and broader encrypted/indexed fields.
+verified bank/code patterns, fitted calibration/runtime policy consumers, persisted/native
+90-day cache, admitted official-provider lifecycle/sync and broader encrypted/indexed
+fields. Scoped server search, actual 90-day history, original/billed FX provenance and
+evidence-based consent-gap/direct import recovery are now implemented locally.
 The [offline boundary](../operations/offline-cache.md) and
 [evaluation tools](../../tools/evaluation/README.md) describe their actual limits.
 Provider access, legal review, native devices and representative labels constrain
@@ -73,8 +84,32 @@ real operation/acceptance; they do not mark these missing local paths completed.
 [The new engine suite](../../packages/engines/src/reconciliation-scenarios.test.ts)
 contains **21 actual Vitest cases**, including the catalogue completeness/priority
 contract, the supported variable-mandate/month-boundary assertions, conservative
-partial behavior and explicit P1/P2 guards. It does not assert full ID churn, fuel
-expiry, own-IBAN, split, reimbursement, FX, native storage or alert implementation.
+partial behavior and explicit P1/P2 guards. That engine suite alone does not assert
+the newer API identity/FX implementation, fuel matching, own-IBAN, split, reimbursement, native storage or alert acceptance.
+
+The 2026-10-04 integrated API suites add the following bounded evidence:
+
+- [Sync identity](../../apps/api/test/sync-identity.test.ts): missing-ID ordinals,
+  actual renewal aliases, ambiguous/incomplete refusal, carried corrections,
+  immutable audit, isolation and erasure fencing.
+- [Pending/source choices](../../apps/api/test/pending-lifecycle.test.ts): compatible
+  carried edits/first-seen, changed-money accept/undo, exact terminal evidence,
+  persistent source keep-manual/remove/undo and retained private ownership facts.
+- [Mapped import](../../apps/api/test/mapped-import.test.ts) and
+  [consent gaps](../../apps/api/test/consent-history-gap.test.ts): explicit seven-day
+  links/receipt counts, undo/reimport memory, stale privacy fences and completed-window
+  evidence for exact gaps without inferring completeness from rows.
+- [Ledger reads](../../apps/api/test/ledger-read.test.ts): both read projections agree
+  with source choices, reject stale cursors and preserve encrypted canonical money.
+- [FX evidence](../../apps/api/test/fx-evidence.test.ts): exact original/billed money,
+  literal rates, retained corrections/conflicts, raw-TTL survival, atomic contradictory
+  snapshot refusal, owned references, RLS and source/profile erasure.
+
+The root combined gate passed 23 Turbo tasks with 579 API tests/3 skips on PGlite;
+the same 45-file suite passed 581/1 on PostgreSQL. Driver repetitions are not added
+together. These totals cover the repository increment, not 25 independently completed
+case requirements. Latest visual/browser release acceptance and deployment are tracked
+separately in [STATUS](../STATUS.md).
 
 Existing [API ingestion tests](../../apps/api/test/integration.test.ts) execute stable-ID
 replay, same-ID pending/booked transition, persisted sticky decisions and reconciliation

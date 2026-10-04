@@ -1,6 +1,54 @@
 # PROJECT STATE — Lilleri
 
-## Latest iteration — 2026-10-04 (Europe/Rome)
+## Current integration and release handoff — 2026-10-04 (Europe/Rome)
+
+Persistent user goal: execute the seven development phases in parallel, publish tested
+increments frequently on the existing Railway URL, and make the visual design original.
+The shared synthetic preview is not the completed real-bank/public MVP. Integration
+branch: `codex/roadmap-integration`; ordinary checked pushes to
+`claude/admiring-hypatia-yzh6nq` trigger the existing Railway service. No new PR or
+force push is requested. Preserve its archive, current recovery namespace and one replica.
+
+The integrated source now has bounded no-ID fingerprint/ordinals and in-place renewal
+aliases; explicit pending lifecycle/correction history and individual Inbox accept,
+keep-manual/remove and undo choices; explicit seven-day CSV/bank links with receipt/source
+history and persistent duplicate undo; evidence-based exact renewal-gap/account import
+recovery; scoped server search and actual 90-day history with revision-bound HMAC cursors;
+and encrypted original/billed FX versions/detail/owned export. Unknown/ambiguous evidence
+fails or stays unknown; canonical money and source audit are never guessed. The new
+migration chain contains **36 frozen files**, with earlier files unchanged.
+
+Optional hosted HTTPS identity/client, mandatory verification/recovery delivery ports,
+atomic quotas and redacted readiness inspection have local proof. The default entry point
+remains synthetic/loopback; `productionReady` is always false. Hosted runtime/financial
+scope, external KMS and an independently durable current remote deletion/source journal
+still require implementation. Real mail/notices, EU PostgreSQL/TLS/separate roles,
+backup/PITR/alerts and actual provider application/consent remain unconfigured. The official
+Yapily Modelo sandbox read adapter is unregistered: consent creation/redirect/exchange,
+renewal/revocation and admitted durable sync remain separate work. Never paste secrets
+into chat or relabel local journals as production integrations.
+
+Combined validation: `pnpm check` passed **23 Turbo tasks**, API **579/3 skipped** on
+PGlite; the complete isolated PostgreSQL API suite passed **581/1 skipped**, 45 files.
+Those driver runs are not additive distinct cases. The actual guarded PostgreSQL 16
+custom-dump/deletion-aware restore drill passed **8/8** against all **36 migrations**;
+restored targets retain `ALLOW_CONNECTIONS=false` and revoked PUBLIC CONNECT.
+`productionBackupAccepted` remains false. Logs/reports:
+`/workspace/.lilleri-validation/roadmap-check.log`, `roadmap-postgres-api.log` and
+`roadmap-postgres-drill.json`. Preserve existing archives and independent keys/journals.
+
+The last verified publication remains commit `3efd4ab65a361931f5e64f5ff3380943a56f227c`,
+Railway deployment `7dc1df94-42f4-40c0-8caf-72b3dcd610e8` SUCCESS, with fresh public reads
+preserving the original connection and exact five account balances. **The integrated
+roadmap/design increment is awaiting final browser verification and publication.**
+The current original-design direction uses a ruled account-register composition,
+Newsreader/Geist typography, aligned money and numbered utility rows; no fabricated charts
+or mixed-currency totals. Preserve Italian/British ICU, focus/reflow and identity fences.
+All 40 epics retain residual acceptance, and the 25-case v1 catalogue remains 4/18/3 until
+whole-case acceptance is reviewed. Current residual work is in the execution plan/status;
+older verification counts/process notes below are historical, not evidence of live state.
+
+## Earlier preview iteration — 2026-10-04 (Europe/Rome)
 
 Current user goal: finish the real-bank/public MVP through an iterative
 development → manual test → feedback → minimal fix workflow. There is no
@@ -99,7 +147,7 @@ stdin/stdout redirected: plain nohup is killed by command-group cleanup and can
 leave detached child workers. Final log is `iterative-runtime.log`, launcher PID
 in `iterative-launcher.pid`; verify the actual runner/process identity before
 stopping it. A managed persistent terminal is the portable alternative.
-Latest user preference: remain in this Codex chat with the existing Railway online preview, without Mac installation, source ZIPs or a move to Replit. Railway public ingress is verified. Do not restart obsolete tunnel or Codex-native ingress investigations. Latest user instruction: proceed across the seven proposed development phases and parallelize/optimize their dependencies. Six isolated implementation tracks are active: sync identity, pending/source decisions, reversible history import, server ledger search, hosted identity/recovery, official sandbox adapter. Main integration branch is `codex/roadmap-integration`; checked releases push normally to `claude/admiring-hypatia-yzh6nq`.
+Latest user preference: remain in this Codex chat with the existing Railway online preview, without Mac installation, source ZIPs or a move to Replit. Railway public ingress is verified. Do not restart obsolete tunnel or Codex-native ingress investigations. The seven requested development phases were implemented in isolated tracks and integrated; latest source/gates and the pending original-design release are recorded above. Main integration branch is `codex/roadmap-integration`; checked releases push normally to `claude/admiring-hypatia-yzh6nq`.
 
 Compiled-preview increment `3efd4ab65a361931f5e64f5ff3380943a56f227c` reached Railway SUCCESS (`7dc1df94-42f4-40c0-8caf-72b3dcd610e8`). Fresh public health/demo reads preserved the original connection and exact five account balances. Local runtime uses approximately0.55GB total RSS after8browser flows; deployed memory is not measured, so keep3GB cap. Assets have3tested traversal/ownership/cache boundaries. Keep current `/data` archive/recovery namespace, one replica and existing API synthetic/identity guards. No real-bank or mail/KMS resources have been supplied. An optional asynchronous resource-status question is pending; never ask the user to paste secrets.
 
@@ -238,7 +286,7 @@ originale e owned JSON/ZIP11file. La continuazione aggiunge:
   exactinteger economics riproducibili. Bench finAPI non è preventivo vincolante né
   attivazione/pagamento. Decisione in `docs/business/zero-investment-launch.md`.
 
-## Verifiche correnti
+## Historical verification — 2026-10-03
 
 - 847 casi Vitest distinti:361 core(money63/domain42/engine142/provider114),451 API,
   35 mobile. Full corrente defaultAPI448pass/3skip; PG450pass/1skip. Caso secondocluster passa
@@ -299,14 +347,19 @@ deve verificare processi/porte e non assumere un restore già validato.
 
 ## Lavoro residuo reale
 
-Il piano40epic rimane attivo. Tecnico locale ancora aperto: fingerprint/ordinal/IDchurn;
-expired/cancelled/reversed holds; ownIBAN/missingleg/crosssource dedup; source-removal
-keepmanual/remove e batchundo; original/billed money/datedFX; scoped server search e
-90dayprojection autorevole; feedback/fieldlocks/remainingrules/stages/calibratedpolicy;
-exactrenewalgaps/directCSVrecovery/renewalall; encryptionclass/index/tokenisation più
-ampie, retentionclasses e explanatoryrights. Non sono tutti blocker esterni.
+The 40-epic plan remains active. Local residuals: own-IBAN/missing-leg provenance,
+fuel/tolerance matching and whole-case reconciliation acceptance; batch/session undo;
+complete feedback/field-lock/rule stages/actions and fitted runtime calibration/policy;
+representative server-search latency and persisted/native cache; renewal-all and admitted
+official-provider consent lifecycle/sync; reviewed hosted bootstrap/financial scope,
+external key/current remote deletion-journal integration; wider encryption/index/tokenisation,
+retained object classes and explanatory rights. Bounded identity, explicit holds/source
+choices, reviewed seven-day import links, server history/FX and exact evidence-based
+renewal recovery are now delivered locally, as described above.
 
-Gate esterni: accesso sandbox ufficiale emesso, contratti/route legale/DPIA/coverage e
-processori prima dati reali; autorizzazioni/fixture autentiche e misura empirica;
-KMS/TLS/backup/PITR deployed; native delivery/store/device/assistive/user e naming
-clearance professionale. Le incompletezze restano esplicite, senza aggirare i gate.
+External release gates: issued official sandbox application/consent, contracts/legal route,
+DPIA/verified coverage/processors before real data; approved notices and actual mail delivery;
+EU database/TLS/roles/KMS/backup/PITR/alerts with deletion-aware deployed recovery proof;
+authorized representative labels/audits, native/store/device/accessibility/users and
+professional naming review. These gates do not suspend independent local implementation
+or promote unfinished acceptance.
