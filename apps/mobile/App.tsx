@@ -1017,7 +1017,7 @@ function AppSurface({
               </View>
             )}
           </View>
-          {!hostedIdentityMode && tab === 'Home' && !manage && !selected && (
+          {!hostedIdentityMode && emptyFixtures && tab === 'Home' && !manage && !selected && (
             <Text style={s.demoIntro}>{emptyFixtures ? t('app.cleanIntro') : t('app.intro')}</Text>
           )}
           {identityMode && (
@@ -1733,6 +1733,7 @@ function AppSurface({
                   />
                   <Button
                     label={t('app.import')}
+                    visibleLabel={t('app.addShort')}
                     onPress={() => setManage('import')}
                     quiet
                     c={c}
@@ -2180,6 +2181,7 @@ function Signature({ color }: { color: string }) {
 type Styles = ReturnType<typeof styles>
 function Button({
   label,
+  visibleLabel,
   testID,
   onPress,
   quiet = false,
@@ -2189,6 +2191,7 @@ function Button({
   s,
 }: {
   label: string
+  visibleLabel?: string
   testID?: string
   onPress: () => void
   quiet?: boolean
@@ -2217,7 +2220,7 @@ function Button({
       <Text
         style={[s.buttonText, quiet && { color: c.primary }, destructive && { color: c.danger }]}
       >
-        {label}
+        {visibleLabel ?? label}
       </Text>
     </Pressable>
   )
@@ -2320,7 +2323,7 @@ function styles(c: ThemeColors) {
       flexWrap: 'wrap',
     },
     headingCopy: { gap: 8, flex: 1 },
-    narrowHeadingCopy: { gap: 16 },
+    narrowHeadingCopy: { gap: 8 },
     narrowHeadingActions: { position: 'absolute', top: -14, right: -8 },
     eyebrow: {
       fontFamily: 'GeistMedium',

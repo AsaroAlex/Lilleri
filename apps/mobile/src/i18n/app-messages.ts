@@ -1,6 +1,7 @@
 /** Italian App master with explicit British English ICU pairs. */
 export const APP_MESSAGE_PAIRS = {
   'app.syntheticBalance': ['Saldo dimostrativo', 'Sample balance'],
+  'app.addShort': ['Aggiungi', 'Add'],
   'app.settings': ['Impostazioni', 'Settings'],
   'app.privacyAndData': ['Privacy e dati', 'Privacy and data'],
   'app.preferences': ['Preferenze', 'Preferences'],
