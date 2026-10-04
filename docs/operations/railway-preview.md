@@ -4,7 +4,7 @@ Checked against Railway's official documentation on 2026-10-04 (Europe/Rome).
 
 Codex remains the editing workspace. Railway runs this repository at a stable HTTPS address. Each tested change is committed and pushed to the connected development branch; Railway rebuilds and redeploys it automatically. This is a commit/deploy loop, not hot reload from the Codex filesystem. Refresh the preview after a successful deployment. A volume-backed service briefly goes offline during redeployment to keep one database writer.
 
-The root Dockerfile uses the repository's Node 22.22.0 and pnpm 10.28.0 toolchain, builds the existing shared packages, then starts `tools/dev/run.mjs --prepared`. Startup validates the compiled synthetic API and uses the already-built packages; it does not repeat compiler work inside the runtime memory limit. Local `pnpm dev:cloud` retains its normal build/watch behavior. It serves the actual Expo financial application, with `/api` on the same origin. The Next project page remains internal. No provider, production database, domain purchase or Mac installation is needed. This remains a shared synthetic development instance, without public banking identity or live bank connections.
+The root Dockerfile uses the repository's Node 22.22.0 and pnpm 10.28.0 toolchain, runs `pnpm preview:build` to compile the API and export the financial web UI, then starts `tools/preview/run.mjs`. Startup validates the compiled synthetic API and serves the exported assets. Metro, Next and build watchers stay in the development workflow; the hosted runtime starts only the API, loopback asset server and same-origin gateway. Local `pnpm dev:cloud` retains its normal build/watch behavior. It serves the actual Expo financial application, with `/api` on the same origin. The financial preview does not start the Next project page. No provider, production database, domain purchase or Mac installation is needed. This remains a shared synthetic development instance, without public banking identity or live bank connections.
 
 ## One-time account setup
 
@@ -31,7 +31,7 @@ The Dockerfile must remain portable: Railway Metal accepts cache mounts but reje
 
 Railway's current trial provides $5 in one-time credits and a 1 GB RAM limit; Free provides $1 monthly credits and 0.5 GB RAM. The running development supervisor was observed using approximately **1.3 GB RSS** across API, Metro and Next before build/compile peaks. A real Docker test with a **1 GiB limit** started the prepared API, then was killed for insufficient memory during the first browser bundle compilation. Use **at least 2 GB runtime memory** for this configuration; Free/Trial is not a working fit. Skipping redundant startup compilation does not remove the browser bundler's memory needs.
 
-The live Railway preview reached approximately **1.85 GB** while compiling the frontend on 2026-10-04. Its memory cap is now **3 GB** to provide headroom. The cap is a limit; metered consumption determines resource charges.
+The earlier development supervisor reached approximately **1.85 GB** on Railway while compiling the frontend on 2026-10-04. The compiled preview measured approximately **0.55 GB total RSS locally** after the same eight browser flows; deployed memory has not yet been measured. Its memory cap remains **3 GB** until deployed usage is verified. The cap is a limit; metered consumption determines resource charges.
 
 Hobby starts at **$5/month**, includes $5 of resource usage and charges additional usage above that amount. Current published RAM usage is $10/GB/month and CPU is $20/vCPU/month; this development service running continuously can exceed the $5 subscription. Review the dashboard's estimate and budget controls before activating a paid service. No subscription or payment has been activated by the repository work.
 
@@ -50,6 +50,10 @@ The local/cloud Codex instance keeps its own archive. Railway starts a separate 
 [Lilleri demo](https://lilleri-production.up.railway.app/) is deployed from fix commit `199f8f8`. Railway observed SUCCESS for deployment `fa15d61b` and redeployment `6975da48`. Public health, HTML, Expo bundle and demo API requests returned200. A fresh API read after redeployment preserved the original synthetic connection and all five account balances on `/data`.
 
 The same source passed13 launcher tests and all8 interactive browser checks against a new isolated local archive, including manual amounts, reload persistence, language settings and ZIP export verification; no console or page errors were observed. Public interactive writes and downloads still need user testing on the shared preview. Full evidence is in [railway-preview-validation.json](railway-preview-validation.json). This is a synthetic development preview; live banking and production MVP requirements remain open.
+
+## Compiled preview increment — 2026-10-04
+
+Commit `3efd4ab` reached Railway SUCCESS (`7dc1df94`). Runtime logs confirm the compiled app started on8080. Fresh public health and demo requests returned200; the original connection and all five exact account balances remained unchanged. Local evidence includes three asset-boundary tests, the required API/shared builds and all eight browser flows without console or page errors. The runtime uses the existing `/data/database` and recovery namespace unchanged.
 
 ## References
 

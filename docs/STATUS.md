@@ -1,5 +1,9 @@
 # Lilleri delivery status
 
+## Compiled Railway preview — 2026-10-04
+
+Commit `3efd4ab` reached Railway SUCCESS (`7dc1df94`). The image builds the API and exports the financial web UI once; runtime starts the API, loopback asset server and gateway, without Metro/Next/watchers. The existing volume/recovery namespace is unchanged. Fresh public health/demo reads preserved the original connection and all five exact account balances. Three asset-boundary tests and all eight local browser flows pass; local total RSS was approximately0.55GB. Deployed memory is not yet measured; retain the3GB cap. This establishes an online synthetic preview, with public user identity and real bank access still gated.
+
 ## Interactive development iteration — 2026-10-04
 
 `pnpm dev:cloud` now provides a supervised same-origin browser preview on port
@@ -18,8 +22,7 @@ and exact source restoration preserve the ledger. Browser manual writes target
 only an isolated fresh synthetic store. Reports are outside the checkout at
 `/workspace/.lilleri-validation/iterative-*`.
 
-The goal remains a real-bank/public MVP. The founder currently has no provider,
-hosting or domain resources. This iteration establishes a development workflow;
+The goal remains a real-bank/public MVP. The founder has a verified synthetic Railway preview; no provider account/contract or custom domain has been supplied. This iteration establishes a development workflow;
 unfinished P0 software, official adapter/access, production identity and deployed
 security/release acceptance remain open. See [repository analysis and next
 steps](operations/interactive-development.md) and the existing execution plan.
@@ -32,7 +35,7 @@ The persistent synthetic financial slice now integrates durable bounded sync job
 
 These extend exact money, optional local identity, forced financial RLS, audited runtime policy, selected-field encryption, profile erasure, masked support, rules, manual finance, notifications and raw cleanup. Expo uses the implemented paths; Next is a project/plan page and a separate local preview launcher enforces the documented zero-initial-cash scenario. Local evaluation tools validate split/metric/shadow-policy contracts; the original frozen toy fixture remains a regression runner. No real bank is connected.
 
-The **37 initial deliverables are foundational delivery**, not completion of the full P0 beta, P1 launch, P2 expansion or Later plan. Local implementation/testing can continue while provider/legal/empirical prerequisites are pending. Remaining technical work is named in the execution plan; it is not disguised as an external blocker. There is no public deployment, store submission, billable purchase, representative accuracy, legally cleared pilot or production-security acceptance claim.
+The **37 initial deliverables are foundational delivery**, not completion of the full P0 beta, P1 launch, P2 expansion or Later plan. Local implementation/testing can continue while provider/legal/empirical prerequisites are pending. Remaining technical work is named in the execution plan; it is not disguised as an external blocker. The public Railway URL hosts a shared synthetic preview. Store submission, billable purchases, representative accuracy, a legally cleared pilot and production-security acceptance remain unclaimed.
 
 ## Implemented extension and limits
 

@@ -5,14 +5,14 @@
 Current user goal: finish the real-bank/public MVP through an iterative
 development → manual test → feedback → minimal fix workflow. There is no
 provider account/contract or custom domain. The user has now created a Railway
-service linked to Lilleri; its initial Railpack build failed on the old commit.
+service linked to Lilleri; its synthetic preview is online with verified persistence.
 Do not call
 the synthetic preview the completed banking MVP. Remaining software P0 work and
 external prerequisites are in the execution plan and
 `docs/operations/interactive-development.md`.
 
 Current online-preview path: root Dockerfile, Node22.22/pnpm10.28 and the
-existing development supervisor on Railway. `/data` must persist database,
+compiled synthetic preview supervisor on Railway (`pnpm preview:build`, `tools/preview/run.mjs`). `/data` must persist database,
 independent keys and source journal; PORT and DEV_RECOVERY_PATH are supported.
 Detailed one-time service settings are in `docs/operations/railway-preview.md`.
 Use the existing development branch and automatic deploys after checked pushes.
@@ -87,7 +87,7 @@ Use at least2GB for the complete development image; Free/Trial cannot run it
 reliably. No paid plan was activated. Proofs in railway-* validation files.
 The Docker image uses --prepared to avoid repeating its build at startup; normal
 local development still builds before launch. The actual hosted HTTPS URL and
-automatic GitHub deploy need the user's service settings and remain unverified.
+automatic GitHub deployment are now verified as described above; this paragraph records the earlier local image proof.
 
 Proof/logs in `/workspace/.lilleri-validation/iterative-*`; browser writes used
 only separate `/workspace/.lilleri-validation/interactive-smoke/data`.
@@ -99,26 +99,9 @@ stdin/stdout redirected: plain nohup is killed by command-group cleanup and can
 leave detached child workers. Final log is `iterative-runtime.log`, launcher PID
 in `iterative-launcher.pid`; verify the actual runner/process identity before
 stopping it. A managed persistent terminal is the portable alternative.
-Latest user preference: remain in this Codex chat with an online browser
-preview, without Mac installations, ZIP downloads or a move to Replit.
-Do not propose the earlier source-snapshot/local-project workflow again.
-This cloud task has no available port-forwarding tool or verified public
-preview URL. Mac localhost does not reach cloud8080. Environment status at
-revision29 confirms enforced package-manager-only HTTP networking, no
-configured capabilities/credentials, VPNfalse and no TCP grants. The runtime
-is healthy internally; do not describe it as reachable from the user's Mac.
-An authorized public ingress to this environment's8080 would retain the
-same source, hot reload and archive. No callable configuration workflow is
-available to activate one. The user has begun the separate Railway hosting setup.
-Sites Workers hosting is not a drop-in host for the current Node/PGlite
-supervisor; do not rewrite the app or silently create a different app merely
-to present an approximate preview. Keep all source/archives while this
-infrastructure prerequisite is unresolved.
-The previous cloud/live-preview goal was blocked on native ingress. The user
-then requested concrete instructions and began connecting Railway. Complete
-that setup from the current Docker configuration; do not repeat tunnel/native
-ingress investigations or reset archives. A Railway HTTPS endpoint is not yet
-verified; await its URL/status and diagnose the actual deployed commit.
+Latest user preference: remain in this Codex chat with the existing Railway online preview, without Mac installation, source ZIPs or a move to Replit. Railway public ingress is verified. Do not restart obsolete tunnel or Codex-native ingress investigations. Latest user instruction: proceed across the seven proposed development phases and parallelize/optimize their dependencies. Six isolated implementation tracks are active: sync identity, pending/source decisions, reversible history import, server ledger search, hosted identity/recovery, official sandbox adapter. Main integration branch is `codex/roadmap-integration`; checked releases push normally to `claude/admiring-hypatia-yzh6nq`.
+
+Compiled-preview increment `3efd4ab65a361931f5e64f5ff3380943a56f227c` reached Railway SUCCESS (`7dc1df94-42f4-40c0-8caf-72b3dcd610e8`). Fresh public health/demo reads preserved the original connection and exact five account balances. Local runtime uses approximately0.55GB total RSS after8browser flows; deployed memory is not measured, so keep3GB cap. Assets have3tested traversal/ownership/cache boundaries. Keep current `/data` archive/recovery namespace, one replica and existing API synthetic/identity guards. No real-bank or mail/KMS resources have been supplied. An optional asynchronous resource-status question is pending; never ask the user to paste secrets.
 
 > Memoria operativa corrente, 2026-10-03. Mandato in `docs/BRIEF.md`, prove e
 > limiti in `docs/STATUS.md`, tutti i40 epic in `docs/product/execution-plan.md`.

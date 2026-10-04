@@ -129,5 +129,20 @@
     "demoStatus": 200,
     "method": "Exa fetch plus Railway HTTP logs; cache-busting query for persistence comparison",
     "hostedInteractiveMutationsTested": false
+  },
+  "compiledPreview": {
+    "commit": "3efd4ab65a361931f5e64f5ff3380943a56f227c",
+    "deploymentId": "7dc1df94-42f4-40c0-8caf-72b3dcd610e8",
+    "deploymentStatus": "SUCCESS",
+    "observedAt": "2026-10-04T10:05:32.557Z",
+    "healthHTTP": 200,
+    "demoHTTP": 200,
+    "sameConnectionAndExactAccountsPreserved": true,
+    "localBrowserChecksPassed": 8,
+    "staticBoundaryTestsPassed": 3,
+    "localMeasuredTotalRSSBytesApprox": 550000000,
+    "deployedMemoryMeasured": false,
+    "archiveNamespaceChanged": false,
+    "runtimeBundlers": false
   }
 }
