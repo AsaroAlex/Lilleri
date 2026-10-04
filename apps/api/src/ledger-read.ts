@@ -1,11 +1,25 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
 import { type Database, schema } from '@lilleri/database'
 import type { Transaction } from '@lilleri/domain'
-import { and, asc, desc, eq, gt, inArray, lt, or, type SQL, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  inArray,
+  lt,
+  or,
+  type SQL,
+  sql,
+} from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { ProfileEncryption } from './encryption.js'
+import { pendingLifecycleReadPredicate, pendingLifecycleSourceSql } from './pending-lifecycle.js'
+import { pendingLifecycles, sourceRemovalDecisions } from './pending-lifecycle-schema.js'
 import { transactionPrivacy } from './privacy-schema.js'
 import { notFound, Problem } from './problem.js'
 import { json } from './service.js'
@@ -238,25 +252,9 @@ export class LedgerReadService {
       filters.status ? eq(schema.transactions.status, filters.status) : undefined,
       filters.from ? sql`${datedDay} >= ${filters.from}` : undefined,
       filters.to ? sql`${datedDay} <= ${filters.to}` : undefined,
-      // Validate the complete same-source explicit replacement even when its booking is
-      // outside the requested window. Raw ownership/export still retains the old hold.
-      sql`NOT (${schema.transactions.status} = 'pending' AND EXISTS (
-        SELECT 1 FROM sync_source_presence AS presence JOIN transactions AS replacement
-          ON replacement.profile_id = presence.profile_id
-          AND replacement.id = presence.evidence->>'replacementTransactionId'
-        WHERE presence.profile_id = ${this.profileId}
-          AND presence.transaction_id = ${schema.transactions.id}
-          AND presence.state = 'pending_replaced'
-          AND presence.evidence->>'version' = 'sync-presence-v1'
-          AND presence.evidence->>'rule' = 'provider_link_exact'
-          AND replacement.status = 'booked'
-          AND replacement.account_id = ${schema.transactions.accountId}
-          AND replacement.connection_id = ${schema.transactions.connectionId}
-          AND replacement.provider_id = ${schema.transactions.providerId}
-          AND replacement.currency = ${schema.transactions.currency}
-          AND replacement.amount_minor = ${schema.transactions.amountMinor}
-          AND replacement.related_transaction_id = ${schema.transactions.id}
-      ))`,
+      // Evaluate source decisions and complete replacement evidence independently of
+      // the requested date window. Explicit undo must override old presence proof.
+      pendingLifecycleReadPredicate(this.profileId),
     ) as SQL
   }
   private after(cursor: Pick<Cursor, 'day' | 'id'> | null): SQL | undefined {
@@ -274,6 +272,12 @@ export class LedgerReadService {
     for (const [table, profile, key] of [
       [schema.transactions, schema.transactions.profileId, schema.transactions.id],
       [syncPresence, syncPresence.profileId, syncPresence.transactionId],
+      [pendingLifecycles, pendingLifecycles.profileId, pendingLifecycles.transactionId],
+      [
+        sourceRemovalDecisions,
+        sourceRemovalDecisions.profileId,
+        sourceRemovalDecisions.transactionId,
+      ],
       [transactionPrivacy, transactionPrivacy.profileId, transactionPrivacy.transactionId],
       [schema.accounts, schema.accounts.profileId, schema.accounts.id],
       [schema.profiles, schema.profiles.id, schema.profiles.id],
@@ -315,7 +319,10 @@ export class LedgerReadService {
       !byteLimited
     ) {
       const rows = await db
-        .select()
+        .select({
+          ...getTableColumns(schema.transactions),
+          source: pendingLifecycleSourceSql(this.profileId),
+        })
         .from(schema.transactions)
         .where(and(this.where(filters), this.after(last)))
         .orderBy(desc(financialDay), asc(schema.transactions.id))

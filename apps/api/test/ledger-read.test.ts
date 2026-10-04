@@ -11,8 +11,10 @@ import { ProfileEncryption } from '../src/encryption.js'
 import { createLocalSyntheticKeyManagement } from '../src/encryption-local.js'
 import { LOCAL_TERMS_VERSION } from '../src/identity.js'
 import { memberships, session, user } from '../src/identity-schema.js'
+import { pendingLifecycles } from '../src/pending-lifecycle-schema.js'
 import { transactionPrivacy } from '../src/privacy-schema.js'
 import { DEFAULT_SYNC_CONFIGURATION } from '../src/runtime-config.js'
+import { syncHash } from '../src/sync-provider.js'
 import { emptySyncReport, syncJobs, syncPresence } from '../src/sync-schema.js'
 
 let handle: DatabaseHandle, encryption: ProfileEncryption, vault: string
@@ -120,6 +122,129 @@ async function fixture(secure = true) {
     projection,
   }
 }
+type OwnedFixture = Awaited<ReturnType<typeof fixture>>
+async function cursors(owned: OwnedFixture) {
+  const search = (await owned.search('?limit=1')).json()
+  const projection = (await owned.projection('?limit=1')).json()
+  expect(search.nextCursor).toBeTypeOf('string')
+  expect(projection.nextCursor).toBeTypeOf('string')
+  return { search: search.nextCursor as string, projection: projection.nextCursor as string }
+}
+async function rejectedCursors(owned: OwnedFixture, previous: Awaited<ReturnType<typeof cursors>>) {
+  for (const response of [
+    await owned.search(`?limit=1&cursor=${previous.search}`),
+    await owned.projection(`?limit=1&cursor=${previous.projection}`),
+  ]) {
+    expect(response.statusCode, response.payload).toBe(409)
+    expect(response.json().code).toBe('ledger_changed')
+  }
+}
+async function presence(
+  owned: OwnedFixture,
+  transactionId: string,
+  replacementTransactionId?: string,
+) {
+  const jobId = `ledger_presence_job_${randomUUID()}`,
+    consentId = `ledger_presence_consent_${randomUUID()}`
+  await handle.db.insert(schema.consents).values({
+    id: consentId,
+    profileId: owned.profileId,
+    connectionId: owned.connectionId,
+    purpose: 'account_information',
+    grantedAt: baseAt,
+    expiresAt: '2026-12-01T00:00:00.000Z',
+    provider: 'mock-italian',
+  })
+  await handle.db.insert(syncJobs).values({
+    id: jobId,
+    profileId: owned.profileId,
+    connectionId: owned.connectionId,
+    consentId,
+    providerId: 'mock-italian',
+    requestId: randomUUID(),
+    requestHash: 'b'.repeat(64),
+    mode: 'user_present',
+    requestedFrom: '2026-10-01',
+    requestedTo: '2026-10-04',
+    state: 'completed',
+    reason: null,
+    configurationRevision: 1,
+    configurationDigest: 'b'.repeat(64),
+    configuration: DEFAULT_SYNC_CONFIGURATION,
+    providerPolicy: new MockItalianProvider().syncMetadata(),
+    leaseToken: null,
+    leaseExpiresAt: null,
+    leaseEpoch: 0,
+    failures: 0,
+    availableAt: baseAt,
+    revision: 1,
+    report: emptySyncReport(),
+    createdAt: baseAt,
+    updatedAt: baseAt,
+    completedAt: baseAt,
+  })
+  await handle.db.insert(syncPresence).values({
+    transactionId,
+    profileId: owned.profileId,
+    connectionId: owned.connectionId,
+    accountId: owned.accountId,
+    state: replacementTransactionId ? 'pending_replaced' : 'removed_by_source',
+    missingCompletions: replacementTransactionId ? 0 : 2,
+    lastCompleteJobId: jobId,
+    evidence: {
+      version: 'sync-presence-v1',
+      snapshotId: 'synthetic-read-fixture',
+      rule: replacementTransactionId ? 'provider_link_exact' : 'two_complete_windows',
+      ...(replacementTransactionId ? { replacementTransactionId } : {}),
+    },
+    updatedAt: baseAt,
+  })
+}
+async function pendingFixture(changedAmount: boolean) {
+  const owned = await fixture(),
+    id = randomUUID(),
+    holdId = `${id}_hold`,
+    replacementId = `${id}_booked`,
+    amountMinor = changedAmount ? '-124' : '-123',
+    state = changedAmount ? ('amount_change_review' as const) : ('replaced' as const)
+  await owned.insert([
+    { id: holdId, status: 'pending', bookedOn: null, authorizedOn: '2026-10-01' },
+    { id: replacementId, amountMinor: BigInt(amountMinor), relatedTransactionId: holdId },
+    { id: `${id}_stable_a` },
+    { id: `${id}_stable_b` },
+  ])
+  await presence(owned, holdId, replacementId)
+  const payload = {
+    version: 'pending-lifecycle-v1',
+    state,
+    pending: { amountMinor: '-123', currency: 'EUR', status: 'pending', revision: 1 },
+    observed: { amountMinor, currency: 'EUR', status: 'booked', revision: 1 },
+    replacement: { id: replacementId, amountMinor, currency: 'EUR', status: 'booked', revision: 1 },
+    evidence: null,
+    carried: [],
+    decision: null,
+  }
+  await handle.db.insert(pendingLifecycles).values({
+    transactionId: holdId,
+    profileId: owned.profileId,
+    connectionId: owned.connectionId,
+    accountId: owned.accountId,
+    replacementTransactionId: replacementId,
+    firstSeenAt: baseAt,
+    state,
+    revision: 1,
+    pendingRevision: 1,
+    replacementRevision: 1,
+    digest: syncHash(payload),
+    payload: await encryption.encryptJson(
+      handle.db,
+      { profileId: owned.profileId, table: 'pending_lifecycles', column: 'payload', rowId: holdId },
+      payload,
+    ),
+    updatedAt: baseAt,
+  })
+  return { ...owned, holdId }
+}
 beforeAll(async () => {
   const url = process.env.PG_TEST_DATABASE_URL
   handle = await openDatabase(url ? { driver: 'postgres', url } : { driver: 'pglite' })
@@ -140,6 +265,96 @@ afterAll(async () => {
 })
 
 describe('authoritative owned ledger read model', () => {
+  test('scoped HTTP keep-manual/remove/undo changes both read projections, rejects old cursors and leaves encrypted canonical rows intact', async () => {
+    const owned = await fixture(),
+      other = await fixture(),
+      id = randomUUID(),
+      transactionId = `${id}_source_removed`
+    await owned.insert([{ id: transactionId }, { id: `${id}_stable_a` }, { id: `${id}_stable_b` }])
+    await presence(owned, transactionId)
+    const raw = () =>
+      handle.db
+        .select()
+        .from(schema.transactions)
+        .where(eq(schema.transactions.profileId, owned.profileId))
+        .orderBy(schema.transactions.id)
+    const original = await raw()
+    const initial = (await owned.app.inject('/v1/reconciliation/source-removals')).json()[0]
+    const input = {
+      transactionId,
+      revision: initial.revision,
+      transactionRevision: initial.transactionRevision,
+      presenceDigest: initial.presenceDigest,
+      choice: 'keep_manual',
+    }
+    const beforeForeign = await cursors(owned)
+    const foreign = await other.app.inject({
+      method: 'POST',
+      url: '/v1/reconciliation/source-removals/decision',
+      payload: input,
+    })
+    expect(foreign.statusCode, foreign.payload).toBe(404)
+    expect((await owned.search(`?limit=1&cursor=${beforeForeign.search}`)).statusCode).toBe(200)
+    let revision = input.revision
+    for (const choice of ['keep_manual', 'remove', 'undo'] as const) {
+      const previous = await cursors(owned)
+      const response = await owned.app.inject({
+        method: 'POST',
+        url: '/v1/reconciliation/source-removals/decision',
+        payload: { ...input, revision, choice },
+      })
+      expect(response.statusCode, response.payload).toBe(200)
+      revision = response.json().revision
+      await rejectedCursors(owned, previous)
+      for (const page of [(await owned.search()).json(), (await owned.projection()).json()]) {
+        const transaction = page.items.find((item: { id: string }) => item.id === transactionId)
+        if (choice === 'remove') expect(transaction).toBeUndefined()
+        else expect(transaction.source).toBe(choice === 'keep_manual' ? 'manual' : 'bank')
+      }
+      expect(await raw()).toEqual(original)
+    }
+  })
+
+  test.each([true, false])(
+    'scoped HTTP pending choice/undo fences both cursors, restores the reservation despite old presence proof and retains canonical history (changed amount: %s)',
+    async (changedAmount) => {
+      const owned = await pendingFixture(changedAmount)
+      const raw = () =>
+        handle.db
+          .select()
+          .from(schema.transactions)
+          .where(eq(schema.transactions.profileId, owned.profileId))
+          .orderBy(schema.transactions.id)
+      const original = await raw()
+      let view = (await owned.app.inject('/v1/reconciliation/pending')).json()[0]
+      const actions = changedAmount ? (['accept', 'undo'] as const) : (['undo'] as const)
+      for (const action of actions) {
+        const previous = await cursors(owned)
+        const response = await owned.app.inject({
+          method: 'POST',
+          url: '/v1/reconciliation/pending/decision',
+          payload: {
+            transactionId: view.transactionId,
+            revision: view.revision,
+            expectedDigest: view.digest,
+            replacementRevision: view.replacementRevision,
+            action,
+          },
+        })
+        expect(response.statusCode, response.payload).toBe(200)
+        view = response.json()
+        await rejectedCursors(owned, previous)
+        for (const page of [(await owned.search()).json(), (await owned.projection()).json()]) {
+          expect(page.items.some((item: { id: string }) => item.id === owned.holdId)).toBe(
+            action === 'undo',
+          )
+          expect(page.items).toHaveLength(action === 'undo' ? 4 : 3)
+        }
+        expect(await raw()).toEqual(original)
+      }
+    },
+  )
+
   test('expiring page tokens and bounded response bytes require an explicit restart/export instead of accepting a partial snapshot', async () => {
     const owned = await fixture(false),
       id = randomUUID()
