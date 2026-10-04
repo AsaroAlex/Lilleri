@@ -12,6 +12,7 @@ import {
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { FinanceVisual } from './src/FinanceVisual'
 import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
 import { useI18n } from './src/i18n/context'
 
@@ -138,6 +139,7 @@ export function ConnectionsPanel({
   const [catalogue, setCatalogue] = useState<ConnectionInstitutionCatalogueDto | null>(null)
   const [lifecycles, setLifecycles] = useState<readonly ConnectionLifecycleDto[]>([])
   const [kind, setKind] = useState<ConnectionAccountKind>('current')
+  const emptyFixtures = 'fixtureMode' in overview && overview.fixtureMode === 'empty'
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -433,7 +435,9 @@ export function ConnectionsPanel({
       <Text accessibilityRole="header" aria-level={2} style={s.title}>
         {t('connections.title')}
       </Text>
-      <Text style={s.body}>{t('connections.syntheticDisclosure')}</Text>
+      <Text style={s.body}>
+        {t(emptyFixtures ? 'connections.setupHelp' : 'connections.syntheticDisclosure')}
+      </Text>
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
           {error}
@@ -450,68 +454,89 @@ export function ConnectionsPanel({
           <Text style={s.body}>{t('connections.loading')}</Text>
         </View>
       )}
-      <View style={s.card}>
-        <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
-          {t('connections.availableKinds')}
-        </Text>
-        <View style={s.row}>
-          {(Object.keys(kindLabels) as ConnectionAccountKind[]).map((value) => (
-            <Pressable
-              key={value}
-              accessibilityRole="radio"
-              aria-checked={kind === value}
-              aria-disabled={busy}
-              accessibilityState={{ checked: kind === value, disabled: busy }}
-              disabled={busy}
-              onPress={() => setKind(value)}
-              style={[s.choice, kind === value && s.selectedChoice]}
-            >
-              <Text style={s.body}>{t(kindLabels[value])}</Text>
-            </Pressable>
+      {emptyFixtures ? (
+        <View style={s.card}>
+          <FinanceVisual kind="bank" size={80} mode={theme} />
+          <Text style={s.subtitle}>{t('connections.setupTitle')}</Text>
+          {(
+            [
+              ['connections.setupIdentity', 'connections.setupPending'],
+              ['connections.setupProvider', 'connections.setupPending'],
+              ['connections.setupConsent', 'connections.setupWaiting'],
+            ] as const
+          ).map(([label, state], index) => (
+            <View key={label} style={s.inline}>
+              <Text style={s.body}>
+                {index + 1}. {t(label)}
+              </Text>
+              <Text style={s.body}>· {t(state)}</Text>
+            </View>
           ))}
         </View>
-        {catalogue?.institutions.map((institution) => {
-          const permitted = canConnectFixture(catalogue, institution, kind)
-          const linked = overview.connections.some(
-            (connection) =>
-              connection.institutionId === institution.id &&
-              connection.providerId === institution.providerId &&
-              connection.status !== 'revoked',
-          )
-          return (
-            <View key={`${institution.providerId}:${institution.id}`} style={s.institution}>
-              <Text style={s.subtitle}>{institution.name}</Text>
-              <Text style={s.body}>
-                {t(kindLabels[kind])} · {t(coverageLabel(institution, kind))}
-              </Text>
-              {permitted && <Text style={s.body}>{t('connections.syntheticKinds')}</Text>}
-              <View style={s.row}>
-                {permitted ? (
-                  button(
-                    linked ? t('connections.linked') : t('connections.connect'),
-                    () => {
-                      void run(async () => {
-                        const connection = await api.connectInstitution(institution.id, kind)
-                        return [connection.id]
-                      }, t('connections.connected'))
-                    },
-                    linked || loading,
-                  )
-                ) : (
-                  <Text style={s.body}>{t('connections.manualUnavailable')}</Text>
-                )}
-                {button(t('connections.manual'), onManualFallback, false, true)}
+      ) : (
+        <View style={s.card}>
+          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+            {t('connections.availableKinds')}
+          </Text>
+          <View style={s.row}>
+            {(Object.keys(kindLabels) as ConnectionAccountKind[]).map((value) => (
+              <Pressable
+                key={value}
+                accessibilityRole="radio"
+                aria-checked={kind === value}
+                aria-disabled={busy}
+                accessibilityState={{ checked: kind === value, disabled: busy }}
+                disabled={busy}
+                onPress={() => setKind(value)}
+                style={[s.choice, kind === value && s.selectedChoice]}
+              >
+                <Text style={s.body}>{t(kindLabels[value])}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {catalogue?.institutions.map((institution) => {
+            const permitted = canConnectFixture(catalogue, institution, kind)
+            const linked = overview.connections.some(
+              (connection) =>
+                connection.institutionId === institution.id &&
+                connection.providerId === institution.providerId &&
+                connection.status !== 'revoked',
+            )
+            return (
+              <View key={`${institution.providerId}:${institution.id}`} style={s.institution}>
+                <Text style={s.subtitle}>{institution.name}</Text>
+                <Text style={s.body}>
+                  {t(kindLabels[kind])} · {t(coverageLabel(institution, kind))}
+                </Text>
+                {permitted && <Text style={s.body}>{t('connections.syntheticKinds')}</Text>}
+                <View style={s.row}>
+                  {permitted ? (
+                    button(
+                      linked ? t('connections.linked') : t('connections.connect'),
+                      () => {
+                        void run(async () => {
+                          const connection = await api.connectInstitution(institution.id, kind)
+                          return [connection.id]
+                        }, t('connections.connected'))
+                      },
+                      linked || loading,
+                    )
+                  ) : (
+                    <Text style={s.body}>{t('connections.manualUnavailable')}</Text>
+                  )}
+                  {button(t('connections.manual'), onManualFallback, false, true)}
+                </View>
               </View>
-            </View>
-          )
-        })}
-        {!loading && catalogue !== null && !catalogue.institutions.length && (
-          <Text style={s.body}>{t('connections.noCoverage')}</Text>
-        )}
-        {!loading &&
-          !catalogue?.institutions.length &&
-          button(t('connections.useManual'), onManualFallback, false, true)}
-      </View>
+            )
+          })}
+          {!loading && catalogue !== null && !catalogue.institutions.length && (
+            <Text style={s.body}>{t('connections.noCoverage')}</Text>
+          )}
+          {!loading &&
+            !catalogue?.institutions.length &&
+            button(t('connections.useManual'), onManualFallback, false, true)}
+        </View>
+      )}
       {overview.connections
         .filter((connection) => connection.providerId !== 'local-manual')
         .map((connection) => {

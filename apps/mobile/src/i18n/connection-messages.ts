@@ -1,4 +1,14 @@
 export const CONNECTION_MESSAGE_PAIRS = {
+  'connections.setupTitle': ['Colleghiamo la tua banca.', 'Connect your bank.'],
+  'connections.setupHelp': [
+    'Il collegamento reale deve ancora essere attivato. Nessuna credenziale bancaria viene richiesta in questa anteprima.',
+    'The real connection still needs activation. This preview does not ask for bank credentials.',
+  ],
+  'connections.setupIdentity': ['Accesso personale protetto', 'Protected personal sign-in'],
+  'connections.setupProvider': ['Servizio di collegamento bancario', 'Bank connection service'],
+  'connections.setupConsent': ['Autorizzazione nella tua banca', 'Authorisation at your bank'],
+  'connections.setupPending': ['Da configurare', 'Needs setup'],
+  'connections.setupWaiting': ['Dopo la configurazione', 'After setup'],
   'connections.historyInterruption': [
     'Accesso interrotto dal {from} al rinnovo del {to}.',
     'Access interrupted from {from} until renewal on {to}.',

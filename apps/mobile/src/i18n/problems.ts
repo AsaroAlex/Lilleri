@@ -199,6 +199,10 @@ export const PROBLEM_MESSAGES = {
     'La fonte non è disponibile. I dati salvati restano visibili con la loro data.',
     'The source is unavailable. Saved data remains visible with its date.',
   ],
+  public_identity_required: [
+    'Per usare dati personali serve un accesso protetto. Questa anteprima è condivisa.',
+    'Personal data needs a protected sign-in. This preview is shared.',
+  ],
   rate_limited: [
     'Troppi tentativi. Attendi prima di riprovare.',
     'Too many attempts. Wait before trying again.',

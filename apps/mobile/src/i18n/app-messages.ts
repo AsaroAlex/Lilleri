@@ -1,5 +1,88 @@
 /** Italian App master with explicit British English ICU pairs. */
 export const APP_MESSAGE_PAIRS = {
+  'app.syntheticBalance': ['Saldo dimostrativo', 'Sample balance'],
+  'app.settings': ['Impostazioni', 'Settings'],
+  'app.privacyAndData': ['Privacy e dati', 'Privacy and data'],
+  'app.preferences': ['Preferenze', 'Preferences'],
+  'app.preferencesHelp': ['Lingua, fuso orario e valuta', 'Language, timezone and currency'],
+  'app.privacyHelp': [
+    'Consensi, esportazione e gestione dei dati',
+    'Consent, export and data management',
+  ],
+  'app.connectionsHelp': ['Banche, conti e aggiornamenti', 'Banks, accounts and updates'],
+  'app.notificationsHelp': ['Scegli cosa ricevere', 'Choose what to receive'],
+  'app.cleanBadge': ['Anteprima', 'Preview'],
+  'app.cleanIntro': [
+    'Dati di prova rimossi. Collegamento bancario da configurare.',
+    'Sample data removed. Bank connection needs to be configured.',
+  ],
+  'app.emptyHomeTitle': ['Partiamo dai tuoi conti.', 'Start with your accounts.'],
+  'app.emptyHomeCopy': [
+    'Saldi, spese e movimenti, tutti al loro posto.',
+    'Balances, spending and transactions, each in its place.',
+  ],
+  'app.connectionSetup': ['Prepara il collegamento', 'Set up a connection'],
+  'app.personalAccessNeeded': [
+    'Per usare dati personali serve prima un accesso protetto. Questa anteprima è condivisa.',
+    'Personal data needs a protected sign-in first. This preview is shared.',
+  ],
+  'app.spendingShort': ['Spese contabilizzate', 'Booked spending'],
+  'app.incomeShort': ['Entrate', 'Income'],
+  'app.pendingShort': ['In attesa', 'Pending'],
+  'app.summaryDetails': ['Come leggiamo questi importi', 'How we calculate these amounts'],
+  'app.dayUnknown': ['Data non disponibile', 'Date unavailable'],
+  'app.categoryReviewHeading': ['Categorie da scegliere', 'Categories to choose'],
+  'app.categoryReviewHelp': [
+    'Scegli dove contare la spesa. Puoi sempre cambiare idea.',
+    'Choose where to count the spending. You can always change your mind.',
+  ],
+  'app.linkReviewHeading': ['Movimenti da collegare', 'Transactions to link'],
+  'app.verifiedDecisions': ['Già verificati', 'Already reviewed'],
+  'app.matchQuestion.duplicate': ['Sono lo stesso acquisto?', 'Are these the same purchase?'],
+  'app.matchQuestion.pending_to_booked': [
+    'È lo stesso movimento, ora contabilizzato?',
+    'Is this the same transaction, now booked?',
+  ],
+  'app.matchQuestion.internal_transfer': [
+    'Hai spostato denaro tra questi conti?',
+    'Did you move money between these accounts?',
+  ],
+  'app.matchQuestion.card_settlement': [
+    'Questo addebito salda la carta?',
+    'Does this payment settle the card?',
+  ],
+  'app.matchQuestion.refund': [
+    'È il rimborso di questa spesa?',
+    'Is this a refund for this expense?',
+  ],
+  'app.matchQuestion.cash_transfer': [
+    'È denaro spostato da o verso i contanti?',
+    'Is this money moved to or from cash?',
+  ],
+  'app.matchEffect.duplicate': [
+    'Confermando, conteremo la spesa una volta sola.',
+    'Confirming counts the purchase only once.',
+  ],
+  'app.matchEffect.pending_to_booked': [
+    'Confermando, il movimento contabilizzato sostituirà quello in attesa nel riepilogo.',
+    'Confirming uses the booked transaction instead of the pending one in the summary.',
+  ],
+  'app.matchEffect.internal_transfer': [
+    'Confermando, il trasferimento non sarà contato come una spesa.',
+    'Confirming keeps the transfer out of spending.',
+  ],
+  'app.matchEffect.card_settlement': [
+    'Confermando, il saldo della carta non sarà contato come una seconda spesa.',
+    'Confirming keeps the card settlement from counting as another expense.',
+  ],
+  'app.matchEffect.refund': [
+    'Confermando, il rimborso sarà collegato alla spesa originale.',
+    'Confirming links the refund to the original expense.',
+  ],
+  'app.matchEffect.cash_transfer': [
+    'Confermando, lo spostamento di contanti non sarà contato come una spesa.',
+    'Confirming keeps the cash transfer out of spending.',
+  ],
   'app.offlineHeading': [
     'Consultazione temporanea senza connessione',
     'Temporary view without a connection',

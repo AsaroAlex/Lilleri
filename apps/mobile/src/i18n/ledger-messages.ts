@@ -1,4 +1,12 @@
 export const LEDGER_MESSAGE_PAIRS = {
+  'ledger.filters': ['Filtri', 'Filters'],
+  'ledger.account': ['Conto', 'Account'],
+  'ledger.currency': ['Valuta', 'Currency'],
+  'ledger.period': ['Periodo', 'Date range'],
+  'ledger.clearFilters': ['Azzera filtri', 'Clear filters'],
+  'ledger.historyShort': ['Storico', 'History'],
+  'ledger.last90DaysShort': ['90 giorni', '90 days'],
+  'ledger.removeFilter': ['Rimuovi filtro: {filter}', 'Remove filter: {filter}'],
   'ledger.historySearch': ['Cerca nello storico', 'Search transaction history'],
   'ledger.searchFields': ['Nome, descrizione o riferimento', 'Name, description or reference'],
   'ledger.allHistory': ['Tutto lo storico', 'All history'],

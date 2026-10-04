@@ -45,8 +45,9 @@ import {
   WebAccessibilityStyles,
 } from './src/accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './src/accessibility/web-focus'
+import { FinanceHome } from './src/FinanceHome'
+import { CategoryVisual, FinanceVisual } from './src/FinanceVisual'
 import { FxEvidencePanel } from './src/FxEvidencePanel'
-import { HomeQuickActions } from './src/HomeQuickActions'
 import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
 import type { LocalIdentitySession } from './src/identity-client'
@@ -89,7 +90,7 @@ const apiBaseUrl =
   (hostedIdentityMode && typeof window !== 'undefined' ? window.location.origin : undefined) ??
   (identityMode ? 'http://localhost:3001' : 'http://127.0.0.1:3001')
 const onlineApi = createApiClient(apiBaseUrl)
-const tabs = ['Home', 'Movimenti', 'Da controllare', 'Ricorrenti', 'Privacy'] as const
+const tabs = ['Home', 'Movimenti', 'Da controllare', 'Ricorrenti', 'Impostazioni'] as const
 type Tab = (typeof tabs)[number]
 type ThemeColors = typeof colors.light | typeof colors.dark
 type Scope = 'once' | 'merchant'
@@ -98,7 +99,7 @@ const tabMessages: Record<Tab, MessageKey> = {
   Movimenti: 'nav.transactions',
   'Da controllare': 'nav.review',
   Ricorrenti: 'nav.recurring',
-  Privacy: 'nav.privacy',
+  Impostazioni: 'app.settings',
 }
 const manageMessages = {
   rules: 'app.rules',
@@ -108,6 +109,8 @@ const manageMessages = {
   understanding: 'app.understanding',
   notifications: 'app.notifications',
   merchants: 'merchant.title',
+  privacy: 'app.privacyAndData',
+  preferences: 'app.preferences',
 } as const satisfies Record<string, MessageKey>
 type DisplayPreferences = { readonly locale: ProfileLocale; readonly timezone: string }
 const defaultDisplayPreferences: DisplayPreferences = {
@@ -173,7 +176,6 @@ function AppSurface({
   const s = useMemo(() => styles(c), [c])
   const windowWidth = useWindowDimensions().width
   const wide = windowWidth >= 960
-  const homeWide = windowWidth >= 1180
   const [fontsLoaded, fontError] = useFonts({
     Geist: require('../../packages/brand/fonts/Geist-Regular.ttf'),
     GeistMedium: require('../../packages/brand/fonts/Geist-Medium.ttf'),
@@ -199,8 +201,12 @@ function AppSurface({
     | 'understanding'
     | 'notifications'
     | 'merchants'
+    | 'privacy'
+    | 'preferences'
     | null
   >(null)
+  const [showVerified, setShowVerified] = useState(false)
+  const [expandedMatch, setExpandedMatch] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'review'>('all')
   const [detailId, setDetailId] = useState<string | null>(null)
   const [recoveryAccount, setRecoveryAccount] = useState<{
@@ -663,6 +669,14 @@ function AppSurface({
       (connection) => connection.status === 'active' && connection.providerId !== 'local-manual',
     ) ?? []
   const reviewCount = data?.analysis.reviewItems.length ?? 0
+  const emptyFixtures = Boolean(data && 'fixtureMode' in data && data.fixtureMode === 'empty')
+  const navIcons = {
+    Home: 'home',
+    Movimenti: 'wallet',
+    'Da controllare': 'review',
+    Ricorrenti: 'recurring',
+    Impostazioni: 'settings',
+  } as const
   const orderedMatches = [...(data?.analysis.matches ?? [])].sort((first, second) => {
     const awaiting = (state: string) => (state === 'suggested' || state === 'undone' ? 0 : 1)
     return awaiting(first.state) - awaiting(second.state)
@@ -701,56 +715,72 @@ function AppSurface({
     setManage(null)
   }
 
-  const transactionRow = (transaction: TransactionDto) => {
-    const categoryName = i18n.categoryLabel(
-      classification(transaction.id)?.categoryId ?? 'uncategorised',
-    )
+  const transactionRow = (transaction: TransactionDto, grouped = false) => {
+    const categoryId = classification(transaction.id)?.categoryId ?? 'uncategorised'
+    const categoryName = i18n.categoryLabel(categoryId)
     const account = data?.accounts.find((item) => item.id === transaction.accountId)
     const match = data?.analysis.matches.find(
       (item) => item.state === 'confirmed' && item.transactionIds.includes(transaction.id),
     )
     const excluded =
       match && ['internal_transfer', 'card_settlement', 'cash_transfer'].includes(match.type)
+    const longAmount = windowWidth < 600 && amount(transaction.amount, true).length > 14
     return (
       <Pressable
         key={transaction.id}
         accessibilityRole="button"
-        accessibilityLabel={t('app.openTransaction', {
-          name: name(transaction),
-          amount: accessibleAmount(transaction.amount),
-          category: categoryName,
-          status: statusLabels[transaction.status],
-        })}
+        accessibilityLabel={`${t('app.openTransaction', { name: name(transaction), amount: accessibleAmount(transaction.amount), category: categoryName, status: statusLabels[transaction.status] })}, ${account?.name ?? t('app.demoAccount')}, ${date(transaction.bookedOn ?? transaction.authorizedOn)}`}
         onPress={() => openDetail(transaction)}
         style={({ pressed }) => [s.transaction, pressed && s.pressed]}
       >
-        <View style={s.transactionTop}>
-          <View style={s.transactionName}>
-            <Text style={s.strong}>{name(transaction)}</Text>
-            <Text style={s.caption}>
-              {date(transaction.bookedOn ?? transaction.authorizedOn)} ·{' '}
-              {account?.name ?? t('app.demoAccount')}
+        <CategoryVisual categoryId={categoryId} size={40} mode={theme} />
+        <View style={s.transactionName}>
+          <Text numberOfLines={1} style={s.transactionTitle}>
+            {name(transaction)}
+          </Text>
+          <Text numberOfLines={1} style={s.categoryLabel}>
+            {categoryName} · {account?.name ?? t('app.demoAccount')}
+          </Text>
+          {(!grouped || transaction.status !== 'booked' || excluded) && (
+            <Text
+              style={[
+                s.transactionStatus,
+                transaction.status === 'pending' && { color: c.warning },
+              ]}
+            >
+              {!grouped ? `${date(transaction.bookedOn ?? transaction.authorizedOn)} · ` : ''}
+              {transaction.status !== 'booked' ? statusLabels[transaction.status] : ''}
+              {excluded ? t('app.excludedSpend') : ''}
             </Text>
-          </View>
-          <Text
-            accessibilityLabel={accessibleAmount(transaction.amount)}
-            style={[
-              s.rowAmount,
-              { color: BigInt(transaction.amount.amountMinor) > 0n ? c.positive : c.textPrimary },
-            ]}
-          >
-            {amount(transaction.amount, true)}
-          </Text>
+          )}
         </View>
-        <View style={s.transactionMeta}>
-          <Text style={s.categoryLabel}>{categoryName}</Text>
-          <Text style={[s.caption, transaction.status === 'pending' && { color: c.warning }]}>
-            {statusLabels[transaction.status]}
-            {excluded ? t('app.excludedSpend') : match ? t('app.confirmedMatch') : ''}
-          </Text>
-        </View>
+        <Text
+          accessibilityLabel={accessibleAmount(transaction.amount)}
+          style={[
+            s.rowAmount,
+            longAmount && s.fullRowAmount,
+            { color: BigInt(transaction.amount.amountMinor) > 0n ? c.positive : c.textPrimary },
+          ]}
+        >
+          {amount(transaction.amount, true)}
+        </Text>
       </Pressable>
     )
+  }
+  const transactionGroups = (transactions: readonly TransactionDto[]) => {
+    const groups = new Map<string, TransactionDto[]>()
+    for (const transaction of transactions) {
+      const day = transaction.bookedOn ?? transaction.authorizedOn ?? ''
+      groups.set(day, [...(groups.get(day) ?? []), transaction])
+    }
+    return [...groups].map(([day, rows]) => (
+      <View key={day} style={s.dateGroup}>
+        <Text accessibilityRole="header" aria-level={3} style={s.dateHeading}>
+          {day ? date(day) : t('app.dayUnknown')}
+        </Text>
+        {rows.map((row) => transactionRow(row, true))}
+      </View>
+    ))
   }
 
   const saveCategory = async () => {
@@ -899,7 +929,7 @@ function AppSurface({
         />
         <View style={[s.headerActions, windowWidth < 400 && s.compactHeaderActions]}>
           <Text style={[s.demoBadge, windowWidth < 400 && s.compactDemoBadge]}>
-            {t('app.demoBadge')}
+            {emptyFixtures ? t('app.cleanBadge') : t('app.demoBadge')}
           </Text>
           <Pressable
             accessibilityRole="button"
@@ -929,6 +959,13 @@ function AppSurface({
                 onPress={() => go(destination)}
                 style={[s.railTab, tab === destination && s.selectedRailTab]}
               >
+                <FinanceVisual
+                  kind={navIcons[destination]}
+                  size={24}
+                  mode={theme}
+                  bare
+                  color={tab === destination ? c.primary : c.textSecondary}
+                />
                 <Text style={[s.navLabel, tab === destination && s.selectedText]}>
                   {t(tabMessages[destination])}
                   {destination === 'Da controllare' && reviewCount > 0 ? ` (${reviewCount})` : ''}
@@ -981,14 +1018,14 @@ function AppSurface({
             )}
           </View>
           {!hostedIdentityMode && tab === 'Home' && !manage && !selected && (
-            <Text style={s.demoIntro}>{t('app.intro')}</Text>
+            <Text style={s.demoIntro}>{emptyFixtures ? t('app.cleanIntro') : t('app.intro')}</Text>
           )}
           {identityMode && (
             <LocalIdentityPanel
               baseUrl={apiBaseUrl}
               {...(hostedIdentity ? { hostedIdentity } : {})}
               theme={theme}
-              visible={!signedIn || tab === 'Privacy' || reauthenticationRequested}
+              visible={!signedIn || tab === 'Impostazioni' || reauthenticationRequested}
               sessionLostVersion={sessionLostVersion}
               reauthenticationRequested={reauthenticationRequested}
               onSignedIn={async (session) => {
@@ -1160,6 +1197,20 @@ function AppSurface({
                 <View style={s.card}>
                   <Text style={s.body}>{t('app.offlinePanel')}</Text>
                 </View>
+              ) : emptyFixtures &&
+                !identityMode &&
+                (manage === 'mapped-import' || manage === 'import') ? (
+                <View style={s.card}>
+                  <FinanceVisual kind="bank" size={64} mode={theme} />
+                  <Text style={s.sectionTitle}>{t('app.connectionSetup')}</Text>
+                  <Text style={s.body}>{t('app.personalAccessNeeded')}</Text>
+                  <Button
+                    label={t('app.connections')}
+                    onPress={() => setManage('connections')}
+                    c={c}
+                    s={s}
+                  />
+                </View>
               ) : manage === 'mapped-import' ? (
                 <MappedImportPanel
                   overview={data}
@@ -1181,7 +1232,8 @@ function AppSurface({
                   onError={panelIdentityFailure}
                   onOpenPrivacy={() => {
                     setManage(null)
-                    go('Privacy')
+                    go('Impostazioni')
+                    setManage('privacy')
                   }}
                   onOpenDestination={(destination) => {
                     if (destination.screen === 'connections') setManage('connections')
@@ -1192,8 +1244,9 @@ function AppSurface({
                           ? 'Da controllare'
                           : destination.screen === 'overview'
                             ? 'Home'
-                            : 'Privacy',
+                            : 'Impostazioni',
                       )
+                      if (destination.screen === 'privacy') setManage('privacy')
                     }
                   }}
                 />
@@ -1225,6 +1278,166 @@ function AppSurface({
                       accountId,
                     })
                     setManage('mapped-import')
+                  }}
+                  onError={panelIdentityFailure}
+                />
+              ) : manage === 'privacy' ? (
+                <>
+                  <PrivacyControlsPanel
+                    overview={data}
+                    theme={theme}
+                    request={api.request}
+                    resetKey={renderedIdentityEpoch}
+                    onChanged={refreshAfterChange}
+                    onError={panelIdentityFailure}
+                  />
+                  <View style={s.card}>
+                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                      {t('app.demoDataHeading')}
+                    </Text>
+                    <Text style={s.body}>
+                      {t('app.demoOwnership', { name: data.profile.name })}
+                    </Text>
+                    <View style={s.divider} />
+                    <Text style={s.strong}>{t('app.realBankUnavailable')}</Text>
+                    <Text style={s.caption}>{t('app.simulatedSourceHelp')}</Text>
+                  </View>
+                  <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                    {t('app.simulatedSource')}
+                  </Text>
+                  {data.connections
+                    .filter((connection) => connection.providerId !== 'local-manual')
+                    .map((connection) => (
+                      <View style={s.card} key={connection.id}>
+                        <Text style={s.strong}>
+                          {t('app.sourceState', {
+                            status:
+                              connection.status === 'active'
+                                ? t('app.active')
+                                : connection.status === 'revoked'
+                                  ? t('app.disconnectedState')
+                                  : connection.status === 'expired'
+                                    ? t('app.expired')
+                                    : t('app.updateFailed'),
+                          })}
+                        </Text>
+                        <Text style={s.caption}>
+                          {t('app.sourceUpdatedAt', { date: datetime(connection.lastSyncedAt) })}
+                        </Text>
+                        <Text style={s.caption}>{t('app.simulatedAccess')}</Text>
+                        <View style={s.actions}>
+                          {connection.status === 'active' ? (
+                            <>
+                              <Button
+                                label={t('app.updateSource')}
+                                onPress={() =>
+                                  void mutate(
+                                    'sync',
+                                    async () => {
+                                      const result = await api.sync(connection.id)
+                                      setNotice(
+                                        t('app.syncCounts', {
+                                          inserted: result.inserted,
+                                          updated: result.updated,
+                                          unchanged: result.unchanged,
+                                        }),
+                                      )
+                                      return result
+                                    },
+                                    t('app.sourceUpdated'),
+                                  )
+                                }
+                                disabled={mutationsDisabled}
+                                c={c}
+                                s={s}
+                              />
+                              <Button
+                                label={t('app.disconnectSource')}
+                                onPress={() =>
+                                  setConfirm({ type: 'disconnect', id: connection.id })
+                                }
+                                quiet
+                                disabled={mutationsDisabled}
+                                c={c}
+                                s={s}
+                              />
+                            </>
+                          ) : (
+                            <Text style={s.body}>{t('app.updatesStopped')}</Text>
+                          )}
+                        </View>
+                      </View>
+                    ))}
+                  {!emptyFixtures && !activeConnections.length && (
+                    <Button
+                      label={t('app.activateSource')}
+                      onPress={() =>
+                        void mutate('connect', () => api.connectMock(), t('app.sourceActivated'))
+                      }
+                      disabled={mutationsDisabled}
+                      c={c}
+                      s={s}
+                    />
+                  )}
+                  <View style={s.card}>
+                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                      {t('app.exportHeading')}
+                    </Text>
+                    <Text style={s.body}>{t('app.exportHelp')}</Text>
+                    <Button
+                      label={t('app.exportData')}
+                      onPress={() => void exportData()}
+                      disabled={mutationsDisabled}
+                      c={c}
+                      s={s}
+                    />
+                    {Platform.OS === 'web' && (
+                      <Button
+                        label={t('app.downloadArchive')}
+                        onPress={() => void exportArchive()}
+                        disabled={mutationsDisabled}
+                        quiet
+                        c={c}
+                        s={s}
+                      />
+                    )}
+                    {exported && (
+                      <>
+                        <Text accessibilityLiveRegion="polite" style={s.caption}>
+                          {Platform.OS === 'web' ? t('app.downloadStarted') : t('app.exportCopy')}
+                        </Text>
+                        <ScrollView style={s.exportPreview} nestedScrollEnabled>
+                          <Text selectable style={s.exportText}>
+                            {exported}
+                          </Text>
+                        </ScrollView>
+                      </>
+                    )}
+                  </View>
+                  <View style={s.card}>
+                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                      {t('app.eraseHeading')}
+                    </Text>
+                    <Text style={s.body}>{t('app.eraseHelp')}</Text>
+                    <Button
+                      label={t('app.eraseButton')}
+                      onPress={() => setConfirm({ type: 'erase' })}
+                      destructive
+                      disabled={mutationsDisabled}
+                      c={c}
+                      s={s}
+                    />
+                  </View>
+                </>
+              ) : manage === 'preferences' ? (
+                <SettingsPanel
+                  request={api.request}
+                  theme={theme}
+                  resetKey={renderedIdentityEpoch}
+                  onChanged={async (settings: ProfileSettings) => {
+                    if (renderedIdentityEpoch !== identityEpoch.current) return
+                    onDisplayPreferences({ locale: settings.locale, timezone: settings.timezone })
+                    await refreshAfterChange()
                   }}
                   onError={panelIdentityFailure}
                 />
@@ -1359,6 +1572,7 @@ function AppSurface({
                       onPress={() => setCategory(id)}
                       style={[s.categoryOption, category === id && s.selectedOption]}
                     >
+                      <CategoryVisual categoryId={id} size={32} mode={theme} />
                       <Text style={[s.body, category === id && s.selectedText]}>
                         {i18n.categoryLabel(id)}
                       </Text>
@@ -1424,294 +1638,247 @@ function AppSurface({
             </>
           ) : tab === 'Home' ? (
             <>
-              <View style={s.attention}>
-                <View style={s.attentionCopy}>
-                  <Text accessibilityRole="header" aria-level={2} style={s.attentionTitle}>
-                    {reviewCount
-                      ? t('app.reviewCount', { count: reviewCount })
-                      : t('app.nothingReview')}
+              <FinanceHome
+                overview={data}
+                theme={theme}
+                history={history}
+                emptyFixtures={emptyFixtures}
+                protectedIdentity={identityMode}
+                onConnections={() => setManage('connections')}
+                onAccount={(accountId) => {
+                  go('Movimenti')
+                  setLedgerFilters({ ...EMPTY_LEDGER_FILTERS, accountId })
+                }}
+              />
+              {reviewCount > 0 && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => go('Da controllare')}
+                  style={s.attention}
+                >
+                  <FinanceVisual kind="review" size={32} mode={theme} />
+                  <Text style={s.attentionTitle}>
+                    {t('app.reviewCount', { count: reviewCount })}
                   </Text>
-                </View>
-                {reviewCount > 0 && (
-                  <Button
-                    label={t('common.review')}
-                    onPress={() => go('Da controllare')}
-                    quiet
-                    c={c}
-                    s={s}
-                  />
-                )}
-              </View>
-              <View style={[s.homeColumns, homeWide && s.homeColumnsWide]}>
-                <View style={[s.summary, homeWide && s.summaryWide]}>
-                  <View style={s.summaryHead}>
-                    <Text style={s.label}>{t('app.spendingHeading')}</Text>
-                  </View>
-                  <Text style={s.caption}>
-                    {t('app.accountCoverage', { history, count: data.accounts.length })}
-                  </Text>
-                  {data.analysis.summaries.length ? (
-                    data.analysis.summaries.map((summary) => (
-                      <View key={summary.currency} style={s.currencySummary}>
-                        <View
-                          style={[s.currencyHeading, windowWidth < 600 && s.narrowCurrencyHeading]}
-                        >
-                          <Text style={s.currency}>{summary.currency}</Text>
-                          <Text
-                            accessibilityLabel={t('app.spendLabel', {
-                              amount: accessibleAmount(summary.spend),
-                            })}
-                            style={[
-                              s.bigAmount,
-                              homeWide && s.wideAmount,
-                              windowWidth < 400 && s.compactAmount,
-                            ]}
-                          >
-                            {amount(summary.spend)}
-                          </Text>
-                        </View>
-                        <View
-                          style={[s.summaryDetails, windowWidth < 600 && s.narrowSummaryDetails]}
-                        >
-                          <View style={[s.metric, windowWidth < 600 && s.narrowMetric]}>
-                            <Text style={s.caption}>{t('app.bookedIncome')}</Text>
-                            <Text style={s.mediumAmount}>{amount(summary.income)}</Text>
-                          </View>
-                          <View style={[s.metric, windowWidth < 600 && s.narrowMetric]}>
-                            <Text style={s.caption}>{t('app.pendingBalance')}</Text>
-                            <Text style={s.mediumAmount}>{amount(summary.pending)}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    ))
-                  ) : (
-                    <Text style={s.body}>{t('app.noAmounts')}</Text>
-                  )}
-                  <Text style={s.summaryNote}>{t('app.summaryNote')}</Text>
-                  <Text style={s.caption}>
-                    {t('app.lastRetrieved', { date: datetime(retrievedAt) })}
-                  </Text>
-                </View>
-                <View style={[s.accountRegister, homeWide && s.accountRegisterWide]}>
+                  <Text style={s.selectedText}>→</Text>
+                </Pressable>
+              )}
+              {(sorted.length > 0 || data.accounts.length > 0) && (
+                <>
                   <View style={s.sectionHeader}>
                     <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                      {t('app.accountsHeading')}
+                      {t('app.latestTransactions')}
                     </Text>
                     <Button
-                      label={t('app.accountSources')}
-                      onPress={() => setManage('connections')}
+                      label={t('app.viewAll')}
+                      onPress={() => go('Movimenti')}
                       quiet
                       c={c}
                       s={s}
                     />
                   </View>
-                  <View style={s.accountList}>
-                    {data.accounts.length ? (
-                      data.accounts.map((account, index) => (
-                        <View style={s.accountRow} key={account.id}>
-                          <Text style={s.accountNumber} aria-hidden={true} accessible={false}>
-                            {String(index + 1).padStart(2, '0')}
-                          </Text>
-                          <View style={s.accountName}>
-                            <Text style={s.accountTitle}>{account.name}</Text>
-                            <Text style={s.caption}>
-                              {t('app.accountObserved', {
-                                institution: account.institutionName,
-                                date: datetime(account.balanceUpdatedAt),
-                              })}
-                            </Text>
-                          </View>
-                          <Text style={s.accountAmount}>{amount(account.balance)}</Text>
-                        </View>
-                      ))
-                    ) : (
-                      <Text style={s.body}>{t('app.noAccounts')}</Text>
-                    )}
+                  <View style={s.list}>
+                    {transactionGroups(sorted.slice(0, 4))}
+                    {!sorted.length && <Text style={s.body}>{t('app.transactionsHere')}</Text>}
                   </View>
-                </View>
-              </View>
-              <View style={s.sectionHeader}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.latestTransactions')}
-                </Text>
-                <Button
-                  label={t('app.viewAll')}
-                  onPress={() => go('Movimenti')}
-                  quiet
-                  c={c}
-                  s={s}
-                />
-              </View>
-              <View style={s.list}>
-                {sorted.slice(0, 4).map(transactionRow)}
-                {!sorted.length && <Text style={s.body}>{t('app.transactionsHere')}</Text>}
-              </View>
-              <HomeQuickActions
-                theme={theme}
-                reviewCount={reviewCount}
-                disabled={mutationsDisabled}
-                copy={{
-                  title: t('quick.title'),
-                  add: t('quick.add'),
-                  addHelp: t('quick.addHelp'),
-                  review: t('quick.review'),
-                  reviewHelp: t('quick.reviewHelp', { count: reviewCount }),
-                  transactions: t('quick.transactions'),
-                  transactionsHelp: t('quick.transactionsHelp'),
-                  summary: t('quick.summary'),
-                  summaryHelp: t('quick.summaryHelp'),
-                }}
-                onAdd={() => setManage('import')}
-                onReview={() => go('Da controllare')}
-                onTransactions={() => go('Movimenti')}
-                onSummary={() => setManage('understanding')}
-              />
-              <View style={s.footerNote}>
-                <Text style={s.caption}>{t('app.syntheticNote')}</Text>
-              </View>
+                  <View style={s.actions}>
+                    <Button
+                      label={t('app.import')}
+                      onPress={() => setManage('import')}
+                      quiet
+                      disabled={mutationsDisabled}
+                      c={c}
+                      s={s}
+                    />
+                    <Button
+                      label={t('app.understanding')}
+                      onPress={() => setManage('understanding')}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
+                  </View>
+                </>
+              )}
             </>
           ) : tab === 'Movimenti' ? (
-            <>
-              <View style={s.actions}>
+            !data.accounts.length && !sorted.length ? (
+              <View style={s.empty}>
+                <FinanceVisual kind="wallet" size={80} mode={theme} />
+                <Text style={s.sectionTitle}>{t('app.transactionsPlaceholder')}</Text>
+                <Text style={s.body}>{t('app.emptyTransactions')}</Text>
                 <Button
-                  label={t('app.rules')}
-                  onPress={() => setManage('rules')}
-                  quiet
-                  c={c}
-                  s={s}
-                />
-                <Button
-                  label={t('app.mappedImport')}
-                  onPress={() => setManage('mapped-import')}
-                  quiet
-                  c={c}
-                  s={s}
-                />
-                <Button
-                  label={t('app.import')}
-                  onPress={() => setManage('import')}
-                  quiet
+                  label={t('app.connectionSetup')}
+                  onPress={() => setManage('connections')}
                   c={c}
                   s={s}
                 />
               </View>
-              <Text style={s.caption}>
-                {t('app.ledgerCoverage', { count: sorted.length, history })}
-              </Text>
-              <Text style={s.inputLabel}>{t('ledger.historySearch')}</Text>
-              <TextInput
-                accessibilityLabel={t('ledger.historySearch')}
-                placeholder={t('ledger.searchFields')}
-                placeholderTextColor={c.textTertiary}
-                value={query}
-                onChangeText={setQuery}
-                style={s.input}
-              />
-              <LedgerSearchFilters
-                accounts={data.accounts}
-                value={ledgerFilters}
-                onChange={setLedgerFilters}
-                theme={theme}
-                offline={ledgerOffline}
-              />
-              <View style={s.filters}>
-                {(['all', 'pending', 'review'] as const).map((id) => (
-                  <Pressable
-                    key={id}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: filter === id }}
-                    aria-pressed={filter === id}
-                    onPress={() => setFilter(id)}
-                    style={[s.filter, filter === id && s.selectedOption]}
-                  >
-                    <Text style={[s.body, filter === id && s.selectedText]}>
-                      {id === 'all'
-                        ? t('app.all')
-                        : id === 'pending'
-                          ? t('ledger.pending')
-                          : t('nav.review')}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-              <View style={s.list}>
-                {filtered.map(transactionRow)}
-                {!ledgerOffline && ledgerSearch.loading && (
-                  <AccessibleStatus>
-                    <Text style={s.caption}>{t('common.loading')}</Text>
-                  </AccessibleStatus>
-                )}
-                {!ledgerOffline && ledgerSearch.error !== null && (
-                  <View style={s.empty}>
-                    <Text accessibilityRole="alert" style={s.body}>
-                      {ledgerSearch.error instanceof ApiError &&
-                      ['ledger_changed', 'invalid_cursor'].includes(ledgerSearch.error.code)
-                        ? t('ledger.changed')
-                        : i18n.problemMessage(ledgerSearch.error)}
-                    </Text>
-                    <Button
-                      label={t('common.retry')}
-                      onPress={ledgerSearch.retry}
-                      quiet
-                      c={c}
-                      s={s}
-                    />
-                  </View>
-                )}
-                {!ledgerOffline && ledgerSearch.nextCursor && !ledgerSearch.error && (
+            ) : (
+              <>
+                <View style={s.actions}>
                   <Button
-                    label={t(filtered.length ? 'ledger.moreTransactions' : 'ledger.continueSearch')}
-                    onPress={ledgerSearch.more}
-                    disabled={ledgerSearch.loading}
+                    label={t('app.rules')}
+                    onPress={() => setManage('rules')}
                     quiet
                     c={c}
                     s={s}
                   />
-                )}
-                {!filtered.length &&
-                  (ledgerOffline ||
-                    (!ledgerSearch.loading &&
-                      ledgerSearch.error === null &&
-                      ledgerSearch.searchComplete)) && (
+                  <Button
+                    label={t('app.mappedImport')}
+                    onPress={() => setManage('mapped-import')}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                  <Button
+                    label={t('app.import')}
+                    onPress={() => setManage('import')}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                </View>
+                <Text style={s.caption}>
+                  {t('app.ledgerCoverage', { count: sorted.length, history })}
+                </Text>
+                <View style={s.searchBar}>
+                  <FinanceVisual
+                    kind="search"
+                    size={24}
+                    mode={theme}
+                    bare
+                    color={c.textSecondary}
+                  />
+                  <TextInput
+                    accessibilityLabel={t('ledger.historySearch')}
+                    placeholder={t('ledger.historySearch')}
+                    placeholderTextColor={c.textTertiary}
+                    value={query}
+                    onChangeText={setQuery}
+                    style={s.searchInput}
+                  />
+                  {query.length > 0 && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={t('app.clearSearch')}
+                      onPress={() => setQuery('')}
+                      style={s.searchClear}
+                    >
+                      <Text style={s.caption}>×</Text>
+                    </Pressable>
+                  )}
+                </View>
+                <LedgerSearchFilters
+                  accounts={data.accounts}
+                  value={ledgerFilters}
+                  onChange={setLedgerFilters}
+                  theme={theme}
+                  offline={ledgerOffline}
+                />
+                <View style={s.filters}>
+                  {(['all', 'pending', 'review'] as const).map((id) => (
+                    <Pressable
+                      key={id}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: filter === id }}
+                      aria-pressed={filter === id}
+                      onPress={() => setFilter(id)}
+                      style={[s.filter, filter === id && s.selectedOption]}
+                    >
+                      <Text style={[s.categoryLabel, filter === id && s.selectedText]}>
+                        {id === 'all'
+                          ? t('app.all')
+                          : id === 'pending'
+                            ? t('ledger.pending')
+                            : t('nav.review')}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <View style={s.list}>
+                  {transactionGroups(filtered)}
+                  {!ledgerOffline && ledgerSearch.loading && (
+                    <AccessibleStatus>
+                      <Text style={s.caption}>{t('common.loading')}</Text>
+                    </AccessibleStatus>
+                  )}
+                  {!ledgerOffline && ledgerSearch.error !== null && (
                     <View style={s.empty}>
-                      <Text style={s.sectionTitle}>
-                        {sorted.length ? t('app.noResults') : t('app.transactionsPlaceholder')}
+                      <Text accessibilityRole="alert" style={s.body}>
+                        {ledgerSearch.error instanceof ApiError &&
+                        ['ledger_changed', 'invalid_cursor'].includes(ledgerSearch.error.code)
+                          ? t('ledger.changed')
+                          : i18n.problemMessage(ledgerSearch.error)}
                       </Text>
-                      <Text style={s.body}>
-                        {sorted.length ? t('app.searchHelp') : t('app.emptyTransactions')}
-                      </Text>
-                      {sorted.length > 0 && (
-                        <Button
-                          label={t('app.clearSearch')}
-                          onPress={() => {
-                            setQuery('')
-                            setFilter('all')
-                            setLedgerFilters(EMPTY_LEDGER_FILTERS)
-                          }}
-                          quiet
-                          c={c}
-                          s={s}
-                        />
-                      )}
+                      <Button
+                        label={t('common.retry')}
+                        onPress={ledgerSearch.retry}
+                        quiet
+                        c={c}
+                        s={s}
+                      />
                     </View>
                   )}
-              </View>
-            </>
+                  {!ledgerOffline && ledgerSearch.nextCursor && !ledgerSearch.error && (
+                    <Button
+                      label={t(
+                        filtered.length ? 'ledger.moreTransactions' : 'ledger.continueSearch',
+                      )}
+                      onPress={ledgerSearch.more}
+                      disabled={ledgerSearch.loading}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
+                  )}
+                  {!filtered.length &&
+                    (ledgerOffline ||
+                      (!ledgerSearch.loading &&
+                        ledgerSearch.error === null &&
+                        ledgerSearch.searchComplete)) && (
+                      <View style={s.empty}>
+                        <Text style={s.sectionTitle}>
+                          {sorted.length ? t('app.noResults') : t('app.transactionsPlaceholder')}
+                        </Text>
+                        <Text style={s.body}>
+                          {sorted.length ? t('app.searchHelp') : t('app.emptyTransactions')}
+                        </Text>
+                        {sorted.length > 0 && (
+                          <Button
+                            label={t('app.clearSearch')}
+                            onPress={() => {
+                              setQuery('')
+                              setFilter('all')
+                              setLedgerFilters(EMPTY_LEDGER_FILTERS)
+                            }}
+                            quiet
+                            c={c}
+                            s={s}
+                          />
+                        )}
+                      </View>
+                    )}
+                </View>
+              </>
+            )
           ) : tab === 'Da controllare' ? (
             <>
-              {!networkUnavailable && !offlineSnapshot && (
-                <SourceDecisionsPanel
-                  request={api.request}
-                  refreshKey={data}
-                  profileId={data.profile.id}
-                  resetKey={renderedIdentityEpoch}
-                  transactions={data.transactions}
-                  theme={theme}
-                  disabled={mutationsDisabled}
-                  onChanged={refreshAfterChange}
-                  onError={panelIdentityFailure}
-                />
-              )}
+              {!networkUnavailable &&
+                !offlineSnapshot &&
+                (data.transactions.length > 0 || data.connections.length > 0) && (
+                  <SourceDecisionsPanel
+                    request={api.request}
+                    refreshKey={data}
+                    profileId={data.profile.id}
+                    resetKey={renderedIdentityEpoch}
+                    transactions={data.transactions}
+                    theme={theme}
+                    disabled={mutationsDisabled}
+                    onChanged={refreshAfterChange}
+                    onError={panelIdentityFailure}
+                  />
+                )}
               <Button
                 label={t('merchant.title')}
                 onPress={() => setManage('merchants')}
@@ -1719,21 +1886,22 @@ function AppSurface({
                 c={c}
                 s={s}
               />
-              <Text style={s.body}>{t('app.reviewIntro')}</Text>
+              {data.analysis.reviewItems.some((item) => item.type === 'classification') && (
+                <>
+                  <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                    {t('app.categoryReviewHeading')}
+                  </Text>
+                  <Text style={s.caption}>{t('app.categoryReviewHelp')}</Text>
+                </>
+              )}
               {data.analysis.reviewItems
                 .filter((item) => item.type === 'classification')
                 .map((item) => (
-                  <View style={s.card} key={item.id}>
-                    <Text style={s.eyebrow}>{t('app.categoryToChoose')}</Text>
-                    <Text style={s.body}>
-                      {item.type === 'balance'
-                        ? t('app.balanceEvidence')
-                        : t('app.categoryEvidence')}
-                    </Text>
+                  <View style={s.reviewRow} key={item.id}>
                     {item.transactionIds
                       .map((id) => data.transactions.find((transaction) => transaction.id === id))
                       .filter((transaction): transaction is TransactionDto => !!transaction)
-                      .map(transactionRow)}
+                      .map((row) => transactionRow(row))}
                     <Button
                       label={t('app.chooseCategory')}
                       onPress={() => {
@@ -1748,55 +1916,99 @@ function AppSurface({
                     />
                   </View>
                 ))}
-              {orderedMatches.map((match) => (
-                <View style={s.card} key={match.id}>
-                  <View style={s.matchHeader}>
-                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                      {matchLabels[match.type]}
-                    </Text>
-                    <Text style={s.stateBadge}>{matchStates[match.state]}</Text>
-                  </View>
-                  <Text style={s.body}>
-                    {match.evidence[0]
-                      ? humanEvidence(match.evidence[0], '')
-                      : t('evidence.generic')}
+              {orderedMatches.length > 0 && (
+                <View style={s.sectionHeader}>
+                  <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                    {t('app.linkReviewHeading')}
                   </Text>
-                  {match.evidence.map((item) => (
-                    <Text key={item} style={s.caption}>
-                      • {humanEvidence(item, match.explanation)}
+                  <Button
+                    label={t('app.verifiedDecisions')}
+                    onPress={() => setShowVerified(!showVerified)}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                </View>
+              )}
+              {orderedMatches
+                .filter(
+                  (match) =>
+                    showVerified || match.state === 'suggested' || match.state === 'undone',
+                )
+                .map((match) => (
+                  <View style={s.reviewRow} key={match.id}>
+                    <View style={s.matchHeader}>
+                      <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                        {t(`app.matchQuestion.${match.type}`)}
+                      </Text>
+                      <Text style={s.stateBadge}>{matchStates[match.state]}</Text>
+                    </View>
+                    <Text style={s.body}>
+                      {match.evidence[0]
+                        ? humanEvidence(match.evidence[0], '')
+                        : t('evidence.generic')}
                     </Text>
-                  ))}
-                  <View style={s.matchTransactions}>
-                    {match.transactionIds
-                      .map((id) => data.transactions.find((transaction) => transaction.id === id))
-                      .filter((transaction): transaction is TransactionDto => !!transaction)
-                      .map(transactionRow)}
-                  </View>
-                  <Text style={s.caption}>{t('app.confirmationEffect')}</Text>
-                  <View style={s.actions}>
-                    {match.state === 'suggested' || match.state === 'undone' ? (
-                      <>
+                    <Button
+                      label={t('app.summaryDetails')}
+                      onPress={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
+                    {expandedMatch === match.id &&
+                      match.evidence.slice(1).map((item) => (
+                        <Text key={item} style={s.caption}>
+                          {humanEvidence(item, match.explanation)}
+                        </Text>
+                      ))}
+                    <View style={s.matchTransactions}>
+                      {match.transactionIds
+                        .map((id) => data.transactions.find((transaction) => transaction.id === id))
+                        .filter((transaction): transaction is TransactionDto => !!transaction)
+                        .map((row) => transactionRow(row))}
+                    </View>
+                    <Text style={s.caption}>{t(`app.matchEffect.${match.type}`)}</Text>
+                    <View style={s.actions}>
+                      {match.state === 'suggested' || match.state === 'undone' ? (
+                        <>
+                          <Button
+                            label={t('app.confirmMatch')}
+                            onPress={() =>
+                              void mutate(
+                                match.id,
+                                () => api.decideMatch(match.id, 'confirmed', match.revision),
+                                t('app.matchSaved'),
+                                'match',
+                              )
+                            }
+                            disabled={mutationsDisabled}
+                            c={c}
+                            s={s}
+                          />
+                          <Button
+                            label={t('app.reject')}
+                            onPress={() =>
+                              void mutate(
+                                match.id,
+                                () => api.decideMatch(match.id, 'rejected', match.revision),
+                                t('app.matchRejected'),
+                                'match',
+                              )
+                            }
+                            quiet
+                            disabled={mutationsDisabled}
+                            c={c}
+                            s={s}
+                          />
+                        </>
+                      ) : (
                         <Button
-                          label={t('app.confirmMatch')}
+                          label={t('app.undoDecision')}
                           onPress={() =>
                             void mutate(
                               match.id,
-                              () => api.decideMatch(match.id, 'confirmed', match.revision),
-                              t('app.matchSaved'),
-                              'match',
-                            )
-                          }
-                          disabled={mutationsDisabled}
-                          c={c}
-                          s={s}
-                        />
-                        <Button
-                          label={t('app.reject')}
-                          onPress={() =>
-                            void mutate(
-                              match.id,
-                              () => api.decideMatch(match.id, 'rejected', match.revision),
-                              t('app.matchRejected'),
+                              () => api.decideMatch(match.id, 'undone', match.revision),
+                              t('app.decisionUndone'),
                               'match',
                             )
                           }
@@ -1805,42 +2017,20 @@ function AppSurface({
                           c={c}
                           s={s}
                         />
-                      </>
-                    ) : (
-                      <Button
-                        label={t('app.undoDecision')}
-                        onPress={() =>
-                          void mutate(
-                            match.id,
-                            () => api.decideMatch(match.id, 'undone', match.revision),
-                            t('app.decisionUndone'),
-                            'match',
-                          )
-                        }
-                        quiet
-                        disabled={mutationsDisabled}
-                        c={c}
-                        s={s}
-                      />
-                    )}
+                      )}
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
               {data.analysis.reviewItems
                 .filter((item) => item.type === 'balance')
                 .map((item) => (
                   <View style={s.card} key={item.id}>
                     <Text style={s.sectionTitle}>{t('app.balanceReview')}</Text>
-                    <Text style={s.body}>
-                      {item.type === 'balance'
-                        ? t('app.balanceEvidence')
-                        : t('app.categoryEvidence')}
-                    </Text>
                   </View>
                 ))}
               {!reviewCount && (
                 <View style={s.empty}>
-                  <Signature color={c.primary} />
+                  <FinanceVisual kind="review" size={64} mode={theme} />
                   <Text style={s.sectionTitle}>{t('app.nothingReview')}</Text>
                   <Text style={s.body}>{t('app.priorDecisions')}</Text>
                 </View>
@@ -1879,181 +2069,52 @@ function AppSurface({
               <Text style={s.body}>{t('app.offlinePanel')}</Text>
             </View>
           ) : (
-            <>
-              <Button
-                label={t('app.notifications')}
-                onPress={() => setManage('notifications')}
-                quiet
-                c={c}
-                s={s}
-              />
-              <Button
-                label={t('app.connections')}
-                onPress={() => setManage('connections')}
-                quiet
-                c={c}
-                s={s}
-              />
-              <Button
-                label={t('merchant.title')}
-                onPress={() => setManage('merchants')}
-                quiet
-                c={c}
-                s={s}
-              />
-              <PrivacyControlsPanel
-                overview={data}
-                theme={theme}
-                request={api.request}
-                resetKey={renderedIdentityEpoch}
-                onChanged={refreshAfterChange}
-                onError={panelIdentityFailure}
-              />
-              <SettingsPanel
-                request={api.request}
-                theme={theme}
-                resetKey={renderedIdentityEpoch}
-                onChanged={async (settings: ProfileSettings) => {
-                  if (renderedIdentityEpoch !== identityEpoch.current) return
-                  onDisplayPreferences({ locale: settings.locale, timezone: settings.timezone })
-                  await refreshAfterChange()
-                }}
-                onError={panelIdentityFailure}
-              />
-              <View style={s.card}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.demoDataHeading')}
-                </Text>
-                <Text style={s.body}>{t('app.demoOwnership', { name: data.profile.name })}</Text>
-                <View style={s.divider} />
-                <Text style={s.strong}>{t('app.realBankUnavailable')}</Text>
-                <Text style={s.caption}>{t('app.simulatedSourceHelp')}</Text>
-              </View>
-              <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                {t('app.simulatedSource')}
-              </Text>
-              {data.connections
-                .filter((connection) => connection.providerId !== 'local-manual')
-                .map((connection) => (
-                  <View style={s.card} key={connection.id}>
-                    <Text style={s.strong}>
-                      {t('app.sourceState', {
-                        status:
-                          connection.status === 'active'
-                            ? t('app.active')
-                            : connection.status === 'revoked'
-                              ? t('app.disconnectedState')
-                              : connection.status === 'expired'
-                                ? t('app.expired')
-                                : t('app.updateFailed'),
-                      })}
-                    </Text>
-                    <Text style={s.caption}>
-                      {t('app.sourceUpdatedAt', { date: datetime(connection.lastSyncedAt) })}
-                    </Text>
-                    <Text style={s.caption}>{t('app.simulatedAccess')}</Text>
-                    <View style={s.actions}>
-                      {connection.status === 'active' ? (
-                        <>
-                          <Button
-                            label={t('app.updateSource')}
-                            onPress={() =>
-                              void mutate(
-                                'sync',
-                                async () => {
-                                  const result = await api.sync(connection.id)
-                                  setNotice(
-                                    t('app.syncCounts', {
-                                      inserted: result.inserted,
-                                      updated: result.updated,
-                                      unchanged: result.unchanged,
-                                    }),
-                                  )
-                                  return result
-                                },
-                                t('app.sourceUpdated'),
-                              )
-                            }
-                            disabled={mutationsDisabled}
-                            c={c}
-                            s={s}
-                          />
-                          <Button
-                            label={t('app.disconnectSource')}
-                            onPress={() => setConfirm({ type: 'disconnect', id: connection.id })}
-                            quiet
-                            disabled={mutationsDisabled}
-                            c={c}
-                            s={s}
-                          />
-                        </>
-                      ) : (
-                        <Text style={s.body}>{t('app.updatesStopped')}</Text>
-                      )}
-                    </View>
+            <View style={s.settingsList}>
+              {(
+                [
+                  {
+                    destination: 'connections',
+                    kind: 'bank',
+                    title: 'app.connections',
+                    help: 'app.connectionsHelp',
+                  },
+                  {
+                    destination: 'preferences',
+                    kind: 'settings',
+                    title: 'app.preferences',
+                    help: 'app.preferencesHelp',
+                  },
+                  {
+                    destination: 'notifications',
+                    kind: 'recurring',
+                    title: 'app.notifications',
+                    help: 'app.notificationsHelp',
+                  },
+                  {
+                    destination: 'privacy',
+                    kind: 'review',
+                    title: 'app.privacyAndData',
+                    help: 'app.privacyHelp',
+                  },
+                  { destination: 'merchants', kind: 'wallet', title: 'merchant.title', help: null },
+                ] as const
+              ).map((item) => (
+                <Pressable
+                  key={item.destination}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(item.title)}
+                  onPress={() => setManage(item.destination)}
+                  style={s.settingsRow}
+                >
+                  <FinanceVisual kind={item.kind} size={40} mode={theme} />
+                  <View style={s.settingsCopy}>
+                    <Text style={s.strong}>{t(item.title)}</Text>
+                    {item.help && <Text style={s.caption}>{t(item.help)}</Text>}
                   </View>
-                ))}
-              {!activeConnections.length && (
-                <Button
-                  label={t('app.activateSource')}
-                  onPress={() =>
-                    void mutate('connect', () => api.connectMock(), t('app.sourceActivated'))
-                  }
-                  disabled={mutationsDisabled}
-                  c={c}
-                  s={s}
-                />
-              )}
-              <View style={s.card}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.exportHeading')}
-                </Text>
-                <Text style={s.body}>{t('app.exportHelp')}</Text>
-                <Button
-                  label={t('app.exportData')}
-                  onPress={() => void exportData()}
-                  disabled={mutationsDisabled}
-                  c={c}
-                  s={s}
-                />
-                {Platform.OS === 'web' && (
-                  <Button
-                    label={t('app.downloadArchive')}
-                    onPress={() => void exportArchive()}
-                    disabled={mutationsDisabled}
-                    quiet
-                    c={c}
-                    s={s}
-                  />
-                )}
-                {exported && (
-                  <>
-                    <Text accessibilityLiveRegion="polite" style={s.caption}>
-                      {Platform.OS === 'web' ? t('app.downloadStarted') : t('app.exportCopy')}
-                    </Text>
-                    <ScrollView style={s.exportPreview} nestedScrollEnabled>
-                      <Text selectable style={s.exportText}>
-                        {exported}
-                      </Text>
-                    </ScrollView>
-                  </>
-                )}
-              </View>
-              <View style={s.card}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.eraseHeading')}
-                </Text>
-                <Text style={s.body}>{t('app.eraseHelp')}</Text>
-                <Button
-                  label={t('app.eraseButton')}
-                  onPress={() => setConfirm({ type: 'erase' })}
-                  destructive
-                  disabled={mutationsDisabled}
-                  c={c}
-                  s={s}
-                />
-              </View>
-            </>
+                  <Text style={s.caption}>›</Text>
+                </Pressable>
+              ))}
+            </View>
           )}
           <View style={s.pageEnd}>
             <Text style={s.caption}>{t('app.footer')}</Text>
@@ -2069,7 +2130,7 @@ function AppSurface({
       </View>
       {!wide && (
         <View role="navigation" accessibilityLabel={t('app.navigation')} style={s.tabBar}>
-          {tabs.map((destination, index) => (
+          {tabs.map((destination) => (
             <Pressable
               key={destination}
               accessibilityRole="button"
@@ -2083,12 +2144,13 @@ function AppSurface({
               onPress={() => go(destination)}
               style={[s.tab, tab === destination && s.selectedTab]}
             >
-              <Text
-                accessibilityElementsHidden
-                style={[s.tabIcon, tab === destination && s.selectedText]}
-              >
-                {['⌂', '≡', '✓', '↻', '◉'][index]}
-              </Text>
+              <FinanceVisual
+                kind={navIcons[destination]}
+                size={24}
+                mode={theme}
+                bare
+                color={tab === destination ? c.primary : c.textSecondary}
+              />
               <Text style={[s.tabLabel, tab === destination && s.selectedText]}>
                 {destination === 'Da controllare'
                   ? t('common.review')
@@ -2214,8 +2276,8 @@ function styles(c: ThemeColors) {
     shell: { flex: 1, width: '100%', maxWidth: 1280, alignSelf: 'center' },
     wideShell: { flexDirection: 'row' },
     scroll: { flex: 1 },
-    content: { padding: 20, gap: 20, paddingBottom: 40 },
-    wideContent: { paddingHorizontal: 40, paddingVertical: 32, maxWidth: 1096 },
+    content: { padding: 20, gap: 14, paddingBottom: 32 },
+    wideContent: { paddingHorizontal: 28, paddingVertical: 24, maxWidth: 1096 },
     rail: { width: 200, paddingHorizontal: 16, paddingVertical: 32, gap: 4 },
     railLabel: {
       fontFamily: 'GeistMedium',
@@ -2446,43 +2508,80 @@ function styles(c: ThemeColors) {
     },
     disabled: { opacity: 0.5 },
     pressed: { opacity: 0.75 },
-    list: {
-      borderTopWidth: 1,
-      borderTopColor: c.borderStrong,
-      borderBottomWidth: 1,
-      borderBottomColor: c.borderStrong,
-    },
+    list: { gap: 4 },
     transaction: {
-      paddingHorizontal: 4,
-      paddingVertical: 16,
-      gap: 8,
-      borderBottomWidth: 1,
-      borderColor: c.border,
-      minHeight: 88,
-    },
-    transactionTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-    transactionName: { flex: 1, minWidth: 120, gap: 4 },
-    rowAmount: {
-      fontFamily: 'GeistMedium',
-      fontSize: 16,
-      lineHeight: 24,
-      fontVariant: ['tabular-nums'],
-      color: c.textPrimary,
-      flexShrink: 1,
-    },
-    transactionMeta: {
-      gap: 4,
       flexDirection: 'row',
       flexWrap: 'wrap',
+      paddingVertical: 12,
+      gap: 10,
       alignItems: 'center',
-      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderColor: c.border,
+      minHeight: 70,
     },
-    categoryLabel: {
+    transactionName: { flex: 1, minWidth: 70, gap: 2 },
+    transactionTitle: {
       fontFamily: 'GeistMedium',
-      fontSize: 13,
-      lineHeight: 20,
+      fontSize: 15,
+      lineHeight: 22,
+      color: c.textPrimary,
+    },
+    transactionStatus: {
+      fontFamily: 'Geist',
+      fontSize: 11,
+      lineHeight: 16,
       color: c.textSecondary,
     },
+    rowAmount: {
+      fontFamily: 'GeistSemibold',
+      fontSize: 15,
+      lineHeight: 22,
+      fontVariant: ['tabular-nums'],
+      color: c.textPrimary,
+    },
+    fullRowAmount: { width: '100%', textAlign: 'right' },
+    categoryLabel: { fontFamily: 'Geist', fontSize: 12, lineHeight: 18, color: c.textSecondary },
+    dateGroup: { gap: 0, marginBottom: 12 },
+    dateHeading: {
+      fontFamily: 'GeistSemibold',
+      fontSize: 12,
+      lineHeight: 18,
+      color: c.textSecondary,
+      paddingVertical: 10,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+    },
+    reviewRow: { backgroundColor: c.surface, borderRadius: 16, padding: 16, gap: 10 },
+    settingsList: { backgroundColor: c.surface, borderRadius: 16, paddingHorizontal: 16 },
+    settingsRow: {
+      minHeight: 80,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      paddingVertical: 14,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+    },
+    settingsCopy: { flex: 1, minWidth: 0, gap: 2 },
+    searchBar: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      backgroundColor: c.surface,
+      borderRadius: 14,
+      paddingHorizontal: 14,
+      minHeight: 48,
+    },
+    searchInput: {
+      flex: 1,
+      minWidth: 0,
+      fontFamily: 'Geist',
+      fontSize: 16,
+      color: c.textPrimary,
+      minHeight: 48,
+      paddingVertical: 10,
+    },
+    searchClear: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
     accountRow: {
       flexDirection: 'row',
       gap: 10,
@@ -2522,6 +2621,9 @@ function styles(c: ThemeColors) {
     divider: { height: 1, backgroundColor: c.border, marginVertical: 8 },
     categories: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
     categoryOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
       minHeight: 48,
       justifyContent: 'center',
       paddingHorizontal: 12,
@@ -2559,14 +2661,23 @@ function styles(c: ThemeColors) {
       borderRadius: tokens.radius.md,
       backgroundColor: c.surface,
     },
-    filters: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    filters: {
+      flexDirection: 'row',
+      gap: 2,
+      backgroundColor: c.surface,
+      borderRadius: 12,
+      padding: 4,
+    },
     filter: {
-      minHeight: 48,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderWidth: 1,
-      borderColor: c.borderStrong,
-      borderRadius: tokens.radius.sm,
+      flex: 1,
+      minHeight: 44,
+      paddingHorizontal: 4,
+      paddingVertical: 10,
+      borderBottomWidth: 2,
+      borderColor: 'transparent',
+      borderRadius: 8,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     empty: { padding: 24, gap: 16 },
     matchHeader: { gap: 12 },
