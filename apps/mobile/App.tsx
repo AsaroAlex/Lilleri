@@ -1453,13 +1453,19 @@ function AppSurface({
                   {data.analysis.summaries.length ? (
                     data.analysis.summaries.map((summary) => (
                       <View key={summary.currency} style={s.currencySummary}>
-                        <View style={s.currencyHeading}>
+                        <View
+                          style={[s.currencyHeading, windowWidth < 600 && s.narrowCurrencyHeading]}
+                        >
                           <Text style={s.currency}>{summary.currency}</Text>
                           <Text
                             accessibilityLabel={t('app.spendLabel', {
                               amount: accessibleAmount(summary.spend),
                             })}
-                            style={[s.bigAmount, homeWide && s.wideAmount]}
+                            style={[
+                              s.bigAmount,
+                              homeWide && s.wideAmount,
+                              windowWidth < 400 && s.compactAmount,
+                            ]}
                           >
                             {amount(summary.spend)}
                           </Text>
@@ -2361,6 +2367,7 @@ function styles(c: ThemeColors) {
       borderColor: c.border,
     },
     currencyHeading: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+    narrowCurrencyHeading: { flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
     currency: { fontFamily: 'GeistMedium', fontSize: 12, color: c.textSecondary, minWidth: 30 },
     bigAmount: {
       fontFamily: 'GeistMedium',
@@ -2372,6 +2379,7 @@ function styles(c: ThemeColors) {
       flexShrink: 1,
     },
     wideAmount: { fontSize: 48, lineHeight: 56, letterSpacing: -1.8 },
+    compactAmount: { fontSize: 32, lineHeight: 40, letterSpacing: -0.8 },
     mediumAmount: {
       fontFamily: 'GeistMedium',
       fontSize: type.amountMedium.size,
