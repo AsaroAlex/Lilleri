@@ -11,6 +11,7 @@ import {
 } from '@lilleri/financial-providers'
 import { and, eq, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, expect, test } from 'vitest'
+import { createApp } from '../src/app.js'
 import { ConsentLifecycleService, recordConsentGranted } from '../src/consent-lifecycle.js'
 import { ProfileEncryption } from '../src/encryption.js'
 import { createLocalSyntheticKeyManagement } from '../src/encryption-local.js'
@@ -28,6 +29,7 @@ import {
   sourceRemovalDecisionEvents,
   sourceRemovalDecisions,
 } from '../src/pending-lifecycle-schema.js'
+import { PrivacyService } from '../src/privacy.js'
 import { transactionPrivacy } from '../src/privacy-schema.js'
 import { DEFAULT_RUNTIME_CONFIGURATION } from '../src/runtime-config.js'
 import { DemoService } from '../src/service.js'
@@ -695,4 +697,141 @@ test('the common ledger predicate preserves pre-lifecycle exact bridge evidence 
   await handle.db.delete(pendingLifecycles).where(eq(pendingLifecycles.profileId, f.profileId))
   expect((await f.service.data()).transactions).toHaveLength(1)
   await assertReadProjection(f)
+})
+
+test('removed-source GET retains decrypted exact facts for review and undo, scoped cards exclude private facts, and ownership retains them', async () => {
+  const f = await fixture(true)
+  f.records.splice(
+    0,
+    1,
+    record('source-facts', {
+      status: 'booked',
+      bookedOn: '2026-10-01',
+      authorizedOn: '2026-09-30',
+      amount: '-90071992547409.93',
+      description: 'Acquisto sintetico — Caffè',
+      reference: 'SYNTHETIC-FACTS-001',
+    }),
+  )
+  expect((await f.sync()).state).toBe('completed')
+  f.records.splice(0)
+  await f.sync()
+  await f.sync()
+  const original = required((await f.lifecycle.removals())[0])
+  const expected = {
+    accountId: original.transaction.accountId,
+    connectionId: f.connectionId,
+    description: 'Acquisto sintetico — Caffè',
+    bookedOn: '2026-10-01',
+    authorizedOn: '2026-09-30',
+    amountMinor: '-9007199254740993',
+    currency: 'EUR',
+    reference: 'SYNTHETIC-FACTS-001',
+  }
+  expect(original.transaction).toEqual(expected)
+  const foreign = await fixture(true)
+  await foreign.sync()
+  const app = await createApp({
+    db: handle.db,
+    financialScope: handle.withProfile,
+    profileId: f.profileId,
+    demoMode: true,
+    seed: false,
+    provider: f.provider,
+    now: f.now,
+    encryption: f.encryption,
+  })
+  const foreignApp = await createApp({
+    db: handle.db,
+    financialScope: handle.withProfile,
+    profileId: foreign.profileId,
+    demoMode: true,
+    seed: false,
+    provider: foreign.provider,
+    now: foreign.now,
+    encryption: foreign.encryption,
+  })
+  const removalInput = (row: typeof original, choice: 'remove' | 'undo') => ({
+    transactionId: row.transactionId,
+    revision: row.revision,
+    transactionRevision: row.transactionRevision,
+    presenceDigest: row.presenceDigest,
+    choice,
+  })
+  try {
+    const removed = await app.inject({
+      method: 'POST',
+      url: '/v1/reconciliation/source-removals/decision',
+      payload: removalInput(original, 'remove'),
+    })
+    expect(removed.statusCode, removed.payload).toBe(200)
+    expect(removed.json().transaction).toEqual(expected)
+    expect((await f.service.data()).transactions).toHaveLength(0)
+    const review = await app.inject({ url: '/v1/reconciliation/source-removals' })
+    expect(review.statusCode, review.payload).toBe(200)
+    const removedView = required(review.json<(typeof original)[]>()[0])
+    expect(removedView).toMatchObject({
+      choice: 'remove',
+      needsDecision: false,
+      transaction: expected,
+    })
+    const denied = await foreignApp.inject({
+      method: 'POST',
+      url: '/v1/reconciliation/source-removals/decision',
+      payload: removalInput(removedView, 'undo'),
+    })
+    expect(denied.statusCode).toBe(404)
+    expect(denied.payload).not.toContain(expected.description)
+    expect((await foreignApp.inject({ url: '/v1/reconciliation/source-removals' })).json()).toEqual(
+      [],
+    )
+    const undone = await app.inject({
+      method: 'POST',
+      url: '/v1/reconciliation/source-removals/decision',
+      payload: removalInput(removedView, 'undo'),
+    })
+    expect(undone.statusCode, undone.payload).toBe(200)
+    expect(undone.json().transaction).toEqual(expected)
+    expect((await f.service.data()).transactions).toHaveLength(1)
+    await new PrivacyService(handle.db, f.profileId, f.now).updateTransaction(
+      original.transactionId,
+      1,
+      { quiet: true, private: true },
+    )
+    const hidden = await app.inject({ url: '/v1/reconciliation/source-removals' })
+    expect(hidden.statusCode).toBe(200)
+    expect(hidden.json()).toEqual([])
+    expect(hidden.payload).not.toContain(expected.description)
+    const privateDenied = await app.inject({
+      method: 'POST',
+      url: '/v1/reconciliation/source-removals/decision',
+      payload: removalInput(undone.json(), 'remove'),
+    })
+    expect(privateDenied.statusCode).toBe(404)
+    const owned = await f.lifecycle.ownership()
+    expect(owned.removals[0]?.transaction).toEqual(expected)
+    const rows = await handle.db
+      .select()
+      .from(schema.transactions)
+      .where(eq(schema.transactions.profileId, f.profileId))
+    assertPendingOwnershipReferences(owned, {
+      profileId: f.profileId,
+      transactions: rows,
+      exportedAt: f.now(),
+    })
+    const changedScope = structuredClone(owned)
+    required(changedScope.removals[0]).transaction.accountId = 'foreign-account'
+    expect(() =>
+      assertPendingOwnershipReferences(changedScope, {
+        profileId: f.profileId,
+        transactions: rows,
+      }),
+    ).toThrow('Removal ownership scope is invalid')
+    const exported = await app.inject({ url: '/v1/export' })
+    expect(exported.statusCode, exported.payload).toBe(200)
+    expect(exported.json().pendingLifecycle.removals[0].transaction).toEqual(expected)
+  } finally {
+    await app.close()
+    await foreignApp.close()
+  }
 })

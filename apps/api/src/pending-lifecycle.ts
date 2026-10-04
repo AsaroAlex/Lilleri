@@ -715,6 +715,16 @@ export const pendingReplacementChoiceDto = z.strictObject({
   replacementRevision: revisionDto,
   action: z.enum(['accept', 'undo']),
 })
+export const removalTransactionFactsDto = z.strictObject({
+  accountId: idDto,
+  connectionId: idDto,
+  description: z.string().min(1),
+  bookedOn: z.iso.date().nullable(),
+  authorizedOn: z.iso.date().nullable(),
+  amountMinor: z.string().regex(/^-?\d+$/u),
+  currency: z.string().length(3),
+  reference: z.string().nullable(),
+})
 export const removalViewDto = z.strictObject({
   transactionId: idDto,
   revision: revisionDto,
@@ -722,6 +732,7 @@ export const removalViewDto = z.strictObject({
   presenceDigest: digestDto,
   choice: z.enum(['keep_manual', 'remove', 'undone']).nullable(),
   needsDecision: z.boolean(),
+  transaction: removalTransactionFactsDto,
 })
 export const pendingViewDto = z.strictObject({
   transactionId: idDto,
@@ -817,9 +828,15 @@ export function assertPendingOwnershipReferences(
       (row.replacementTransactionId && !transactions.has(row.replacementTransactionId))
     )
       throw new Error('Lifecycle ownership reference is missing')
-  for (const row of value.removals)
-    if (!transactions.has(row.transactionId))
-      throw new Error('Removal ownership reference is missing')
+  for (const row of value.removals) {
+    const transaction = transactions.get(row.transactionId)
+    if (!transaction) throw new Error('Removal ownership reference is missing')
+    if (
+      row.transaction.accountId !== transaction.accountId ||
+      row.transaction.connectionId !== transaction.connectionId
+    )
+      throw new Error('Removal ownership scope is invalid')
+  }
   for (const event of value.events) {
     const transaction = transactions.get(event.transactionId)
     if (
@@ -983,6 +1000,10 @@ export class PendingLifecycleService {
         decision?.transactionRevision === transaction.revision &&
         decision.presenceDigest === removalDigest(presence) &&
         decision.choice !== 'undone'
+      // Retained canonical facts remain reviewable after an active-view removal.
+      const facts = this.encryption
+        ? await this.encryption.decryptTransactionRow(this.db, transaction)
+        : transaction
       result.push(
         removalViewDto.parse({
           transactionId: transaction.id,
@@ -991,6 +1012,16 @@ export class PendingLifecycleService {
           presenceDigest: removalDigest(presence),
           choice: active ? decision.choice : null,
           needsDecision: !active,
+          transaction: {
+            accountId: facts.accountId,
+            connectionId: facts.connectionId,
+            description: facts.description,
+            bookedOn: facts.bookedOn,
+            authorizedOn: facts.authorizedOn,
+            amountMinor: String(facts.amountMinor),
+            currency: facts.currency,
+            reference: facts.reference,
+          },
         }),
       )
     }
