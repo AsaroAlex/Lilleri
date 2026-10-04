@@ -98,3 +98,9 @@ node tools/postgres-operations-smoke.mjs --execute --scope=local-synthetic \
 The drill creates and removes only its fresh synthetic databases and disposable files. It does not stop the shared isolated cluster or modify other test databases. Invoking it without explicit execution flags prints requirements and performs no drill I/O.
 
 Production acceptance still requires an approved EU PostgreSQL service with separate maintenance/runtime credentials and verified TLS/RLS, external KMS and independently current deletion/source journals, an encrypted off-cluster backup store with access/retention/expiry policy, provider and identity data deletion obligations, scheduled restore drills with RPO/RTO and alerting, and measured evidence from the actual deployed infrastructure. Local dump success is not evidence of Railway production PITR, processor deletion, backup expiry, lawful retention or recovery of a real user's bank data. See [the existing deletion-aware boundary](deletion-aware-restore.md) for journal trust and replay details.
+
+The combined integration was rerun on 2026-10-04 against all **36 migration checksums**:
+**8/8 checks passed**, including the newer identity, pending, quota and FX tables.
+Report: `/workspace/.lilleri-validation/roadmap-postgres-drill.json`. Targets remained
+quarantined; `productionBackupAccepted` is still `false`. The complete PostgreSQL API
+regression passed 581 tests with one skip across 45 files in the same isolated cluster.

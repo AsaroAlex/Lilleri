@@ -37,13 +37,19 @@ restored targets retain `ALLOW_CONNECTIONS=false` and revoked PUBLIC CONNECT.
 `/workspace/.lilleri-validation/roadmap-check.log`, `roadmap-postgres-api.log` and
 `roadmap-postgres-drill.json`. Preserve existing archives and independent keys/journals.
 
-The last verified publication remains commit `3efd4ab65a361931f5e64f5ff3380943a56f227c`,
-Railway deployment `7dc1df94-42f4-40c0-8caf-72b3dcd610e8` SUCCESS, with fresh public reads
-preserving the original connection and exact five account balances. **The integrated
-roadmap/design increment is awaiting final browser verification and publication.**
-The current original-design direction uses a ruled account-register composition,
-Newsreader/Geist typography, aligned money and numbered utility rows; no fabricated charts
-or mixed-currency totals. Preserve Italian/British ICU, focus/reflow and identity fences.
+The current verified publication is commit `54c35c268679ade1f10f0d6aad712fc02ebb9d97`,
+Railway deployment `91590ba9-4a81-4547-aa2f-c6a94655222c` **SUCCESS** at
+https://lilleri-production.up.railway.app/. The integrated roadmap and original register
+layout are live. Fresh public HTML/new exact bundle and all seven API reads returned 200;
+the original connection, all five exact account balances and 35 transaction IDs/amounts
+were preserved. The original composition uses Newsreader/Geist, a numbered index, aligned
+money, ruled utility rows and spending/accounts columns on wide screens. Nine widths
+(320–1440 px), dark appearance and keyboard focus passed. Local actual browser groups
+passed 5 source-decision, 3 cross-source and 8 complete interactive checks with no
+unexpected runtime errors. Public financial writes remain for the user's feedback;
+validation mutations were confined to the isolated local archive. Preserve Italian/British
+ICU, focus/reflow and identity fences. Evidence:
+[original-design-release-20261004.json](docs/operations/original-design-release-20261004.json).
 All 40 epics retain residual acceptance, and the 25-case v1 catalogue remains 4/18/3 until
 whole-case acceptance is reviewed. Current residual work is in the execution plan/status;
 older verification counts/process notes below are historical, not evidence of live state.

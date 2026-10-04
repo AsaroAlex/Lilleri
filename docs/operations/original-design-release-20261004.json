@@ -1,0 +1,138 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Europe/Rome",
+  "scope": "shared synthetic Railway preview; no real bank access or public personal identity",
+  "url": "https://lilleri-production.up.railway.app/",
+  "commit": "54c35c268679ade1f10f0d6aad712fc02ebb9d97",
+  "deploymentId": "91590ba9-4a81-4547-aa2f-c6a94655222c",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "_expo/static/js/web/index-7cee5b073361e3be6abd0b851608ea2e.js",
+  "publicReadChecks": {
+    "health": true,
+    "originalConnectionPreserved": true,
+    "exactFiveAccountBalancesPreserved": true,
+    "all35TransactionIdsAndAmountsPreserved": true,
+    "http": [
+      {
+        "method": "GET",
+        "path": "/",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/_expo/static/js/web/index-7cee5b073361e3be6abd0b851608ea2e.js",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/demo",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/transactions/transaction_02971339db19d2cb4d53b737b2ed09b3/fx-evidence",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/ledger/search",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/reconciliation/pending",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/reconciliation/source-removals",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/ledger/projection",
+        "status": 200
+      }
+    ],
+    "features": [
+      {
+        "endpoint": "search?limit=7&q=Booking",
+        "records": 2,
+        "kind": null,
+        "fxState": null
+      },
+      {
+        "endpoint": "projection?limit=7&currency=EUR",
+        "records": 7,
+        "kind": "owned_ledger_history",
+        "fxState": null
+      },
+      {
+        "endpoint": "pending?validation=original-54c35c2-1791123855447",
+        "records": 1,
+        "kind": null,
+        "fxState": null
+      },
+      {
+        "endpoint": "source-removals?validation=original-54c35c2-1791123855447",
+        "records": 0,
+        "kind": null,
+        "fxState": null
+      },
+      {
+        "endpoint": "fx-evidence",
+        "records": null,
+        "kind": null,
+        "fxState": "unknown"
+      }
+    ]
+  },
+  "localValidation": {
+    "repositoryTurboTasks": 23,
+    "pgliteApi": {
+      "passed": 579,
+      "skipped": 3,
+      "files": 45
+    },
+    "postgresApi": {
+      "passed": 581,
+      "skipped": 1,
+      "files": 45
+    },
+    "mobileTests": 45,
+    "postgresRestore": {
+      "checks": 8,
+      "migrations": 36,
+      "quarantined": true,
+      "productionBackupAccepted": false
+    },
+    "sourceDecisionBrowserGroups": 5,
+    "crossSourceImportBrowserGroups": 3,
+    "interactiveBrowserGroups": 8,
+    "originalLayoutWidths": [
+      320,
+      390,
+      720,
+      768,
+      960,
+      1024,
+      1180,
+      1280,
+      1440
+    ],
+    "keyboardFocusVerified": true,
+    "darkAppearanceVerified": true,
+    "pageErrors": 0
+  },
+  "limits": [
+    "Public interactive writes were tested only in an isolated local synthetic archive.",
+    "The existing persistent volume and recovery namespace were preserved.",
+    "Source-declared FX remains unknown when no evidence exists.",
+    "Real-bank/public MVP and whole-scenario catalogue acceptance remain incomplete."
+  ]
+}

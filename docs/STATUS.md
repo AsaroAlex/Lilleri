@@ -18,10 +18,16 @@ a booking, a rate or bank-history completeness. Original canonical audit is reta
 | Hosted identity/readiness | Optional HTTPS factory/client, mandatory verification/recovery delivery port and atomic quota contracts tested; readiness always **`productionReady: false`** | Default server/preview remains synthetic. Reviewed hosted entry point, external key/journal runtime, approved notices and deployed delivery are incomplete. [Readiness](operations/hosted-readiness.md). |
 | Official sandbox adapter | Documented Yapily Modelo read adapter and zero-I/O prerequisite check implemented | Reader is unregistered; issued application/consent, authorization/exchange/renewal/revocation and admitted durable sync remain required. No bank connection was made. |
 
-The founder requests frequent checked Railway publications and an original visual design.
-A ruled account-register layout with the existing licensed typography is being integrated;
-its final browser/release gate is pending. **The roadmap increment above is not yet claimed
-deployed.** The last verified publication remains the compiled-preview release below.
+The roadmap increment and original account-register design are now published at
+[Lilleri](https://lilleri-production.up.railway.app/): commit `54c35c2`, Railway
+`91590ba9-4a81-4547-aa2f-c6a94655222c` **SUCCESS**. Fresh public HTML, the exact new bundle,
+health, demo, search, 90-day history, pending/source choices and FX reads returned 200.
+The original connection, five exact account balances and all 35 transaction IDs/amounts
+survived. The register uses Newsreader headings, a numbered index, aligned financial rows
+and side-by-side spending/accounts on wide screens. Nine widths (320–1440 px), dark
+appearance and keyboard skip/focus passed; local browser groups passed 5 source-decision,
+3 cross-source-import and 8 complete interactive checks. Public writes remain for user
+feedback. [Release evidence](operations/original-design-release-20261004.json).
 All 40 epics retain unfinished stories/acceptance; the reconciliation catalogue remains
 **4 supported / 18 incomplete / 3 expected unsupported**. See [parallel release order](operations/parallel-development.md).
 

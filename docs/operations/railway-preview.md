@@ -57,6 +57,17 @@ Commit `3efd4ab` reached Railway SUCCESS (`7dc1df94`). Runtime logs confirm the 
 
 ## References
 
+## Original account-register release — 2026-10-04
+
+Commit `54c35c2` reached Railway SUCCESS (`91590ba9`). The original Newsreader/Geist
+register, index and ruled actions are live together with server history search, explicit
+source decisions, CSV recovery and FX evidence. Fresh public HTML, exact exported bundle
+and seven API reads returned 200. The original connection, all five exact account
+balances and all 35 transaction IDs/amounts were preserved. Nine widths, dark appearance,
+keyboard focus and the 5/3/8 local browser groups passed. Public financial writes were not
+performed during release validation. The service retains the same volume, recovery
+namespace, one replica and 3 GB cap. [Release evidence](original-design-release-20261004.json).
+
 - [GitHub automatic deployment and Wait for CI](https://docs.railway.com/guides/github-autodeploys)
 - [Dockerfile detection](https://docs.railway.com/guides/dockerfiles)
 - [Volumes and single-writer deployment](https://docs.railway.com/reference/volumes)
