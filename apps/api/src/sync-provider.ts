@@ -5,7 +5,7 @@ import {
   normalizeTransaction,
   type ProviderAccount,
   type ProviderContext,
-  type ProviderTransaction,
+  type SyncProviderTransaction,
   type SyntheticSyncMetadata,
   type SyntheticSyncPage,
   type SyntheticSyncPageRequest,
@@ -65,7 +65,7 @@ const accountSchema = z
   .strict()
 export const syncRecordSchema = z
   .object({
-    id: text,
+    id: text.refine((value) => !value.startsWith('no-id:v1:')).nullable(),
     accountId: text,
     amount: z.string().min(1).max(40),
     currency: z.string().length(3),
@@ -173,7 +173,7 @@ export interface SyncStage {
   windowIndex: number
   cursor: string | null
   seenCursors: string[]
-  records: ProviderTransaction[]
+  records: SyncProviderTransaction[]
   complete: boolean[]
   pages: number
 }
@@ -248,14 +248,19 @@ export function validateSyncPage(
         (raw.source && raw.source !== 'bank')
       )
         throw new Error('Wrong record scope')
-      const record = raw as ProviderTransaction
-      normalizeTransaction(providerId, context, record, new Date().toISOString())
+      const record = raw as SyncProviderTransaction
+      normalizeTransaction(
+        providerId,
+        context,
+        { ...record, id: record.id ?? 'validation-only' },
+        new Date().toISOString(),
+      )
       if (record.status === 'pending') {
         if (!request.includePending) throw new Error('Unexpected pending set')
       } else if (!record.bookedOn || record.bookedOn < request.from || record.bookedOn > request.to)
         throw new Error('Outside requested window')
     }
-    return { ...parsed, transactions: parsed.transactions as ProviderTransaction[] }
+    return { ...parsed, transactions: parsed.transactions as SyncProviderTransaction[] }
   } catch {
     throw new SyncContractError('invalid_provider_contract')
   }

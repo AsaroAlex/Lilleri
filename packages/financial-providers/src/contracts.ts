@@ -54,11 +54,15 @@ export interface SyntheticSyncPageRequest {
   readonly pageSize: number
   readonly includePending: boolean
 }
+/** Missing bank IDs are resolved only after a complete bounded snapshot, never per page. */
+export type SyncProviderTransaction = Omit<ProviderTransaction, 'id'> & {
+  readonly id: string | null
+}
 export interface SyntheticSyncPage {
   readonly snapshotId: string
   readonly from: string
   readonly to: string
-  readonly transactions: readonly ProviderTransaction[]
+  readonly transactions: readonly SyncProviderTransaction[]
   readonly nextCursor: string | null
   readonly coverage: 'complete_window' | 'unknown'
 }

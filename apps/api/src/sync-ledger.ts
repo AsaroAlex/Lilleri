@@ -6,10 +6,11 @@ import {
   type ReviewItem,
   type Transaction,
 } from '@lilleri/domain'
-import { normalizeAccount, normalizeTransaction, stableId } from '@lilleri/financial-providers'
+import { normalizeAccount, stableId } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, or } from 'drizzle-orm'
 import type { ProfileEncryption } from './encryption.js'
 import { insertSourceObservation } from './retention.js'
+import { persistSyncIdentities, resolveSyncIdentities } from './sync-identity.js'
 import { addDays, type SyncStage, syncHash, syncRequired } from './sync-provider.js'
 import {
   emptySyncReport,
@@ -255,7 +256,8 @@ export async function applySyncStage(
   recordSourceFacts?: SyncSourceFactRecorder,
 ): Promise<SyncReport> {
   const report = emptySyncReport(),
-    context = { profileId: job.profileId, connectionId: job.connectionId, grantId: job.consentId }
+    context = { profileId: job.profileId, connectionId: job.connectionId, grantId: job.consentId },
+    resolved = await resolveSyncIdentities(db, job, stage)
   report.pages = stage.pages
   report.windowsCompleted = stage.windows.length
   report.windowsTotal = stage.windows.length
@@ -271,13 +273,7 @@ export async function applySyncStage(
     statuses = new Map<string, string>(),
     duplicates: Transaction[] = []
   const priority = { pending: 0, booked: 1, reversed: 2 }
-  for (const record of stage.records) {
-    const transaction = normalizeTransaction(
-      job.providerId,
-      context,
-      record,
-      stage.snapshot.observedAt,
-    )
+  for (const { transaction } of resolved) {
     const key = `${transaction.id}:${transaction.status}`,
       digest = transactionHash(transaction)
     if (statuses.has(key)) {
@@ -303,21 +299,15 @@ export async function applySyncStage(
       .values(row)
       .onConflictDoUpdate({ target: schema.accounts.id, set: row })
   }
-  for (const record of stage.records) {
-    const transaction = normalizeTransaction(
-        job.providerId,
-        context,
-        record,
-        stage.snapshot.observedAt,
-      ),
-      contentHash = syncHash(record)
+  for (const { raw: record, transaction, observationRecordId } of resolved) {
+    const contentHash = syncHash(record)
     const observationId = stableId(
       'observation',
       job.profileId,
       job.connectionId,
       transaction.accountId,
       job.providerId,
-      record.id,
+      observationRecordId,
       record.status,
       contentHash,
     )
@@ -331,7 +321,7 @@ export async function applySyncStage(
           job.connectionId,
           transaction.accountId,
           job.providerId,
-          record.id,
+          observationRecordId,
           record.status,
           contentHash,
         ),
@@ -339,7 +329,7 @@ export async function applySyncStage(
         connectionId: job.connectionId,
         accountId: transaction.accountId,
         providerId: job.providerId,
-        providerRecordId: record.id,
+        providerRecordId: observationRecordId,
         status: record.status,
         contentHash,
         observedAt: stage.snapshot.observedAt,
@@ -431,6 +421,7 @@ export async function applySyncStage(
       outcome: 'duplicate_payload',
       reason: 'repeated_or_superseded_observation',
     })
+  await persistSyncIdentities(db, job, resolved, at)
   report.processedRecords = report.outcomes.length
   if (report.processedRecords !== report.payloadRecords)
     throw new Error('Payload-to-ledger accounting mismatch')

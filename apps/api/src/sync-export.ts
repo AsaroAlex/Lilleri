@@ -2,6 +2,7 @@ import type { Database } from '@lilleri/database'
 import { asc, eq } from 'drizzle-orm'
 import { z } from 'zod'
 import { syncJobDto } from './sync-http.js'
+import { syncIdentityOwnershipDto, syncIdentityOwnershipExport } from './sync-identity-export.js'
 import { publicSyncJob } from './sync-jobs.js'
 import {
   syncActivity,
@@ -16,6 +17,7 @@ const id = z.string().min(1).max(200),
   count = z.number().int().nonnegative()
 export const syncOwnershipDto = z
   .object({
+    ...syncIdentityOwnershipDto.shape,
     jobs: z.array(syncJobDto),
     reservations: z.array(
       z
@@ -117,6 +119,7 @@ export async function syncOwnershipExport(db: Database, profileId: string): Prom
     .where(eq(syncIssues.profileId, profileId))
     .orderBy(asc(syncIssues.createdAt), asc(syncIssues.id))
   return syncOwnershipDto.parse({
+    ...(await syncIdentityOwnershipExport(db, profileId)),
     jobs: jobs.map(publicSyncJob),
     reservations: reservations.map(strip),
     activity: activity ? strip(activity) : null,
@@ -150,7 +153,22 @@ export function assertSyncOwnershipReferences(
     !unique(value.reservations.map((row) => row.id)) ||
     !unique(value.reservations.map((row) => `${row.jobId}:${row.leaseEpoch}`)) ||
     !unique(value.presence.map((row) => row.transactionId)) ||
-    !unique(value.issues.map((row) => row.id))
+    !unique(value.issues.map((row) => row.id)) ||
+    !unique(value.identities.map((row) => row.transactionId)) ||
+    !unique(
+      value.identityAliases.map((row) =>
+        JSON.stringify([
+          row.profileId,
+          row.connectionId,
+          row.accountId,
+          row.providerId,
+          row.consentId,
+          row.renewalRevision,
+          row.providerRecordId,
+        ]),
+      ),
+    ) ||
+    !unique(value.identityEvents.map((row) => row.id))
   )
     throw new Error('Duplicate sync audit identity')
   const exportedAt = scope.exportedAt === undefined ? null : Date.parse(scope.exportedAt)
@@ -174,6 +192,29 @@ export function assertSyncOwnershipReferences(
   const transactionOwned = (transactionId: string, accountId: string, connectionId: string) => {
     const row = transactions.get(transactionId)
     return row?.accountId === accountId && row.connectionId === connectionId
+  }
+  for (const row of [...value.identities, ...value.identityAliases, ...value.identityEvents]) {
+    const transaction = transactions.get(row.transactionId)
+    if (
+      !owned(row.profileId, row.connectionId) ||
+      !transactionOwned(row.transactionId, row.accountId, row.connectionId) ||
+      !beforeExport(row.createdAt) ||
+      ('providerId' in row && transaction?.providerId !== row.providerId)
+    )
+      throw new Error('Invalid sync identity ownership references')
+    const consentId = 'originConsentId' in row ? row.originConsentId : row.consentId
+    if (
+      !scope.consents.some(
+        (consent) => consent.id === consentId && consent.connectionId === row.connectionId,
+      )
+    )
+      throw new Error('Invalid sync identity consent reference')
+    if (
+      'jobId' in row &&
+      (jobs.get(row.jobId)?.connectionId !== row.connectionId ||
+        jobs.get(row.jobId)?.consentId !== row.consentId)
+    )
+      throw new Error('Invalid sync identity audit job reference')
   }
   for (const job of value.jobs) {
     if (
