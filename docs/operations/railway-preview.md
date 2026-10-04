@@ -23,7 +23,9 @@ The root Dockerfile uses the repository's Node 22.22.0 and pnpm 10.28.0 toolchai
 6. Set the healthcheck path to **`/api/health`** and the healthcheck timeout to **300 seconds**. Leave `DEV_PUBLIC_ORIGIN` unset for this initial setup: Railway's health probe uses its own hostname. The gateway continues to check browser Origin and fetch metadata for application requests.
 7. Under service networking, generate a Railway HTTPS domain with target port **8080**. Wait for a successful deployment, then open the generated link from the Mac.
 
-Share the generated application URL and deployment status in the Codex chat. Do not send passwords, API tokens, database contents or key-vault files. The account owner performs account creation and any billing decision; Codex does not have a Railway account-management connector in this chat.
+Share the generated application URL and deployment status in the Codex chat. Do not send passwords, API tokens, database contents or key-vault files. The account owner performs account creation and any billing decision. The connected Railway plugin can inspect and configure the existing service and follow its deployments.
+
+The Dockerfile must remain portable: Railway Metal accepts cache mounts but rejects `RUN --mount=type=secret`. Keep managed Codex proxy certificates in a temporary local validation Dockerfile, with the CA supplied only as a build secret. Do not commit that validation file or copy session certificates into the deployed image. Keep TLS verification enabled in both environments.
 
 ## Cost and resource limits
 

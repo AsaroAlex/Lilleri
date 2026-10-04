@@ -16,9 +16,21 @@ existing development supervisor on Railway. `/data` must persist database,
 independent keys and source journal; PORT and DEV_RECOVERY_PATH are supported.
 Detailed one-time service settings are in `docs/operations/railway-preview.md`.
 Use the existing development branch and automatic deploys after checked pushes.
-This is commit/build/deploy, not filesystem hot reload from Codex. Railway has
-no account-management connector here; the user handles login, volume/domain,
-service settings and any billing decision. No payment has been activated by us.
+This is commit/build/deploy, not filesystem hot reload from Codex. The Railway
+plugin is now connected and can inspect/configure the existing service. The user
+has upgraded to Hobby; any subscription or billing decision remains theirs.
+
+Railway project `perfect-light` (`515b8fe0-7c94-4449-9d7e-4b290fcb80c3`),
+production environment `d5ee5896-0e66-4cd9-a6a4-8ee057da0330`, service
+`bebdbda1-7f5e-48fc-8a3b-72ece8b9fefb`, domain
+`https://lilleri-production.up.railway.app` on port8080. Build `a10e286d`
+of commit `73d0a08` failed because Railway Metal rejects secret mounts in RUN.
+The deployment Dockerfile now uses standard npm/pnpm installation steps; local
+Codex certificate handling belongs only in a temporary validation Dockerfile.
+The plugin attached volume `lilleri-data` (`4599b33e-5413-4388-9980-872cb2ca7ef2`,
+1024MB) at `/data` and set healthcheck `/api/health` (300s), memory limit2GB
+and graceful draining30s in production. Keep the current single replica.
+Online verification is still pending; do not report the service as ready yet.
 
 Preferred browser development command is now `pnpm dev:cloud`, after activating
 the pinned Node22/pnpm10 toolchain and installing the frozen lockfile. New
