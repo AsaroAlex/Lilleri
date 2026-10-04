@@ -19,8 +19,7 @@ COPY packages/financial-providers/package.json packages/financial-providers/pack
 COPY packages/money/package.json packages/money/package.json
 RUN CI=1 pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm exec turbo run build --filter=@lilleri/api --filter=@lilleri/api-client --filter=@lilleri/brand -- --noEmitOnError \
-    && node apps/web/scripts/copy-brand.mjs
+RUN pnpm preview:build
 
 # Mount /data at runtime: database and its independent keys/journals must all survive redeploys.
 ENV NODE_ENV=development \
@@ -30,4 +29,4 @@ ENV NODE_ENV=development \
     DEV_RECOVERY_PATH=/data/recovery
 EXPOSE 8080
 STOPSIGNAL SIGTERM
-CMD ["node", "tools/dev/run.mjs", "--prepared"]
+CMD ["node", "tools/preview/run.mjs"]

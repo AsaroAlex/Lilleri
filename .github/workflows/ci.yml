@@ -55,6 +55,8 @@ jobs:
         run: pnpm test:bootstrap
       - name: Interactive development gateway and rebuilds
         run: pnpm test:dev
+      - name: Compiled preview static server
+        run: pnpm test:preview
       - name: Unit tests
         run: pnpm test
       - name: Integration tests (PostgreSQL)
