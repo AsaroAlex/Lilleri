@@ -151,7 +151,7 @@ async function search(page, description, english = false) {
     )
     check('Transactions search opens actual detail and preserves the query when returning')
 
-    await button(page, 'Importa o aggiungi').click()
+    await button(page, 'Conti e movimenti manuali').click()
     await page.getByRole('tab', { name: 'Aggiungi conto', exact: true }).click()
     const suffix = randomUUID().slice(0, 8)
     const accountName = `Contanti interattivi ${suffix}`

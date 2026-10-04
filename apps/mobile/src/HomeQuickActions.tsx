@@ -16,7 +16,7 @@ export interface HomeQuickActionsCopy {
 
 export function defaultHomeQuickActionsCopy(reviewCount: number): HomeQuickActionsCopy {
   return {
-    title: 'Usa il quaderno',
+    title: 'Strumenti',
     add: 'Aggiungi conto o movimenti',
     addHelp: 'Tieni traccia di contanti o importa un file. Parti da un conto manuale.',
     review: 'Rivedi i movimenti',

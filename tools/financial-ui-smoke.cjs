@@ -291,7 +291,7 @@ const matchCard = (page) =>
     )
 
     await button(page, '← Torna ai movimenti').click()
-    await button(page, 'Importa o aggiungi').click()
+    await button(page, 'Conti e movimenti manuali').click()
     await page.getByRole('tab', { name: 'Aggiungi conto', exact: true }).click()
     const accountName = `Contanti browser ${suffix}`
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome' }).format(new Date())
@@ -545,7 +545,7 @@ const matchCard = (page) =>
     await noOverflow(page, '320px rule form')
     await button(page, 'Chiudi senza salvare').click()
     await button(page, '← Torna ai movimenti').click()
-    await button(page, 'Importa o aggiungi').click()
+    await button(page, 'Conti e movimenti manuali').click()
     await page.getByRole('tab', { name: 'Aggiungi conto', exact: true }).click()
     await noOverflow(page, '320px manual account form')
     await page.getByRole('tab', { name: 'Importa CSV', exact: true }).click()

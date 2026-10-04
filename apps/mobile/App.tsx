@@ -915,7 +915,7 @@ function AppSurface({
         {wide && (
           <View role="navigation" accessibilityLabel={t('app.navigation')} style={s.rail}>
             <Text style={s.railLabel}>{t('app.railLabel')}</Text>
-            {tabs.map((destination, index) => (
+            {tabs.map((destination) => (
               <Pressable
                 key={destination}
                 accessibilityRole="button"
@@ -929,9 +929,6 @@ function AppSurface({
                 onPress={() => go(destination)}
                 style={[s.railTab, tab === destination && s.selectedRailTab]}
               >
-                <Text style={[s.railNumber, tab === destination && s.selectedText]}>
-                  {String(index + 1).padStart(2, '0')}
-                </Text>
                 <Text style={[s.navLabel, tab === destination && s.selectedText]}>
                   {t(tabMessages[destination])}
                   {destination === 'Da controllare' && reviewCount > 0 ? ` (${reviewCount})` : ''}
@@ -939,7 +936,6 @@ function AppSurface({
               </Pressable>
             ))}
             <View style={s.railFooter}>
-              <Signature color={c.primary} />
               <Text style={s.railColophon}>{t('app.railColophon')}</Text>
             </View>
           </View>
@@ -984,7 +980,9 @@ function AppSurface({
               </View>
             )}
           </View>
-          {!hostedIdentityMode && <Text style={s.demoIntro}>{t('app.intro')}</Text>}
+          {!hostedIdentityMode && tab === 'Home' && !manage && !selected && (
+            <Text style={s.demoIntro}>{t('app.intro')}</Text>
+          )}
           {identityMode && (
             <LocalIdentityPanel
               baseUrl={apiBaseUrl}
@@ -1433,14 +1431,12 @@ function AppSurface({
                       ? t('app.reviewCount', { count: reviewCount })
                       : t('app.nothingReview')}
                   </Text>
-                  <Text style={s.attentionText}>
-                    {reviewCount ? t('app.reviewHelp') : t('app.reviewHere')}
-                  </Text>
                 </View>
                 {reviewCount > 0 && (
                   <Button
                     label={t('common.review')}
                     onPress={() => go('Da controllare')}
+                    quiet
                     c={c}
                     s={s}
                   />
@@ -1450,7 +1446,6 @@ function AppSurface({
                 <View style={[s.summary, homeWide && s.summaryWide]}>
                   <View style={s.summaryHead}>
                     <Text style={s.label}>{t('app.spendingHeading')}</Text>
-                    <Signature color={c.primary} />
                   </View>
                   <Text style={s.caption}>
                     {t('app.accountCoverage', { history, count: data.accounts.length })}
@@ -1495,8 +1490,8 @@ function AppSurface({
                       {t('app.accountsHeading')}
                     </Text>
                     <Button
-                      label={t('app.manage')}
-                      onPress={() => go('Privacy')}
+                      label={t('app.accountSources')}
+                      onPress={() => setManage('connections')}
                       quiet
                       c={c}
                       s={s}
@@ -1527,6 +1522,22 @@ function AppSurface({
                   </View>
                 </View>
               </View>
+              <View style={s.sectionHeader}>
+                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                  {t('app.latestTransactions')}
+                </Text>
+                <Button
+                  label={t('app.viewAll')}
+                  onPress={() => go('Movimenti')}
+                  quiet
+                  c={c}
+                  s={s}
+                />
+              </View>
+              <View style={s.list}>
+                {sorted.slice(0, 4).map(transactionRow)}
+                {!sorted.length && <Text style={s.body}>{t('app.transactionsHere')}</Text>}
+              </View>
               <HomeQuickActions
                 theme={theme}
                 reviewCount={reviewCount}
@@ -1547,24 +1558,7 @@ function AppSurface({
                 onTransactions={() => go('Movimenti')}
                 onSummary={() => setManage('understanding')}
               />
-              <View style={s.sectionHeader}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.latestTransactions')}
-                </Text>
-                <Button
-                  label={t('app.viewAll')}
-                  onPress={() => go('Movimenti')}
-                  quiet
-                  c={c}
-                  s={s}
-                />
-              </View>
-              <View style={s.list}>
-                {sorted.slice(0, 4).map(transactionRow)}
-                {!sorted.length && <Text style={s.body}>{t('app.transactionsHere')}</Text>}
-              </View>
               <View style={s.footerNote}>
-                <Signature color={c.primary} />
                 <Text style={s.caption}>{t('app.syntheticNote')}</Text>
               </View>
             </>
@@ -1732,6 +1726,18 @@ function AppSurface({
                       .map((id) => data.transactions.find((transaction) => transaction.id === id))
                       .filter((transaction): transaction is TransactionDto => !!transaction)
                       .map(transactionRow)}
+                    <Button
+                      label={t('app.chooseCategory')}
+                      onPress={() => {
+                        const transaction = data.transactions.find((row) =>
+                          item.transactionIds.includes(row.id),
+                        )
+                        if (transaction) openDetail(transaction)
+                      }}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
                   </View>
                 ))}
               {orderedMatches.map((match) => (
@@ -1869,12 +1875,14 @@ function AppSurface({
               <Button
                 label={t('app.notifications')}
                 onPress={() => setManage('notifications')}
+                quiet
                 c={c}
                 s={s}
               />
               <Button
                 label={t('app.connections')}
                 onPress={() => setManage('connections')}
+                quiet
                 c={c}
                 s={s}
               />
@@ -2161,7 +2169,7 @@ function styles(c: ThemeColors) {
       paddingVertical: 20,
       gap: 16,
       borderBottomWidth: 1,
-      borderColor: c.borderStrong,
+      borderColor: c.border,
     },
     logo: { width: 122, height: 40 },
     compactHeader: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
@@ -2199,7 +2207,7 @@ function styles(c: ThemeColors) {
     wideShell: { flexDirection: 'row' },
     scroll: { flex: 1 },
     content: { padding: 20, gap: 20, paddingBottom: 40 },
-    wideContent: { padding: 40, maxWidth: 1096 },
+    wideContent: { paddingHorizontal: 40, paddingVertical: 32, maxWidth: 1096 },
     rail: { width: 200, paddingHorizontal: 16, paddingVertical: 32, gap: 4 },
     railLabel: {
       fontFamily: 'GeistMedium',
@@ -2215,8 +2223,9 @@ function styles(c: ThemeColors) {
       alignItems: 'center',
       paddingHorizontal: 8,
       paddingVertical: 12,
-      borderLeftWidth: 3,
+      borderLeftWidth: 2,
       borderColor: 'transparent',
+      borderRadius: 8,
     },
     railNumber: {
       color: c.textTertiary,
@@ -2227,12 +2236,12 @@ function styles(c: ThemeColors) {
     navLabel: { color: c.textSecondary, fontFamily: 'GeistMedium', fontSize: 14, flexShrink: 1 },
     railFooter: { marginTop: 'auto', gap: 16, paddingTop: 40 },
     railColophon: {
-      fontFamily: 'Newsreader',
-      fontSize: 18,
-      lineHeight: 24,
+      fontFamily: 'Geist',
+      fontSize: 12,
+      lineHeight: 18,
       color: c.textSecondary,
     },
-    selectedRailTab: { borderColor: c.primary },
+    selectedRailTab: { borderColor: c.primary, backgroundColor: c.primarySoft },
     pageHeading: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -2247,17 +2256,17 @@ function styles(c: ThemeColors) {
       fontFamily: 'GeistMedium',
       fontSize: type.caption.size,
       lineHeight: type.caption.lineHeight,
-      color: c.primary,
-      letterSpacing: 1.1,
+      color: c.textSecondary,
+      letterSpacing: 0.8,
     },
     heading: {
-      fontFamily: 'Newsreader',
-      fontSize: 42,
-      lineHeight: 48,
+      fontFamily: 'GeistSemibold',
+      fontSize: 28,
+      lineHeight: 36,
       color: c.textPrimary,
-      letterSpacing: -1,
+      letterSpacing: -0.7,
     },
-    wideHeading: { fontSize: 64, lineHeight: 72, letterSpacing: -1.8 },
+    wideHeading: { fontSize: 36, lineHeight: 44, letterSpacing: -1 },
     demoIntro: {
       fontFamily: 'Geist',
       fontSize: type.bodySmall.size,
@@ -2281,8 +2290,8 @@ function styles(c: ThemeColors) {
     },
     caption: {
       fontFamily: 'Geist',
-      fontSize: type.caption.size,
-      lineHeight: type.caption.lineHeight,
+      fontSize: 13,
+      lineHeight: 20,
       color: c.textSecondary,
       flexShrink: 1,
     },
@@ -2295,9 +2304,9 @@ function styles(c: ThemeColors) {
       marginTop: 8,
     },
     sectionTitle: {
-      fontFamily: 'Newsreader',
-      fontSize: 26,
-      lineHeight: 32,
+      fontFamily: 'GeistSemibold',
+      fontSize: 18,
+      lineHeight: 26,
       color: c.textPrimary,
       flexShrink: 1,
     },
@@ -2305,16 +2314,15 @@ function styles(c: ThemeColors) {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: 4,
+      borderRadius: 12,
       padding: 24,
       gap: 16,
     },
     homeColumns: {
       backgroundColor: c.surface,
-      borderTopWidth: 2,
-      borderTopColor: c.textPrimary,
-      borderBottomWidth: 1,
-      borderBottomColor: c.borderStrong,
+      borderWidth: 1,
+      borderColor: c.border,
+      borderRadius: 12,
       padding: 20,
       gap: 28,
     },
@@ -2351,7 +2359,7 @@ function styles(c: ThemeColors) {
       borderColor: c.border,
     },
     currencyHeading: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-    currency: { fontFamily: 'GeistMedium', fontSize: 12, color: c.primary, minWidth: 30 },
+    currency: { fontFamily: 'GeistMedium', fontSize: 12, color: c.textSecondary, minWidth: 30 },
     bigAmount: {
       fontFamily: 'GeistMedium',
       fontSize: 36,
@@ -2380,20 +2388,19 @@ function styles(c: ThemeColors) {
       paddingTop: 4,
     },
     attention: {
-      paddingVertical: 12,
-      paddingLeft: 16,
-      borderLeftWidth: 3,
-      borderColor: c.primary,
+      paddingVertical: 4,
+      borderBottomWidth: 1,
+      borderColor: c.border,
       flexDirection: 'row',
       gap: 16,
       alignItems: 'center',
       flexWrap: 'wrap',
     },
-    attentionCopy: { flex: 1, minWidth: 160, gap: 4 },
+    attentionCopy: { flex: 1, minWidth: 140, gap: 4 },
     attentionTitle: {
-      fontFamily: 'Newsreader',
-      fontSize: 23,
-      lineHeight: 28,
+      fontFamily: 'GeistMedium',
+      fontSize: 14,
+      lineHeight: 20,
       color: c.textPrimary,
     },
     attentionText: { fontFamily: 'Geist', fontSize: 14, lineHeight: 21, color: c.textSecondary },
@@ -2407,7 +2414,7 @@ function styles(c: ThemeColors) {
     },
     button: {
       backgroundColor: c.primary,
-      borderRadius: 4,
+      borderRadius: 8,
       paddingHorizontal: 20,
       paddingVertical: 12,
       minHeight: 48,
@@ -2428,8 +2435,8 @@ function styles(c: ThemeColors) {
     disabled: { opacity: 0.5 },
     pressed: { opacity: 0.75 },
     list: {
-      borderTopWidth: 2,
-      borderTopColor: c.textPrimary,
+      borderTopWidth: 1,
+      borderTopColor: c.borderStrong,
       borderBottomWidth: 1,
       borderBottomColor: c.borderStrong,
     },
@@ -2458,7 +2465,12 @@ function styles(c: ThemeColors) {
       alignItems: 'center',
       justifyContent: 'space-between',
     },
-    categoryLabel: { fontFamily: 'GeistMedium', fontSize: 12, lineHeight: 18, color: c.primary },
+    categoryLabel: {
+      fontFamily: 'GeistMedium',
+      fontSize: 13,
+      lineHeight: 20,
+      color: c.textSecondary,
+    },
     accountRow: {
       flexDirection: 'row',
       gap: 10,
@@ -2472,7 +2484,7 @@ function styles(c: ThemeColors) {
       fontFamily: 'Geist',
       fontSize: 10,
       lineHeight: 16,
-      color: c.primary,
+      color: c.textTertiary,
       alignSelf: 'flex-start',
       paddingTop: 4,
     },
@@ -2550,9 +2562,9 @@ function styles(c: ThemeColors) {
       fontFamily: 'GeistMedium',
       fontSize: 12,
       lineHeight: 18,
-      color: c.primary,
+      color: c.textSecondary,
       alignSelf: 'flex-start',
-      backgroundColor: c.primarySoft,
+      backgroundColor: c.background,
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: tokens.radius.pill,
