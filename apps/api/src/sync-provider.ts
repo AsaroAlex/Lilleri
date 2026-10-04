@@ -81,6 +81,13 @@ export const syncRecordSchema = z
     relatedTransactionId: text.optional(),
     relatedAccountId: text.optional(),
     source: z.enum(['bank', 'csv', 'manual']).optional(),
+    pendingLifecycle: z
+      .strictObject({
+        state: z.enum(['expired', 'cancelled', 'reversed']),
+        evidenceReference: text,
+        effectiveAt: z.string().datetime({ offset: true }).max(40),
+      })
+      .optional(),
   })
   .strict()
 export function validateSyncSnapshot(
@@ -255,7 +262,9 @@ export function validateSyncPage(
         { ...record, id: record.id ?? 'validation-only' },
         new Date().toISOString(),
       )
-      if (record.status === 'pending') {
+      if (record.pendingLifecycle && record.status !== 'reversed')
+        throw new Error('Terminal pending evidence requires a reversed observation')
+      if (record.status === 'pending' || record.pendingLifecycle) {
         if (!request.includePending) throw new Error('Unexpected pending set')
       } else if (!record.bookedOn || record.bookedOn < request.from || record.bookedOn > request.to)
         throw new Error('Outside requested window')

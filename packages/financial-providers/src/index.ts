@@ -49,6 +49,12 @@ export interface ProviderTransaction {
   readonly relatedTransactionId?: string
   readonly relatedAccountId?: string
   readonly source?: Transaction['source']
+  /** Explicit adapter evidence; absence from a snapshot never expires or cancels a hold. */
+  readonly pendingLifecycle?: {
+    readonly state: 'expired' | 'cancelled' | 'reversed'
+    readonly evidenceReference: string
+    readonly effectiveAt: string
+  }
 }
 export interface ProviderPage {
   readonly transactions: readonly ProviderTransaction[]

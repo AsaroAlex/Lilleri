@@ -9,9 +9,17 @@ import {
 import { normalizeAccount, stableId } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, or } from 'drizzle-orm'
 import type { ProfileEncryption } from './encryption.js'
+import { pendingLifecycleProjection, recordPendingLifecycles } from './pending-lifecycle.js'
+import { pendingLifecycles } from './pending-lifecycle-schema.js'
 import { insertSourceObservation } from './retention.js'
 import { persistSyncIdentities, resolveSyncIdentities } from './sync-identity.js'
-import { addDays, type SyncStage, syncHash, syncRequired } from './sync-provider.js'
+import {
+  addDays,
+  SyncContractError,
+  type SyncStage,
+  syncHash,
+  syncRequired,
+} from './sync-provider.js'
 import {
   emptySyncReport,
   type SyncBalanceResult,
@@ -151,6 +159,7 @@ export async function syncReviewItems(
     if (
       presence.state === 'removed_by_source' &&
       (transaction.status !== 'booked' ||
+        transaction.source !== 'bank' ||
         presence.missingCompletions < 2 ||
         presence.evidence.rule !== 'two_complete_windows')
     )
@@ -206,6 +215,21 @@ export async function activeSyncTransactions(
 ): Promise<Transaction[]> {
   const replaced = new Set<string>(),
     transactionsById = new Map(transactions.map((transaction) => [transaction.id, transaction]))
+  const explicitReview = new Set(
+    (
+      await db
+        .select()
+        .from(pendingLifecycles)
+        .where(
+          and(
+            eq(pendingLifecycles.profileId, profileId),
+            eq(pendingLifecycles.state, 'amount_change_review'),
+          ),
+        )
+    )
+      .filter((row) => transactionsById.get(row.transactionId)?.revision === row.pendingRevision)
+      .map((row) => row.transactionId),
+  )
   for (const presence of await db
     .select()
     .from(syncPresence)
@@ -218,6 +242,7 @@ export async function activeSyncTransactions(
       presence.evidence.version === 'sync-presence-v1' &&
       presence.evidence.rule === 'provider_link_exact' &&
       original &&
+      !explicitReview.has(original.id) &&
       replacement &&
       replacement.status === 'booked' &&
       original.accountId === replacement.accountId &&
@@ -229,8 +254,12 @@ export async function activeSyncTransactions(
     )
       replaced.add(original.id)
   }
-  return transactions.filter(
-    (transaction) => transaction.status !== 'pending' || !replaced.has(transaction.id),
+  return pendingLifecycleProjection(
+    db,
+    profileId,
+    transactions.filter(
+      (transaction) => transaction.status !== 'pending' || !replaced.has(transaction.id),
+    ),
   )
 }
 
@@ -263,6 +292,12 @@ export async function applySyncStage(
   report.windowsTotal = stage.windows.length
   report.payloadRecords = stage.records.length
   const observationFacts = new Map<string, { id: string; accountId: string }>()
+  for (const record of stage.records)
+    if (
+      record.pendingLifecycle &&
+      Date.parse(record.pendingLifecycle.effectiveAt) > Date.parse(stage.snapshot.observedAt)
+    )
+      throw new SyncContractError('invalid_provider_contract')
   report.syncedAt = stage.snapshot.observedAt
   report.coverage = stage.complete.every(Boolean) ? 'complete_requested_interval' : 'unknown'
   const knownHistory = Object.values(stage.snapshot.historyFrom)
@@ -270,6 +305,7 @@ export async function applySyncStage(
     ? ((knownHistory as string[]).sort()[0] ?? null)
     : null
   const canonical = new Map<string, Transaction>(),
+    previousTransactions = new Map<string, typeof schema.transactions.$inferSelect>(),
     statuses = new Map<string, string>(),
     duplicates: Transaction[] = []
   const priority = { pending: 0, booked: 1, reversed: 2 }
@@ -349,6 +385,7 @@ export async function applySyncStage(
         ),
       )
       .for('update')
+    if (existing) previousTransactions.set(existing.id, existing)
     let outcome: 'inserted' | 'updated' | 'unchanged' | 'rejected',
       reason: string | null = null
     if (!existing) {
@@ -358,6 +395,19 @@ export async function applySyncStage(
         .values(encryption ? await encryption.encryptTransactionRow(db, row) : row)
       report.inserted++
       outcome = 'inserted'
+    } else if (
+      existing.status === 'pending' &&
+      transaction.status === 'reversed' &&
+      !resolved.some(
+        ({ raw, transaction: resolvedTransaction }) =>
+          resolvedTransaction.id === transaction.id &&
+          raw.pendingLifecycle &&
+          raw.status === 'reversed',
+      )
+    ) {
+      report.rejected++
+      outcome = 'rejected'
+      reason = 'pending_termination_evidence_missing'
     } else if (
       ((existing.status === 'booked' || existing.status === 'reversed') &&
         transaction.status === 'pending') ||
@@ -415,6 +465,23 @@ export async function applySyncStage(
         },
       })
   }
+  // Lifecycle evidence follows the resolved canonical ID; raw observations above stay original.
+  const canonicalStage: SyncStage = {
+    ...stage,
+    records: resolved.map(({ raw, transaction }) => ({
+      ...raw,
+      id: transaction.providerTransactionId,
+    })),
+  }
+  await recordPendingLifecycles(
+    db,
+    job,
+    canonicalStage,
+    canonical,
+    at,
+    encryption,
+    previousTransactions,
+  )
   for (const duplicate of duplicates)
     report.outcomes.push({
       transactionId: duplicate.id,
