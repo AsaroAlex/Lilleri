@@ -8,6 +8,13 @@ app's financial connection routes, and does not implement creation, callback
 exchange, renewal, remote revocation or payments. The source type intentionally
 does not pretend to implement `FinancialDataProvider` or `SyntheticSyncProvider`.
 
+FACT: `YapilySandboxAuthorisationClient` separately implements the documented
+Modelo account-authorisation and one-time-token exchange protocol. It is also
+unregistered. Its durable intent store and authenticated HTTP callback ingress
+are explicit caller dependencies; no production implementation is provided by
+this package. It does not implement renewal, remote revocation, live institutions
+or ledger/sync admission.
+
 FACT: API documentation was fetched from the official URLs below on 2026-10-04
 through the connected Exa fetch tool. The reference pages identify API version
 12.16.0. No official sandbox account, application credentials, permission,
@@ -74,6 +81,59 @@ pnpm --filter @lilleri/financial-providers test
 pnpm --filter @lilleri/financial-providers sandbox:check
 ```
 
+## Sandbox authorisation client
+
+The new client generates a random 32-byte Lilleri state and persists a creation
+draft through `SandboxAuthorisationStore.stage` before any provider request. It
+verifies `modelo-sandbox`, the reported `SANDBOX` environment and initiation/data
+features, then calls POST `/account-auth-requests`. The registered HTTPS callback
+receives a custom `lilleri-state` query parameter. Yapily's returned correlation
+state remains distinct. The returned authorisation URL must have an explicitly
+reviewed exact HTTPS origin; no wildcard, prefix, user-info, local/IP or HTTP
+destination is admitted.
+
+OTT mode is the default: `oneTimeToken: true` is requested, and the callback's
+one-time token is exchanged with POST `/consent-one-time-token`. This endpoint
+returns a **bare Consent** with HTTP 201. GET `/consents/{id}` returns the separate
+`data` envelope with HTTP 200. Consent ID, application user, institution, provider
+state and token must agree between the staged intent, exchange and authoritative
+read. Only authorized data scopes are accepted. Missing expiry stays `null`;
+reconfirmation, SCA, session and token expiry remain separate. Direct-consent
+callback mode is available only when deliberately configured; mixed token modes
+are rejected. No generic OAuth2 code flow is substituted for either callback.
+
+The caller's store must atomically claim an active, unexpired state once and fence
+the exact profile/connection/grant generation. The client checks the current
+generation around provider work and after the final consent read. The test store
+is memory-only and never exported. The returned token binding is sensitive:
+trusted server code must encrypt it before durable storage and never serialize it
+to browser data, logs or analytics. It can feed the existing read-only sandbox
+adapter after the remaining application admission checks.
+
+Provider mutations make one attempt. Timeout, cancellation, a transport error or
+a malformed/late provider result can leave a remote outcome uncertain. The staged
+draft/claimed callback must be retained for durable reconciliation and cleanup;
+the integrator must not blindly replay a POST or issue a replacement consent.
+`close()` cancels local work and never means remote revocation. The whole-operation
+deadline also interrupts a noncooperating transport or stalled response body.
+
+The official callback guide describes OTT exchange but does not specify the OTT
+HTTP query-parameter spelling. The protocol client therefore accepts a typed
+callback, without guessing a parser. The future authenticated ingress must
+measure the actual Modelo callback, map its documented/observed fields, reject
+duplicate/ambiguous query parameters and remove token-bearing callback URLs from
+logging/history. Durable encrypted callback work, late-settlement compensation,
+renewal, revocation and server routing remain unfinished.
+
+Verification: all **265 provider tests** passed on 2026-10-04, including 59 new
+authorisation cases for exact bindings, duplicate/concurrent callbacks, missing
+scopes, changed tokens/state, direct/OTT separation, HTTPS origins, sandbox
+discovery, malformed input, cancellation and bounded failure. One test hands the
+verified callback binding to the existing reader. All wire responses are original
+synthetic fixtures; no provider account, credentials or bank API was used.
+
+## Operator read check
+
 The default operator command checks missing configuration and performs **zero
 network calls**, even if credentials are present. It prints only variable names
 and readiness labels. It does not read `.env` files or ambient live-provider
@@ -117,11 +177,12 @@ chat messages. No current Railway variable or public archive is modified.
 2. **External — authorized sandbox consent:** complete the official redirect flow
    with an isolated test user and the documented pseudonymous application user
    reference. Register a trusted callback origin. Keep tokens server-side.
-3. **Software — lifecycle:** adapt durable creation intents to asynchronous
-   authorization, one-time callback state, code exchange, encrypted grant token
-   storage, exact-generation renewal/revoke and late-settlement compensation.
-   The documented account authorisation, callback exchange and delete endpoints
-   are references for this next step; the current module makes no mutation call.
+3. **Software — lifecycle integration:** wire the implemented authorisation
+   protocol client to durable creation intents, a transactional/encrypted store,
+   measured HTTP callback ingress and encrypted grant token storage. Complete
+   exact-generation renewal/revoke and late-settlement compensation. The new
+   client defines explicit provider mutations, but remains unregistered and has
+   made no real provider call.
 4. **Software — canonical grant and sync ports:** the current legacy create-grant
    shape requires a known expiry, while Yapily consent `expiresAt` may be omitted.
    Its absence must be represented faithfully, alongside separately proven
@@ -150,6 +211,28 @@ coverage, source ID stability, historical fill rate, unattended allowance,
 commercial pricing and legal permissions. A source field advertised in public
 OpenAPI is not field availability measured at an Italian bank.
 
+## Concrete next real-account test
+
+The Railway service was inspected on 2026-10-04: its configured variable names
+were only `NODE_ENV`, `PORT` and `RAILWAY_DEPLOYMENT_DRAINING_SECONDS`. The running
+entry point instantiates `MockItalianProvider`; it cannot connect a real bank.
+The hosted library and provider client do not change that published behavior.
+
+The next useful user inputs are the bank name, country, account type, and whether
+an authorized Yapily/other provider application already exists. No account number,
+bank password, API secret or consent token should be supplied in chat. An operator
+puts provider credentials in private host variables for a protected environment,
+after the separate hosted runtime and live adapter exist. The current sandbox
+credential names are listed above; they never enable a live institution.
+
+Use existing `pnpm check:hosted` and `pnpm check:sandbox` for zero-I/O checks of the
+respective configuration. Then complete an official isolated Modelo pilot, wire
+its durable lifecycle/sync path, and exercise the chosen bank in a protected
+identity-scoped deployment. A CSV/manual account path already exists, but the
+shared unauthenticated public preview must not accept personal financial records.
+Removing synthetic records alone does not create private access or real-bank
+capability.
+
 ## Official sources
 
 All verified as public documentation on **2026-10-04**. Individual publication
@@ -167,4 +250,5 @@ change and must be rechecked during actual sandbox admission.
 - [Create account authorisation](https://docs.yapily.com/api-reference/authorisations/create-account-authorisation)
 - [Callback and code exchange](https://docs.yapily.com/open-banking-flow/handling-redirects/callback-url)
 - [Exchange OAuth2 code](https://docs.yapily.com/api-reference/consents/exchange-oauth2-code)
+- [Exchange one-time token](https://docs.yapily.com/api-reference/consents/exchange-one-time-token)
 - [Delete consent](https://docs.yapily.com/api-reference/consents/delete-consent)

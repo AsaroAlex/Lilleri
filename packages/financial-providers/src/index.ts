@@ -19,6 +19,7 @@ export { parseBankCsv } from './csv.js'
 export * from './csv-mapper.js'
 export * from './fx-evidence.js'
 export * from './yapily-sandbox.js'
+export * from './yapily-sandbox-authorisation.js'
 
 export interface ProviderContext {
   readonly profileId: string
