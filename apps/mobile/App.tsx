@@ -1677,6 +1677,7 @@ function AppSurface({
               {!networkUnavailable && !offlineSnapshot && (
                 <SourceDecisionsPanel
                   request={api.request}
+                  refreshKey={data}
                   profileId={data.profile.id}
                   resetKey={renderedIdentityEpoch}
                   transactions={data.transactions}

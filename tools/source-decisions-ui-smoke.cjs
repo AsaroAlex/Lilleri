@@ -31,6 +31,16 @@ async function main() {
     presenceDigest: 'a'.repeat(64),
     choice: null,
     needsDecision: true,
+    transaction: {
+      accountId: records[0].accountId,
+      connectionId: records[0].connectionId,
+      description: records[0].description,
+      bookedOn: records[0].bookedOn,
+      authorizedOn: records[0].authorizedOn,
+      amountMinor: records[0].amount.amountMinor,
+      currency: records[0].amount.currency,
+      reference: records[0].reference,
+    },
   }
   let pending = {
     transactionId: records[1].id,

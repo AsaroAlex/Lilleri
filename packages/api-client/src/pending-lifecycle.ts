@@ -25,6 +25,16 @@ export interface SourceRemovalDto {
   readonly presenceDigest: string
   readonly choice: 'keep_manual' | 'remove' | 'undone' | null
   readonly needsDecision: boolean
+  readonly transaction: {
+    readonly accountId: string
+    readonly connectionId: string
+    readonly description: string
+    readonly bookedOn: string | null
+    readonly authorizedOn: string | null
+    readonly amountMinor: string
+    readonly currency: string
+    readonly reference: string | null
+  }
 }
 export function createPendingLifecycleClient(
   request: <T>(path: string, init?: RequestInit) => Promise<T>,

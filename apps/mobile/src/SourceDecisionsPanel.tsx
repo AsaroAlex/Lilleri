@@ -17,6 +17,7 @@ interface Props {
   readonly request: <T>(path: string, init?: RequestInit) => Promise<T>
   readonly profileId: string
   readonly resetKey: number
+  readonly refreshKey: unknown
   readonly transactions: readonly TransactionDto[]
   readonly theme: BrandTheme
   readonly disabled: boolean
@@ -61,6 +62,7 @@ export function SourceDecisionsPanel({
   request,
   profileId,
   resetKey,
+  refreshKey,
   transactions,
   theme,
   disabled,
@@ -98,6 +100,7 @@ export function SourceDecisionsPanel({
   const epoch = identity.current.epoch
   const mounted = useRef(true),
     busy = useRef<number | null>(null)
+  const readTicket = useRef(0)
   const handlers = useRef({ onChanged, onError })
   handlers.current = { onChanged, onError }
   const [state, setState] = useState(() => empty(epoch))
@@ -130,34 +133,45 @@ export function SourceDecisionsPanel({
   )
   const reload = useCallback(
     async (captured: number) => {
-      const [pending, removals] = await Promise.all([client.pending(), client.removals()])
-      patch(captured, { pending, removals, confirmId: null })
+      const ticket = ++readTicket.current
+      try {
+        const [pending, removals] = await Promise.all([client.pending(), client.removals()])
+        if (ticket === readTicket.current) patch(captured, { pending, removals, confirmId: null })
+      } catch (cause) {
+        if (ticket === readTicket.current && current(captured)) throw cause
+      }
     },
-    [client, patch],
+    [client, current, patch],
   )
+  // biome-ignore lint/correctness/useExhaustiveDependencies: A refreshed authoritative overview requires a new source read.
   useEffect(() => {
     mounted.current = true
+    patch(epoch, { loading: true, error: null })
+    const ticket = readTicket.current + 1
     void reload(epoch)
       .catch((cause) => report(epoch, cause))
-      .finally(() => patch(epoch, { loading: false }))
+      .finally(() => {
+        if (ticket === readTicket.current) patch(epoch, { loading: false })
+      })
     return () => {
       mounted.current = false
     }
-  }, [epoch, reload, report, patch])
+  }, [epoch, reload, report, patch, refreshKey])
   const refresh = async () => {
     const captured = epoch
+    const ticket = readTicket.current + 1
     patch(captured, { loading: true, error: null, notice: null })
     try {
       await reload(captured)
     } catch (cause) {
       report(captured, cause)
     } finally {
-      patch(captured, { loading: false })
+      if (ticket === readTicket.current) patch(captured, { loading: false })
     }
   }
   const decide = async (action: () => Promise<unknown>) => {
     const captured = epoch
-    if (disabled || busy.current === captured || !current(captured)) return
+    if (disabled || view.loading || busy.current === captured || !current(captured)) return
     busy.current = captured
     patch(captured, { busy: true, error: null, notice: null, confirmId: null })
     try {
@@ -185,10 +199,10 @@ export function SourceDecisionsPanel({
     <Pressable
       key={key}
       accessibilityRole="button"
-      accessibilityState={{ disabled: disabled || view.busy }}
-      disabled={disabled || view.busy}
+      accessibilityState={{ disabled: disabled || view.busy || view.loading }}
+      disabled={disabled || view.busy || view.loading}
       onPress={action}
-      style={[s.button, (disabled || view.busy) && s.disabled]}
+      style={[s.button, (disabled || view.busy || view.loading) && s.disabled]}
     >
       <Text style={s.body}>{label}</Text>
     </Pressable>
@@ -224,7 +238,14 @@ export function SourceDecisionsPanel({
       {view.removals.slice(0, view.visible).map((row) => (
         <View key={`removal:${row.transactionId}`} style={s.card}>
           <Text style={s.title}>{t('source.removed')}</Text>
-          <Text style={s.body}>{description(row.transactionId)}</Text>
+          <Text style={s.body}>
+            {row.transaction.description || t('common.descriptionUnknown')}
+          </Text>
+          <Text style={s.body}>{money(row.transaction.amountMinor, row.transaction.currency)}</Text>
+          <Text style={s.caption}>
+            {i18n.calendarDate(row.transaction.bookedOn ?? row.transaction.authorizedOn)}
+          </Text>
+          {row.transaction.reference && <Text style={s.caption}>{row.transaction.reference}</Text>}
           <Text style={s.caption}>{t('source.removedHelp')}</Text>
           {row.needsDecision ? (
             view.confirmId === row.transactionId ? (
