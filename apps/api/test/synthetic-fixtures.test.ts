@@ -90,7 +90,10 @@ describe('explicit demo fixture retirement, without erasing user ownership', () 
   test('proven bank fixtures disappear from every active view; manual/CSV rows, balances and decisions stay owned', async () => {
     const { app, profileId } = await setup()
     const original = await overview(app)
-    const fixtureAccount = original.accounts.find((row: { kind: string }) => row.kind === 'current')
+    const fixtureAccount = original.accounts.find(
+      (row: { kind: string; balance: { currency: string } }) =>
+        row.kind === 'current' && row.balance.currency === 'EUR',
+    )
     const imported = await app.inject({
       method: 'POST',
       url: '/v1/imports/csv',
