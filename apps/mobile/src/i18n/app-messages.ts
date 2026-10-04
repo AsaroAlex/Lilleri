@@ -180,8 +180,8 @@ export const APP_MESSAGE_PAIRS = {
   'app.pendingBalance': ['In attesa (saldo)', 'Pending (balance)'],
   'app.noAmounts': ['Nessun importo disponibile.', 'No amount available.'],
   'app.summaryNote': [
-    'Valute separate; movimenti in attesa a parte. Gli abbinamenti confermati evitano i doppi conteggi. Gli indicatori escludono movimenti riservati e rimborsi collegati.',
-    'Currencies stay separate; pending transactions appear separately. Confirmed links prevent double counting. Indicators exclude private transactions and linked refunds.',
+    'Valute separate; movimenti in attesa a parte. Gli abbinamenti confermati evitano i doppi conteggi. Gli indicatori escludono movimenti riservati e i relativi rimborsi.',
+    'Currencies stay separate; pending transactions appear separately. Confirmed links prevent double counting. Indicators exclude private transactions and their linked refunds.',
   ],
   'app.understanding': ['Riepilogo mensile e disponibilità', 'Monthly summary and available funds'],
   'app.accountsHeading': ['I tuoi conti', 'Your accounts'],
