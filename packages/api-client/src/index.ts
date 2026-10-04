@@ -274,7 +274,7 @@ export {
   manualRequestId,
 } from './manual.js'
 export * from './mapped-import.js'
+export * from './pending-lifecycle.js'
 export { createRulesClient } from './rules.js'
 export * from './settings.js'
-
 export * from './sync.js'

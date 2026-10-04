@@ -5,6 +5,7 @@ import { MANUAL_MESSAGE_PAIRS } from './manual-messages'
 import { MAPPED_IMPORT_MESSAGE_PAIRS } from './mapped-import-messages'
 import { MERCHANT_MESSAGE_PAIRS } from './merchant-messages'
 import { PANEL_MESSAGE_PAIRS } from './panel-messages'
+import { SOURCE_DECISION_MESSAGE_PAIRS } from './source-decision-messages'
 
 /** Italian is the master; every explicit key has the corresponding British English message. */
 export const CORE_MESSAGE_PAIRS = {
@@ -417,6 +418,7 @@ export const MESSAGE_PAIRS = {
   ...PANEL_MESSAGE_PAIRS,
   ...MERCHANT_MESSAGE_PAIRS,
   ...IDENTITY_PANEL_MESSAGE_PAIRS,
+  ...SOURCE_DECISION_MESSAGE_PAIRS,
 } as const
 
 export type MessageKey = keyof typeof MESSAGE_PAIRS
