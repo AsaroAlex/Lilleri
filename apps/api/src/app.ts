@@ -33,6 +33,7 @@ import {
   type HostedIdentityOptions,
   type LocalIdentityOptions,
 } from './identity.js'
+import { LedgerReadService, registerLedgerReadRoutes } from './ledger-read.js'
 import { ManualService, manualAuditDto, registerManualRoutes } from './manual-service.js'
 import { registerMappedImportRoutes } from './mapped-import.js'
 import { MerchantTaxonomyService, registerMerchantTaxonomyRoutes } from './merchant-taxonomy.js'
@@ -1239,6 +1240,14 @@ export async function createApp(options: AppOptions) {
       },
     },
     async (request) => serviceFor(request).importCsv(request.body.accountId, request.body.csv),
+  )
+  registerLedgerReadRoutes(
+    app,
+    (request) => {
+      const service = serviceFor(request)
+      return new LedgerReadService(service.db, service.profileId, options.now, options.encryption)
+    },
+    { transaction: transactionDto, account: accountDto },
   )
   app.get(
     '/v1/transactions',

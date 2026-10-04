@@ -65,7 +65,7 @@ async function search(page, description, english = false) {
   await button(page, english ? 'Transactions' : 'Movimenti').click()
   await page
     .getByRole('textbox', {
-      name: english ? 'Search transactions' : 'Cerca un movimento',
+      name: english ? 'Search transaction history' : 'Cerca nello storico',
       exact: true,
     })
     .fill(description)
@@ -146,7 +146,7 @@ async function search(page, description, english = false) {
     await page.getByText(sample.description, { exact: true }).waitFor()
     await button(page, '← Torna all’elenco').click()
     assert.equal(
-      await page.getByRole('textbox', { name: 'Cerca un movimento' }).inputValue(),
+      await page.getByRole('textbox', { name: 'Cerca nello storico' }).inputValue(),
       sampleName,
     )
     check('Transactions search opens actual detail and preserves the query when returning')

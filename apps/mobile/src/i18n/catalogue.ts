@@ -1,6 +1,7 @@
 import { APP_MESSAGE_PAIRS } from './app-messages'
 import { CONNECTION_MESSAGE_PAIRS } from './connection-messages'
 import { IDENTITY_PANEL_MESSAGE_PAIRS } from './identity-panel-messages'
+import { LEDGER_MESSAGE_PAIRS } from './ledger-messages'
 import { MANUAL_MESSAGE_PAIRS } from './manual-messages'
 import { MAPPED_IMPORT_MESSAGE_PAIRS } from './mapped-import-messages'
 import { MERCHANT_MESSAGE_PAIRS } from './merchant-messages'
@@ -412,6 +413,7 @@ export const CORE_MESSAGE_PAIRS = {
 export const MESSAGE_PAIRS = {
   ...CORE_MESSAGE_PAIRS,
   ...APP_MESSAGE_PAIRS,
+  ...LEDGER_MESSAGE_PAIRS,
   ...MAPPED_IMPORT_MESSAGE_PAIRS,
   ...MANUAL_MESSAGE_PAIRS,
   ...CONNECTION_MESSAGE_PAIRS,

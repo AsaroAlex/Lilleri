@@ -7,6 +7,7 @@ import type {
   CurrencyCode,
   Transaction,
 } from '@lilleri/domain'
+import { createLedgerReadClient } from './ledger-read.js'
 import { createSyncClient } from './sync.js'
 
 /** Bigint money is serialized as a base-ten string, never a JSON number. */
@@ -177,6 +178,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   }
   return {
     ...createSyncClient(request),
+    ...createLedgerReadClient(request),
     request,
     overview: (signal?: AbortSignal) => request<DemoOverview>('/v1/demo', signal ? { signal } : {}),
     connectMock: () => request<Connection>('/v1/connections/mock', { method: 'POST', body: '{}' }),
@@ -266,6 +268,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
 
 export type ApiClient = ReturnType<typeof createApiClient>
 
+export * from './ledger-read.js'
 export {
   createManualClient,
   type ManualAccountDto,

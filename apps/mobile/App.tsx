@@ -8,8 +8,10 @@ import {
 } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import {
+  addDays,
   CATEGORIES,
   type CategoryId,
+  calendarDateAt,
   PROFILE_LOCALE,
   type ProfileLocale,
   type ProfileSettings,
@@ -47,6 +49,7 @@ import { HomeQuickActions } from './src/HomeQuickActions'
 import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
 import type { LocalIdentitySession } from './src/identity-client'
+import { EMPTY_LEDGER_FILTERS, LedgerSearchFilters } from './src/LedgerSearchFilters'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
 import { NotificationsPanel } from './src/NotificationsPanel'
 import {
@@ -58,6 +61,7 @@ import { matchesVerifiedOverview, offlineGatedApi } from './src/offline-api'
 import { RulesPanel } from './src/RulesPanel'
 import { SettingsPanel } from './src/SettingsPanel'
 import { SourceDecisionsPanel } from './src/SourceDecisionsPanel'
+import { useLedgerSearch } from './src/useLedgerSearch'
 import { UnderstandingPanel } from './UnderstandingPanel'
 
 declare const process: {
@@ -183,6 +187,7 @@ function AppSurface({
   const [notice, setNotice] = useState<string | null>(null)
   const [retrievedAt, setRetrievedAt] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [ledgerFilters, setLedgerFilters] = useState(EMPTY_LEDGER_FILTERS)
   const [manage, setManage] = useState<
     | 'rules'
     | 'import'
@@ -244,6 +249,7 @@ function AppSurface({
     setManage(null)
     setNotice(null)
     setQuery('')
+    setLedgerFilters(EMPTY_LEDGER_FILTERS)
     setLoading(false)
     setBusy(null)
     setError(language.current.t('app.offlineExpired'))
@@ -286,6 +292,7 @@ function AppSurface({
       setBusy(null)
       setLoading(false)
       setQuery('')
+      setLedgerFilters(EMPTY_LEDGER_FILTERS)
       setManage(null)
       if (!options?.preserveNavigation) setTab('Home')
       setReauthenticationRequested(false)
@@ -596,7 +603,37 @@ function AppSurface({
     setScope('once')
     setNotice(null)
   }
-  const selected = data?.transactions.find((transaction) => transaction.id === detailId)
+  const ledgerOffline = offlineSnapshot !== null || networkUnavailable
+  const ledgerSearch = useLedgerSearch({
+    api,
+    enabled:
+      tab === 'Movimenti' &&
+      Boolean(data) &&
+      !ledgerOffline &&
+      (ledgerFilters.history90 ||
+        [ledgerFilters.from, ledgerFilters.to].every((value) => !value || value.length === 10)),
+    profileId: data?.profile.id,
+    identityEpoch: renderedIdentityEpoch,
+    refreshKey: data,
+    query: {
+      ...(query.trim() ? { q: query.trim() } : {}),
+      ...(filter === 'pending' ? { status: 'pending' as const } : {}),
+      ...(ledgerFilters.accountId ? { accountId: ledgerFilters.accountId } : {}),
+      ...(ledgerFilters.currency ? { currency: ledgerFilters.currency } : {}),
+      ...(!ledgerFilters.history90 && ledgerFilters.from ? { from: ledgerFilters.from } : {}),
+      ...(!ledgerFilters.history90 && ledgerFilters.to ? { to: ledgerFilters.to } : {}),
+    },
+    history90: ledgerFilters.history90,
+    current: () =>
+      renderedIdentityEpoch === identityEpoch.current &&
+      !offlineView.current &&
+      !networkBlocked.current &&
+      data?.profile.id === profileId,
+    identityFailure: panelIdentityFailure,
+  })
+  const selected =
+    ledgerSearch.items.find((transaction) => transaction.id === detailId) ??
+    data?.transactions.find((transaction) => transaction.id === detailId)
   const sorted = useMemo(
     () =>
       [...(data?.transactions ?? [])].sort((a, b) =>
@@ -620,13 +657,27 @@ function AppSurface({
     const awaiting = (state: string) => (state === 'suggested' || state === 'undone' ? 0 : 1)
     return awaiting(first.state) - awaiting(second.state)
   })
-  const filtered = sorted.filter((transaction) => {
+  const offlineToday = calendarDateAt(
+    new Date(retrievedAt ?? Date.now()),
+    data?.profile.timezone ?? 'Europe/Rome',
+  )
+  const offlineFrom = ledgerFilters.history90 ? addDays(offlineToday, -89) : ledgerFilters.from
+  const offlineTo = ledgerFilters.history90 ? offlineToday : ledgerFilters.to
+  const filtered = (ledgerOffline ? sorted : ledgerSearch.items).filter((transaction) => {
     const matchesSearch =
       `${name(transaction)} ${transaction.description} ${i18n.categoryLabel(classification(transaction.id)?.categoryId ?? 'uncategorised')}`
         .toLocaleLowerCase(i18n.locale)
         .includes(query.toLocaleLowerCase(i18n.locale))
     return (
-      matchesSearch &&
+      (!ledgerOffline ||
+        (matchesSearch &&
+          (!ledgerFilters.accountId || transaction.accountId === ledgerFilters.accountId) &&
+          (!ledgerFilters.currency || transaction.amount.currency === ledgerFilters.currency) &&
+          (!offlineFrom ||
+            (transaction.bookedOn ?? transaction.authorizedOn ?? '') >= offlineFrom) &&
+          (!offlineTo ||
+            (Boolean(transaction.bookedOn ?? transaction.authorizedOn) &&
+              (transaction.bookedOn ?? transaction.authorizedOn ?? '') <= offlineTo)))) &&
       (filter === 'all' ||
         (filter === 'pending' && transaction.status === 'pending') ||
         (filter === 'review' &&
@@ -1502,14 +1553,21 @@ function AppSurface({
               <Text style={s.caption}>
                 {t('app.ledgerCoverage', { count: sorted.length, history })}
               </Text>
-              <Text style={s.inputLabel}>{t('ledger.search')}</Text>
+              <Text style={s.inputLabel}>{t('ledger.historySearch')}</Text>
               <TextInput
-                accessibilityLabel={t('ledger.search')}
-                placeholder={t('app.searchPlaceholder')}
+                accessibilityLabel={t('ledger.historySearch')}
+                placeholder={t('ledger.searchFields')}
                 placeholderTextColor={c.textTertiary}
                 value={query}
                 onChangeText={setQuery}
                 style={s.input}
+              />
+              <LedgerSearchFilters
+                accounts={data.accounts}
+                value={ledgerFilters}
+                onChange={setLedgerFilters}
+                theme={theme}
+                offline={ledgerOffline}
               />
               <View style={s.filters}>
                 {(['all', 'pending', 'review'] as const).map((id) => (
@@ -1533,28 +1591,65 @@ function AppSurface({
               </View>
               <View style={s.list}>
                 {filtered.map(transactionRow)}
-                {!filtered.length && (
+                {!ledgerOffline && ledgerSearch.loading && (
+                  <AccessibleStatus>
+                    <Text style={s.caption}>{t('common.loading')}</Text>
+                  </AccessibleStatus>
+                )}
+                {!ledgerOffline && ledgerSearch.error !== null && (
                   <View style={s.empty}>
-                    <Text style={s.sectionTitle}>
-                      {sorted.length ? t('app.noResults') : t('app.transactionsPlaceholder')}
+                    <Text accessibilityRole="alert" style={s.body}>
+                      {ledgerSearch.error instanceof ApiError &&
+                      ['ledger_changed', 'invalid_cursor'].includes(ledgerSearch.error.code)
+                        ? t('ledger.changed')
+                        : i18n.problemMessage(ledgerSearch.error)}
                     </Text>
-                    <Text style={s.body}>
-                      {sorted.length ? t('app.searchHelp') : t('app.emptyTransactions')}
-                    </Text>
-                    {sorted.length > 0 && (
-                      <Button
-                        label={t('app.clearSearch')}
-                        onPress={() => {
-                          setQuery('')
-                          setFilter('all')
-                        }}
-                        quiet
-                        c={c}
-                        s={s}
-                      />
-                    )}
+                    <Button
+                      label={t('common.retry')}
+                      onPress={ledgerSearch.retry}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
                   </View>
                 )}
+                {!ledgerOffline && ledgerSearch.nextCursor && !ledgerSearch.error && (
+                  <Button
+                    label={t(filtered.length ? 'ledger.moreTransactions' : 'ledger.continueSearch')}
+                    onPress={ledgerSearch.more}
+                    disabled={ledgerSearch.loading}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                )}
+                {!filtered.length &&
+                  (ledgerOffline ||
+                    (!ledgerSearch.loading &&
+                      ledgerSearch.error === null &&
+                      ledgerSearch.searchComplete)) && (
+                    <View style={s.empty}>
+                      <Text style={s.sectionTitle}>
+                        {sorted.length ? t('app.noResults') : t('app.transactionsPlaceholder')}
+                      </Text>
+                      <Text style={s.body}>
+                        {sorted.length ? t('app.searchHelp') : t('app.emptyTransactions')}
+                      </Text>
+                      {sorted.length > 0 && (
+                        <Button
+                          label={t('app.clearSearch')}
+                          onPress={() => {
+                            setQuery('')
+                            setFilter('all')
+                            setLedgerFilters(EMPTY_LEDGER_FILTERS)
+                          }}
+                          quiet
+                          c={c}
+                          s={s}
+                        />
+                      )}
+                    </View>
+                  )}
               </View>
             </>
           ) : tab === 'Da controllare' ? (
