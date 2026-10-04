@@ -2,7 +2,13 @@
 const assert = require('node:assert/strict')
 const { randomUUID } = require('node:crypto')
 const { writeFile } = require('node:fs/promises')
-const { chromium } = require('playwright')
+const { chromium } = (() => {
+  try {
+    return require('playwright')
+  } catch {
+    return require('/opt/codex/runtimes/cua/lib/node_modules/playwright-core')
+  }
+})()
 const ui = process.argv[2] || 'http://127.0.0.1:5173'
 const api = process.argv[3] || 'http://127.0.0.1:3287'
 const report = { checks: [], pageErrors: [] }
@@ -19,7 +25,8 @@ async function request(path) {
 async function responseFrom(page, path, action, method = 'POST') {
   const pending = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname === path && response.request().method() === method,
+      new URL(response.url()).pathname.replace(/^\/api(?=\/)/, '') === path &&
+      response.request().method() === method,
   )
   const [response] = await Promise.all([pending, action()])
   const result = await response.json()

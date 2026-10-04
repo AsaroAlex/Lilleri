@@ -45,6 +45,7 @@ import {
   WebAccessibilityStyles,
 } from './src/accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './src/accessibility/web-focus'
+import { FxEvidencePanel } from './src/FxEvidencePanel'
 import { HomeQuickActions } from './src/HomeQuickActions'
 import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
@@ -1328,6 +1329,16 @@ function AppSurface({
                     />
                   </View>
                 ))}
+              {!networkUnavailable && !offlineSnapshot && (
+                <FxEvidencePanel
+                  request={api.request}
+                  profileId={data.profile.id}
+                  transactionId={selected.id}
+                  resetKey={renderedIdentityEpoch}
+                  theme={theme}
+                  onError={panelIdentityFailure}
+                />
+              )}
               <View style={s.card}>
                 <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
                   {t('app.chooseCategory')}

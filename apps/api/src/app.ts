@@ -26,6 +26,7 @@ import {
 import { createDataExportArchive } from './data-export.js'
 import { createDeletionCertificate, DELETION_CERTIFICATE_SCHEMA } from './deletion-restore.js'
 import type { ProfileEncryption } from './encryption.js'
+import { FxEvidenceService, registerFxEvidenceRoutes } from './fx-evidence.js'
 import {
   createHostedIdentity,
   createLocalIdentity,
@@ -1032,6 +1033,10 @@ export async function createApp(options: AppOptions) {
       service.now,
       options.encryption,
     )
+  })
+  registerFxEvidenceRoutes(app, async (request) => {
+    const service = serviceFor(request)
+    return new FxEvidenceService(service.db, service.profileId, options.encryption)
   })
   registerConsentLifecycleRoutes(app, async (request) => {
     const service = serviceFor(request)

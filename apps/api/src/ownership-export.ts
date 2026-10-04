@@ -9,6 +9,9 @@ import {
 } from './connection-creation-export.js'
 import { consentEvents, consentLifecycles } from './consent-lifecycle-schema.js'
 import type { ProfileEncryption } from './encryption.js'
+import { exportFxEvidence } from './fx-evidence.js'
+import { fxOwnershipDto } from './fx-evidence-dto.js'
+import { assertFxOwnershipReferences } from './fx-evidence-export.js'
 import { savedCsvMappingDto } from './mapped-import-dto.js'
 import {
   csvMappingEventDto,
@@ -303,6 +306,7 @@ export const ownershipExportSchemas = {
   merchantTaxonomy: merchantTaxonomyExportDtoSchema.optional(),
   sync: syncOwnershipDto.optional(),
   pendingLifecycle: pendingOwnershipDto.optional(),
+  fxEvidence: fxOwnershipDto.optional(),
   recurringPreferences: recurringOwnershipSchemas.recurringPreferences.optional(),
   recurringPreferenceEvents: recurringOwnershipSchemas.recurringPreferenceEvents.optional(),
   sourceErasures: sourceErasureOwnershipSchemas.sourceErasures.optional(),
@@ -382,6 +386,7 @@ export async function augmentOwnershipExport(
     mappedImports,
     sync: await syncOwnershipExport(db, profileId),
     pendingLifecycle: await new PendingLifecycleService(db, profileId, now, encryption).ownership(),
+    fxEvidence: await exportFxEvidence(db, profileId, encryption),
     connectionCreation: await connectionCreationOwnershipExport(db, profileId),
     merchantTaxonomy: await new MerchantTaxonomyService(
       db,
@@ -486,6 +491,15 @@ export function validateOwnershipExport(
       transactions: snapshot.transactions,
     } as unknown as Parameters<typeof assertSyncOwnershipReferences>[1])
   const connections = unique(snapshot.connections, (row) => row.id)
+  if (parsed.fxEvidence)
+    assertFxOwnershipReferences(parsed.fxEvidence, {
+      profileId,
+      exportedAt: snapshot.exportedAt,
+      accounts: snapshot.accounts,
+      transactions: snapshot.transactions,
+      sourceObservations: value.sourceObservations,
+      jobs: parsed.sync?.jobs ?? [],
+    } as unknown as Parameters<typeof assertFxOwnershipReferences>[1])
   if (parsed.pendingLifecycle)
     assertPendingOwnershipReferences(parsed.pendingLifecycle, {
       profileId,
