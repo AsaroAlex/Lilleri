@@ -68,7 +68,7 @@ export function HomeQuickActions({
       <Text accessibilityRole="header" aria-level={2} style={[s.heading, { color: c.textPrimary }]}>
         {copy.title}
       </Text>
-      <View style={[s.actions, { borderTopColor: c.borderStrong }]}>
+      <View style={[s.actions, { borderTopColor: c.border }]}>
         {actions.map((action, index) => (
           <Pressable
             key={action.title}
@@ -88,7 +88,11 @@ export function HomeQuickActions({
               disabled && s.disabled,
             ]}
           >
-            <Text style={[s.number, { color: c.primary }]} aria-hidden={true} accessible={false}>
+            <Text
+              style={[s.number, { color: c.textTertiary }]}
+              aria-hidden={true}
+              accessible={false}
+            >
               {String(index + 1).padStart(2, '0')}
             </Text>
             <View style={[s.copy, roomy && s.roomyCopy]}>
@@ -99,8 +103,12 @@ export function HomeQuickActions({
                 {action.help}
               </Text>
             </View>
-            <Text style={[s.arrow, { color: c.primary }]} aria-hidden={true} accessible={false}>
-              →
+            <Text
+              style={[s.arrow, { color: c.textSecondary }]}
+              aria-hidden={true}
+              accessible={false}
+            >
+              ›
             </Text>
           </Pressable>
         ))}
@@ -110,41 +118,39 @@ export function HomeQuickActions({
 }
 
 const s = StyleSheet.create({
-  container: { gap: 14, marginBottom: 24 },
+  container: { gap: 12, marginBottom: 24 },
   heading: {
-    fontFamily: tokens.typography.fontEditorial,
-    fontSize: 27,
-    lineHeight: 32,
-    letterSpacing: -0.4,
+    fontFamily: 'GeistMedium',
+    fontSize: 18,
+    lineHeight: 24,
   },
   actions: { borderTopWidth: 1 },
   action: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    minHeight: 80,
-    paddingVertical: 17,
-    paddingHorizontal: 8,
+    minHeight: 72,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
-    gap: 14,
+    gap: 12,
   },
   number: {
-    width: 25,
-    paddingTop: 3,
+    width: 20,
+    paddingTop: 2,
     fontFamily: tokens.typography.fontUI,
-    fontSize: 12,
-    lineHeight: 24,
+    fontSize: 11,
+    lineHeight: 20,
     fontVariant: ['tabular-nums'],
   },
-  copy: { flex: 1, minWidth: 0, gap: 5 },
-  roomyCopy: { flexDirection: 'row', alignItems: 'center', gap: 26 },
+  copy: { flex: 1, minWidth: 0, gap: 4 },
+  roomyCopy: { flexDirection: 'row', alignItems: 'center', gap: 24 },
   title: {
-    fontFamily: tokens.typography.fontEditorial,
-    fontSize: 23,
-    lineHeight: 27,
-    letterSpacing: -0.25,
+    fontFamily: 'GeistMedium',
+    fontSize: 17,
+    lineHeight: 24,
   },
   roomyTitle: { flexBasis: '45%', flexShrink: 1 },
-  arrow: { width: 20, fontSize: 23, lineHeight: 27 },
+  arrow: { width: 12, fontSize: 22, lineHeight: 24 },
   help: { fontFamily: tokens.typography.fontUI, fontSize: 13, lineHeight: 20 },
   roomyHelp: { flex: 1, minWidth: 0 },
   disabled: { opacity: 0.6 },
