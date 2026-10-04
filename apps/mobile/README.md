@@ -1,6 +1,6 @@
 # Lilleri mobile prototype
 
-Expo / React Native app with a web export. It uses the local synthetic API only; there is no authentication or real banking connection.
+Expo / React Native app with a web export. It uses the local synthetic API only; real banking connections are unavailable. Authentication is disabled in the default demo. The optional local identity mode supports synthetic local accounts and sessions; it remains restricted to loopback development.
 
 From the repository root, after installing dependencies and building shared packages:
 

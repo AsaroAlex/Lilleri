@@ -1,5 +1,29 @@
 # Lilleri delivery status
 
+## Interactive development iteration — 2026-10-04
+
+`pnpm dev:cloud` now provides a supervised same-origin browser preview on port
+8080, with Expo/Next reload and serialized checked API/package rebuilds. It uses
+a separate persistent synthetic archive and independent home-directory recovery
+records; existing archives are preserved. A compiler failure retains the running
+API. Production/auth/database overrides are refused. Standard Turbo also now
+forwards the source-erasure journal path, and the Next demo link can point to an
+explicit gateway URL.
+
+The frozen installation, full check (23 Turbo tasks, existing API448pass/3skip),
+fresh core/mobile396, thirteen gateway/process/rebuild tests and eight actual
+browser flow groups pass. Live frontend HMR uses same-origin WebSockets through
+8080 even from a mapped remote hostname; backend compiler failure/corrected save
+and exact source restoration preserve the ledger. Browser manual writes target
+only an isolated fresh synthetic store. Reports are outside the checkout at
+`/workspace/.lilleri-validation/iterative-*`.
+
+The goal remains a real-bank/public MVP. The founder currently has no provider,
+hosting or domain resources. This iteration establishes a development workflow;
+unfinished P0 software, official adapter/access, production identity and deployed
+security/release acceptance remain open. See [repository analysis and next
+steps](operations/interactive-development.md) and the existing execution plan.
+
 **Snapshot:** 2026-10-03. **Scope:** extended local synthetic foundation. This report follows [BRIEF](BRIEF.md); [execution plan](product/execution-plan.md) accounts for every E00–E39 epic. Research dates, commercial assumptions and external gates retain their source context.
 
 ## Current outcome

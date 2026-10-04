@@ -12,6 +12,8 @@
   "scripts": {
     "predev": "turbo run build --filter=@lilleri/api --filter=@lilleri/api-client --filter=@lilleri/brand",
     "dev": "turbo run dev",
+    "dev:cloud": "node tools/dev/run.mjs",
+    "test:dev": "node --test tools/dev/dev.test.mjs",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -21,7 +23,7 @@
     "format:check": "biome format .",
     "lint:configuration": "node tools/lint-operational-configuration.mjs",
     "test:configuration-lint": "node --test tools/lint-operational-configuration.test.mjs",
-    "check": "biome check . && pnpm test:configuration-lint && pnpm lint:configuration && pnpm test:copy-lint && pnpm lint:copy && pnpm test:evaluation-contract && pnpm test:bootstrap && turbo run typecheck test",
+    "check": "biome check . && pnpm test:configuration-lint && pnpm lint:configuration && pnpm test:copy-lint && pnpm lint:copy && pnpm test:evaluation-contract && pnpm test:bootstrap && pnpm test:dev && turbo run typecheck test",
     "check:fix": "biome check --write .",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "prepare": "simple-git-hooks || true",

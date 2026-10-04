@@ -1,5 +1,102 @@
 # PROJECT STATE — Lilleri
 
+## Latest iteration — 2026-10-04 (Europe/Rome)
+
+Current user goal: finish the real-bank/public MVP through an iterative
+development → manual test → feedback → minimal fix workflow. There is no
+provider account/contract or custom domain. The user has now created a Railway
+service linked to Lilleri; its initial Railpack build failed on the old commit.
+Do not call
+the synthetic preview the completed banking MVP. Remaining software P0 work and
+external prerequisites are in the execution plan and
+`docs/operations/interactive-development.md`.
+
+Current online-preview path: root Dockerfile, Node22.22/pnpm10.28 and the
+existing development supervisor on Railway. `/data` must persist database,
+independent keys and source journal; PORT and DEV_RECOVERY_PATH are supported.
+Detailed one-time service settings are in `docs/operations/railway-preview.md`.
+Use the existing development branch and automatic deploys after checked pushes.
+This is commit/build/deploy, not filesystem hot reload from Codex. Railway has
+no account-management connector here; the user handles login, volume/domain,
+service settings and any billing decision. No payment has been activated by us.
+
+Preferred browser development command is now `pnpm dev:cloud`, after activating
+the pinned Node22/pnpm10 toolchain and installing the frozen lockfile. New
+dependency-free `tools/dev` supervises Fastify3191, Expo localhost8181, Next3000
+and a gateway0.0.0.0:8080. Forward only8080 for the financial browser app; `/api`
+and Metro WebSockets share the preview origin. API production/loopback guards
+remain. This is a private shared synthetic preview, without production identity.
+The standard `pnpm dev` and `dev:zero` workflows remain available separately.
+
+Default archive is ignored `.lilleri/interactive/data`, with independent keys
+and source journal under `~/.lilleri-interactive/<root-and-database-path-hash>/`.
+`DEV_DATA_PATH` selects a separate synthetic fixture with its own recovery
+namespace; preserve current keys/journals. `DEV_HOST`, `DEV_PORT` and optional
+exact `DEV_PUBLIC_ORIGIN` configure only the gateway. No old archive was reset.
+
+Source rebuilds are serialized and use `--noEmitOnError`; failed compilation
+leaves the current API alive, and a corrected save restarts after its writer
+closes. Expo must run without CI (CI disables watch) and with `--clear` to avoid
+stale embedded endpoints. Metro readiness now probes explicit IPv6/IPv4 loopback
+and the gateway reuses the working address. Container Node ADDRCONFIG otherwise
+filters IPv6 localhost even when Expo binds ::1; API stays IPv4.
+Worker groups and early-reset WebSockets
+are handled on shutdown. Standard Turbo now passes SOURCE_ERASURE_JOURNAL_PATH.
+Next DemoLink accepts an explicit validated NEXT_PUBLIC_DEMO_URL for this setup.
+
+Verification: frozen offline install; full check23tasks (API448pass/3skip,
+existing core361 and mobile35); independent fresh core/mobile396pass; thirteen
+real HTTP/WebSocket/process/build regressions; eight actual browser flows
+(manual exact money, reload, language, real ZIP, 320/390/1280); live HMR without
+navigation using mapped remote hostname and same-origin8080 sockets; actual
+compiler failure/corrected save/source restore with unchanged financial ledger.
+Temporary App/server probes were restored byte for byte. No PostgreSQL/native
+or actual public ingress claim is added by this iteration.
+
+Railway image verification: frozen dependency install and eight package builds
+passed in Docker; thirteen development tests also passed inside the image.
+Eight browser flows passed through the real container gateway. A new prepared
+container with the same /data reopened all six accounts and36 transactions,
+preserved exact financial records/profile, completed synthetic sync and rendered
+and refreshed the UI with no browser errors. Railway healthcheck Host returned200.
+At1GiB the first browser bundle compile caused OOM; the2GiB fixture passed.
+Use at least2GB for the complete development image; Free/Trial cannot run it
+reliably. No paid plan was activated. Proofs in railway-* validation files.
+The Docker image uses --prepared to avoid repeating its build at startup; normal
+local development still builds before launch. The actual hosted HTTPS URL and
+automatic GitHub deploy need the user's service settings and remain unverified.
+
+Proof/logs in `/workspace/.lilleri-validation/iterative-*`; browser writes used
+only separate `/workspace/.lilleri-validation/interactive-smoke/data`.
+Final manual preview uses the default interactive archive. Keep the active
+environment and archive between feedback iterations; never reseed/reset as an
+assumed fix. Use current source/logs and reproduce the reported flow first.
+For a detached launch on this executor use `setsid nohup pnpm dev:cloud` with
+stdin/stdout redirected: plain nohup is killed by command-group cleanup and can
+leave detached child workers. Final log is `iterative-runtime.log`, launcher PID
+in `iterative-launcher.pid`; verify the actual runner/process identity before
+stopping it. A managed persistent terminal is the portable alternative.
+Latest user preference: remain in this Codex chat with an online browser
+preview, without Mac installations, ZIP downloads or a move to Replit.
+Do not propose the earlier source-snapshot/local-project workflow again.
+This cloud task has no available port-forwarding tool or verified public
+preview URL. Mac localhost does not reach cloud8080. Environment status at
+revision29 confirms enforced package-manager-only HTTP networking, no
+configured capabilities/credentials, VPNfalse and no TCP grants. The runtime
+is healthy internally; do not describe it as reachable from the user's Mac.
+An authorized public ingress to this environment's8080 would retain the
+same source, hot reload and archive. No callable configuration workflow is
+available to activate one. The user has begun the separate Railway hosting setup.
+Sites Workers hosting is not a drop-in host for the current Node/PGlite
+supervisor; do not rewrite the app or silently create a different app merely
+to present an approximate preview. Keep all source/archives while this
+infrastructure prerequisite is unresolved.
+The previous cloud/live-preview goal was blocked on native ingress. The user
+then requested concrete instructions and began connecting Railway. Complete
+that setup from the current Docker configuration; do not repeat tunnel/native
+ingress investigations or reset archives. A Railway HTTPS endpoint is not yet
+verified; await its URL/status and diagnose the actual deployed commit.
+
 > Memoria operativa corrente, 2026-10-03. Mandato in `docs/BRIEF.md`, prove e
 > limiti in `docs/STATUS.md`, tutti i40 epic in `docs/product/execution-plan.md`.
 > Sorgenti e verifiche effettive prevalgono su annotazioni storiche.

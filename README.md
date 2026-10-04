@@ -4,6 +4,21 @@ Lilleri is an Italy-first personal-finance project. The current repository is a 
 
 See [delivery status and evidence](docs/STATUS.md), [project memory](PROJECT_STATE.md), [the founder’s brief](docs/BRIEF.md) and [documentation map](docs/README.md).
 
+## Interactive development
+
+For a browser preview in a cloud workspace or local development, use Node 22.12+ and the pinned pnpm 10.28.0:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev:cloud
+```
+
+Open port **8080** if the cloud host provides a preview/port-forwarding interface, or visit `http://localhost:8080` after starting the project locally. The user selected an online preview in the current Codex chat; the current cloud task has no verified externally accessible preview URL or callable ingress configuration. Mac localhost does not reach this cloud instance. See the [online-preview prerequisite](docs/operations/interactive-development.md#view-and-iterate-in-codex-on-a-mac). The application and `/api` share one address; the browser never needs to reach the workspace's private API port. Expo updates the interface automatically, and backend/shared-package edits trigger a checked rebuild and coordinated API restart. Synthetic data persists in a separate `.lilleri/interactive/data` archive across restarts. The existing archives are preserved. The Next project page also runs on loopback port 3000.
+
+This preview remains a shared synthetic development instance. Use a private workspace preview and invented data. Real bank access and a public banking release are still open work. See the [repository analysis, commands, environment and iteration workflow](docs/operations/interactive-development.md), including the remaining MVP prerequisites.
+
+To keep editing in Codex and test through an online HTTPS URL, the [Railway preview setup](docs/operations/railway-preview.md) connects this development branch to a persistent single-service deployment. Updates arrive after a tested commit is deployed; they are not filesystem hot reload from this cloud task. The root Dockerfile is a synthetic development image, not a production banking image.
+
 ## Run the local demo
 
 Use Node 22.12+ and pnpm 10 (the repository pins pnpm 10.28.0). In the supplied cloud workspace, the optional installed toolchain can be activated with `. /workspace/.lilleri-toolchain/env.sh`.

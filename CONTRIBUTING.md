@@ -4,6 +4,8 @@ Read [PROJECT_STATE.md](PROJECT_STATE.md), [STATUS](docs/STATUS.md), [BRIEF](doc
 
 ## Toolchain and startup
 
+For the iterative cloud/browser workflow, prefer `pnpm dev:cloud` after the frozen installation. It supervises the API, Expo, Next and a same-origin preview on port 8080, and rebuilds backend/shared sources before restarting the API. Its persistent archive and independent vault are separate from `pnpm dev` and `dev:zero`. See [interactive development](docs/operations/interactive-development.md) for port forwarding, diagnostics, configuration and manual checks.
+
 Use Node 22.12+ and pnpm 10; the package manager is pinned to pnpm 10.28.0. This workspace optionally provides (activate it for Git commits too: hooks invoke pnpm):
 
 ```bash
@@ -68,7 +70,8 @@ The trusted `DATABASE_URL` serves migrations, identity and maintenance. Financia
 | `pnpm test:copy-lint` | Node regression groups for the UI-copy guard |
 | `pnpm test:evaluation-contract` | Node groups for frozen splits, metrics, shadow thresholds and local policy journal invariants |
 | `pnpm test:bootstrap` | Node groups for the separate zero-investment launcher and exact economic calculator |
-| `pnpm check` | Biome check, configuration/copy guards, their regression groups, evaluation/bootstrap contracts, workspace typecheck and tests |
+| `pnpm test:dev` | Real HTTP/WebSocket gateway and development rebuild regressions |
+| `pnpm check` | Biome check, configuration/copy guards, their regression groups, evaluation/bootstrap/development contracts, workspace typecheck and tests |
 | `pnpm check:fix` | Apply Biome fixes; typecheck/tests still need their own run |
 | `pnpm test:integration` | API integration suite, PGlite unless `PG_TEST_DATABASE_URL` is set |
 | `pnpm build` | Workspace builds, Next production build and Expo **web** export |
