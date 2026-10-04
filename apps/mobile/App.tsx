@@ -171,7 +171,9 @@ function AppSurface({
   const theme = themeChoice ?? (systemTheme === 'dark' ? 'dark' : 'light')
   const c = colors[theme]
   const s = useMemo(() => styles(c), [c])
-  const wide = useWindowDimensions().width >= 960
+  const windowWidth = useWindowDimensions().width
+  const wide = windowWidth >= 960
+  const homeWide = windowWidth >= 1180
   const [fontsLoaded, fontError] = useFonts({
     Geist: require('../../packages/brand/fonts/Geist-Regular.ttf'),
     GeistMedium: require('../../packages/brand/fonts/Geist-Medium.ttf'),
@@ -723,9 +725,6 @@ function AppSurface({
         style={({ pressed }) => [s.transaction, pressed && s.pressed]}
       >
         <View style={s.transactionTop}>
-          <View style={s.merchantCircle}>
-            <Text style={s.merchantLetter}>{name(transaction).slice(0, 1).toUpperCase()}</Text>
-          </View>
           <View style={s.transactionName}>
             <Text style={s.strong}>{name(transaction)}</Text>
             <Text style={s.caption}>
@@ -887,14 +886,14 @@ function AppSurface({
           <Text style={s.buttonText}>{t('app.skipContent')}</Text>
         </Pressable>
       )}
-      <View style={s.appHeader}>
+      <View style={[s.appHeader, windowWidth < 400 && s.compactHeader]}>
         <Image
           source={
             theme === 'dark'
               ? require('../../packages/brand/png/lockup-dark.png')
               : require('../../packages/brand/png/lockup-light.png')
           }
-          style={s.logo}
+          style={[s.logo, wide && s.wideLogo, windowWidth < 400 && s.compactLogo]}
           resizeMode="contain"
           accessibilityLabel="Lilleri"
         />
@@ -926,7 +925,7 @@ function AppSurface({
                     : t(tabMessages[destination])
                 }
                 onPress={() => go(destination)}
-                style={[s.railTab, tab === destination && s.selectedTab]}
+                style={[s.railTab, tab === destination && s.selectedRailTab]}
               >
                 <Text style={[s.railNumber, tab === destination && s.selectedText]}>
                   {String(index + 1).padStart(2, '0')}
@@ -939,7 +938,7 @@ function AppSurface({
             ))}
             <View style={s.railFooter}>
               <Signature color={c.primary} />
-              <Text style={s.caption}>{t('app.signature')}</Text>
+              <Text style={s.railColophon}>{t('app.railColophon')}</Text>
             </View>
           </View>
         )}
@@ -959,7 +958,7 @@ function AppSurface({
                 nativeID="lilleri-main-heading"
                 accessibilityRole="header"
                 aria-level={1}
-                style={s.heading}
+                style={[s.heading, wide && s.wideHeading]}
               >
                 {selected
                   ? t('app.transaction')
@@ -1425,12 +1424,12 @@ function AppSurface({
             <>
               <View style={s.attention}>
                 <View style={s.attentionCopy}>
-                  <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                  <Text accessibilityRole="header" aria-level={2} style={s.attentionTitle}>
                     {reviewCount
                       ? t('app.reviewCount', { count: reviewCount })
                       : t('app.nothingReview')}
                   </Text>
-                  <Text style={s.body}>
+                  <Text style={s.attentionText}>
                     {reviewCount ? t('app.reviewHelp') : t('app.reviewHere')}
                   </Text>
                 </View>
@@ -1443,52 +1442,87 @@ function AppSurface({
                   />
                 )}
               </View>
-              <View style={s.summary}>
-                <View style={s.summaryHead}>
-                  <Text style={s.label}>{t('app.spendingHeading')}</Text>
-                  <Signature color={c.primary} />
-                </View>
-                <Text style={s.caption}>
-                  {t('app.accountCoverage', { history, count: data.accounts.length })}
-                </Text>
-                {data.analysis.summaries.length ? (
-                  data.analysis.summaries.map((summary) => (
-                    <View key={summary.currency} style={s.currencySummary}>
-                      <Text style={s.currency}>{summary.currency}</Text>
-                      <Text
-                        accessibilityLabel={t('app.spendLabel', {
-                          amount: accessibleAmount(summary.spend),
-                        })}
-                        style={s.bigAmount}
-                      >
-                        {amount(summary.spend)}
-                      </Text>
-                      <View style={s.summaryDetails}>
-                        <View style={s.metric}>
-                          <Text style={s.caption}>{t('app.bookedIncome')}</Text>
-                          <Text style={s.mediumAmount}>{amount(summary.income)}</Text>
+              <View style={[s.homeColumns, homeWide && s.homeColumnsWide]}>
+                <View style={[s.summary, homeWide && s.summaryWide]}>
+                  <View style={s.summaryHead}>
+                    <Text style={s.label}>{t('app.spendingHeading')}</Text>
+                    <Signature color={c.primary} />
+                  </View>
+                  <Text style={s.caption}>
+                    {t('app.accountCoverage', { history, count: data.accounts.length })}
+                  </Text>
+                  {data.analysis.summaries.length ? (
+                    data.analysis.summaries.map((summary) => (
+                      <View key={summary.currency} style={s.currencySummary}>
+                        <View style={s.currencyHeading}>
+                          <Text style={s.currency}>{summary.currency}</Text>
+                          <Text
+                            accessibilityLabel={t('app.spendLabel', {
+                              amount: accessibleAmount(summary.spend),
+                            })}
+                            style={[s.bigAmount, homeWide && s.wideAmount]}
+                          >
+                            {amount(summary.spend)}
+                          </Text>
                         </View>
-                        <View style={s.metric}>
-                          <Text style={s.caption}>{t('app.pendingBalance')}</Text>
-                          <Text style={s.mediumAmount}>{amount(summary.pending)}</Text>
+                        <View style={s.summaryDetails}>
+                          <View style={s.metric}>
+                            <Text style={s.caption}>{t('app.bookedIncome')}</Text>
+                            <Text style={s.mediumAmount}>{amount(summary.income)}</Text>
+                          </View>
+                          <View style={s.metric}>
+                            <Text style={s.caption}>{t('app.pendingBalance')}</Text>
+                            <Text style={s.mediumAmount}>{amount(summary.pending)}</Text>
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={s.body}>{t('app.noAmounts')}</Text>
-                )}
-                <Text style={s.summaryNote}>{t('app.summaryNote')}</Text>
-                <Text style={s.caption}>
-                  {t('app.lastRetrieved', { date: datetime(retrievedAt) })}
-                </Text>
+                    ))
+                  ) : (
+                    <Text style={s.body}>{t('app.noAmounts')}</Text>
+                  )}
+                  <Text style={s.summaryNote}>{t('app.summaryNote')}</Text>
+                  <Text style={s.caption}>
+                    {t('app.lastRetrieved', { date: datetime(retrievedAt) })}
+                  </Text>
+                </View>
+                <View style={[s.accountRegister, homeWide && s.accountRegisterWide]}>
+                  <View style={s.sectionHeader}>
+                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                      {t('app.accountsHeading')}
+                    </Text>
+                    <Button
+                      label={t('app.manage')}
+                      onPress={() => go('Privacy')}
+                      quiet
+                      c={c}
+                      s={s}
+                    />
+                  </View>
+                  <View style={s.accountList}>
+                    {data.accounts.length ? (
+                      data.accounts.map((account, index) => (
+                        <View style={s.accountRow} key={account.id}>
+                          <Text style={s.accountNumber} aria-hidden={true} accessible={false}>
+                            {String(index + 1).padStart(2, '0')}
+                          </Text>
+                          <View style={s.accountName}>
+                            <Text style={s.accountTitle}>{account.name}</Text>
+                            <Text style={s.caption}>
+                              {t('app.accountObserved', {
+                                institution: account.institutionName,
+                                date: datetime(account.balanceUpdatedAt),
+                              })}
+                            </Text>
+                          </View>
+                          <Text style={s.accountAmount}>{amount(account.balance)}</Text>
+                        </View>
+                      ))
+                    ) : (
+                      <Text style={s.body}>{t('app.noAccounts')}</Text>
+                    )}
+                  </View>
+                </View>
               </View>
-              <Button
-                label={t('app.understanding')}
-                onPress={() => setManage('understanding')}
-                c={c}
-                s={s}
-              />
               <HomeQuickActions
                 theme={theme}
                 reviewCount={reviewCount}
@@ -1509,32 +1543,6 @@ function AppSurface({
                 onTransactions={() => go('Movimenti')}
                 onSummary={() => setManage('understanding')}
               />
-              <View style={s.sectionHeader}>
-                <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                  {t('app.accountsHeading')}
-                </Text>
-                <Button label={t('app.manage')} onPress={() => go('Privacy')} quiet c={c} s={s} />
-              </View>
-              <View style={s.card}>
-                {data.accounts.length ? (
-                  data.accounts.map((account) => (
-                    <View style={s.accountRow} key={account.id}>
-                      <View style={s.accountName}>
-                        <Text style={s.strong}>{account.name}</Text>
-                        <Text style={s.caption}>
-                          {t('app.accountObserved', {
-                            institution: account.institutionName,
-                            date: datetime(account.balanceUpdatedAt),
-                          })}
-                        </Text>
-                      </View>
-                      <Text style={s.mediumAmount}>{amount(account.balance)}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={s.body}>{t('app.noAccounts')}</Text>
-                )}
-              </View>
               <View style={s.sectionHeader}>
                 <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
                   {t('app.latestTransactions')}
@@ -2139,19 +2147,22 @@ function styles(c: ThemeColors) {
     root: { flex: 1, backgroundColor: c.background },
     appHeader: {
       width: '100%',
-      maxWidth: 1100,
+      maxWidth: 1280,
       alignSelf: 'center',
       flexDirection: 'row',
       flexWrap: 'wrap',
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 24,
-      paddingVertical: 16,
+      paddingVertical: 20,
       gap: 16,
       borderBottomWidth: 1,
-      borderColor: c.border,
+      borderColor: c.borderStrong,
     },
     logo: { width: 122, height: 40 },
+    compactHeader: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
+    compactLogo: { width: 106, height: 36 },
+    wideLogo: { width: 146, height: 48 },
     headerActions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -2164,9 +2175,8 @@ function styles(c: ThemeColors) {
       fontSize: tokens.typography.scale.caption.size,
       lineHeight: 16,
       color: c.textSecondary,
-      borderWidth: 1,
-      borderColor: c.borderStrong,
-      borderRadius: tokens.radius.pill,
+      borderLeftWidth: 2,
+      borderColor: c.primary,
       paddingHorizontal: 10,
       paddingVertical: 5,
       flexShrink: 1,
@@ -2179,27 +2189,28 @@ function styles(c: ThemeColors) {
       borderRadius: 12,
     },
     themeGlyph: { fontSize: 24, color: c.primary },
-    shell: { flex: 1, width: '100%', maxWidth: 1100, alignSelf: 'center' },
+    shell: { flex: 1, width: '100%', maxWidth: 1280, alignSelf: 'center' },
     wideShell: { flexDirection: 'row' },
     scroll: { flex: 1 },
-    content: { padding: 24, gap: 16, paddingBottom: 40 },
-    wideContent: { padding: 40, maxWidth: 820 },
-    rail: { width: 220, padding: 24, gap: 8, borderRightWidth: 1, borderColor: c.border },
+    content: { padding: 20, gap: 20, paddingBottom: 40 },
+    wideContent: { padding: 40, maxWidth: 1096 },
+    rail: { width: 200, paddingHorizontal: 16, paddingVertical: 32, gap: 4 },
     railLabel: {
       fontFamily: 'GeistMedium',
       fontSize: tokens.typography.scale.caption.size,
       color: c.textTertiary,
       letterSpacing: 1.3,
-      paddingBottom: 24,
-      paddingTop: 16,
+      paddingBottom: 20,
     },
     railTab: {
       minHeight: 52,
       flexDirection: 'row',
       gap: 12,
       alignItems: 'center',
-      padding: 12,
-      borderRadius: 12,
+      paddingHorizontal: 8,
+      paddingVertical: 12,
+      borderLeftWidth: 3,
+      borderColor: 'transparent',
     },
     railNumber: {
       color: c.textTertiary,
@@ -2209,6 +2220,13 @@ function styles(c: ThemeColors) {
     },
     navLabel: { color: c.textSecondary, fontFamily: 'GeistMedium', fontSize: 14, flexShrink: 1 },
     railFooter: { marginTop: 'auto', gap: 16, paddingTop: 40 },
+    railColophon: {
+      fontFamily: 'Newsreader',
+      fontSize: 18,
+      lineHeight: 24,
+      color: c.textSecondary,
+    },
+    selectedRailTab: { borderColor: c.primary },
     pageHeading: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -2225,12 +2243,13 @@ function styles(c: ThemeColors) {
       letterSpacing: 1.1,
     },
     heading: {
-      fontFamily: 'GeistSemibold',
-      fontSize: type.h1.size,
-      lineHeight: type.h1.lineHeight,
+      fontFamily: 'Newsreader',
+      fontSize: 42,
+      lineHeight: 48,
       color: c.textPrimary,
-      letterSpacing: -0.6,
+      letterSpacing: -1,
     },
+    wideHeading: { fontSize: 64, lineHeight: 72, letterSpacing: -1.8 },
     demoIntro: {
       fontFamily: 'Geist',
       fontSize: type.bodySmall.size,
@@ -2268,9 +2287,9 @@ function styles(c: ThemeColors) {
       marginTop: 8,
     },
     sectionTitle: {
-      fontFamily: 'GeistSemibold',
-      fontSize: type.title.size,
-      lineHeight: type.title.lineHeight,
+      fontFamily: 'Newsreader',
+      fontSize: 26,
+      lineHeight: 32,
       color: c.textPrimary,
       flexShrink: 1,
     },
@@ -2278,18 +2297,37 @@ function styles(c: ThemeColors) {
       backgroundColor: c.surface,
       borderWidth: 1,
       borderColor: c.border,
-      borderRadius: tokens.radius.lg,
+      borderRadius: 4,
       padding: 24,
       gap: 16,
     },
-    summary: {
+    homeColumns: {
       backgroundColor: c.surface,
-      borderRadius: tokens.radius.xl,
-      padding: 24,
-      gap: 16,
-      borderWidth: 1,
+      borderTopWidth: 2,
+      borderTopColor: c.textPrimary,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderStrong,
+      padding: 20,
+      gap: 28,
+    },
+    homeColumnsWide: { flexDirection: 'row', padding: 28, gap: 28 },
+    summary: { minWidth: 0, gap: 12 },
+    summaryWide: { flex: 1.15 },
+    accountRegister: {
+      minWidth: 0,
+      gap: 12,
+      paddingTop: 20,
+      borderTopWidth: 1,
       borderColor: c.border,
     },
+    accountRegisterWide: {
+      flex: 1,
+      borderTopWidth: 0,
+      paddingTop: 0,
+      borderLeftWidth: 1,
+      paddingLeft: 28,
+    },
+    accountList: { gap: 0 },
     summaryHead: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -2297,17 +2335,25 @@ function styles(c: ThemeColors) {
       flexWrap: 'wrap',
       gap: 8,
     },
-    currencySummary: { gap: 8, paddingTop: 8 },
-    currency: { fontFamily: 'GeistMedium', fontSize: 12, color: c.primary },
+    currencySummary: {
+      gap: 8,
+      paddingTop: 12,
+      paddingBottom: 16,
+      borderBottomWidth: 1,
+      borderColor: c.border,
+    },
+    currencyHeading: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+    currency: { fontFamily: 'GeistMedium', fontSize: 12, color: c.primary, minWidth: 30 },
     bigAmount: {
       fontFamily: 'GeistMedium',
-      fontSize: type.amountLarge.size,
-      lineHeight: type.amountLarge.lineHeight,
-      letterSpacing: type.amountLarge.letterSpacing,
+      fontSize: 36,
+      lineHeight: 44,
+      letterSpacing: -1.2,
       color: c.textPrimary,
       fontVariant: ['tabular-nums'],
       flexShrink: 1,
     },
+    wideAmount: { fontSize: 48, lineHeight: 56, letterSpacing: -1.8 },
     mediumAmount: {
       fontFamily: 'GeistMedium',
       fontSize: type.amountMedium.size,
@@ -2316,27 +2362,33 @@ function styles(c: ThemeColors) {
       fontVariant: ['tabular-nums'],
       flexShrink: 1,
     },
-    summaryDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 24, paddingTop: 16 },
-    metric: { gap: 8, minWidth: 140, flex: 1 },
+    summaryDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingTop: 8 },
+    metric: { gap: 4, minWidth: 110, flex: 1 },
     summaryNote: {
       fontFamily: 'Geist',
       fontSize: 12,
       lineHeight: 18,
       color: c.textSecondary,
-      borderTopWidth: 1,
-      borderColor: c.border,
-      paddingTop: 16,
+      paddingTop: 4,
     },
     attention: {
-      padding: 24,
-      backgroundColor: c.primarySoft,
-      borderRadius: tokens.radius.lg,
+      paddingVertical: 12,
+      paddingLeft: 16,
+      borderLeftWidth: 3,
+      borderColor: c.primary,
       flexDirection: 'row',
       gap: 16,
       alignItems: 'center',
       flexWrap: 'wrap',
     },
-    attentionCopy: { flex: 1, minWidth: 160, gap: 8 },
+    attentionCopy: { flex: 1, minWidth: 160, gap: 4 },
+    attentionTitle: {
+      fontFamily: 'Newsreader',
+      fontSize: 23,
+      lineHeight: 28,
+      color: c.textPrimary,
+    },
+    attentionText: { fontFamily: 'Geist', fontSize: 14, lineHeight: 21, color: c.textSecondary },
     sectionHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -2347,7 +2399,7 @@ function styles(c: ThemeColors) {
     },
     button: {
       backgroundColor: c.primary,
-      borderRadius: tokens.radius.md,
+      borderRadius: 4,
       paddingHorizontal: 20,
       paddingVertical: 12,
       minHeight: 48,
@@ -2368,29 +2420,20 @@ function styles(c: ThemeColors) {
     disabled: { opacity: 0.5 },
     pressed: { opacity: 0.75 },
     list: {
-      backgroundColor: c.surface,
-      borderRadius: tokens.radius.lg,
-      borderWidth: 1,
-      borderColor: c.border,
-      overflow: 'hidden',
+      borderTopWidth: 2,
+      borderTopColor: c.textPrimary,
+      borderBottomWidth: 1,
+      borderBottomColor: c.borderStrong,
     },
     transaction: {
-      padding: 16,
+      paddingHorizontal: 4,
+      paddingVertical: 16,
       gap: 8,
       borderBottomWidth: 1,
       borderColor: c.border,
       minHeight: 88,
     },
     transactionTop: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 12 },
-    merchantCircle: {
-      width: 36,
-      height: 36,
-      borderRadius: tokens.radius.sm,
-      backgroundColor: c.primarySoft,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    merchantLetter: { fontFamily: 'Newsreader', fontSize: 22, color: c.primary },
     transactionName: { flex: 1, minWidth: 120, gap: 4 },
     rowAmount: {
       fontFamily: 'GeistMedium',
@@ -2401,7 +2444,6 @@ function styles(c: ThemeColors) {
       flexShrink: 1,
     },
     transactionMeta: {
-      marginLeft: 48,
       gap: 4,
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -2411,14 +2453,32 @@ function styles(c: ThemeColors) {
     categoryLabel: { fontFamily: 'GeistMedium', fontSize: 12, lineHeight: 18, color: c.primary },
     accountRow: {
       flexDirection: 'row',
-      gap: 16,
+      gap: 10,
       alignItems: 'center',
       flexWrap: 'wrap',
       borderBottomWidth: 1,
       borderColor: c.border,
-      paddingVertical: 8,
+      paddingVertical: 14,
     },
-    accountName: { flex: 1, minWidth: 150, gap: 4 },
+    accountNumber: {
+      fontFamily: 'Geist',
+      fontSize: 10,
+      lineHeight: 16,
+      color: c.primary,
+      alignSelf: 'flex-start',
+      paddingTop: 4,
+    },
+    accountName: { flex: 1, minWidth: 110, gap: 4 },
+    accountTitle: { fontFamily: 'GeistMedium', fontSize: 14, lineHeight: 21, color: c.textPrimary },
+    accountAmount: {
+      fontFamily: 'GeistMedium',
+      fontSize: 18,
+      lineHeight: 26,
+      fontVariant: ['tabular-nums'],
+      color: c.textPrimary,
+      textAlign: 'right',
+      flexShrink: 1,
+    },
     footerNote: { gap: 16, paddingVertical: 24 },
     pageEnd: { gap: 4, paddingTop: 32, borderTopWidth: 1, borderColor: c.border, marginTop: 8 },
     detailMerchant: {

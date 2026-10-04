@@ -13,6 +13,7 @@ const report = {
   scope: 'isolated synthetic UI with intercepted decision transport',
   checks: [],
   errors: [],
+  expectedConflictConsole: [],
 }
 const check = (name) => {
   report.checks.push(name)
@@ -58,12 +59,23 @@ async function main() {
   }
   const removalWrites = [],
     pendingWrites = []
-  const browser = await chromium.launch({ headless: true })
+  const browser = await chromium.launch({
+    executablePath: '/usr/bin/chromium',
+    headless: true,
+    args: ['--no-sandbox'],
+  })
   try {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
     page.on('pageerror', (error) => report.errors.push(error.message))
     page.on('console', (message) => {
-      if (message.type() === 'error') report.errors.push(message.text())
+      if (message.type() !== 'error') return
+      if (
+        removalWrites.length === 1 &&
+        message.location().url === `${origin}/api/v1/reconciliation/source-removals/decision` &&
+        /status of 409 \(Conflict\)/.test(message.text())
+      )
+        report.expectedConflictConsole.push(message.text())
+      else report.errors.push(message.text())
     })
     const json = (route, body, status = 200) =>
       route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })

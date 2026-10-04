@@ -95,8 +95,9 @@ export const APP_MESSAGE_PAIRS = {
   'app.demoBadge': ['Dati dimostrativi', 'Demo data'],
   'app.lightTheme': ['Usa aspetto chiaro', 'Use light appearance'],
   'app.darkTheme': ['Usa aspetto scuro', 'Use dark appearance'],
-  'app.railLabel': ['LE TUE FINANZE', 'YOUR FINANCES'],
-  'app.eyebrow': ['LE TUE FINANZE', 'YOUR FINANCES'],
+  'app.railLabel': ['INDICE', 'CONTENTS'],
+  'app.eyebrow': ['IL QUADERNO DEI CONTI', 'THE ACCOUNT BOOK'],
+  'app.railColophon': ['Lilleri\nConti personali', 'Lilleri\nPersonal accounts'],
   'app.transaction': ['Dettaglio movimento', 'Transaction details'],
   'app.homeHeading': ['Panoramica', 'Overview'],
   'app.refreshing': ['Recupero…', 'Refreshing…'],
@@ -167,8 +168,8 @@ export const APP_MESSAGE_PAIRS = {
   'app.saveCategory': ['Salva categoria', 'Save category'],
   'app.nothingReview': ['Niente da controllare.', 'Nothing to review.'],
   'app.reviewHelp': [
-    'Controlla le categorie e gli abbinamenti proposti. Apri i dettagli prima di confermare una scelta.',
-    'Review suggested categories and transaction links. Open the details before confirming a choice.',
+    'Categorie e abbinamenti da verificare.',
+    'Categories and transaction links to review.',
   ],
   'app.reviewHere': [
     'Qui troverai categorie e abbinamenti da verificare quando arrivano nuovi movimenti.',
@@ -384,7 +385,7 @@ export const APP_MESSAGE_PAIRS = {
     'Gli indizi disponibili richiedono una tua scelta della categoria.',
     'The available evidence requires your category choice.',
   ],
-  'quick.title': ['Da dove vuoi iniziare?', 'Where would you like to start?'],
+  'quick.title': ['Usa il quaderno', 'Use your account book'],
   'quick.add': ['Aggiungi conto o movimenti', 'Add an account or transactions'],
   'quick.addHelp': [
     'Tieni traccia di contanti o importa un file. Parti da un conto manuale.',
