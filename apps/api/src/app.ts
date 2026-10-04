@@ -46,6 +46,7 @@ import type { Observability } from './observability.js'
 import { renderObservabilityDashboard } from './observability-dashboard.js'
 import { registerObservabilityHooks } from './observability-hooks.js'
 import { ownershipExportSchemas, validateOwnershipExport } from './ownership-export.js'
+import { PendingLifecycleService, registerPendingLifecycleRoutes } from './pending-lifecycle.js'
 import { PrivacyService, registerPrivacyRoutes } from './privacy.js'
 import { Problem } from './problem.js'
 import { RecurringService, registerRecurringRoutes } from './recurring.js'
@@ -1022,6 +1023,15 @@ export async function createApp(options: AppOptions) {
   registerRulesRoutes(app, async (request) => {
     const service = serviceFor(request)
     return new RulesService(service.db, service.profileId, options.now, options.encryption)
+  })
+  registerPendingLifecycleRoutes(app, (request) => {
+    const service = serviceFor(request)
+    return new PendingLifecycleService(
+      service.db,
+      service.profileId,
+      service.now,
+      options.encryption,
+    )
   })
   registerConsentLifecycleRoutes(app, async (request) => {
     const service = serviceFor(request)

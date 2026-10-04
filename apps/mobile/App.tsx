@@ -200,6 +200,11 @@ function AppSurface({
   >(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'review'>('all')
   const [detailId, setDetailId] = useState<string | null>(null)
+  const [recoveryAccount, setRecoveryAccount] = useState<{
+    readonly profileId: string
+    readonly epoch: number
+    readonly accountId: string
+  } | null>(null)
   const [category, setCategory] = useState<CategoryId>('uncategorised')
   const [scope, setScope] = useState<Scope>('once')
   const [undoCategory, setUndoCategory] = useState<{ id: string; category: CategoryId } | null>(
@@ -247,6 +252,7 @@ function AppSurface({
     setUndoCategory(null)
     setExported(null)
     setManage(null)
+    setRecoveryAccount(null)
     setNotice(null)
     setQuery('')
     setLedgerFilters(EMPTY_LEDGER_FILTERS)
@@ -294,6 +300,7 @@ function AppSurface({
       setQuery('')
       setLedgerFilters(EMPTY_LEDGER_FILTERS)
       setManage(null)
+      setRecoveryAccount(null)
       if (!options?.preserveNavigation) setTab('Home')
       setReauthenticationRequested(false)
       setCategory('uncategorised')
@@ -1154,6 +1161,10 @@ function AppSurface({
               ) : manage === 'mapped-import' ? (
                 <MappedImportPanel
                   overview={data}
+                  {...(recoveryAccount?.profileId === data.profile.id &&
+                  recoveryAccount.epoch === renderedIdentityEpoch
+                    ? { recoveryAccountId: recoveryAccount.accountId }
+                    : {})}
                   theme={theme}
                   request={api.request}
                   resetKey={renderedIdentityEpoch}
@@ -1204,6 +1215,15 @@ function AppSurface({
                   resetKey={renderedIdentityEpoch}
                   onRefresh={refreshAfterChange}
                   onManualFallback={() => setManage('import')}
+                  onRecoverHistory={(accountId) => {
+                    if (renderedIdentityEpoch !== identityEpoch.current) return
+                    setRecoveryAccount({
+                      profileId: data.profile.id,
+                      epoch: renderedIdentityEpoch,
+                      accountId,
+                    })
+                    setManage('mapped-import')
+                  }}
                   onError={panelIdentityFailure}
                 />
               ) : manage === 'merchants' ? (

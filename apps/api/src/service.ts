@@ -1427,7 +1427,7 @@ export class DemoService {
         createdAt: new Date((await this.profile(db)).createdAt).toISOString(),
       },
       transactions: (await this.data(db)).ledgerTransactions,
-      ...(await augmentOwnershipExport(db, this.profileId, this.encryption)),
+      ...(await augmentOwnershipExport(db, this.profileId, this.encryption, this.now)),
       ...(await new RecurringService(this, this.recurringPolicy).ownedExport(db)),
       consents: consents.map(withoutHousehold),
       sourceObservations: observations,

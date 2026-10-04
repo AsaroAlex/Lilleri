@@ -28,6 +28,11 @@ import {
   notificationPreferenceValuesSchema,
 } from './notifications.js'
 import {
+  assertPendingOwnershipReferences,
+  PendingLifecycleService,
+  pendingOwnershipDto,
+} from './pending-lifecycle.js'
+import {
   PrivacyService,
   privacyExportDtoSchema,
   privacyPermissionEventDtoSchema,
@@ -297,6 +302,7 @@ export const ownershipExportSchemas = {
   mappedImports: exportedMappedImports.optional(),
   merchantTaxonomy: merchantTaxonomyExportDtoSchema.optional(),
   sync: syncOwnershipDto.optional(),
+  pendingLifecycle: pendingOwnershipDto.optional(),
   recurringPreferences: recurringOwnershipSchemas.recurringPreferences.optional(),
   recurringPreferenceEvents: recurringOwnershipSchemas.recurringPreferenceEvents.optional(),
   sourceErasures: sourceErasureOwnershipSchemas.sourceErasures.optional(),
@@ -311,6 +317,7 @@ export async function augmentOwnershipExport(
   db: Database,
   profileId: string,
   encryption?: ProfileEncryption,
+  now: () => string = () => new Date().toISOString(),
 ): Promise<OwnershipExport> {
   const lifecycles = await db
     .select()
@@ -374,6 +381,7 @@ export async function augmentOwnershipExport(
     notifications: { ...notificationData, feed: notificationFeed },
     mappedImports,
     sync: await syncOwnershipExport(db, profileId),
+    pendingLifecycle: await new PendingLifecycleService(db, profileId, now, encryption).ownership(),
     connectionCreation: await connectionCreationOwnershipExport(db, profileId),
     merchantTaxonomy: await new MerchantTaxonomyService(
       db,
@@ -478,6 +486,12 @@ export function validateOwnershipExport(
       transactions: snapshot.transactions,
     } as unknown as Parameters<typeof assertSyncOwnershipReferences>[1])
   const connections = unique(snapshot.connections, (row) => row.id)
+  if (parsed.pendingLifecycle)
+    assertPendingOwnershipReferences(parsed.pendingLifecycle, {
+      profileId,
+      exportedAt: snapshot.exportedAt,
+      transactions: snapshot.transactions,
+    } as unknown as Parameters<typeof assertPendingOwnershipReferences>[1])
   const consents = unique(snapshot.consents, (row) => row.id)
   const lifecycleRows = parsed.consentLifecycles ?? []
   const consentRows = parsed.consentEvents ?? []
