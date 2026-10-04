@@ -17,6 +17,8 @@
     "preview:build": "node tools/preview/build.mjs",
     "preview:start": "node tools/preview/run.mjs",
     "test:preview": "node --test tools/preview/static.test.mjs",
+    "check:hosted": "node tools/hosted-readiness.mjs",
+    "check:sandbox": "pnpm --filter @lilleri/financial-providers sandbox:check",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",

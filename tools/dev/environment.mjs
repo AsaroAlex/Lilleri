@@ -9,6 +9,10 @@ export function developmentConfiguration(parent, root) {
     throw new Error('The interactive preview is development only')
   if (parent.LOCAL_AUTH_MODE === '1' || parent.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1')
     throw new Error('The interactive preview uses the synthetic demo, without local authentication')
+  if (parent.HOSTED_AUTH_MODE === '1' || parent.EXPO_PUBLIC_HOSTED_AUTH_MODE === '1')
+    throw new Error(
+      'The interactive preview uses the synthetic demo, without hosted authentication',
+    )
   if (parent.DEMO_MODE !== undefined && parent.DEMO_MODE !== '1')
     throw new Error('The interactive preview requires DEMO_MODE=1')
   if (parent.DATABASE_URL || parent.DATABASE_RUNTIME_URL || parent.PG_TEST_DATABASE_URL)
@@ -79,6 +83,7 @@ export function developmentConfiguration(parent, root) {
     SOURCE_ERASURE_JOURNAL_PATH: join(recovery, 'source-journal'),
     EXPO_PUBLIC_API_URL: '/api',
     EXPO_PUBLIC_LOCAL_AUTH_MODE: '0',
+    EXPO_PUBLIC_HOSTED_AUTH_MODE: '0',
     EXPO_OFFLINE: '1',
     EXPO_NO_TELEMETRY: '1',
     EXPO_NO_DOTENV: '1',

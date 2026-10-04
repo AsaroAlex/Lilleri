@@ -161,6 +161,8 @@ test('interactive configuration refuses production, external databases, authenti
     { NODE_ENV: 'production' },
     { LOCAL_AUTH_MODE: '1' },
     { EXPO_PUBLIC_LOCAL_AUTH_MODE: '1' },
+    { HOSTED_AUTH_MODE: '1' },
+    { EXPO_PUBLIC_HOSTED_AUTH_MODE: '1' },
     { DEMO_MODE: '0' },
     { DATABASE_URL: 'postgres://synthetic.example/dev' },
     { DATABASE_RUNTIME_URL: 'postgres://synthetic.example/dev' },

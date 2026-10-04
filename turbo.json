@@ -12,7 +12,14 @@
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["EXPO_PUBLIC_API_URL", "EXPO_PUBLIC_LOCAL_AUTH_MODE", "NEXT_PUBLIC_DEMO_URL"]
+      "env": [
+        "EXPO_PUBLIC_API_URL",
+        "EXPO_PUBLIC_LOCAL_AUTH_MODE",
+        "EXPO_PUBLIC_HOSTED_AUTH_MODE",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL",
+        "NEXT_PUBLIC_DEMO_URL"
+      ]
     },
     "typecheck": {
       "dependsOn": ["^build"],
@@ -38,6 +45,11 @@
         "LOCAL_AUTH_BASE_URL",
         "LOCAL_AUTH_SECRET",
         "EXPO_PUBLIC_LOCAL_AUTH_MODE",
+        "EXPO_PUBLIC_HOSTED_AUTH_MODE",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL",
+        "POSTGRES_OPERATIONS_CONFIG_FILE",
+        "POSTGRES_BACKUP_SIGNING_KEY_FILE",
         "API_HOST",
         "API_PORT",
         "DATABASE_URL",
