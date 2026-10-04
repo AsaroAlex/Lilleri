@@ -22,6 +22,7 @@ import { transactionPrivacy, transactionPrivacyEvents } from './privacy-schema.j
 import { notFound, Problem } from './problem.js'
 import { type SyncStage, syncHash } from './sync-provider.js'
 import { type syncJobs, syncPresence } from './sync-schema.js'
+import { fixtureRetirement } from './synthetic-fixtures.js'
 
 type LedgerRow = typeof schema.transactions.$inferSelect
 type LifecycleRow = typeof pendingLifecycles.$inferSelect
@@ -929,6 +930,10 @@ export class PendingLifecycleService {
       .orderBy(asc(pendingLifecycles.transactionId))
     const result = []
     const excluded = includePrivate ? new Set<string>() : await this.excluded()
+    if (!includePrivate)
+      for (const id of (await fixtureRetirement(this.db, this.profileId))?.proof.transactionIds ??
+        [])
+        excluded.add(id)
     for (const row of rows) {
       if (
         excluded.has(row.transactionId) ||
@@ -966,6 +971,10 @@ export class PendingLifecycleService {
   async removals(includePrivate = false) {
     const result = []
     const excluded = includePrivate ? new Set<string>() : await this.excluded()
+    if (!includePrivate)
+      for (const id of (await fixtureRetirement(this.db, this.profileId))?.proof.transactionIds ??
+        [])
+        excluded.add(id)
     const rows = await this.db
       .select()
       .from(syncPresence)

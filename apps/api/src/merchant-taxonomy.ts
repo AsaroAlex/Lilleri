@@ -30,6 +30,7 @@ import {
 import { PrivacyService } from './privacy.js'
 import { transactionPrivacy } from './privacy-schema.js'
 import { notFound, Problem } from './problem.js'
+import { fixtureTransactionReadPredicate } from './synthetic-fixtures.js'
 
 const id = z.string().min(1).max(200)
 const revision = z.number().int().min(1).max(2_147_483_646)
@@ -357,7 +358,12 @@ export class MerchantTaxonomyService {
     const rows = await db
       .select()
       .from(schema.transactions)
-      .where(eq(schema.transactions.profileId, this.profileId))
+      .where(
+        and(
+          eq(schema.transactions.profileId, this.profileId),
+          fixtureTransactionReadPredicate(this.profileId),
+        ),
+      )
       .orderBy(asc(schema.transactions.id))
     const transactions: Transaction[] = []
     for (const stored of rows) {

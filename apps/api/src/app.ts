@@ -80,6 +80,13 @@ import type { SyncForegroundContext } from './sync-foreground.js'
 import { registerSyncRoutes } from './sync-http.js'
 import { SyncCoordinator } from './sync-jobs.js'
 import {
+  assertFixturesEnabled,
+  fixtureRetirement,
+  fixtureSummary,
+  fixtureSummaryDto,
+  syntheticFixturePreflight,
+} from './synthetic-fixtures.js'
+import {
   eraseUnderstandingFinancialReferences,
   exportUnderstandingPersistence,
   registerUnderstandingPersistenceRoutes,
@@ -207,6 +214,8 @@ const accountDto = z.object({
 })
 const overviewDto = z.object({
   mode: z.literal('synthetic'),
+  fixtureMode: z.enum(['seeded', 'empty']).optional(),
+  fixtureCleanup: fixtureSummaryDto.optional(),
   profile: z.object({ id: z.string(), name: z.string(), timezone: z.string() }),
   connections: z.array(connectionDto),
   connectionLifecycles: z.array(consentLifecycleDto),
@@ -394,6 +403,8 @@ export interface AppOptions {
   readonly profileId?: string
   readonly provider?: FinancialDataProvider
   readonly seed?: boolean
+  /** Trusted demo-only launch choice; empty retires proven mock fixtures without erasure. */
+  readonly demoFixtures?: 'seeded' | 'empty'
   readonly now?: () => string
 }
 export function assertDemoConfiguration(
@@ -414,7 +425,7 @@ export async function createApp(options: AppOptions) {
     throw new Error('Select either local or hosted identity')
   const identityOptions = options.hostedIdentity ?? options.localIdentity
   if (identityOptions) {
-    if (options.demoMode || options.profileId || options.seed)
+    if (options.demoMode || options.profileId || options.seed || options.demoFixtures)
       throw new Error(
         'Authenticated identity cannot use a demo profile or automatically connect sources',
       )
@@ -508,7 +519,34 @@ export async function createApp(options: AppOptions) {
               )
           : undefined,
       )
-  await demoService?.bootstrap(options.seed ?? false)
+  await demoService?.bootstrap(options.demoFixtures === 'empty' ? false : (options.seed ?? false))
+  if (options.demoFixtures === 'empty') await demoService?.retireFixtures()
+  // Empty public previews cannot accept personal payloads or recreate synthetic bank data.
+  app.addHook('onRequest', async (request) => {
+    const path = request.routeOptions.url ?? ''
+    if (identity || request.method === 'GET' || request.method === 'DELETE' || !demoService) return
+    const personal =
+      path.startsWith('/v1/manual/') ||
+      path.startsWith('/v1/imports/') ||
+      path.startsWith('/v1/import-mappings')
+    const synthetic = path.startsWith('/v1/connections') || path.startsWith('/v1/sync/')
+    if (!personal && !synthetic) return
+    const empty =
+      options.demoFixtures === 'empty' ||
+      (await fixtureRetirement(options.db, demoService.profileId))
+    if (!empty) return
+    if (personal)
+      throw new Problem(
+        401,
+        'public_identity_required',
+        'Per inserire dati personali serve un accesso privato. Questa anteprima condivisa non accetta movimenti o file finanziari reali.',
+      )
+    throw new Problem(
+      409,
+      'synthetic_fixtures_disabled',
+      'I dati di prova sono stati rimossi. Per usare una banca reale serve un collegamento personale autorizzato.',
+    )
+  })
   const requestServices = new WeakMap<FastifyRequest, DemoService>()
   const principals = new WeakMap<FastifyRequest, FinancialPrincipal>()
   const connectionPolicies = new WeakMap<FastifyRequest, ConsentLifecycleOptions>()
@@ -701,6 +739,8 @@ export async function createApp(options: AppOptions) {
     institutionId?: string,
     accountKind?: Account['kind'],
   ) => {
+    const service = serviceFor(request)
+    await assertFixturesEnabled(service.db, service.profileId)
     if (!durableSync) return serviceFor(request).connect(institutionId, accountKind)
     const coordinator = coordinatorFor(request)
     const scope = coordinator.options.scope
@@ -1184,6 +1224,29 @@ export async function createApp(options: AppOptions) {
         .send(renderObservabilityDashboard(options.observability))
     })
   }
+  app.get(
+    '/v1/demo/fixtures/preflight',
+    {
+      schema: {
+        response: {
+          200: z.object({
+            fixtureMode: z.enum(['seeded', 'empty']),
+            wouldRetire: fixtureSummaryDto,
+          }),
+          ...errors,
+        },
+      },
+    },
+    async (request) => {
+      const service = serviceFor(request)
+      return {
+        fixtureMode: (await fixtureRetirement(service.db, service.profileId))
+          ? ('empty' as const)
+          : ('seeded' as const),
+        wouldRetire: fixtureSummary(await syntheticFixturePreflight(service.db, service.profileId)),
+      }
+    },
+  )
   app.get(
     '/v1/demo',
     {

@@ -41,6 +41,9 @@ import { eraseUnderstandingFinancialReferences } from './understanding-persisten
 const host = process.env.API_HOST ?? '127.0.0.1'
 const localAuthMode = process.env.LOCAL_AUTH_MODE === '1'
 const demoMode = process.env.DEMO_MODE === '1'
+const demoFixtures = process.env.DEMO_FIXTURES ?? 'seeded'
+if (!['seeded', 'empty'].includes(demoFixtures))
+  throw new Error('DEMO_FIXTURES must be seeded or empty')
 if (!['127.0.0.1', 'localhost', '::1'].includes(host))
   throw new Error('Synthetic API modes must listen on loopback')
 if (localAuthMode && demoMode) throw new Error('Select either LOCAL_AUTH_MODE or DEMO_MODE')
@@ -246,7 +249,9 @@ const app = await createApp({
     observability.setConfiguration((await configurations.read()).values.observability),
   provider,
   demoMode,
-  ...(localIdentity ? { localIdentity } : { seed: true }),
+  ...(localIdentity
+    ? { localIdentity }
+    : { seed: demoFixtures === 'seeded', demoFixtures: demoFixtures as 'seeded' | 'empty' }),
 })
 const revocations = createRevocationPump(handle.db, [provider], {
   ...initialConfiguration.values.revocation,

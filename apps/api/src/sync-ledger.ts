@@ -29,6 +29,7 @@ import {
   syncJobs,
   syncPresence,
 } from './sync-schema.js'
+import { fixtureRetirement } from './synthetic-fixtures.js'
 
 function transactionHash({ revision: _revision, observedAt: _observedAt, ...value }: Transaction) {
   return syncHash(value)
@@ -99,9 +100,13 @@ export async function syncReviewItems(
       desc(syncJobs.id),
     )
     .limit(100)
+  const retirement = await fixtureRetirement(db, profileId)
+  const retiredAccounts = new Set(retirement?.proof.accountIds ?? [])
   for (const job of currentJobs) {
+    if (retirement && job.providerId === 'mock-italian') continue
     for (const issue of job.report.issues) {
       if (issue.kind !== 'balance_mismatch' && issue.kind !== 'history_gap') continue
+      if (retiredAccounts.has(issue.accountId)) continue
       const group = accountGroups.get(issue.accountId) ?? []
       if (
         group.some(

@@ -37,6 +37,18 @@ export interface Page<T> {
 }
 export interface DemoOverview {
   readonly mode: 'synthetic'
+  /** Empty means mock fixtures were retired; it does not imply live bank connectivity. */
+  readonly fixtureMode?: 'seeded' | 'empty'
+  readonly fixtureCleanup?: {
+    readonly retiredTransactions: number
+    readonly retiredAccounts: number
+    readonly retiredConnections: number
+    readonly protectedTransactions: number
+    readonly protectedAccounts: number
+    readonly protectedConnections: number
+    readonly userDecisions: number
+    readonly archivePreserved: true
+  }
   readonly profile: { readonly id: string; readonly name: string; readonly timezone: string }
   readonly accounts: readonly AccountDto[]
   readonly transactions: readonly TransactionDto[]

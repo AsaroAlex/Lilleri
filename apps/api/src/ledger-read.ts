@@ -24,6 +24,11 @@ import { transactionPrivacy } from './privacy-schema.js'
 import { notFound, Problem } from './problem.js'
 import { json } from './service.js'
 import { syncPresence } from './sync-schema.js'
+import {
+  fixtureAccountReadPredicate,
+  fixtureTransactionReadPredicate,
+  syntheticFixtureRetirements,
+} from './synthetic-fixtures.js'
 
 /** Bounds apply to each response, including an empty intermediate search page. */
 export const LEDGER_READ_LIMITS = Object.freeze({
@@ -183,6 +188,7 @@ export class LedgerReadService {
           .where(
             and(
               eq(schema.accounts.profileId, this.profileId),
+              fixtureAccountReadPredicate(this.profileId),
               input.accountId ? eq(schema.accounts.id, input.accountId) : undefined,
             ),
           )
@@ -255,6 +261,7 @@ export class LedgerReadService {
       // Evaluate source decisions and complete replacement evidence independently of
       // the requested date window. Explicit undo must override old presence proof.
       pendingLifecycleReadPredicate(this.profileId),
+      fixtureTransactionReadPredicate(this.profileId),
     ) as SQL
   }
   private after(cursor: Pick<Cursor, 'day' | 'id'> | null): SQL | undefined {
@@ -281,6 +288,11 @@ export class LedgerReadService {
       [transactionPrivacy, transactionPrivacy.profileId, transactionPrivacy.transactionId],
       [schema.accounts, schema.accounts.profileId, schema.accounts.id],
       [schema.profiles, schema.profiles.id, schema.profiles.id],
+      [
+        syntheticFixtureRetirements,
+        syntheticFixtureRetirements.profileId,
+        syntheticFixtureRetirements.profileId,
+      ],
     ] as const) {
       const [row] = await db
         .select({

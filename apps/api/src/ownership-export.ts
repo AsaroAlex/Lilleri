@@ -62,6 +62,7 @@ import {
   syncOwnershipDto,
   syncOwnershipExport,
 } from './sync-export.js'
+import { fixtureAudit, fixtureAuditDto, validateFixtureOwnership } from './synthetic-fixtures.js'
 import { understandingOwnershipExportDto } from './understanding-persistence-dto.js'
 import { validateUnderstandingOwnershipExport } from './understanding-persistence-validation.js'
 
@@ -297,6 +298,7 @@ const privacyExport = privacyExportDtoSchema
 
 /** Optional additions preserve the existing version-1 import/export contract. */
 export const ownershipExportSchemas = {
+  syntheticFixtures: fixtureAuditDto.optional(),
   consentLifecycles: z.array(exportedConsentLifecycle).optional(),
   consentEvents: z.array(exportedConsentEvent).optional(),
   supportAccess: exportedSupportAccess.optional(),
@@ -378,6 +380,7 @@ export async function augmentOwnershipExport(
     terms: authorization,
   }))
   return ownershipExport.parse({
+    syntheticFixtures: await fixtureAudit(db, profileId),
     consentLifecycles: lifecycleRows,
     consentEvents: eventRows,
     supportAccess: { grants, requests, approvals, events },
@@ -461,6 +464,15 @@ export function validateOwnershipExport(
   const profileId = snapshot.profile.id
   const exportedAt = Date.parse(snapshot.exportedAt)
   if (!Number.isFinite(exportedAt)) fail()
+  if (parsed.syntheticFixtures)
+    validateFixtureOwnership(parsed.syntheticFixtures, {
+      profileId,
+      exportedAt: snapshot.exportedAt,
+      connections: snapshot.connections,
+      accounts: snapshot.accounts,
+      transactions: snapshot.transactions,
+      erasedSources: parsed.sourceErasures?.map((row) => row.signed.body) ?? [],
+    })
   if (parsed.understandingPersistence)
     validateUnderstandingOwnershipExport(parsed.understandingPersistence, {
       profileId,

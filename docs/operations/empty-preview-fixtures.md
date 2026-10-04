@@ -1,0 +1,13 @@
+# Explicit empty preview
+
+`DEV_DEMO_FIXTURES=empty` is an allowlisted choice for the existing compiled interactive preview. It propagates `DEMO_FIXTURES=empty` to the loopback API. The archive directory and independent key/journal recovery identity stay unchanged.
+
+Before switching, `GET /api/v1/demo/fixtures/preflight` returns only counts. It is read-only and contains no transaction IDs, descriptions, account names or amounts. The preflight identifies synthetic rows by both the `mock-italian` provider and the matching connection; the original seed includes one CSV-labelled duplicate, which remains synthetic. Genuine user CSV imports use `csv-import`; manual entries use their own provider. Explicit `keep_manual` decisions are protected. Ordinary classification and reconciliation decisions are preserved in the owned archive without keeping fake rows in the active view.
+
+On the first empty launch, migration 0039 stores a scoped retirement and an immutable event. Canonical rows, balances, keys, classification feedback, import/manual history and financial audit are retained. Proven mock transactions and accounts with no protected rows disappear from Home, account lists, transactions, ledger searches/projections, review lists and active connections. A mixed account remains visible because user imports belong to it; its bank balance is still a synthetic observation and must be labelled accordingly. All mock connections are locally revoked. The same preflight produces no extra event on restart unless its recorded scope changes.
+
+The overview exposes `fixtureMode: "empty"` and `fixtureCleanup` counts with `archivePreserved: true`. JSON/ZIP ownership export still includes the canonical fixture rows, original accounts/connections, all user decisions, the current retirement and its immutable events. Ledger cursors are invalidated when the retirement changes.
+
+The empty public preview refuses personal account/transaction writes and CSV/XLSX payloads with `401 public_identity_required`. New synthetic connection, sync, retry and renewal requests return `409 synthetic_fixtures_disabled`. Configured local/hosted identity keeps its separate admission rules. Empty mode does not enable live bank connectivity or make the public preview a private financial account.
+
+Removing the environment flag does not silently undo a retirement or reopen personal imports. An explicit trusted operator can call `restoreSyntheticFixtures(db, profileId, at)` from the compiled module; that records a new immutable restoration event without deleting the original retirement. It is deliberately not a public mutation. The restored connection remains revoked until an explicit reviewed regrant.

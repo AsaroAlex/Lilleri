@@ -62,6 +62,15 @@ import { DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION } from './runtime-config.js'
 import { SettingsService } from './settings.js'
 import type { SourceFacts } from './source-erasure.js'
 import { activeSyncTransactions, syncReviewItems } from './sync-ledger.js'
+import {
+  assertFixturesEnabled,
+  fixtureAccountReadPredicate,
+  fixtureConnectionReadPredicate,
+  fixtureRetirement,
+  fixtureSummary,
+  fixtureTransactionReadPredicate,
+  retireSyntheticFixtures,
+} from './synthetic-fixtures.js'
 
 export type SourceFactsRecorder = (db: Database, facts: SourceFacts, at: string) => Promise<void>
 
@@ -254,6 +263,7 @@ export class DemoService {
       .onConflictDoNothing()
     if (
       seed &&
+      !(await fixtureRetirement(this.db, this.profileId)) &&
       !(
         await this.db
           .select()
@@ -312,6 +322,13 @@ export class DemoService {
   }
   async institutions() {
     const provider = this.provider
+    if (await fixtureRetirement(this.db, this.profileId))
+      return {
+        mode: 'synthetic' as const,
+        providerId: provider.id,
+        environment: 'synthetic' as const,
+        institutions: [],
+      }
     if (!hasExpandedProviderContract(provider))
       return {
         mode: 'synthetic' as const,
@@ -335,6 +352,7 @@ export class DemoService {
     accountKind: Account['kind'] = 'current',
     deferSync = false,
   ): Promise<Connection> {
+    await assertFixturesEnabled(this.db, this.profileId)
     if (hasExpandedProviderContract(this.provider)) {
       const catalogue = await this.institutions()
       const institution = catalogue.institutions.find((row) => row.id === institutionId)
@@ -512,6 +530,7 @@ export class DemoService {
     }
   }
   async sync(connectionId: string, coordinator?: import('./sync-jobs.js').SyncCoordinator) {
+    await assertFixturesEnabled(this.db, this.profileId)
     if (coordinator) return coordinator.sync(connectionId)
     try {
       return await this.db.transaction(async (tx) => {
@@ -910,14 +929,36 @@ export class DemoService {
       return report
     })
   }
+  async retireFixtures() {
+    const result = await retireSyntheticFixtures(this.db, this.profileId, this.now())
+    if (!result) return
+    const connections = await this.db
+      .select()
+      .from(schema.connections)
+      .where(
+        and(
+          eq(schema.connections.profileId, this.profileId),
+          eq(schema.connections.providerId, 'mock-italian'),
+        ),
+      )
+    for (const connection of connections)
+      if (connection.status !== 'revoked') await this.disconnect(connection.id)
+    return fixtureSummary(result.proof)
+  }
   async data(
     db = this.db,
     additionalMatchOverrides: Readonly<Record<string, 'confirmed' | 'rejected' | 'undone'>> = {},
+    includeRetiredFixtures = false,
   ) {
     const accountRows = await db
       .select()
       .from(schema.accounts)
-      .where(eq(schema.accounts.profileId, this.profileId))
+      .where(
+        and(
+          eq(schema.accounts.profileId, this.profileId),
+          includeRetiredFixtures ? undefined : fixtureAccountReadPredicate(this.profileId),
+        ),
+      )
     const transactionRows = await db
       .select()
       .from(schema.transactions)
@@ -949,7 +990,23 @@ export class DemoService {
     // A scoped PostgreSQL transaction has one client; decrypt sequentially on that client.
     for (const row of transactionRows)
       ledgerTransactions.push(await transactionFromRow(db, row, this.encryption))
-    const transactions = await activeSyncTransactions(db, this.profileId, ledgerTransactions)
+    const activeIds = new Set(
+      (
+        await db
+          .select({ id: schema.transactions.id })
+          .from(schema.transactions)
+          .where(
+            and(
+              eq(schema.transactions.profileId, this.profileId),
+              fixtureTransactionReadPredicate(this.profileId),
+            ),
+          )
+      ).map((row) => row.id),
+    )
+    const activeLedger = includeRetiredFixtures
+      ? ledgerTransactions
+      : ledgerTransactions.filter((row) => activeIds.has(row.id))
+    const transactions = await activeSyncTransactions(db, this.profileId, activeLedger)
     const privacy = new PrivacyService(db, this.profileId, this.now)
     const context = await privacy.analysisContext(db)
     const analysisOptions = {
@@ -998,7 +1055,7 @@ export class DemoService {
       reviewItems: [
         ...derived.reviewItems,
         ...(await syncReviewItems(db, this.profileId, {
-          transactions: ledgerTransactions,
+          transactions: activeLedger,
           classifications: derived.classifications,
           excludedTransactionIds: [
             ...excluded.excludedTransactionIds,
@@ -1025,24 +1082,35 @@ export class DemoService {
       accessMode: 'read only',
     })
   }
-  async overviewSnapshot(db: Database) {
+  async overviewSnapshot(db: Database, includeRetiredFixtures = false) {
     const profile = await this.profile(db),
-      data = await this.data(db)
+      data = await this.data(db, {}, includeRetiredFixtures)
     const connections = await db
       .select()
       .from(schema.connections)
-      .where(eq(schema.connections.profileId, this.profileId))
+      .where(
+        and(
+          eq(schema.connections.profileId, this.profileId),
+          includeRetiredFixtures ? undefined : fixtureConnectionReadPredicate(this.profileId),
+        ),
+      )
+    const retirement = await fixtureRetirement(db, this.profileId)
+    const visibleConnections = new Set(connections.map((row) => row.id))
     return {
       mode: 'synthetic' as const,
+      fixtureMode: retirement ? ('empty' as const) : ('seeded' as const),
+      ...(retirement ? { fixtureCleanup: fixtureSummary(retirement.proof) } : {}),
       profile: { id: profile.id, name: profile.name, timezone: profile.timezone },
       connections: connections.map(withoutHousehold),
-      connectionLifecycles: await new ConsentLifecycleService(
-        db,
-        this.profileId,
-        this.provider,
-        this.now,
-        this.connectionLifecycleConfiguration,
-      ).list(db),
+      connectionLifecycles: (
+        await new ConsentLifecycleService(
+          db,
+          this.profileId,
+          this.provider,
+          this.now,
+          this.connectionLifecycleConfiguration,
+        ).list(db, includeRetiredFixtures)
+      ).filter((row) => visibleConnections.has(row.connectionId)),
       accounts: data.accounts,
       transactions: data.transactions,
       analysis: data.analysis,
@@ -1074,7 +1142,11 @@ export class DemoService {
       .select()
       .from(schema.transactions)
       .where(
-        and(eq(schema.transactions.profileId, this.profileId), gt(schema.transactions.id, lastId)),
+        and(
+          eq(schema.transactions.profileId, this.profileId),
+          gt(schema.transactions.id, lastId),
+          fixtureTransactionReadPredicate(this.profileId),
+        ),
       )
       .orderBy(asc(schema.transactions.id))
       .limit(limit + 1)
@@ -1372,8 +1444,10 @@ export class DemoService {
   }
   async exportSnapshot(db: Database) {
     const exportedAt = this.now()
-    const { connectionLifecycles: _computedLifecycles, ...overview } =
-      await this.overviewSnapshot(db)
+    const { connectionLifecycles: _computedLifecycles, ...overview } = await this.overviewSnapshot(
+      db,
+      true,
+    )
     const consents = await db
       .select()
       .from(schema.consents)

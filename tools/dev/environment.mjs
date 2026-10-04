@@ -17,6 +17,9 @@ export function developmentConfiguration(parent, root) {
     throw new Error('The interactive preview requires DEMO_MODE=1')
   if (parent.DATABASE_URL || parent.DATABASE_RUNTIME_URL || parent.PG_TEST_DATABASE_URL)
     throw new Error('The interactive preview cannot use an inherited external database')
+  const demoFixtures = parent.DEV_DEMO_FIXTURES ?? 'seeded'
+  if (!['seeded', 'empty'].includes(demoFixtures))
+    throw new Error('DEV_DEMO_FIXTURES must be seeded or empty')
   const host = parent.DEV_HOST ?? '0.0.0.0'
   if (!['0.0.0.0', '127.0.0.1', 'localhost', '::1'].includes(host))
     throw new Error('DEV_HOST must be 0.0.0.0 or a loopback host')
@@ -75,6 +78,7 @@ export function developmentConfiguration(parent, root) {
   Object.assign(env, {
     NODE_ENV: 'development',
     DEMO_MODE: '1',
+    DEMO_FIXTURES: demoFixtures,
     LOCAL_AUTH_MODE: '0',
     API_HOST: '127.0.0.1',
     API_PORT: String(DEVELOPMENT_PORTS.api),

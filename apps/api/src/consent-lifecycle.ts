@@ -23,6 +23,7 @@ import {
 import { notFound, Problem, providerFailure } from './problem.js'
 import { assertNoOutstandingRevocation } from './revocation-outbox.js'
 import { DEFAULT_CONNECTION_LIFECYCLE_CONFIGURATION } from './runtime-config.js'
+import { fixtureConnectionReadPredicate } from './synthetic-fixtures.js'
 
 export interface ConsentProviderMetadata {
   readonly discovery: ProviderDiscoveryMetadata
@@ -534,11 +535,16 @@ export class ConsentLifecycleService {
   async get(connectionId: string, db: Database = this.db) {
     return readConsentLifecycle(db, this.profileId, connectionId, this.now(), this.options)
   }
-  async list(db: Database = this.db) {
+  async list(db: Database = this.db, includeRetiredFixtures = false) {
     const connections = await db
       .select()
       .from(schema.connections)
-      .where(eq(schema.connections.profileId, this.profileId))
+      .where(
+        and(
+          eq(schema.connections.profileId, this.profileId),
+          includeRetiredFixtures ? undefined : fixtureConnectionReadPredicate(this.profileId),
+        ),
+      )
       .orderBy(asc(schema.connections.createdAt), asc(schema.connections.id))
     const lifecycles: ConsentLifecycle[] = []
     for (const connection of connections)

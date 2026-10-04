@@ -507,3 +507,23 @@ test('managed cleanup terminates bundler workers after their command wrapper has
     await managed.stop()
   }
 })
+
+test('empty fixtures are an explicit allowlisted choice without changing the archive or recovery identity', () => {
+  const before = developmentConfiguration(
+    { DEV_DATA_PATH: '/data/database', DEV_RECOVERY_PATH: '/data/recovery' },
+    '/app',
+  )
+  const empty = developmentConfiguration(
+    {
+      DEV_DEMO_FIXTURES: 'empty',
+      DEV_DATA_PATH: '/data/database',
+      DEV_RECOVERY_PATH: '/data/recovery',
+    },
+    '/app',
+  )
+  assert.equal(before.env.DEMO_FIXTURES, 'seeded')
+  assert.equal(empty.env.DEMO_FIXTURES, 'empty')
+  for (const name of ['PGLITE_PATH', 'LOCAL_KEY_VAULT_PATH', 'SOURCE_ERASURE_JOURNAL_PATH'])
+    assert.equal(empty.env[name], before.env[name])
+  assert.throws(() => developmentConfiguration({ DEV_DEMO_FIXTURES: 'live' }, '/app'))
+})

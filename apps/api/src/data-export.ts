@@ -392,6 +392,12 @@ function events(snapshot: RecordValue) {
       list(record(snapshot.connectionCreation).intents),
       'createdAt',
     )
+  if (snapshot.syntheticFixtures)
+    append(
+      'synthetic_fixture_retirement',
+      list(record(snapshot.syntheticFixtures).events),
+      'occurredAt',
+    )
   if (snapshot.sourceErasures)
     append('source_erasure_receipt', list(snapshot.sourceErasures), 'appliedAt')
   if (snapshot.understandingPersistence) {
@@ -676,6 +682,17 @@ export const DATA_EXPORT_SCHEMA = {
         exportVersion: { const: 1 },
         exportedAt: stringSchema,
         mode: { const: 'synthetic' },
+        fixtureMode: { enum: ['seeded', 'empty'] },
+        fixtureCleanup: object({
+          retiredTransactions: integerSchema,
+          retiredAccounts: integerSchema,
+          retiredConnections: integerSchema,
+          protectedTransactions: integerSchema,
+          protectedAccounts: integerSchema,
+          protectedConnections: integerSchema,
+          userDecisions: integerSchema,
+          archivePreserved: { const: true },
+        }),
         profile: object(
           { id: stringSchema, name: stringSchema, timezone: stringSchema, createdAt: stringSchema },
           ['id', 'name', 'timezone'],
