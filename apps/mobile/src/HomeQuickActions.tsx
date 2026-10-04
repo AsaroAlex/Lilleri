@@ -1,4 +1,5 @@
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
+import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 export interface HomeQuickActionsCopy {
@@ -50,6 +51,8 @@ export function HomeQuickActions({
   onSummary,
 }: Props) {
   const c = colors[theme]
+  const [width, setWidth] = useState(0)
+  const roomy = width >= 600
   const actions = [
     { title: copy.add, help: copy.addHelp, onPress: onAdd },
     {
@@ -61,12 +64,12 @@ export function HomeQuickActions({
   ]
 
   return (
-    <View style={s.container}>
+    <View style={s.container} onLayout={({ nativeEvent }) => setWidth(nativeEvent.layout.width)}>
       <Text accessibilityRole="header" aria-level={2} style={[s.heading, { color: c.textPrimary }]}>
         {copy.title}
       </Text>
-      <View style={s.actions}>
-        {actions.map((action) => (
+      <View style={[s.actions, { borderTopColor: c.borderStrong }]}>
+        {actions.map((action, index) => (
           <Pressable
             key={action.title}
             accessibilityRole="button"
@@ -79,19 +82,26 @@ export function HomeQuickActions({
             style={({ pressed }) => [
               s.action,
               {
-                backgroundColor: pressed ? c.primarySoft : c.surface,
-                borderColor: c.borderStrong,
+                backgroundColor: pressed ? c.primarySoft : 'transparent',
+                borderBottomColor: c.border,
               },
               disabled && s.disabled,
             ]}
           >
-            <View style={s.titleRow}>
-              <Text style={[s.title, { color: c.textPrimary }]}>{action.title}</Text>
-              <Text style={[s.arrow, { color: c.primary }]} aria-hidden={true} accessible={false}>
-                →
+            <Text style={[s.number, { color: c.primary }]} aria-hidden={true} accessible={false}>
+              {String(index + 1).padStart(2, '0')}
+            </Text>
+            <View style={[s.copy, roomy && s.roomyCopy]}>
+              <Text style={[s.title, roomy && s.roomyTitle, { color: c.textPrimary }]}>
+                {action.title}
+              </Text>
+              <Text style={[s.help, roomy && s.roomyHelp, { color: c.textSecondary }]}>
+                {action.help}
               </Text>
             </View>
-            <Text style={[s.help, { color: c.textSecondary }]}>{action.help}</Text>
+            <Text style={[s.arrow, { color: c.primary }]} aria-hidden={true} accessible={false}>
+              →
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -100,38 +110,42 @@ export function HomeQuickActions({
 }
 
 const s = StyleSheet.create({
-  container: { gap: 12, marginBottom: 24 },
+  container: { gap: 14, marginBottom: 24 },
   heading: {
-    fontFamily: tokens.typography.fontUI,
-    fontSize: 18,
-    fontWeight: '600',
-    lineHeight: 26,
+    fontFamily: tokens.typography.fontEditorial,
+    fontSize: 27,
+    lineHeight: 32,
+    letterSpacing: -0.4,
   },
-  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  actions: { borderTopWidth: 1 },
   action: {
-    flexBasis: 220,
-    flexGrow: 1,
-    minWidth: 0,
-    minHeight: 96,
-    padding: 16,
-    borderWidth: 1,
-    borderRadius: 12,
-    gap: 8,
-  },
-  titleRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
+    minHeight: 80,
+    paddingVertical: 17,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    gap: 14,
   },
-  title: {
-    flexShrink: 1,
+  number: {
+    width: 25,
+    paddingTop: 3,
     fontFamily: tokens.typography.fontUI,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 12,
     lineHeight: 24,
+    fontVariant: ['tabular-nums'],
   },
-  arrow: { fontSize: 20, lineHeight: 24 },
-  help: { fontFamily: tokens.typography.fontUI, fontSize: 14, lineHeight: 21 },
+  copy: { flex: 1, minWidth: 0, gap: 5 },
+  roomyCopy: { flexDirection: 'row', alignItems: 'center', gap: 26 },
+  title: {
+    fontFamily: tokens.typography.fontEditorial,
+    fontSize: 23,
+    lineHeight: 27,
+    letterSpacing: -0.25,
+  },
+  roomyTitle: { flexBasis: '45%', flexShrink: 1 },
+  arrow: { width: 20, fontSize: 23, lineHeight: 27 },
+  help: { fontFamily: tokens.typography.fontUI, fontSize: 13, lineHeight: 20 },
+  roomyHelp: { flex: 1, minWidth: 0 },
   disabled: { opacity: 0.6 },
 })
