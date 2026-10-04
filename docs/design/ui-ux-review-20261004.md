@@ -1,6 +1,6 @@
 # UI and UX decision review — 2026-10-04
 
-**Status:** local compiled-web acceptance passed; Railway rollout pending at the time of this commit. The revised palette and applied UX decisions are verified in the actual application.
+**Status:** local compiled-web acceptance passed and Railway release verified: `e55479b`, deployment `a5f09884`, SUCCESS. The revised palette and applied UX decisions are live.
 
 The user rejected the warm colours and requested a clearer, more considered interface. The response is a neutral financial workspace: amounts and their meaning lead, navigation stays predictable, and blue identifies actions and selection. This record describes decisions implemented and checked in Lilleri.
 
@@ -35,6 +35,6 @@ The initial review used the earlier warm Home, dark and ledger captures and sour
 
 Local browser acceptance passed at 320, 390, 720, 768, 960, 1024, 1180, 1280 and 1440 CSS px. The 720 px case covers the reflow width of a 1440 px window at 200% scale; a physical browser/device zoom session is separate. Checks include light/dark appearance, reduced-motion context, keyboard skip/focus, full Italian/English amounts, nonoverlapping stacked financial metrics and a visible rule marking the selected mobile destination. A read-only intercepted fixture verified all digits and cents of EUR 1,234,567.89 at 320 px without writing the archive. Source-choice, cross-source-import and complete interaction browser groups passed 5/3/8, including undo, reload, language and ZIP export. Reports: `/workspace/.lilleri-validation/neutral-ui-review.json`, `neutral-final-ui.json` and `neutral-interactive-ui.json`.
 
-The terminal Railway result and fresh public persistence checks will be recorded after rollout. Public validation is read-only; the local writing workflows retain their audit in a separate synthetic archive.
+Fresh public health, HTML and the exact exported bundle returned 200; runtime logs confirm the compiled app is ready. The same connection, five exact account balances and all 34 visible transaction IDs/amounts survived the rollout. Public validation was read-only; local writing workflows retain their audit in a separate synthetic archive. [Release evidence](../operations/neutral-ui-release-20261004.json).
 
 This review does not establish physical-device accessibility or user comprehension. Those remain separate validation tasks.

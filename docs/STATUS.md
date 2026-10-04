@@ -1,5 +1,19 @@
 # Lilleri delivery status
 
+## Neutral UI / UX iteration — 2026-10-04
+
+The founder's colour feedback is applied at [Lilleri](https://lilleri-production.up.railway.app/):
+`e55479b`, Railway `a5f09884` **SUCCESS**. The neutral Graphite & Blue palette and regenerated
+logo/assets accompany compact headings, clear source/category destinations, financial rows
+before secondary tools and quiet settings navigation. Local acceptance: 80/80 contrast
+pairs, 45 mobile tests, nine responsive widths, both themes, keyboard focus, complete IT/EN
+amounts, nonoverlapping metrics and a read-only large-value fixture; actual browser groups
+5/3/8. Fresh public health, HTML and exact bundle plus runtime readiness are verified.
+The original connection, five exact balances and all 34 visible transaction IDs/amounts
+matched the immediately preceding snapshot. This is a visible-snapshot comparison,
+not ownership/archive-wide certification. [Review](design/ui-ux-review-20261004.md) ·
+[release evidence](operations/neutral-ui-release-20261004.json).
+
 ## Integrated roadmap increment — 2026-10-04
 
 The combined local increment implements bounded missing-ID ordinals/renewal aliases;

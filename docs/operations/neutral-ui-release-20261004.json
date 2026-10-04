@@ -1,0 +1,73 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Europe/Rome",
+  "url": "https://lilleri-production.up.railway.app/",
+  "commit": "e55479be807639e9877a184460127416e6efde59",
+  "deploymentId": "a5f09884-23f3-4561-8238-22a42d3774ba",
+  "deploymentStatus": "SUCCESS",
+  "scope": "shared synthetic preview; read-only release checks",
+  "bundle": "_expo/static/js/web/index-7021f46844eb98641d71c37af834a670.js",
+  "palette": "Graphite & Blue",
+  "localValidation": {
+    "requiredContrastPairs": {
+      "passed": 80,
+      "total": 80
+    },
+    "mobileTests": 45,
+    "sourceChoiceBrowserGroups": 5,
+    "crossSourceBrowserGroups": 3,
+    "interactiveBrowserGroups": 8,
+    "widths": [
+      320,
+      390,
+      720,
+      768,
+      960,
+      1024,
+      1180,
+      1280,
+      1440
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "keyboardFocus": true,
+    "italianAndEnglishCompactMoney": true,
+    "nonOverlappingMetricGeometry": true,
+    "readonlyLargeMoneyFixture": "EUR 1,234,567.89 fully rendered at 320px",
+    "selectedMobileRule": true,
+    "pageErrors": 0
+  },
+  "publicValidation": {
+    "health": true,
+    "sameConnection": true,
+    "exactAccountBalances": true,
+    "accounts": 5,
+    "visibleTransactionIdsAndAmountsPreserved": true,
+    "visibleTransactions": 34,
+    "compiledRuntimeReady": true,
+    "http": [
+      {
+        "method": "GET",
+        "path": "/_expo/static/js/web/index-7021f46844eb98641d71c37af834a670.js",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200
+      }
+    ]
+  },
+  "limits": [
+    "The transaction comparison covers the current visible demo snapshot, not a full ownership export.",
+    "Financial writing acceptance used only a separate local synthetic archive.",
+    "720px verifies reflow corresponding to a 1440px viewport at 200% scale; physical-device zoom and assistive technology remain separate."
+  ]
+}

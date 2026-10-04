@@ -77,3 +77,14 @@ namespace, one replica and 3 GB cap. [Release evidence](original-design-release-
 - [Current plans and usage pricing](https://docs.railway.com/reference/pricing/plans)
 
 Railway's legacy `railway.toml`/`railway.json` configuration is marked deprecated in its current documentation, so this setup uses a Dockerfile and supported service settings.
+
+## Neutral UI / UX release — 2026-10-04
+
+Commit `e55479b` reached Railway SUCCESS (`a5f09884`). Public health, HTML and exact
+bundle reads returned 200; runtime logs confirm compiled readiness. All five exact
+account balances and all 34 visible transaction IDs/amounts matched the immediately
+preceding snapshot. Graphite & Blue, 80/80 token contrasts, nine-width/both-theme checks,
+keyboard focus, IT/EN complete amounts and browser workflows are recorded in the
+[UI/UX review](../design/ui-ux-review-20261004.md) and
+[release evidence](neutral-ui-release-20261004.json). Volume/recovery/replica configuration
+is unchanged. Public validation was read-only; native/user-study acceptance remains separate.

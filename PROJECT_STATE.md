@@ -37,19 +37,23 @@ restored targets retain `ALLOW_CONNECTIONS=false` and revoked PUBLIC CONNECT.
 `/workspace/.lilleri-validation/roadmap-check.log`, `roadmap-postgres-api.log` and
 `roadmap-postgres-drill.json`. Preserve existing archives and independent keys/journals.
 
-The current verified publication is commit `54c35c268679ade1f10f0d6aad712fc02ebb9d97`,
-Railway deployment `91590ba9-4a81-4547-aa2f-c6a94655222c` **SUCCESS** at
-https://lilleri-production.up.railway.app/. The integrated roadmap and original register
-layout are live. Fresh public HTML/new exact bundle and all seven API reads returned 200;
-the original connection, all five exact account balances and 35 transaction IDs/amounts
-were preserved. The original composition uses Newsreader/Geist, a numbered index, aligned
-money, ruled utility rows and spending/accounts columns on wide screens. Nine widths
-(320–1440 px), dark appearance and keyboard focus passed. Local actual browser groups
-passed 5 source-decision, 3 cross-source and 8 complete interactive checks with no
-unexpected runtime errors. Public financial writes remain for the user's feedback;
-validation mutations were confined to the isolated local archive. Preserve Italian/British
-ICU, focus/reflow and identity fences. Evidence:
-[original-design-release-20261004.json](docs/operations/original-design-release-20261004.json).
+The current verified publication is commit `e55479be807639e9877a184460127416e6efde59`,
+Railway deployment `a5f09884-23f3-4561-8238-22a42d3774ba` **SUCCESS** at
+https://lilleri-production.up.railway.app/. The latest user rejected warm colours and
+requested an applied UI/UX review. Graphite & Blue is now live: neutral planes and logo,
+blue actions/selection, compact Geist headings, recent ledger before tools, direct account
+Sources navigation, explicit category choice and quiet settings links. The review and
+contrast report record 80/80 required pairs. Nine widths, both themes, keyboard focus,
+complete IT/EN amounts, nonoverlapping metrics, selected mobile rule and a read-only
+million-value fixture passed. Source-choice/cross-source/full-interaction browser groups
+passed 5/3/8; mobile tests passed 45. No backend changes accompanied this visual iteration.
+Fresh public health/HTML/exact bundle reads and compiled-runtime logs confirm the release.
+The connection, five exact account balances and all 34 currently visible transaction
+IDs/amounts matched the immediately preceding snapshot; that comparison is not a full
+ownership export. The earlier 35-row proof remains historical. Writing validation stayed
+inside the separate local fixture. [UI/UX review](docs/design/ui-ux-review-20261004.md);
+[release evidence](docs/operations/neutral-ui-release-20261004.json). Preserve financial
+source meaning, locale, identity fences, volume and recovery namespace.
 All 40 epics retain residual acceptance, and the 25-case v1 catalogue remains 4/18/3 until
 whole-case acceptance is reviewed. Current residual work is in the execution plan/status;
 older verification counts/process notes below are historical, not evidence of live state.
