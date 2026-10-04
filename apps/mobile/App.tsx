@@ -2631,6 +2631,8 @@ function styles(c: ThemeColors) {
       gap: 2,
     },
     tab: {
+      borderTopWidth: 2,
+      borderColor: 'transparent',
       flexGrow: 1,
       flexShrink: 1,
       flexBasis: 'auto',
@@ -2643,7 +2645,7 @@ function styles(c: ThemeColors) {
       minHeight: 64,
       borderRadius: tokens.radius.md,
     },
-    selectedTab: { backgroundColor: c.primarySoft },
+    selectedTab: { backgroundColor: c.primarySoft, borderColor: c.primary },
     tabIcon: { fontFamily: 'Geist', fontSize: 22, lineHeight: 24, color: c.textSecondary },
     tabLabel: {
       color: c.textSecondary,
