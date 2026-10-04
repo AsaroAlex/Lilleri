@@ -6,6 +6,16 @@ import sharp from 'sharp'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const base = path.join(root, 'packages/brand')
+const palette = JSON.parse(fs.readFileSync(path.join(base, 'tokens/palette-source.json'), 'utf8'))
+const contrastReport = JSON.parse(
+  fs.readFileSync(path.join(base, 'tokens/contrast-report.json'), 'utf8'),
+)
+const minimum = (mode, floor) =>
+  Math.min(
+    ...contrastReport.pairs
+      .filter((pair) => pair.mode === mode && pair.floor === floor)
+      .map((pair) => pair.ratio),
+  ).toFixed(3)
 const files = []
 for (const dir of ['logo', 'icon', 'png', 'tokens', 'fonts'])
   for (const name of fs.readdirSync(path.join(base, dir)).sort()) {
@@ -26,7 +36,7 @@ for (const dir of ['logo', 'icon', 'png', 'tokens', 'fonts'])
   }
 fs.writeFileSync(
   path.join(base, 'tokens/assets-manifest.json'),
-  JSON.stringify({ generatedAt: '2026-10-02', files }, null, 2) + '\n',
+  JSON.stringify({ generatedAt: palette.source.selectedAt, files }, null, 2) + '\n',
 )
 const purpose = (file) => {
   if (file.startsWith('logo/'))
@@ -41,7 +51,7 @@ const purpose = (file) => {
     return file.includes('android-foreground')
       ? 'Transparent adaptive foreground, central 66% safe area'
       : file.includes('android-background')
-        ? 'Full-bleed adaptive paper field'
+        ? 'Full-bleed adaptive neutral field'
         : file.includes('monochrome')
           ? 'Single-colour themed adaptive foreground'
           : file.includes('favicon')
@@ -70,7 +80,7 @@ const purpose = (file) => {
   return file.includes('contrast')
     ? 'Measured WCAG pair evidence'
     : file.includes('palette-source')
-      ? 'Reviewed immutable palette snapshot and provenance'
+      ? 'Current palette source and revision provenance'
       : file.includes('colors')
         ? 'Direct light/dark semantic roles'
         : 'Generated token interchange / platform mirror'
@@ -91,7 +101,7 @@ const rows = files
   .join('\n')
 const doc = `# Brand assets
 
-**Date:** 2026-10-02. **DECISION:** B li monogram, T3 Carta & Vinaccia, Geist/Newsreader/Geist Mono. Original programmatically generated artwork; no paid assets and no copied competitor logos. **Generated vector — needs designer finalisation** before public production. Finalisation is a release gate, not a claim that a designer has reviewed these files.
+**Date:** ${palette.source.selectedAt}. **DECISION:** B li monogram in neutral graphite, ${palette.name}, Geist/Newsreader/Geist Mono. Original programmatically generated artwork; no paid assets and no copied competitor logos. **Generated vector — needs designer finalisation** before public production. Finalisation is a release gate, not a claim that a designer has reviewed these files.
 
 ## Final deliverable inventory
 
@@ -128,7 +138,7 @@ node tools/brand-render/build-final.mjs
 python3 tools/brand-render/type-specimens.py # fontTools and Brotli required
 node tools/brand-render/identity-board.mjs
 node tools/brand-render/accessibility-proof.mjs
-node tools/brand-render/icon-sheet.mjs packages/brand/icon/app-icon-ios-1024.svg packages/brand/png/icon-sheet.png --title "Lilleri B / T3 final"
+node tools/brand-render/icon-sheet.mjs packages/brand/icon/app-icon-ios-1024.svg packages/brand/png/icon-sheet.png --title "Lilleri Graphite & Blue"
 node tools/brand-render/icon-sheet.mjs packages/brand/icon/favicon.svg packages/brand/png/favicon-sheet.png --title "Lilleri optical favicon"
 node tools/brand-render/shelf.mjs packages/brand/icon/app-icon-ios-1024.svg packages/brand/png/shelf-seed3.png --seed3
 node tools/brand-render/shelf.mjs packages/brand/icon/app-icon-ios-1024.svg packages/brand/png/shelf-seed11.png --seed11
@@ -136,15 +146,15 @@ pnpm --filter @lilleri/brand build
 node tools/brand-render/inventory.mjs
 \`\`\`
 
-The shelf flags are \`--seed 3\` and \`--seed 11\` (separate argument); the command block above is corrected by the generator below. The generator intentionally preserves existing exploration files. Palette source is now an immutable reviewed snapshot, so a later exploration change cannot silently mutate consumer tokens. The remote exploration snapshot included invalid metadata \`id: #NANNANNAN\`; it is excluded from the final colour-role whitelist, and the final generator validates every hex.
+The shelf flags are \`--seed 3\` and \`--seed 11\` (separate argument); the command block above is corrected by the generator below. The generator intentionally preserves existing exploration files. The current palette source is versioned separately, so a later exploration change cannot silently mutate consumer tokens. The 2026-10-04 review supersedes T3 without editing its archive. The remote exploration snapshot included invalid metadata \`id: #NANNANNAN\`; it is excluded from the final colour-role whitelist, and the final generator validates every hex.
 
 Designer specification: preserve lowercase li rhythm, stem 144/foot136/grid1024, one rounded terminal, round dot radius 88, existing custom wordmark outlines and kerning. Refine optical balance/foot joining/curve tangency on actual screens and print. Review small-cut68-unit gap at 16/24px, mark clear space144 units, full app icon0.827 scale and Android safe area. Do not replace the mark with a stock glyph or a coin/graph. Review export geometry and logo minimum sizes; approve exact variant files, not only a presentation image.
 
-Typeface/voice brief: adult Italian warmth without folklore, calm paper/ink with one wine action; serif editorial only; tabular amounts; no money count-up; line/dot action settling respects reduced motion. Product copy is concrete Italian, not bank jargon. Logo/source has no currency symbol, shield or mascot. Source inspiration/problem/weakness/improvement: crowded saturated finance icons → a clear name-linked small mark → generic letter-on-colour lacks a system → original outlined wordmark, warm neutrals, optical cut and visible explanation states.
+Typeface/voice brief: clear Italian language, white and graphite planes with one blue action accent; serif editorial only; tabular amounts; no money count-up; line/dot action settling respects reduced motion. Product copy is concrete Italian, not bank jargon. Logo/source has no currency symbol, shield or mascot. Source inspiration/problem/weakness/improvement: crowded saturated finance icons → a clear name-linked small mark → generic letter-on-colour lacks a system → original neutral outlined wordmark, aligned amounts, optical cut and visible explanation states.
 
 ## Verified limits
 
-Build/typecheck and direct runtime token import executed; 19 exported asset paths exist; 80 required contrast pairs pass. Worst normal text light 4.650:1/dark5.939:1; functional outline floors 3.009:1/3.019:1. Icon16/24/32 and mono/light/dark proofs were visually inspected. Both shelves use 29 generic procedural stand-ins, not authentic competitors; positions/seeds are composition variations, not consumers or recognition times. CVD simulation is an expert aid using Machado 2009 linear-sRGB matrices; status text/signs/vector icons remain necessary.
+Build/typecheck and direct runtime token import executed; 19 exported asset paths exist; 80 required contrast pairs pass. Worst normal text light ${minimum('light', 4.5)}:1/dark ${minimum('dark', 4.5)}:1; functional outline minima ${minimum('light', 3)}:1/${minimum('dark', 3)}:1. Icon16/24/32 and mono/light/dark proofs were visually inspected. Both shelves use 29 generic procedural stand-ins, not authentic competitors; positions/seeds are composition variations, not consumers or recognition times. CVD simulation is an expert aid using Machado 2009 linear-sRGB matrices; status text/signs/vector icons remain necessary.
 
 UNKNOWN / OPEN QUESTION: legal naming/trademark/domain clearance, recruited user-study results, real app-grid competitor confusion, physical-device font rasterisation, VoiceOver/TalkBack, actual-screen contrast/reflow and store submission approval. Existing name research risks remain in \`naming-analysis.md\`. No evidence here claims these gates passed.
 `

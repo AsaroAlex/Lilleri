@@ -1,6 +1,6 @@
 # Lilleri identity
 
-**DECISION — 2026-10-02:** the **li monogram + custom lowercase wordmark**, wine ink on warm paper, Geist UI, Newsreader editorial. See `brand-jury.md` for critique and scored rationale. **Status:** generated original vectors — needs designer finalisation before production. No trademark clearance or user-validation result is implied.
+**DECISION — 2026-10-04:** the **li monogram + custom lowercase wordmark** in neutral graphite/light ink, Graphite & Blue semantic palette, Geist UI, Newsreader editorial. This colour revision supersedes T3; archived explorations retain the earlier decisions. See `brand-jury.md` for critique and scored rationale. **Status:** generated original vectors — needs designer finalisation before production. No trademark clearance or user-validation result is implied.
 
 ## Mark story and construction
 
@@ -16,7 +16,7 @@ Horizontal lockup: mark height1.16× wordmark l height, aligned baselines, gap 0
 
 ## Palette and typography
 
-T3 uses light paper `#F7EFE7`, ink `#221918`, wine `#782443`; dark night `#140F0E`, cream `#F3EBE4`, rose `#D497A7`. These are final source values, not exploratory B's cooler dark surface or research starting hues. Semantic roles are separately specified in `tokens/colors.json`; ordinary expense text stays ink with a minus. Wine is a navigation/action signature, never a loss indicator. Surface proportions favour warm neutral space. Text/UI requirements pass 80 computed pairs; ratios and exclusions live in `tokens/contrast-report.json`.
+Light mode uses neutral ground `#F5F5F7`, white surfaces, graphite `#1D1D1F` and action blue `#005AC1`. Dark mode uses near-black ground `#0B0C0F`, graphite surfaces, light ink `#F5F5F7` and action blue `#79ACFF`. The monogram and wordmark use the corresponding textPrimary ink, independently of the action accent. The current source values live in `tokens/palette-source.json`; semantic roles are exported through `tokens/colors.json`. Ordinary expense text retains a minus and neutral ink. Text/UI requirements pass 80 computed pairs; ratios and exclusions live in `tokens/contrast-report.json`.
 
 Geist 400/500/600 covers body/amount/label. Newsreader500 marks large editorial headlines without entering transaction rows. Geist Mono is restricted to identifiers. Use tabular lining digits, locale-aware exact formatting and untruncated amounts. Details, binary measures and six-family comparison in `explorations/typography-decision.md`.
 
@@ -41,13 +41,13 @@ Voice: precise, direct, respectful, nonjudgmental. “5 movimenti da controllare
 | Finding | Severity | Resolution / remaining limit |
 |---|---|---|
 | B main foot gap closes at 16px | Major | Shorten foot in optical small cut, enlarge viewport; inspected final light/dark proof16/24px |
-| Wine bare favicon fails dark ground | Major | `favicon-on-dark.svg` rose variant; dark stylesheet/service must choose appropriate asset, never reuse wine |
+| Dark-ground favicon requires its own ink | Major | `favicon-on-dark.svg` uses light ink; the theme-specific supplied asset preserves contrast |
 | Latin-ext-only toolkit fonts cannot judge ASCII | Major | Complete official binaries, explicit glyph outlines, new specimens and coverage measurements; old evidence downgraded |
 | Renderer family-name fallback made editorial board sans | Major | Use actual Newsreader outlined headline and label in presentation; real fonts supplied for consumer font loaders |
 | Later exploration metadata contains `#NANNANNAN` | Major | Whitelist actual colour roles into reviewed palette snapshot; validate every hex before final export; preserve exploration history |
 | CVD samples collapse several hues | Major | Signs/text/vector status icons required; no red/green-only rule; chart labels/boundaries |
 | Check glyph absent in renderer font | Minor | Evaluation proof uses drawn vector check instead of missing Unicode glyph |
-| Cool B night clashes with warm system | Minor | Final uses T3 warm night; both modes re-rendered |
+| Warm palette rejected in the 2026-10-04 review | Major | Current light/dark themes use neutral planes and one blue action accent; both modes and proofs regenerated |
 | “Connect once” implies no renewals | Major | Canonical message now “Collega i tuoi conti. Lilleri mette in ordine i movimenti e ti chiede quando serve.” Renewal disclosure retained |
 | Shelf timing/consumer panel claims unsupported | Major | Document expert simulation, no recognition-time data; release study open |
 | Ads/trial/plan draft can overpromise | Major | Launch Gratis/Plus only; optional offers and non-renewing preview marked hypotheses; no autocharge or never-ad absolute |

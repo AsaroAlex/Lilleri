@@ -1,6 +1,6 @@
 # Brand guidelines
 
-**DECISION — 2026-10-02.** Original generated artwork is implementation-ready; designer finalisation, legal clearance and real user/device validation remain release gates. Refer to `brand-identity.md`, `brand-jury.md` and `brand-assets.md`; do not treat these guidelines as a trademark registration.
+**DECISION — 2026-10-04.** Colour guidance supersedes the T3 palette; original geometry and archived evidence are preserved. Original generated artwork is implementation-ready; designer finalisation, legal clearance and real user/device validation remain release gates. Refer to `brand-identity.md`, `brand-jury.md` and `brand-assets.md`; do not treat these guidelines as a trademark registration.
 
 ## Clear space and minimum size
 
@@ -21,9 +21,9 @@ FACT: final16/24/32/64 renders, full icon sheet and light/dark/mono proof are st
 
 ## Colour and typography
 
-Wine `#782443` on warm light ground; rose `#D497A7` on warm dark ground; ink/cream for wordmark. Use supplied asset variants. Wine on dark and rose on paper have inadequate contrast for these roles; do not choose by aesthetic preference. Symbol accepts one solid ink for mono use; artwork never receives gradients, patterned fills or multicolour segments. Photo grounds require a quiet solid panel and inspected contrast. Decorative `border` cannot communicate required control boundaries; use `borderStrong`.
+Graphite `#1D1D1F` on light neutral grounds and light ink `#F5F5F7` on dark grounds identify the brand. Interactive blue is `#005AC1` in light mode and `#79ACFF` in dark mode. Use supplied asset variants and semantic tokens; the original wordmark/monogram geometry is unchanged. Symbol accepts one solid ink for mono use; artwork never receives gradients, patterned fills or multicolour segments. Photo grounds require a quiet solid panel and inspected contrast. Decorative `border` cannot communicate required control boundaries; use `borderStrong`.
 
-Do use semantic colour roles, neutral debits with−, labelled status vector icons, direct chart labels and proper target size. Do not use wine for losses, a green amount as the only evidence of income, or pale text to signal a disabled reason. Error text remains readable. Colour-vision proofs are expert aids; they do not constitute WCAG certification of screens.
+Do use semantic colour roles, neutral debits with−, labelled status vector icons, direct chart labels and proper target size. Do not use blue for losses, a green amount as the only evidence of income, or pale text to signal a disabled reason. Error text remains readable. Colour-vision proofs are expert aids; they do not constitute WCAG certification of screens.
 
 Do use local licensed Geist/Newsreader/Mono assets with tabular figures on amounts. Do not recreate the wordmark by typing “lilleri”, substitute a system serif, fake weight, stretch/compress paths, alter letter spacing, uppercase the wordmark, crop feet/dots, use tiny thin amounts or ellipsise monetary values. UI essentials remain≥14 logical units, preferred16, and scale with device settings.
 
@@ -37,18 +37,18 @@ Do use local licensed Geist/Newsreader/Mono assets with tabular figures on amoun
 | Animate balance through intermediate digits | Displays values that never existed |
 | Draw rounded outer iOS corners | OS mask doubles corner treatment and shrinks meaningful art |
 | Put foreground outside adaptive safe area | Android masks can cut the l foot/dot |
-| Put wine on dark / rose on pale paper | Violates supplied contrast contract |
+| Reuse a light-mode logo or action colour on a dark plane | Violates the supplied theme contrast contract |
 | Add shadow, bevel, shield, chart, euro or coin | Competes with simple identity and invites misleading finance associations |
 | Use lettermark without name on first marketing exposure | Spelling/name learning requires wordmark |
 | Use decorative dot as only consent status | People and assistive technology need state text |
 
 ## Bank/provider co-branding
 
-Connection screen identifies actual institution by verified name and separately the licensed provider in plain copy. Institution logos may be used only from permitted current brand assets/licence; use a neutral initials/name placeholder otherwise. Do not imply partnership by aligning logos in a shared lockup or colouring a bank logo wine. Example: “Collega Intesa Sanpaolo” / “Il collegamento è gestito da [provider autorizzato]. Accesso in sola lettura.” Never fill the provider placeholder in a live release with a guessed entity. Demo: “Banca dimostrativa · dati sintetici”, no authentic-bank credential prompt.
+Connection screen identifies actual institution by verified name and separately the licensed provider in plain copy. Institution logos may be used only from permitted current brand assets/licence; use a neutral initials/name placeholder otherwise. Do not imply partnership by aligning logos in a shared lockup or recolouring a bank logo. Example: “Collega Intesa Sanpaolo” / “Il collegamento è gestito da [provider autorizzato]. Accesso in sola lettura.” Never fill the provider placeholder in a live release with a guessed entity. Demo: “Banca dimostrativa · dati sintetici”, no authentic-bank credential prompt.
 
 ## Store screenshots and landing direction
 
-Store story uses real implemented screens, synthetic data clearly labelled, ample paper and one concise Italian proposition per frame. Suggested order: “I tuoi conti, una vista chiara.” → “Un trasferimento, una volta sola.” → “Solo i movimenti da controllare.” → “Le tue regole vengono prima.” → “Sai cosa leggiamo. Decidi tu.” Claims must match tested capabilities and coverage. No impossible live balance totals, invented testimonials, unsupported bank logos or unreadable mini dashboards. Current platform screenshot/icon rules need recheck at submission.
+Store story uses real implemented screens, synthetic data clearly labelled, ample neutral space and one concise Italian proposition per frame. Suggested order: “I tuoi conti, una vista chiara.” → “Un trasferimento, una volta sola.” → “Solo i movimenti da controllare.” → “Le tue regole vengono prima.” → “Sai cosa leggiamo. Decidi tu.” Claims must match tested capabilities and coverage. No impossible live balance totals, invented testimonials, unsupported bank logos or unreadable mini dashboards. Current platform screenshot/icon rules need recheck at submission.
 
 Landing: one Newsreader editorial sentence, Geist explanation, original outlined wordmark and a calm useful product example. Dominant CTA for current prototype is “Esplora la demo”, with “Dati sintetici. Nessun conto reale collegato.” Beta wait-list collection appears only with its implemented privacy policy/action. Price cards show Gratis/Plus hypothesis values and actual scope; Famiglia does not appear as a purchasable plan. Status/footer must distinguish demo from service availability.
 

@@ -16,7 +16,9 @@ body += place(
   185,
 )
 body += place(
-  fs.readFileSync(path.join(out, 'explorations/type/editorial-headline.svg'), 'utf8'),
+  fs
+    .readFileSync(path.join(out, 'explorations/type/editorial-headline.svg'), 'utf8')
+    .replaceAll('#221918', pal.light.textPrimary),
   64,
   234,
   1312,
@@ -67,7 +69,9 @@ body += screen(pal.dark, 540, 'DARK · SCREEN WITHOUT THE LOGO')
 body += text('Geist', 1030, 460, 28, pal.light.textPrimary, 600)
 body += text('UI · amounts · labels', 1030, 492, 16, pal.light.textSecondary)
 body += place(
-  fs.readFileSync(path.join(out, 'explorations/type/editorial-label.svg'), 'utf8'),
+  fs
+    .readFileSync(path.join(out, 'explorations/type/editorial-label.svg'), 'utf8')
+    .replaceAll('#221918', pal.light.textPrimary),
   1030,
   515,
   350,
@@ -75,9 +79,9 @@ body += place(
 )
 body += text('Editorial only', 1030, 588, 16, pal.light.textSecondary)
 ;[
-  ['primary', 'Wine'],
-  ['textPrimary', 'Ink'],
-  ['surface', 'Paper surface'],
+  ['primary', 'Action blue'],
+  ['textPrimary', 'Graphite'],
+  ['surface', 'White surface'],
   ['positive', 'Inflow'],
   ['danger', 'Error'],
 ].forEach(([role, label], i) => {

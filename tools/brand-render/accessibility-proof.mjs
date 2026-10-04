@@ -56,8 +56,7 @@ function simulate(hex, matrix) {
       .join('')
   )
 }
-let body =
-  '<rect width="1440" height="1450" fill="#F7EFE7"/><text x="40" y="48" font-family="Geist" font-size="28" fill="#221918">Lilleri — semantic colour proof</text><text x="40" y="78" font-family="Geist" font-size="16" fill="#5B4F4D">Machado et al. (2009), severity 100 matrices in linear sRGB. Simulation is an expert aid.</text>'
+let body = `<rect width="1440" height="1450" fill="${colors.light.background}"/><text x="40" y="48" font-family="Geist" font-size="28" fill="${colors.light.textPrimary}">Lilleri — semantic colour proof</text><text x="40" y="78" font-family="Geist" font-size="16" fill="${colors.light.textSecondary}">Machado et al. (2009), severity 100 matrices in linear sRGB. Simulation is an expert aid.</text>`
 const labels = [
   ['primary', 'Controlla'],
   ['success', 'Collegato'],
@@ -69,7 +68,7 @@ const labels = [
 ]
 let y = 104
 for (const [profile, matrix] of Object.entries(profiles)) {
-  body += `<text x="40" y="${y + 24}" font-family="Geist" font-size="20" fill="#221918">${profile}</text>`
+  body += `<text x="40" y="${y + 24}" font-family="Geist" font-size="20" fill="${colors.light.textPrimary}">${profile}</text>`
   for (const [mode, dy] of [
     ['light', 40],
     ['dark', 128],
@@ -88,7 +87,7 @@ for (const [profile, matrix] of Object.entries(profiles)) {
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1450">${body}</svg>`
 fs.writeFileSync(path.join(out, 'png/color-vision-proof.svg'), svg)
 fs.writeFileSync(path.join(out, 'png/color-vision-proof.png'), renderSvg(svg))
-let proof = '<rect width="1200" height="710" fill="#D8D1CA"/>'
+let proof = '<rect width="1200" height="710" fill="#D2D2D7"/>'
 for (const [label, file, ground, ink, x, y] of [
   [
     'Light',

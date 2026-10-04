@@ -1,6 +1,6 @@
 # @lilleri/brand
 
-Dependency-free semantic tokens and original Lilleri vectors, with licensed fonts. Design decision: B li monogram / T3 Carta & Vinaccia. Generated vectors require designer finalisation before production; name/trademark clearance and user/device studies are not complete.
+Dependency-free semantic tokens and original Lilleri vectors, with licensed fonts. Design decision: original B li geometry / Graphite & Blue (2026-10-04 design review). The original geometry is preserved. Neutral graphite/light ink carries the mark; blue identifies actions and selected states. Name/trademark clearance and user/device studies are not complete.
 
 ```ts
 import { colors, tokens, typography, spacing, radius, assets } from '@lilleri/brand';

@@ -1,18 +1,18 @@
 # Visual language
 
-**DECISION — 2026-10-02.** Implementation specification; behavioural fit remains a hypothesis until user-tested. Canonical roles come from `@lilleri/brand`, not arbitrary hex literals.
+**DECISION — 2026-10-04.** The design review replaces the earlier warm T3 palette with Graphite & Blue. Implementation specification; behavioural fit remains a hypothesis until user-tested. Canonical roles come from `@lilleri/brand`, not arbitrary hex literals.
 
 ## A screen should be recognisable without a logo
 
-The signature is a warm paper field, inky tabular amount, a short sentence with one quiet dot/rounded anchor, one wine action and spacious row alignment. Home is **one glance → one insight → one action**. A monochrome spreadsheet with a wine button is insufficient: the anchored hierarchy and deliberate whitespace must also appear. Avoid decorative panels around every number, stacked charts, ornamental currency symbols and oversized brand marks.
+The signature is a clear neutral field, aligned tabular amounts, precise headings and generous whitespace. The custom li mark stays graphite in light mode and light ink in dark mode. Blue appears where a user can act or locate their selection. Remove decorative panels around every number, ornamental currency symbols, overlarge brand marks and competing accents.
 
-Neutral planes occupy roughly 80–90% of visible area; signature wine/rose about 5–10%; remaining semantic/chart colours only where information needs them. These are composition guides, not tracked statistics. Wine supports actions, selected navigation, links and focused evidence. Large wine areas are reserved for occasional brand covers, not daily finance screens. `primarySoft` is a decorative tint with primary/textPrimary content; never assume onPrimary works on a tint.
+White and light grey define the light planes; graphite defines text. Dark mode uses near-black, graphite surfaces and brighter blue with independently measured contrast. Neutral planes carry most of each screen. Financial direction and connection state use semantic colours only with signs, labels or icons. `primarySoft` is a selection tint with primary/textPrimary content; do not put onPrimary text on a tint.
 
 ## Type, spacing, surfaces
 
 Geist 16/24 body; title18/24; amount36/42; secondary explanatory14/20; caption12/18 only supplementary. Main numbers remain tabular; no black-box arithmetic or rolling count animation. Newsreader belongs to an editorial heading with ample room; never mixed into balances/transaction names. Start mobile content at 24-unit margins, use 16 within cards,8 between related words/elements,24–32 between concepts. A long amount gets a dedicated full-width line. Let rows grow for accessibility text rather than shrinking fonts.
 
-Radius follows function: small8, standard12, card20, sheet28. Dot is fully round; other edges are calmer than a bubbly interface. Default elevation is flat; overlays use the specified soft shadow plus clear grouping, not blur glass. Dark surfaces are warm night with modest plane separation; borders are decorative unless using borderStrong for an essential input boundary. Dark contrast is designed separately, not an inverted screenshot.
+Radius follows function: small8, standard12, card20, sheet28. Dot is fully round; other edges are calmer than a bubbly interface. Default elevation is flat; overlays use the specified soft shadow plus clear grouping, not blur glass. Dark surfaces use neutral graphite with modest plane separation; borders are decorative unless using borderStrong for an essential input boundary. Dark contrast is designed separately, not an inverted screenshot.
 
 ## Graphic device, illustration, photography
 
@@ -22,7 +22,7 @@ Illustrations show flat paper entries, two entries becoming linked, one uncertai
 
 ## Data visualisation
 
-Use labelled bars or a calm line for one question, maximum 6 categorical series with stable theme tokens. Order by task or size, label directly, add exact numeric/accessible table equivalent, and show units/time interval. No red/green-only differences: signs, labels, patterns or shapes carry direction. Wine is not negative; debits stay ink. Chart fills are not approved text colours. On light surfaces some chart fills fall below 3:1: use contrasting outlines/patterns and direct labels when shape boundaries carry information, or darken that chart encoding independently. Never claim every supplied chart fill passes UI contrast. No chart area distorting magnitude, unsupported forecast as fact, misleading truncated axis or doughnut with many tiny sectors.
+Use labelled bars or a calm line for one question, maximum 6 categorical series with stable theme tokens. Order by task or size, label directly, add exact numeric/accessible table equivalent, and show units/time interval. No red/green-only differences: signs, labels, patterns or shapes carry direction. Blue denotes actions and selections; ordinary debits stay graphite. Chart fills are not approved text colours. On light surfaces some chart fills fall below 3:1: use contrasting outlines/patterns and direct labels when shape boundaries carry information, or darken that chart encoding independently. Never claim every supplied chart fill passes UI contrast. No chart area distorting magnitude, unsupported forecast as fact, misleading truncated axis or doughnut with many tiny sectors.
 
 ## Motion moments
 

@@ -1,4 +1,4 @@
-// Consolidates the existing B exploration; never overwrites exploration assets.
+// Exports the current semantic palette and original B geometry; exploration assets stay immutable.
 
 import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
@@ -9,12 +9,14 @@ import { contrast, renderSvg, svgInner } from './lib.mjs'
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const out = path.join(root, 'packages/brand')
 const b = path.join(out, 'explorations/direction-b')
-// Snapshot preserves the exact reviewed values when upstream explorations evolve.
+// Current palette is independent from the archived colour explorations.
 const source = JSON.parse(fs.readFileSync(path.join(out, 'tokens/palette-source.json'), 'utf8'))
 const colors = {
-  light: { ...source.light, primarySoft: '#F0DFE4' },
-  dark: { ...source.dark, primarySoft: '#3B2530' },
+  light: { ...source.light },
+  dark: { ...source.dark },
 }
+// The mark is neutral; blue is reserved for interactive and selected states.
+const brandInk = { light: colors.light.textPrimary, dark: colors.dark.textPrimary }
 for (const roles of Object.values(colors))
   for (const [role, value] of Object.entries(roles)) {
     for (const color of Array.isArray(value) ? value : [value])
@@ -27,8 +29,8 @@ const write = (name, value) => fs.writeFileSync(path.join(out, name), value)
 const json = (value) => JSON.stringify(value, null, 2) + '\n'
 const remap = (svg) =>
   svg
-    .replaceAll('#6E1F3B', colors.light.primary)
-    .replaceAll('#D6A4AF', colors.dark.primary)
+    .replaceAll('#6E1F3B', brandInk.light)
+    .replaceAll('#D6A4AF', brandInk.dark)
     .replaceAll('#1F1B17', colors.light.textPrimary)
     .replaceAll('#F6F1E7', colors.dark.textPrimary)
 for (const [from, to] of [
@@ -52,13 +54,10 @@ const symbol = remap(read('symbol.svg'))
 const smallInner = svgInner(symbol).replaceAll('H488', 'H464').replaceAll('488 896', '464 896')
 const small = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="96 96 832 832"><!-- Optical cut for 16–24 px: foot shortened by 24 units; 68-unit clear gap. -->${smallInner}</svg>\n`
 write('logo/lilleri-symbol-small.svg', small)
-write('logo/lilleri-symbol-small-mono.svg', small.replaceAll(colors.light.primary, '#000000'))
-write(
-  'logo/lilleri-symbol-small-on-dark.svg',
-  small.replaceAll(colors.light.primary, colors.dark.primary),
-)
+write('logo/lilleri-symbol-small-mono.svg', small.replaceAll(brandInk.light, '#000000'))
+write('logo/lilleri-symbol-small-on-dark.svg', small.replaceAll(brandInk.light, brandInk.dark))
 write('icon/favicon.svg', small)
-write('icon/favicon-on-dark.svg', small.replaceAll(colors.light.primary, colors.dark.primary))
+write('icon/favicon-on-dark.svg', small.replaceAll(brandInk.light, brandInk.dark))
 const mark = svgInner(symbol)
 const k = 0.827,
   t = 512 * (1 - k)
@@ -72,14 +71,11 @@ write(
   'icon/app-icon-ios-dark-1024.svg',
   full
     .replaceAll(colors.light.background, colors.dark.background)
-    .replaceAll(colors.light.primary, colors.dark.primary),
+    .replaceAll(brandInk.light, brandInk.dark),
 )
 write('icon/app-icon-android-foreground.svg', wrap(group))
 write('icon/app-icon-android-background.svg', wrap(field))
-write(
-  'icon/app-icon-android-monochrome.svg',
-  wrap(group.replaceAll(colors.light.primary, '#000000')),
-)
+write('icon/app-icon-android-monochrome.svg', wrap(group.replaceAll(brandInk.light, '#000000')))
 write('icon/pwa-maskable-512.svg', full)
 write('icon/social-avatar.svg', full)
 
@@ -211,8 +207,8 @@ const motion = {
 }
 const elevation = {
   flat: 'none',
-  raised: '0 4px 16px rgb(34 25 24 / 8%)',
-  overlay: '0 12px 32px rgb(34 25 24 / 16%)',
+  raised: '0 4px 16px rgb(29 29 31 / 8%)',
+  overlay: '0 12px 32px rgb(29 29 31 / 16%)',
 }
 const iconography = { small: 16, default: 24, large: 32, stroke: 1.75, target: 44 }
 const assets = {
@@ -240,7 +236,7 @@ write(
   'tokens/colors.json',
   json({
     $description:
-      'Consolidated T3 roles. Source: tokens/palette-source.json; primarySoft is decorative only.',
+      'Neutral light/dark semantic roles with one blue action accent. Source: tokens/palette-source.json; primarySoft is decorative only.',
     ...colors,
   }),
 )
@@ -322,7 +318,7 @@ write('tokens/tokens.css', css)
 
 // Validate every text role on every surface; chart fills are reviewed independently.
 const report = {
-  measuredAt: '2026-10-02',
+  measuredAt: source.source.selectedAt,
   method: 'WCAG 2.x relative luminance, sRGB',
   pairs: [],
   decorativeExcluded: ['border', 'primarySoft', 'chart'],

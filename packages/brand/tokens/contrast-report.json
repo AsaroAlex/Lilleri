@@ -1,12 +1,12 @@
 {
-  "measuredAt": "2026-10-02",
+  "measuredAt": "2026-10-04",
   "method": "WCAG 2.x relative luminance, sRGB",
   "pairs": [
     {
       "mode": "light",
       "role": "textPrimary",
       "background": "background",
-      "ratio": 15.124,
+      "ratio": 15.457,
       "floor": 4.5,
       "pass": true
     },
@@ -14,7 +14,7 @@
       "mode": "light",
       "role": "textPrimary",
       "background": "surface",
-      "ratio": 16.316,
+      "ratio": 16.83,
       "floor": 4.5,
       "pass": true
     },
@@ -22,7 +22,7 @@
       "mode": "light",
       "role": "textPrimary",
       "background": "surfaceElevated",
-      "ratio": 17.053,
+      "ratio": 16.83,
       "floor": 4.5,
       "pass": true
     },
@@ -30,7 +30,7 @@
       "mode": "light",
       "role": "textSecondary",
       "background": "background",
-      "ratio": 6.911,
+      "ratio": 7.265,
       "floor": 4.5,
       "pass": true
     },
@@ -38,7 +38,7 @@
       "mode": "light",
       "role": "textSecondary",
       "background": "surface",
-      "ratio": 7.456,
+      "ratio": 7.91,
       "floor": 4.5,
       "pass": true
     },
@@ -46,7 +46,7 @@
       "mode": "light",
       "role": "textSecondary",
       "background": "surfaceElevated",
-      "ratio": 7.793,
+      "ratio": 7.91,
       "floor": 4.5,
       "pass": true
     },
@@ -54,7 +54,7 @@
       "mode": "light",
       "role": "textTertiary",
       "background": "background",
-      "ratio": 4.65,
+      "ratio": 5.244,
       "floor": 4.5,
       "pass": true
     },
@@ -62,7 +62,7 @@
       "mode": "light",
       "role": "textTertiary",
       "background": "surface",
-      "ratio": 5.016,
+      "ratio": 5.71,
       "floor": 4.5,
       "pass": true
     },
@@ -70,7 +70,7 @@
       "mode": "light",
       "role": "textTertiary",
       "background": "surfaceElevated",
-      "ratio": 5.243,
+      "ratio": 5.71,
       "floor": 4.5,
       "pass": true
     },
@@ -78,7 +78,7 @@
       "mode": "light",
       "role": "primary",
       "background": "background",
-      "ratio": 8.656,
+      "ratio": 5.966,
       "floor": 4.5,
       "pass": true
     },
@@ -86,7 +86,7 @@
       "mode": "light",
       "role": "primary",
       "background": "surface",
-      "ratio": 9.339,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -94,7 +94,7 @@
       "mode": "light",
       "role": "primary",
       "background": "surfaceElevated",
-      "ratio": 9.76,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -102,7 +102,7 @@
       "mode": "light",
       "role": "secondary",
       "background": "background",
-      "ratio": 6.502,
+      "ratio": 7.265,
       "floor": 4.5,
       "pass": true
     },
@@ -110,7 +110,7 @@
       "mode": "light",
       "role": "secondary",
       "background": "surface",
-      "ratio": 7.014,
+      "ratio": 7.91,
       "floor": 4.5,
       "pass": true
     },
@@ -118,7 +118,7 @@
       "mode": "light",
       "role": "secondary",
       "background": "surfaceElevated",
-      "ratio": 7.331,
+      "ratio": 7.91,
       "floor": 4.5,
       "pass": true
     },
@@ -126,7 +126,7 @@
       "mode": "light",
       "role": "accent",
       "background": "background",
-      "ratio": 11.311,
+      "ratio": 5.966,
       "floor": 4.5,
       "pass": true
     },
@@ -134,7 +134,7 @@
       "mode": "light",
       "role": "accent",
       "background": "surface",
-      "ratio": 12.202,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -142,7 +142,7 @@
       "mode": "light",
       "role": "accent",
       "background": "surfaceElevated",
-      "ratio": 12.753,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -150,7 +150,7 @@
       "mode": "light",
       "role": "success",
       "background": "background",
-      "ratio": 5.52,
+      "ratio": 5.924,
       "floor": 4.5,
       "pass": true
     },
@@ -158,7 +158,7 @@
       "mode": "light",
       "role": "success",
       "background": "surface",
-      "ratio": 5.955,
+      "ratio": 6.45,
       "floor": 4.5,
       "pass": true
     },
@@ -166,7 +166,7 @@
       "mode": "light",
       "role": "success",
       "background": "surfaceElevated",
-      "ratio": 6.225,
+      "ratio": 6.45,
       "floor": 4.5,
       "pass": true
     },
@@ -174,7 +174,7 @@
       "mode": "light",
       "role": "warning",
       "background": "background",
-      "ratio": 4.906,
+      "ratio": 5.6,
       "floor": 4.5,
       "pass": true
     },
@@ -182,7 +182,7 @@
       "mode": "light",
       "role": "warning",
       "background": "surface",
-      "ratio": 5.292,
+      "ratio": 6.098,
       "floor": 4.5,
       "pass": true
     },
@@ -190,7 +190,7 @@
       "mode": "light",
       "role": "warning",
       "background": "surfaceElevated",
-      "ratio": 5.531,
+      "ratio": 6.098,
       "floor": 4.5,
       "pass": true
     },
@@ -198,7 +198,7 @@
       "mode": "light",
       "role": "danger",
       "background": "background",
-      "ratio": 5.163,
+      "ratio": 6.038,
       "floor": 4.5,
       "pass": true
     },
@@ -206,7 +206,7 @@
       "mode": "light",
       "role": "danger",
       "background": "surface",
-      "ratio": 5.57,
+      "ratio": 6.574,
       "floor": 4.5,
       "pass": true
     },
@@ -214,7 +214,7 @@
       "mode": "light",
       "role": "danger",
       "background": "surfaceElevated",
-      "ratio": 5.822,
+      "ratio": 6.574,
       "floor": 4.5,
       "pass": true
     },
@@ -222,7 +222,7 @@
       "mode": "light",
       "role": "info",
       "background": "background",
-      "ratio": 5.737,
+      "ratio": 5.966,
       "floor": 4.5,
       "pass": true
     },
@@ -230,7 +230,7 @@
       "mode": "light",
       "role": "info",
       "background": "surface",
-      "ratio": 6.189,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -238,7 +238,7 @@
       "mode": "light",
       "role": "info",
       "background": "surfaceElevated",
-      "ratio": 6.469,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -246,7 +246,7 @@
       "mode": "light",
       "role": "positive",
       "background": "background",
-      "ratio": 5.792,
+      "ratio": 5.924,
       "floor": 4.5,
       "pass": true
     },
@@ -254,7 +254,7 @@
       "mode": "light",
       "role": "positive",
       "background": "surface",
-      "ratio": 6.248,
+      "ratio": 6.45,
       "floor": 4.5,
       "pass": true
     },
@@ -262,7 +262,7 @@
       "mode": "light",
       "role": "positive",
       "background": "surfaceElevated",
-      "ratio": 6.531,
+      "ratio": 6.45,
       "floor": 4.5,
       "pass": true
     },
@@ -270,7 +270,7 @@
       "mode": "light",
       "role": "negative",
       "background": "background",
-      "ratio": 5.104,
+      "ratio": 6.038,
       "floor": 4.5,
       "pass": true
     },
@@ -278,7 +278,7 @@
       "mode": "light",
       "role": "negative",
       "background": "surface",
-      "ratio": 5.506,
+      "ratio": 6.574,
       "floor": 4.5,
       "pass": true
     },
@@ -286,7 +286,7 @@
       "mode": "light",
       "role": "negative",
       "background": "surfaceElevated",
-      "ratio": 5.755,
+      "ratio": 6.574,
       "floor": 4.5,
       "pass": true
     },
@@ -294,7 +294,7 @@
       "mode": "light",
       "role": "borderStrong",
       "background": "background",
-      "ratio": 3.009,
+      "ratio": 3.454,
       "floor": 3,
       "pass": true
     },
@@ -302,7 +302,7 @@
       "mode": "light",
       "role": "borderStrong",
       "background": "surface",
-      "ratio": 3.246,
+      "ratio": 3.76,
       "floor": 3,
       "pass": true
     },
@@ -310,7 +310,7 @@
       "mode": "light",
       "role": "borderStrong",
       "background": "surfaceElevated",
-      "ratio": 3.393,
+      "ratio": 3.76,
       "floor": 3,
       "pass": true
     },
@@ -318,7 +318,7 @@
       "mode": "light",
       "role": "onPrimary",
       "background": "primary",
-      "ratio": 9.339,
+      "ratio": 6.496,
       "floor": 4.5,
       "pass": true
     },
@@ -326,7 +326,7 @@
       "mode": "dark",
       "role": "textPrimary",
       "background": "background",
-      "ratio": 16.13,
+      "ratio": 17.962,
       "floor": 4.5,
       "pass": true
     },
@@ -334,7 +334,7 @@
       "mode": "dark",
       "role": "textPrimary",
       "background": "surface",
-      "ratio": 14.914,
+      "ratio": 16.467,
       "floor": 4.5,
       "pass": true
     },
@@ -342,7 +342,7 @@
       "mode": "dark",
       "role": "textPrimary",
       "background": "surfaceElevated",
-      "ratio": 13.459,
+      "ratio": 15.146,
       "floor": 4.5,
       "pass": true
     },
@@ -350,7 +350,7 @@
       "mode": "dark",
       "role": "textSecondary",
       "background": "background",
-      "ratio": 10.145,
+      "ratio": 10.192,
       "floor": 4.5,
       "pass": true
     },
@@ -358,7 +358,7 @@
       "mode": "dark",
       "role": "textSecondary",
       "background": "surface",
-      "ratio": 9.38,
+      "ratio": 9.344,
       "floor": 4.5,
       "pass": true
     },
@@ -366,7 +366,7 @@
       "mode": "dark",
       "role": "textSecondary",
       "background": "surfaceElevated",
-      "ratio": 8.465,
+      "ratio": 8.594,
       "floor": 4.5,
       "pass": true
     },
@@ -374,7 +374,7 @@
       "mode": "dark",
       "role": "textTertiary",
       "background": "background",
-      "ratio": 7.118,
+      "ratio": 6.685,
       "floor": 4.5,
       "pass": true
     },
@@ -382,7 +382,7 @@
       "mode": "dark",
       "role": "textTertiary",
       "background": "surface",
-      "ratio": 6.581,
+      "ratio": 6.128,
       "floor": 4.5,
       "pass": true
     },
@@ -390,7 +390,7 @@
       "mode": "dark",
       "role": "textTertiary",
       "background": "surfaceElevated",
-      "ratio": 5.939,
+      "ratio": 5.637,
       "floor": 4.5,
       "pass": true
     },
@@ -398,7 +398,7 @@
       "mode": "dark",
       "role": "primary",
       "background": "background",
-      "ratio": 7.954,
+      "ratio": 8.529,
       "floor": 4.5,
       "pass": true
     },
@@ -406,7 +406,7 @@
       "mode": "dark",
       "role": "primary",
       "background": "surface",
-      "ratio": 7.354,
+      "ratio": 7.819,
       "floor": 4.5,
       "pass": true
     },
@@ -414,7 +414,7 @@
       "mode": "dark",
       "role": "primary",
       "background": "surfaceElevated",
-      "ratio": 6.637,
+      "ratio": 7.192,
       "floor": 4.5,
       "pass": true
     },
@@ -422,7 +422,7 @@
       "mode": "dark",
       "role": "secondary",
       "background": "background",
-      "ratio": 8.876,
+      "ratio": 10.192,
       "floor": 4.5,
       "pass": true
     },
@@ -430,7 +430,7 @@
       "mode": "dark",
       "role": "secondary",
       "background": "surface",
-      "ratio": 8.206,
+      "ratio": 9.344,
       "floor": 4.5,
       "pass": true
     },
@@ -438,7 +438,7 @@
       "mode": "dark",
       "role": "secondary",
       "background": "surfaceElevated",
-      "ratio": 7.406,
+      "ratio": 8.594,
       "floor": 4.5,
       "pass": true
     },
@@ -446,7 +446,7 @@
       "mode": "dark",
       "role": "accent",
       "background": "background",
-      "ratio": 10.632,
+      "ratio": 8.529,
       "floor": 4.5,
       "pass": true
     },
@@ -454,7 +454,7 @@
       "mode": "dark",
       "role": "accent",
       "background": "surface",
-      "ratio": 9.83,
+      "ratio": 7.819,
       "floor": 4.5,
       "pass": true
     },
@@ -462,7 +462,7 @@
       "mode": "dark",
       "role": "accent",
       "background": "surfaceElevated",
-      "ratio": 8.872,
+      "ratio": 7.192,
       "floor": 4.5,
       "pass": true
     },
@@ -470,7 +470,7 @@
       "mode": "dark",
       "role": "success",
       "background": "background",
-      "ratio": 9.21,
+      "ratio": 11.486,
       "floor": 4.5,
       "pass": true
     },
@@ -478,7 +478,7 @@
       "mode": "dark",
       "role": "success",
       "background": "surface",
-      "ratio": 8.516,
+      "ratio": 10.53,
       "floor": 4.5,
       "pass": true
     },
@@ -486,7 +486,7 @@
       "mode": "dark",
       "role": "success",
       "background": "surfaceElevated",
-      "ratio": 7.685,
+      "ratio": 9.685,
       "floor": 4.5,
       "pass": true
     },
@@ -494,7 +494,7 @@
       "mode": "dark",
       "role": "warning",
       "background": "background",
-      "ratio": 10.115,
+      "ratio": 11.761,
       "floor": 4.5,
       "pass": true
     },
@@ -502,7 +502,7 @@
       "mode": "dark",
       "role": "warning",
       "background": "surface",
-      "ratio": 9.352,
+      "ratio": 10.782,
       "floor": 4.5,
       "pass": true
     },
@@ -510,7 +510,7 @@
       "mode": "dark",
       "role": "warning",
       "background": "surfaceElevated",
-      "ratio": 8.44,
+      "ratio": 9.917,
       "floor": 4.5,
       "pass": true
     },
@@ -518,7 +518,7 @@
       "mode": "dark",
       "role": "danger",
       "background": "background",
-      "ratio": 7.885,
+      "ratio": 10.133,
       "floor": 4.5,
       "pass": true
     },
@@ -526,7 +526,7 @@
       "mode": "dark",
       "role": "danger",
       "background": "surface",
-      "ratio": 7.291,
+      "ratio": 9.29,
       "floor": 4.5,
       "pass": true
     },
@@ -534,7 +534,7 @@
       "mode": "dark",
       "role": "danger",
       "background": "surfaceElevated",
-      "ratio": 6.58,
+      "ratio": 8.544,
       "floor": 4.5,
       "pass": true
     },
@@ -542,7 +542,7 @@
       "mode": "dark",
       "role": "info",
       "background": "background",
-      "ratio": 8.889,
+      "ratio": 8.529,
       "floor": 4.5,
       "pass": true
     },
@@ -550,7 +550,7 @@
       "mode": "dark",
       "role": "info",
       "background": "surface",
-      "ratio": 8.218,
+      "ratio": 7.819,
       "floor": 4.5,
       "pass": true
     },
@@ -558,7 +558,7 @@
       "mode": "dark",
       "role": "info",
       "background": "surfaceElevated",
-      "ratio": 7.417,
+      "ratio": 7.192,
       "floor": 4.5,
       "pass": true
     },
@@ -566,7 +566,7 @@
       "mode": "dark",
       "role": "positive",
       "background": "background",
-      "ratio": 9.879,
+      "ratio": 11.486,
       "floor": 4.5,
       "pass": true
     },
@@ -574,7 +574,7 @@
       "mode": "dark",
       "role": "positive",
       "background": "surface",
-      "ratio": 9.134,
+      "ratio": 10.53,
       "floor": 4.5,
       "pass": true
     },
@@ -582,7 +582,7 @@
       "mode": "dark",
       "role": "positive",
       "background": "surfaceElevated",
-      "ratio": 8.243,
+      "ratio": 9.685,
       "floor": 4.5,
       "pass": true
     },
@@ -590,7 +590,7 @@
       "mode": "dark",
       "role": "negative",
       "background": "background",
-      "ratio": 8.24,
+      "ratio": 10.133,
       "floor": 4.5,
       "pass": true
     },
@@ -598,7 +598,7 @@
       "mode": "dark",
       "role": "negative",
       "background": "surface",
-      "ratio": 7.619,
+      "ratio": 9.29,
       "floor": 4.5,
       "pass": true
     },
@@ -606,7 +606,7 @@
       "mode": "dark",
       "role": "negative",
       "background": "surfaceElevated",
-      "ratio": 6.876,
+      "ratio": 8.544,
       "floor": 4.5,
       "pass": true
     },
@@ -614,7 +614,7 @@
       "mode": "dark",
       "role": "borderStrong",
       "background": "background",
-      "ratio": 3.618,
+      "ratio": 4.026,
       "floor": 3,
       "pass": true
     },
@@ -622,7 +622,7 @@
       "mode": "dark",
       "role": "borderStrong",
       "background": "surface",
-      "ratio": 3.345,
+      "ratio": 3.691,
       "floor": 3,
       "pass": true
     },
@@ -630,7 +630,7 @@
       "mode": "dark",
       "role": "borderStrong",
       "background": "surfaceElevated",
-      "ratio": 3.019,
+      "ratio": 3.395,
       "floor": 3,
       "pass": true
     },
@@ -638,7 +638,7 @@
       "mode": "dark",
       "role": "onPrimary",
       "background": "primary",
-      "ratio": 7.488,
+      "ratio": 8.529,
       "floor": 4.5,
       "pass": true
     }
