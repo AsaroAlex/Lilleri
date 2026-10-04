@@ -36,8 +36,9 @@ async function request(path, method = 'GET', body, expected = 200) {
 const digest = (value) => createHash('sha256').update(JSON.stringify(value)).digest('hex')
 async function loaded(page) {
   await page.goto(ui)
-  await button(page, 'Privacy').waitFor()
-  await button(page, 'Privacy').click()
+  await button(page, 'Impostazioni').waitFor()
+  await button(page, 'Impostazioni').click()
+  await button(page, 'Preferenze').click()
   await page.getByRole('radio', { name: 'English', exact: true }).waitFor()
 }
 async function settled(page, name) {
@@ -122,10 +123,13 @@ async function save(page, label, expected = 200) {
     )
 
     await page.reload()
-    await button(page, 'Privacy').waitFor()
-    await button(page, 'Privacy').click()
+    await button(page, 'Settings').waitFor()
+    await button(page, 'Settings').click()
+    await button(page, 'Preferences').click()
     await settled(page, 'Save settings')
     await page.getByRole('heading', { name: 'Profile and display', exact: true }).waitFor()
+    await button(page, '← Back to Settings').click()
+    await button(page, 'Privacy and data').click()
     await page.getByRole('heading', { name: 'Your privacy preferences', exact: true }).waitFor()
     await page.getByRole('checkbox', { name: 'Use only my rules', exact: true }).waitFor()
     await page.getByText(/Synthetic choice text in Italian, version/).waitFor()
@@ -133,6 +137,9 @@ async function save(page, label, expected = 200) {
       'Reload reads saved English preferences and localises privacy while clearly labelling the original versioned Italian disclosure',
     )
 
+    await button(page, '← Back to Settings').click()
+    await button(page, 'Preferences').click()
+    await settled(page, 'Save settings')
     await page
       .getByRole('textbox', { name: 'Profile name', exact: true })
       .fill('Synthetic English preference')
@@ -180,8 +187,9 @@ async function save(page, label, expected = 200) {
     )
 
     await page.reload()
-    await button(page, 'Privacy').waitFor()
-    await button(page, 'Privacy').click()
+    await button(page, 'Impostazioni').waitFor()
+    await button(page, 'Impostazioni').click()
+    await button(page, 'Preferenze').click()
     await settled(page, 'Salva impostazioni')
     await page
       .getByRole('textbox', { name: 'Nome del profilo', exact: true })

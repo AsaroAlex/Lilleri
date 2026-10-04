@@ -64,7 +64,7 @@ const finance = (value) => ({
   analysis: value.analysis,
 })
 async function openPanel(page) {
-  await page.getByRole('button', { name: /^Privacy(?:,|$)/ }).click()
+  await page.getByRole('button', { name: /^Impostazioni(?:,|$)/ }).click()
   await button(page, 'Avvisi di servizio').click()
   await page.getByRole('heading', { name: 'Avvisi', exact: true }).waitFor()
   await page.getByLabel('Inizio degli orari tranquilli').waitFor()
@@ -292,10 +292,14 @@ function validateFeed(feed) {
     )
     await button(card, 'Apri avviso').click()
     assert.deepEqual(await (await destination).json(), { screen: 'privacy', action: 'open' })
-    await button(page, 'Avvisi di servizio').waitFor()
+    await page
+      .getByRole('heading', { name: 'Le tue preferenze di riservatezza', exact: true })
+      .waitFor()
     panel = await openPanel(page)
     await button(panel, 'Apri Permessi e privacy').click()
-    await button(page, 'Avvisi di servizio').waitFor()
+    await page
+      .getByRole('heading', { name: 'Le tue preferenze di riservatezza', exact: true })
+      .waitFor()
     assert.deepEqual(finance(await request('/v1/demo')), finance(initial))
     assert.deepEqual(report.pageErrors, [])
     check(

@@ -108,7 +108,7 @@ async function restorePrivacy() {
     page.on('pageerror', (error) => report.pageErrors.push(error.message))
     const open = async (title = 'Esercenti e categorie') => {
       await page.goto(ui, { waitUntil: 'networkidle' })
-      await button(page, 'Privacy').click()
+      await button(page, title === 'Merchants and categories' ? 'Settings' : 'Impostazioni').click()
       await button(page, title).click()
       await page.getByRole('heading', { name: title, exact: true, level: 2 }).waitFor()
       await button(panel(), title === 'Merchants and categories' ? 'Refresh' : 'Aggiorna').waitFor()

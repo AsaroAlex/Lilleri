@@ -107,7 +107,7 @@ async function bounded(promise) {
       })
       .click()
     await signup.click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByText(email, { exact: true }).waitFor()
     const overview = () =>
       page.evaluate(async (base) => {
@@ -119,6 +119,7 @@ async function bounded(promise) {
     assert.equal(data.value.accounts.length, 0)
     assert.equal(data.value.transactions.length, 0)
     checks.push('signup adult/terms gates and authenticated empty financial profile')
+    await page.getByRole('button', { name: 'Privacy e dati', exact: true }).click()
     // Exact connect label is read from the rendered implementation, not guessed from API state.
     const buttons = await page.getByRole('button').allTextContents()
     const connectLabel = buttons.find((v) =>
@@ -161,7 +162,7 @@ async function bounded(promise) {
     await page
       .getByRole('button', { name: 'Conferma e attiva il secondo fattore', exact: true })
       .click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page
       .getByText('Secondo fattore attivato. I codici di recupero non sono più mostrati.', {
         exact: true,
@@ -174,6 +175,7 @@ async function bounded(promise) {
       0,
     )
     checks.push('actual TOTP setup verification and setup secret dismissal')
+    await page.getByRole('button', { name: 'Privacy e dati', exact: true }).click()
     await page.getByRole('button', { name: 'Esporta i dati', exact: true }).click()
     await page.getByRole('button', { name: 'Verifica la mia identità', exact: true }).waitFor()
     await page.getByLabel('Password per confermare l’identità', { exact: true }).fill(password)
@@ -225,14 +227,14 @@ async function bounded(promise) {
     await page.getByRole('button', { name: 'Usa un codice di recupero', exact: true }).click()
     await page.getByLabel('Codice di recupero', { exact: true }).fill(backups[0])
     await page.getByRole('button', { name: 'Conferma il codice e accedi', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByText(email, { exact: true }).waitFor()
     checks.push(
       'password signin gates financial UI until valid second factor, recovery-code fallback succeeds',
     )
     await page.getByRole('button', { name: 'Esci dal profilo', exact: true }).click()
     await page.getByRole('button', { name: 'Accedi con una passkey', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByText(email, { exact: true }).waitFor()
     checks.push('actual maintained passkey client signin')
     let releaseOverview, overviewReady
@@ -261,7 +263,7 @@ async function bounded(promise) {
     await page.unroute('**/v1/demo')
     checks.push('delayed financial overview after signout cannot resurrect stale financial display')
     await page.getByRole('button', { name: 'Accedi con una passkey', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByText(email, { exact: true }).waitFor()
     const second = await context.newPage()
     second.on('pageerror', () => errors.push('pageerror'))
@@ -277,7 +279,7 @@ async function bounded(promise) {
     await page.getByRole('button', { name: 'Accedi con password', exact: true }).click()
     await page.getByLabel('Codice a 6 cifre', { exact: true }).fill(await gen())
     await page.getByRole('button', { name: 'Conferma il codice e accedi', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page
       .getByRole('button', { name: 'Passkey, secondo fattore e sessioni', exact: true })
       .click()
@@ -310,7 +312,7 @@ async function bounded(promise) {
         })
         .click()
       await page.getByRole('button', { name: 'Crea il profilo locale', exact: true }).click()
-      await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+      await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
       await page.getByText(nextEmail, { exact: true }).waitFor()
       return nextEmail
     }
@@ -338,7 +340,7 @@ async function bounded(promise) {
     await page.getByRole('button', { name: 'Prepara il secondo fattore', exact: true }).click()
     await bounded(setupSeen)
     // Another tab renews the same principal's session while an older setup response is held.
-    // Privacy stays visible, so hiding the panel cannot provide this response fence.
+    // Settings keeps the identity panel visible, so navigation cannot provide this response fence.
     const renewedStatus = await page.evaluate(
       async ({ base, email, password }) => {
         const response = await fetch(`${base}/api/auth/sign-in/email`, {
@@ -368,7 +370,7 @@ async function bounded(promise) {
     assert.equal(await page.getByLabel('Codici di recupero', { exact: true }).count(), 0)
     await page.unroute('**/api/auth/two-factor/enable')
     checks.push(
-      'same-principal session renewal rejects a delayed setup secret while Privacy remains visible',
+      'same-principal session renewal rejects a delayed setup secret while Settings remains visible',
     )
 
     let releaseSettings, settingsReady
@@ -389,6 +391,7 @@ async function bounded(promise) {
       assert.equal(response.status(), 401)
       await route.fulfill({ response })
     })
+    await page.getByRole('button', { name: 'Preferenze', exact: true }).click()
     await page
       .getByRole('textbox', { name: 'Nome del profilo', exact: true })
       .fill('Modifica precedente')
@@ -397,6 +400,7 @@ async function bounded(promise) {
     await page.getByRole('button', { name: 'Esci dal profilo', exact: true }).click()
     await page.getByRole('button', { name: 'Accedi con password', exact: true }).waitFor()
     const erasedEmail = await createAnotherProfile()
+    await page.getByRole('button', { name: 'Privacy e dati', exact: true }).click()
     const staleSettingsResponse = page.waitForResponse(
       (response) =>
         response.url() === `${api}/v1/settings` && response.request().method() === 'PATCH',

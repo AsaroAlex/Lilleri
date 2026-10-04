@@ -215,7 +215,8 @@ async function search(page, description, english = false) {
     await page.getByRole('heading', { name: description, exact: true }).waitFor()
     check('Browser reload retains the manual balance and transaction, verified in API and detail')
 
-    await button(page, 'Privacy').click()
+    await button(page, 'Impostazioni').click()
+    await button(page, 'Preferenze').click()
     await page.getByRole('radio', { name: 'English', exact: true }).click()
     const english = await (
       await responseFrom(page, '/v1/settings', 'PATCH', () =>
@@ -225,7 +226,8 @@ async function search(page, description, english = false) {
     assert.equal(english.settings.locale, 'en-GB')
     await page.getByRole('heading', { name: 'Profile and display', exact: true }).waitFor()
     await load(page, true)
-    await button(page, 'Privacy').click()
+    await button(page, 'Settings').click()
+    await button(page, 'Preferences').click()
     await page.getByRole('heading', { name: 'Profile and display', exact: true }).waitFor()
     assert.equal(
       await page.getByRole('radio', { name: 'English', exact: true }).getAttribute('aria-checked'),
@@ -234,6 +236,8 @@ async function search(page, description, english = false) {
     assert.equal((await request('/v1/settings')).settings.locale, 'en-GB')
     check('Explicit English choice updates real labels and persists after browser reload')
 
+    await button(page, '← Back to Settings').click()
+    await button(page, 'Privacy and data').click()
     const downloadPending = page.waitForEvent('download')
     const archiveResponse = await responseFrom(page, '/v1/export/archive', 'POST', () =>
       button(page, 'Download ZIP archive').click(),
@@ -267,6 +271,8 @@ async function search(page, description, english = false) {
       'Actual same-origin ZIP download preserves the manual expense, locale and verified digests',
     )
 
+    await button(page, '← Back to Settings').click()
+    await button(page, 'Preferences').click()
     await page.getByRole('radio', { name: 'Italiano', exact: true }).click()
     const restored = await (
       await responseFrom(page, '/v1/settings', 'PATCH', () => button(page, 'Save settings').click())

@@ -199,7 +199,7 @@ const types = {
     await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email)
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Accedi con password', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByRole('button', { name: 'Esci dal profilo', exact: true }).waitFor()
     const cookies = await context.cookies(origin)
     const sessionCookie = cookies.find(
@@ -248,7 +248,7 @@ const types = {
     await page.getByRole('textbox', { name: 'Email', exact: true }).fill(email)
     await page.getByLabel('Password', { exact: true }).fill(replacement)
     await page.getByRole('button', { name: 'Accedi con password', exact: true }).click()
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
     await page.getByRole('button', { name: 'Esci dal profilo', exact: true }).click()
     await page.goto(`${origin}/?identity=recover&token=invalid`)
     await page

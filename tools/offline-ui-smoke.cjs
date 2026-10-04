@@ -200,7 +200,7 @@ async function main() {
     pass(
       'actual offline event preserves transaction detail and disables category/scope financial actions',
     )
-    await button('Privacy').click()
+    await button(text('Impostazioni', 'Settings')).click()
     await page
       .getByText(
         text('Questa pagina richiede una connessione.', 'This page requires a connection.'),
@@ -209,7 +209,7 @@ async function main() {
       .waitFor()
     assert.equal(await button(text('Esporta i dati', 'Export data')).count(), 0)
     assert.equal(await page.getByRole('checkbox').count(), 0)
-    pass('offline privacy hides active export, delete, settings and permission controls')
+    pass('offline Settings hides active export, delete, preferences and permission controls')
     await page.clock.fastForward(5 * 60_000 + 1000)
     await page
       .getByText(
@@ -244,7 +244,7 @@ async function main() {
     pass(
       'online revalidation restores current view and action availability without replaying a write',
     )
-    await button('Privacy').click()
+    await button(text('Impostazioni', 'Settings')).click()
     await button(text('Collegamenti e fonti', 'Connections and sources')).click()
     await button(text('Scollega e scegli i dati', 'Disconnect and choose what happens to data'))
       .first()

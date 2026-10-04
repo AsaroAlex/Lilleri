@@ -32,6 +32,7 @@ const suffix = randomUUID().slice(0, 8)
 const labels = {
   'it-IT': {
     transactions: 'Movimenti',
+    settings: 'Impostazioni',
     entry: 'Collegamenti e fonti',
     heading: 'Collegamenti',
     reload: 'Ricarica stato e disponibilità',
@@ -53,6 +54,7 @@ const labels = {
   },
   'en-GB': {
     transactions: 'Transactions',
+    settings: 'Settings',
     entry: 'Connections and sources',
     heading: 'Connections',
     reload: 'Reload status and availability',
@@ -151,7 +153,7 @@ async function responseFrom(page, path, method, action, status = 200) {
 async function openPanel(page, locale = 'it-IT') {
   const copy = labels[locale]
   await button(page, copy.transactions).click()
-  if (!(await button(page, copy.entry).count())) await button(page, 'Privacy').click()
+  if (!(await button(page, copy.entry).count())) await button(page, copy.settings).click()
   await button(page, copy.entry).click()
   await page.getByRole('heading', { name: copy.heading, exact: true }).waitFor()
   await button(page, copy.reload).waitFor()
@@ -342,7 +344,7 @@ async function choose(page, locale, data) {
       if (path === connectionBase && method === 'DELETE') traffic.deletes++
     })
     await page.goto(ui)
-    await button(page, 'Privacy').waitFor()
+    await button(page, labels['it-IT'].settings).waitFor()
     await page.getByRole('button', { name: labels['it-IT'].inbox }).click()
     await page.getByText(merchant, { exact: true }).waitFor()
     const flags = await request(privatePath, 'PATCH', {
@@ -374,7 +376,7 @@ async function choose(page, locale, data) {
         'Private related identifiers cannot appear in attention evidence',
       )
     await page.reload()
-    await button(page, 'Privacy').waitFor()
+    await button(page, labels['it-IT'].settings).waitFor()
     await page.getByRole('button', { name: labels['it-IT'].inbox }).click()
     assert.equal(await page.getByText(merchant, { exact: true }).count(), 0)
     await request(privatePath, 'PATCH', {
@@ -388,7 +390,7 @@ async function choose(page, locale, data) {
 
     await localeChoice('en-GB')
     await page.reload()
-    await button(page, 'Privacy').waitFor()
+    await button(page, labels['en-GB'].settings).waitFor()
     await openPanel(page, 'en-GB')
     await page.getByText('No real bank is connected.', { exact: false }).waitFor()
     await choose(page, 'en-GB', 'erase')
@@ -400,7 +402,7 @@ async function choose(page, locale, data) {
     )
     await localeChoice('it-IT')
     await page.reload()
-    await button(page, 'Privacy').waitFor()
+    await button(page, labels['it-IT'].settings).waitFor()
     await openPanel(page)
     assert.equal(await button(page, labels['it-IT'].update).isDisabled(), true)
     await responseFrom(page, `${connectionBase}/resume`, 'POST', () =>

@@ -455,13 +455,15 @@ const matchCard = (page) =>
     check('Repeating the same CSV preserves transaction IDs, totals and manual balance')
 
     await button(page, '← Torna ai movimenti').click()
-    await button(page, 'Privacy').click()
+    await button(page, 'Impostazioni').click()
+    await button(page, 'Preferenze').click()
     await page.getByRole('textbox', { name: 'Nome del profilo', exact: true }).waitFor()
     const originalSettings = (await request('/v1/settings')).settings
     const beforeSettings = await overview()
     const settingsPeer = await context.newPage()
     await load(settingsPeer)
-    await button(settingsPeer, 'Privacy').click()
+    await button(settingsPeer, 'Impostazioni').click()
+    await button(settingsPeer, 'Preferenze').click()
     await settingsPeer.getByRole('textbox', { name: 'Nome del profilo', exact: true }).waitFor()
     await page
       .getByRole('textbox', { name: 'Nome del profilo', exact: true })
@@ -551,11 +553,14 @@ const matchCard = (page) =>
     await page.getByRole('tab', { name: 'Importa CSV', exact: true }).click()
     await noOverflow(page, '320px CSV form')
     await button(page, '← Torna ai movimenti').click()
-    await button(page, 'Privacy').click()
+    await button(page, 'Impostazioni').click()
+    await button(page, 'Preferenze').click()
     await page.getByRole('textbox', { name: 'Nome del profilo', exact: true }).waitFor()
     await noOverflow(page, '320px settings')
     check('320px Home, rules, account, CSV and settings wrap without horizontal page overflow')
 
+    await button(page, '← Torna a Impostazioni').click()
+    await button(page, 'Privacy e dati').click()
     const beforeArchive = await overview()
     const downloadPending = page.waitForEvent('download')
     const archiveResponsePending = page.waitForResponse(

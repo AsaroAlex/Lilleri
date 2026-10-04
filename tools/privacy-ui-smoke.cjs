@@ -93,7 +93,8 @@ const displayedDate = (value) =>
       }).format(new Date(`${value}T00:00:00Z`))
     : 'Data non comunicata'
 async function open(page) {
-  await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+  await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
+  await page.getByRole('button', { name: 'Privacy e dati', exact: true }).click()
   await page
     .getByRole('heading', { name: 'Le tue preferenze di riservatezza', exact: true })
     .waitFor()

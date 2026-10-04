@@ -280,7 +280,9 @@ async function main() {
     assert.equal(await page.locator('[aria-pressed="true"]').count(), 1)
     await targets()
     pass('transaction category and scope expose actual checked/pressed states')
-    await navigate('Privacy', 'Privacy')
+    await navigate('Impostazioni', 'Settings')
+    await button(text('Privacy e dati', 'Privacy and data')).click()
+    await page.waitForFunction(() => document.activeElement.id === 'lilleri-main-heading')
     const opener = button(text('Elimina dati dimostrativi', 'Delete demo data'))
     await opener.focus()
     await page.keyboard.press('Enter')
@@ -326,6 +328,8 @@ async function main() {
     await checkboxes()
     await contrast()
     pass('privacy control sizes and heading hierarchy')
+    await button(text('← Torna a Impostazioni', '← Back to Settings')).click()
+    await page.waitForFunction(() => document.activeElement.id === 'lilleri-main-heading')
     for (const [it, en] of [
       ['Avvisi di servizio', 'Service notices'],
       ['Collegamenti e fonti', 'Connections and sources'],
@@ -336,7 +340,7 @@ async function main() {
       assert.equal(await mainHeading().count(), 1)
       await targets()
       await checkboxes()
-      await button(text('← Torna a Privacy', '← Back to Privacy')).click()
+      await button(text('← Torna a Impostazioni', '← Back to Settings')).click()
       await page.waitForFunction(() => document.activeElement.id === 'lilleri-main-heading')
     }
     await navigate('Ricorrenti', 'Recurring')

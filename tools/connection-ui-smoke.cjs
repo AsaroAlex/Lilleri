@@ -70,7 +70,7 @@ function assertFinance(value, initial) {
 async function openPanel(page) {
   await page.getByRole('button', { name: 'Movimenti', exact: true }).click()
   if (!(await button(page, 'Collegamenti e fonti').count()))
-    await page.getByRole('button', { name: 'Privacy', exact: true }).click()
+    await page.getByRole('button', { name: 'Impostazioni', exact: true }).click()
   await button(page, 'Collegamenti e fonti').click()
   await page.getByRole('heading', { name: 'Collegamenti', exact: true }).waitFor()
   await button(page, 'Ricarica stato e disponibilità').waitFor()
@@ -125,7 +125,7 @@ async function noOverflow(page, label) {
     assert.equal(
       await page
         .getByRole('button', {
-          name: /^(Home|Movimenti|Da controllare, \d+ moviment[oi]|Ricorrenti|Privacy)$/,
+          name: /^(Home|Movimenti|Da controllare, \d+ moviment[oi]|Ricorrenti|Impostazioni)$/,
         })
         .count(),
       5,
