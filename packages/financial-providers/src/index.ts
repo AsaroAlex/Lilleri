@@ -16,6 +16,7 @@ import type {
 export * from './contracts.js'
 export { parseBankCsv } from './csv.js'
 export * from './csv-mapper.js'
+export * from './yapily-sandbox.js'
 
 export interface ProviderContext {
   readonly profileId: string
