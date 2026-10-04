@@ -286,6 +286,7 @@ export function SourceDecisionsPanel({
           )}
           {row.carried.length > 0 && <Text style={s.caption}>{t('source.carried')}</Text>}
           {row.state === 'replaced' &&
+            row.replacementTransactionId !== row.transactionId &&
             row.replacementRevision !== null &&
             button(t('common.undo'), () => void decide(() => client.decidePending(row, 'undo')))}
         </View>
