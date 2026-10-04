@@ -897,8 +897,10 @@ function AppSurface({
           resizeMode="contain"
           accessibilityLabel="Lilleri"
         />
-        <View style={s.headerActions}>
-          <Text style={s.demoBadge}>{t('app.demoBadge')}</Text>
+        <View style={[s.headerActions, windowWidth < 400 && s.compactHeaderActions]}>
+          <Text style={[s.demoBadge, windowWidth < 400 && s.compactDemoBadge]}>
+            {t('app.demoBadge')}
+          </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={theme === 'dark' ? t('app.lightTheme') : t('app.darkTheme')}
@@ -951,7 +953,7 @@ function AppSurface({
           keyboardShouldPersistTaps="handled"
         >
           <View style={s.pageHeading}>
-            <View style={s.headingCopy}>
+            <View style={[s.headingCopy, windowWidth < 600 && s.narrowHeadingCopy]}>
               <Text style={s.eyebrow}>{t('app.eyebrow')}</Text>
               <Text
                 ref={contentHeading}
@@ -970,14 +972,16 @@ function AppSurface({
               </Text>
             </View>
             {!erased && (
-              <Button
-                label={loading ? t('app.refreshing') : t('common.refresh')}
-                onPress={() => void refresh()}
-                quiet
-                disabled={loading || !!busy}
-                c={c}
-                s={s}
-              />
+              <View style={windowWidth < 600 && s.narrowHeadingActions}>
+                <Button
+                  label={loading ? t('app.refreshing') : t('common.refresh')}
+                  onPress={() => void refresh()}
+                  quiet
+                  disabled={loading || !!busy}
+                  c={c}
+                  s={s}
+                />
+              </View>
             )}
           </View>
           {!hostedIdentityMode && <Text style={s.demoIntro}>{t('app.intro')}</Text>}
@@ -2162,6 +2166,8 @@ function styles(c: ThemeColors) {
     logo: { width: 122, height: 40 },
     compactHeader: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
     compactLogo: { width: 106, height: 36 },
+    compactHeaderActions: { gap: 4 },
+    compactDemoBadge: { fontSize: 11, paddingHorizontal: 8 },
     wideLogo: { width: 146, height: 48 },
     headerActions: {
       flexDirection: 'row',
@@ -2235,6 +2241,8 @@ function styles(c: ThemeColors) {
       flexWrap: 'wrap',
     },
     headingCopy: { gap: 8, flex: 1 },
+    narrowHeadingCopy: { gap: 16 },
+    narrowHeadingActions: { position: 'absolute', top: -14, right: -8 },
     eyebrow: {
       fontFamily: 'GeistMedium',
       fontSize: type.caption.size,
