@@ -1,8 +1,8 @@
 # UI and UX decision review — 2026-10-04
 
-**Status:** implementation review. The revised palette and application source have been inspected; final compiled-web acceptance and the Railway rollout are pending at the time of writing.
+**Status:** local compiled-web acceptance passed; Railway rollout pending at the time of this commit. The revised palette and applied UX decisions are verified in the actual application.
 
-The user rejected the warm colours and requested a clearer, more considered interface. The response is a neutral financial workspace: amounts and their meaning lead, navigation stays predictable, and blue identifies actions and selection. This record describes decisions implemented in Lilleri; it makes no claim of Apple affiliation, external design certification, or native-device acceptance.
+The user rejected the warm colours and requested a clearer, more considered interface. The response is a neutral financial workspace: amounts and their meaning lead, navigation stays predictable, and blue identifies actions and selection. This record describes decisions implemented and checked in Lilleri.
 
 ## Decisions applied
 
@@ -31,8 +31,10 @@ The generated [contrast report](../../packages/brand/tokens/contrast-report.json
 
 ## Acceptance scope
 
-The review inspected the preceding desktop, 390 px and 320 px Home captures, dark Home and ledger captures, plus read-only navigation through Inbox, recurring items and Privacy. Applied behaviour was checked in [App.tsx](../../apps/mobile/App.tsx), [HomeQuickActions.tsx](../../apps/mobile/src/HomeQuickActions.tsx) and the [Italian/English messages](../../apps/mobile/src/i18n/app-messages.ts). Those earlier warm captures are not evidence of the final neutral render.
+The initial review used the earlier warm Home, dark and ledger captures and source inspection of Inbox, recurring items and Privacy. Applied behaviour was then checked in the compiled neutral app, including direct account-to-source navigation, the explicit category action and quiet settings links. Source: [App.tsx](../../apps/mobile/App.tsx), [HomeQuickActions.tsx](../../apps/mobile/src/HomeQuickActions.tsx), [messages](../../apps/mobile/src/i18n/app-messages.ts).
 
-Before recording release acceptance, verify the compiled app in both themes at 320, 390 and desktop widths: heading and navigation reflow, complete money values, visible keyboard focus, clear selected tabs, and the account/source and category-review destinations. Exercise search, import, correction/undo and export through the existing browser workflows. Check zoom at 200% and reduced motion. A terminal successful Railway deployment and fresh public checks are needed before recording the change as published.
+Local browser acceptance passed at 320, 390, 720, 768, 960, 1024, 1180, 1280 and 1440 CSS px. The 720 px case covers the reflow width of a 1440 px window at 200% scale; a physical browser/device zoom session is separate. Checks include light/dark appearance, reduced-motion context, keyboard skip/focus, full Italian/English amounts, nonoverlapping stacked financial metrics and a visible rule marking the selected mobile destination. A read-only intercepted fixture verified all digits and cents of EUR 1,234,567.89 at 320 px without writing the archive. Source-choice, cross-source-import and complete interaction browser groups passed 5/3/8, including undo, reload, language and ZIP export. Reports: `/workspace/.lilleri-validation/neutral-ui-review.json`, `neutral-final-ui.json` and `neutral-interactive-ui.json`.
+
+The terminal Railway result and fresh public persistence checks will be recorded after rollout. Public validation is read-only; the local writing workflows retain their audit in a separate synthetic archive.
 
 This review does not establish physical-device accessibility or user comprehension. Those remain separate validation tasks.
