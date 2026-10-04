@@ -27,8 +27,10 @@ import { createDataExportArchive } from './data-export.js'
 import { createDeletionCertificate, DELETION_CERTIFICATE_SCHEMA } from './deletion-restore.js'
 import type { ProfileEncryption } from './encryption.js'
 import {
+  createHostedIdentity,
   createLocalIdentity,
   type FinancialPrincipal,
+  type HostedIdentityOptions,
   type LocalIdentityOptions,
 } from './identity.js'
 import { ManualService, manualAuditDto, registerManualRoutes } from './manual-service.js'
@@ -383,6 +385,7 @@ export interface AppOptions {
   readonly sourceErasureJournal?: SourceErasureJournal
   readonly demoMode: boolean
   readonly localIdentity?: Omit<LocalIdentityOptions, 'db'>
+  readonly hostedIdentity?: Omit<HostedIdentityOptions, 'db'>
   readonly environment?: string
   /** Trusted application configuration. A request can never select its profile. */
   readonly profileId?: string
@@ -404,22 +407,35 @@ export function assertDemoConfiguration(
 }
 export async function createApp(options: AppOptions) {
   const provider = options.provider ?? new MockItalianProvider()
-  if (options.localIdentity) {
+  if (options.localIdentity && options.hostedIdentity)
+    throw new Error('Select either local or hosted identity')
+  const identityOptions = options.hostedIdentity ?? options.localIdentity
+  if (identityOptions) {
     if (options.demoMode || options.profileId || options.seed)
-      throw new Error('Local identity cannot use a demo profile or automatically connect sources')
+      throw new Error(
+        'Authenticated identity cannot use a demo profile or automatically connect sources',
+      )
   } else {
     assertDemoConfiguration(options.demoMode, options.environment ?? process.env.NODE_ENV)
   }
-  const identity = options.localIdentity
-    ? createLocalIdentity({
-        ...options.localIdentity,
-        ...(options.environment ? { environment: options.environment } : {}),
-        db: options.db,
-        allowedOrigins: options.localIdentity.allowedOrigins ?? [...allowedOrigins],
-      })
-    : undefined
-  const browserOrigins = new Set(options.localIdentity?.allowedOrigins ?? [...allowedOrigins])
-  if (options.localIdentity) browserOrigins.add(new URL(options.localIdentity.baseURL).origin)
+  if (options.hostedIdentity && !options.financialScope)
+    throw new Error('Hosted identity requires a server-derived financial database scope')
+  const identity = options.hostedIdentity
+    ? createHostedIdentity({ ...options.hostedIdentity, db: options.db })
+    : options.localIdentity
+      ? createLocalIdentity({
+          ...options.localIdentity,
+          ...(options.environment ? { environment: options.environment } : {}),
+          db: options.db,
+          allowedOrigins: options.localIdentity.allowedOrigins ?? [...allowedOrigins],
+        })
+      : undefined
+  const browserOrigins = new Set(
+    options.hostedIdentity
+      ? [new URL(options.hostedIdentity.baseURL).origin]
+      : (options.localIdentity?.allowedOrigins ?? [...allowedOrigins]),
+  )
+  if (identityOptions) browserOrigins.add(new URL(identityOptions.baseURL).origin)
   const sourceJournal = options.sourceErasureJournal
   const requestHeaders = (request: FastifyRequest) => {
     const headers = new Headers()
@@ -770,7 +786,10 @@ export async function createApp(options: AppOptions) {
   })
   app.addHook('onRequest', async (request, reply) => {
     const host = request.headers.host
-    if (host) {
+    if (options.hostedIdentity) {
+      if (host !== new URL(options.hostedIdentity.baseURL).host)
+        throw new Problem(403, 'host_forbidden', 'Questo indirizzo non può usare il servizio.')
+    } else if (host) {
       let hostname = ''
       try {
         hostname = new URL(`http://${host}`).hostname
@@ -800,6 +819,7 @@ export async function createApp(options: AppOptions) {
         .header('Access-Control-Allow-Headers', 'Content-Type')
     }
     reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff')
+    if (options.hostedIdentity) reply.header('Referrer-Policy', 'no-referrer')
     if (request.method === 'OPTIONS') return reply.code(204).send(null)
     if (options.connectionLifecycleConfiguration)
       connectionPolicies.set(request, await options.connectionLifecycleConfiguration())
@@ -895,14 +915,14 @@ export async function createApp(options: AppOptions) {
         instance: request.url.split('?')[0] ?? '/',
       }),
   )
-  if (identity && options.localIdentity) {
-    const local = options.localIdentity
+  if (identity && identityOptions) {
+    const configured = identityOptions
     app.route({
       method: ['GET', 'POST'],
       url: '/api/auth/*',
       handler: async (request, reply) => {
         const response = await identity.handler(
-          new Request(new URL(request.url, local.baseURL), {
+          new Request(new URL(request.url, configured.baseURL), {
             method: request.method,
             headers: requestHeaders(request),
             ...(request.body === undefined ? {} : { body: JSON.stringify(request.body) }),

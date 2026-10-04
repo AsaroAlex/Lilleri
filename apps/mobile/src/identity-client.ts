@@ -2,6 +2,10 @@ import { passkeyClient } from '@better-auth/passkey/client'
 import { ApiError, createApiClient } from '@lilleri/api-client'
 import { createAuthClient } from 'better-auth/client'
 import { twoFactorClient } from 'better-auth/client/plugins'
+import {
+  assertHostedIdentityClientConfiguration,
+  type HostedIdentityClientOptions,
+} from './identity-recovery'
 
 export const LOCAL_TERMS_VERSION = 'local-synthetic-terms-v1'
 export interface LocalIdentitySession {
@@ -55,13 +59,20 @@ function checked(result: { readonly error: AuthFailure | null }) {
 const failedResponse = () =>
   new ApiError(502, 'authentication_failed', 'Non riesco a verificare la sessione. Riprova.')
 const iso = (value: string | Date) => new Date(value).toISOString()
-const expiresAt = (expiry: string | Date, created: string | Date) =>
+const expiresAt = (expiry: string | Date, created: string | Date, days = 90) =>
   new Date(
-    Math.min(new Date(expiry).getTime(), new Date(created).getTime() + 90 * 24 * 60 * 60 * 1000),
+    Math.min(new Date(expiry).getTime(), new Date(created).getTime() + days * 24 * 60 * 60 * 1000),
   ).toISOString()
 
 /** Cookies are managed by the browser; no credential or token is stored by the app. */
 export function createLocalIdentityClient(baseUrl: string) {
+  return createIdentityClient(baseUrl)
+}
+export function createHostedIdentityClient(baseUrl: string, options: HostedIdentityClientOptions) {
+  assertHostedIdentityClientConfiguration(baseUrl, options)
+  return createIdentityClient(baseUrl, options)
+}
+function createIdentityClient(baseUrl: string, hosted?: HostedIdentityClientOptions) {
   const auth = createAuthClient({
     baseURL: baseUrl,
     basePath: '/api/auth',
@@ -88,7 +99,11 @@ export function createLocalIdentityClient(baseUrl: string) {
             twoFactorEnabled: user.twoFactorEnabled === true,
           },
           principal,
-          expiresAt: expiresAt(result.data.session.expiresAt, result.data.session.createdAt),
+          expiresAt: expiresAt(
+            result.data.session.expiresAt,
+            result.data.session.createdAt,
+            hosted ? 30 : 90,
+          ),
         }
       } catch (cause) {
         if (cause instanceof ApiError && cause.status === 401) return null
@@ -101,9 +116,39 @@ export function createLocalIdentityClient(baseUrl: string) {
         email,
         password,
         adultAttested: true,
-        termsVersion: LOCAL_TERMS_VERSION,
+        termsVersion: hosted?.termsVersion ?? LOCAL_TERMS_VERSION,
+        ...(hosted ? { callbackURL: `${baseUrl}/` } : {}),
       }
       checked(await auth.signUp.email(input))
+    },
+    async requestPasswordReset(email: string) {
+      if (!hosted)
+        throw new ApiError(
+          400,
+          'recovery_unavailable',
+          'Il recupero email richiede un servizio di invio configurato.',
+        )
+      checked(
+        await auth.requestPasswordReset({ email, redirectTo: `${baseUrl}/?identity=recover` }),
+      )
+    },
+    async resetPassword(token: string, newPassword: string) {
+      if (!hosted)
+        throw new ApiError(
+          400,
+          'recovery_unavailable',
+          'Il recupero email richiede un servizio di invio configurato.',
+        )
+      checked(await auth.resetPassword({ token, newPassword }))
+    },
+    async resendVerification(email: string) {
+      if (!hosted)
+        throw new ApiError(
+          400,
+          'recovery_unavailable',
+          'La verifica email richiede un servizio di invio configurato.',
+        )
+      checked(await auth.sendVerificationEmail({ email, callbackURL: `${baseUrl}/` }))
     },
     async signIn(
       email: string,
@@ -161,7 +206,7 @@ export function createLocalIdentityClient(baseUrl: string) {
         await request<{ sessions: readonly LocalSessionRecord[] }>('/v1/auth/sessions')
       ).sessions.map((record) => ({
         ...record,
-        expiresAt: expiresAt(record.expiresAt, record.createdAt),
+        expiresAt: expiresAt(record.expiresAt, record.createdAt, hosted ? 30 : 90),
       }))
     },
     revokeSession: (id: string) =>

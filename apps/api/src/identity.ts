@@ -1,4 +1,6 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { randomUUID } from 'node:crypto'
+import { isIP } from 'node:net'
 import { passkey } from '@better-auth/passkey'
 import { type Database, schema } from '@lilleri/database'
 import { betterAuth } from 'better-auth'
@@ -6,6 +8,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { APIError } from 'better-auth/api'
 import { twoFactor } from 'better-auth/plugins/two-factor'
 import { and, asc, eq } from 'drizzle-orm'
+import type { IdentityDelivery } from './identity-mail.js'
+import { createIdentityQuota } from './identity-quota.js'
 import * as identity from './identity-schema.js'
 import { notFound, Problem } from './problem.js'
 
@@ -25,6 +29,12 @@ export interface LocalIdentityOptions {
   /** An explicit local delivery adapter; no e-mail provider or public mailbox is installed. */
   readonly deliverVerification?: (message: { email: string; url: string }) => Promise<void>
   readonly now?: () => Date
+}
+export interface HostedIdentityOptions
+  extends Omit<LocalIdentityOptions, 'deliverVerification' | 'environment'> {
+  /** An explicit reviewed version; the local synthetic draft is never a hosted acceptance. */
+  readonly termsVersion: string
+  readonly delivery: IdentityDelivery
 }
 export interface FinancialPrincipal {
   readonly userId: string
@@ -60,6 +70,36 @@ export function assertLocalIdentityConfiguration(options: Omit<LocalIdentityOpti
   }
 }
 
+export function assertHostedIdentityConfiguration(options: Omit<HostedIdentityOptions, 'db'>) {
+  const url = new URL(options.baseURL)
+  if (
+    url.protocol !== 'https:' ||
+    options.baseURL !== url.origin ||
+    url.username ||
+    url.password ||
+    url.port ||
+    isIP(url.hostname.replace(/^\[|\]$/g, '')) ||
+    !url.hostname.includes('.') ||
+    /(?:^|\.)(?:localhost|local|internal)$/.test(url.hostname)
+  )
+    throw new Error('Hosted authentication requires an exact public HTTPS origin')
+  if (options.secret.length < 32 || !options.secret.trim())
+    throw new Error('Hosted authentication secret must contain at least 32 characters')
+  if ((options.allowedOrigins ?? []).some((origin) => origin !== url.origin))
+    throw new Error('Hosted authentication requires the same exact HTTPS browser origin')
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(options.termsVersion) ||
+    options.termsVersion === LOCAL_TERMS_VERSION ||
+    /(?:local|synthetic)/i.test(options.termsVersion)
+  )
+    throw new Error('Hosted authentication requires an explicit reviewed terms version')
+  if (
+    typeof options.delivery?.sendVerification !== 'function' ||
+    typeof options.delivery?.sendPasswordReset !== 'function'
+  )
+    throw new Error('Hosted authentication requires verification and password recovery delivery')
+}
+
 function sanitise(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sanitise)
   if (value && typeof value === 'object')
@@ -79,11 +119,44 @@ function sanitise(value: unknown): unknown {
 /** Explicit development-only library integration, never a production auth switch. */
 export function createLocalIdentity(options: LocalIdentityOptions) {
   assertLocalIdentityConfiguration(options)
+  return createIdentity(options)
+}
+
+/** Separate explicit release boundary. This never upgrades or relaxes local/demo mode. */
+export function createHostedIdentity(options: HostedIdentityOptions) {
+  assertHostedIdentityConfiguration(options)
+  return createIdentity(
+    { ...options, deliverVerification: options.delivery.sendVerification },
+    options,
+  )
+}
+
+function createIdentity(
+  options: LocalIdentityOptions,
+  hosted?: HostedIdentityOptions,
+  recoveryTransaction = false,
+) {
   const now = options.now ?? (() => new Date())
   const origins = [...new Set([new URL(options.baseURL).origin, ...(options.allowedOrigins ?? [])])]
+  const termsVersion = hosted?.termsVersion ?? LOCAL_TERMS_VERSION
+  const sessionSeconds = hosted ? 30 * 24 * 60 * 60 : SESSION_SECONDS
+  const consumeQuota = hosted ? createIdentityQuota(options.db, options.secret) : undefined
   const requestQuotas = new Map<string, { count: number; expiresAt: number }>()
+  const deliveryState = new AsyncLocalStorage<{ failed: boolean }>()
+  const deliver = async (action: () => Promise<void>) => {
+    try {
+      await action()
+    } catch {
+      const state = deliveryState.getStore()
+      if (state) state.failed = true
+      throw new APIError('SERVICE_UNAVAILABLE', {
+        code: 'EMAIL_DELIVERY_UNAVAILABLE',
+        message: 'Invio email non disponibile. Riprova.',
+      })
+    }
+  }
   const auth = betterAuth({
-    appName: 'Lilleri locale — dati sintetici',
+    appName: hosted ? 'Lilleri' : 'Lilleri locale — dati sintetici',
     baseURL: options.baseURL,
     basePath: '/api/auth',
     secret: options.secret,
@@ -97,19 +170,30 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
       maxPasswordLength: 128,
       requireEmailVerification: Boolean(options.deliverVerification),
       revokeSessionsOnPasswordReset: true,
+      ...(hosted
+        ? {
+            resetPasswordTokenExpiresIn: 15 * 60,
+            sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) =>
+              deliver(() => hosted.delivery.sendPasswordReset({ email: user.email, url })),
+          }
+        : {}),
     },
     ...(options.deliverVerification
       ? {
           emailVerification: {
             sendOnSignUp: true,
             autoSignInAfterVerification: false,
+            expiresIn: 60 * 60,
             sendVerificationEmail: async ({
               user,
               url,
             }: {
               user: { email: string }
               url: string
-            }) => options.deliverVerification?.({ email: user.email, url }),
+            }) =>
+              hosted
+                ? deliver(() => hosted.delivery.sendVerification({ email: user.email, url }))
+                : options.deliverVerification?.({ email: user.email, url }),
           },
         }
       : {}),
@@ -120,27 +204,34 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
       },
     },
     session: {
-      expiresIn: SESSION_SECONDS,
+      expiresIn: sessionSeconds,
       updateAge: 24 * 60 * 60,
       freshAge: STEP_UP_SECONDS,
       cookieCache: { enabled: false },
     },
     advanced: {
-      cookiePrefix: 'lilleri-local',
-      useSecureCookies: false,
-      defaultCookieAttributes: { httpOnly: true, sameSite: 'strict', secure: false },
+      cookiePrefix: hosted ? 'lilleri-hosted' : 'lilleri-local',
+      useSecureCookies: Boolean(hosted),
+      defaultCookieAttributes: {
+        httpOnly: true,
+        sameSite: 'strict',
+        secure: Boolean(hosted),
+        path: '/',
+      },
       disableOriginCheck: false,
       disableCSRFCheck: false,
+      trustedProxyHeaders: false,
       ipAddress: { ipAddressHeaders: [], disableIpTracking: false },
     },
     rateLimit: {
-      enabled: true,
+      enabled: !recoveryTransaction,
       storage: 'memory',
       // The library's disabled IP tracking also disables its rate limiter. Use a
       // per-instance atomic quota with no trusted caller-supplied IP headers.
       // This loopback service has one local bucket per allowlisted auth path.
       customStorage: {
         consume: async (key, rule) => {
+          if (consumeQuota) return consumeQuota(`library:${key}`, rule)
           const at = Date.now(),
             old = requestQuotas.get(key)
           const quota =
@@ -158,25 +249,34 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
         '/sign-in/email': { window: 60, max: 5 },
         '/sign-up/email': { window: 60, max: 5 },
         '/two-factor/verify-backup-code': { window: 60, max: 5 },
+        ...(hosted
+          ? {
+              '/request-password-reset': { window: 60, max: 5 },
+              '/reset-password': { window: 60, max: 5 },
+              '/send-verification-email': { window: 60, max: 5 },
+            }
+          : {}),
       },
     },
     databaseHooks: {
       user: {
         create: {
           before: async (user) => {
-            if (user.adultAttested !== true || user.termsVersion !== LOCAL_TERMS_VERSION)
+            if (user.adultAttested !== true || user.termsVersion !== termsVersion)
               throw new APIError('BAD_REQUEST', {
                 code: 'ACCEPTANCE_REQUIRED',
-                message: 'Conferma maggiore età e condizioni locali.',
+                message: hosted
+                  ? 'Conferma maggiore età e condizioni.'
+                  : 'Conferma maggiore età e condizioni locali.',
               })
           },
           after: async (user) => {
             const at = now(),
-              profileId = `profile_local_${randomUUID()}`
+              profileId = `profile_${hosted ? 'hosted' : 'local'}_${randomUUID()}`
             await options.db.transaction(async (db) => {
               await db.insert(schema.profiles).values({
                 id: profileId,
-                name: 'Profilo locale sintetico',
+                name: hosted ? 'Il mio profilo' : 'Profilo locale sintetico',
                 timezone: 'Europe/Rome',
                 createdAt: at.toISOString(),
               })
@@ -193,7 +293,7 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
                 {
                   userId: user.id,
                   kind: 'terms',
-                  textVersion: LOCAL_TERMS_VERSION,
+                  textVersion: termsVersion,
                   acceptedAt: at,
                 },
               ])
@@ -204,14 +304,14 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
     },
     plugins: [
       twoFactor({
-        issuer: 'Lilleri locale',
+        issuer: hosted ? 'Lilleri' : 'Lilleri locale',
         skipVerificationOnEnable: false,
         backupCodeOptions: { storeBackupCodes: 'encrypted' },
         accountLockout: { enabled: true, maxFailedAttempts: 5, durationSeconds: 60 },
       }),
       passkey({
         rpID: new URL(options.baseURL).hostname,
-        rpName: 'Lilleri locale',
+        rpName: hosted ? 'Lilleri' : 'Lilleri locale',
         origin: origins,
         authenticatorSelection: { residentKey: 'required', userVerification: 'required' },
         registration: {
@@ -257,10 +357,13 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
     '/two-factor/verify-backup-code',
     '/two-factor/generate-backup-codes',
   ])
+  if (hosted)
+    for (const path of ['/send-verification-email', '/request-password-reset', '/reset-password'])
+      allowedPaths.add(path)
   function checkOrigin(headers: Headers, mutation: boolean) {
     const origin = headers.get('origin')
     if ((mutation && !origin) || (origin && !origins.includes(origin)))
-      throw new Problem(403, 'origin_forbidden', 'Questa origine non può usare il servizio locale.')
+      throw new Problem(403, 'origin_forbidden', 'Questa origine non può usare il servizio.')
   }
   async function authenticatedSession(headers: Headers) {
     const result = await auth.api.getSession({
@@ -270,8 +373,9 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
     const at = now().getTime()
     if (
       !result ||
+      (hosted && !result.user.emailVerified) ||
       result.session.expiresAt.getTime() <= at ||
-      result.session.createdAt.getTime() + SESSION_SECONDS * 1000 <= at
+      result.session.createdAt.getTime() + sessionSeconds * 1000 <= at
     )
       throw unavailable()
     return result
@@ -310,6 +414,11 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
   async function reauthenticate(headers: Headers, password: string, code?: string) {
     checkOrigin(headers, true)
     const result = await authenticatedSession(headers)
+    if (
+      consumeQuota &&
+      !(await consumeQuota(`reauthenticate:${result.user.id}`, { window: 60, max: 5 })).allowed
+    )
+      throw new Problem(429, 'rate_limited', 'Troppi tentativi. Riprova tra un minuto.')
     const at = now().getTime(),
       old = attempts.get(result.user.id)
     const attempt = old && old.expiresAt > at ? old : { count: 0, expiresAt: at + 60_000 }
@@ -363,14 +472,14 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
       .filter(
         (row) =>
           row.expiresAt.getTime() > now().getTime() &&
-          row.createdAt.getTime() + SESSION_SECONDS * 1000 > now().getTime(),
+          row.createdAt.getTime() + sessionSeconds * 1000 > now().getTime(),
       )
       .map((row) => ({
         id: row.id,
         current: row.id === result.session.id,
         createdAt: row.createdAt.toISOString(),
         expiresAt: new Date(
-          Math.min(row.expiresAt.getTime(), row.createdAt.getTime() + SESSION_SECONDS * 1000),
+          Math.min(row.expiresAt.getTime(), row.createdAt.getTime() + sessionSeconds * 1000),
         ).toISOString(),
       }))
   }
@@ -424,8 +533,73 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
   async function handler(request: Request): Promise<Response> {
     const url = new URL(request.url),
       path = url.pathname.slice('/api/auth'.length)
-    if (!allowedPaths.has(path)) throw notFound()
+    const recoveryCallback = Boolean(hosted && /^\/reset-password\/[A-Za-z0-9_-]+$/.test(path))
+    if (!allowedPaths.has(path) && !recoveryCallback) throw notFound()
+    if (hosted && url.origin !== new URL(options.baseURL).origin)
+      throw new Problem(403, 'origin_forbidden', 'Questa origine non può usare il servizio.')
     checkOrigin(request.headers, !['GET', 'HEAD'].includes(request.method))
+    if (hosted) {
+      // Keep callback/redirect checks independent of the library's optional ambient trusted origins.
+      let body: unknown
+      if (request.method === 'POST') {
+        try {
+          body = await request.clone().json()
+        } catch {
+          throw new Problem(400, 'invalid_request', 'Richiesta non valida.')
+        }
+      }
+      for (const callback of [
+        url.searchParams.get('callbackURL'),
+        ...(body && typeof body === 'object'
+          ? ['callbackURL', 'redirectTo'].map((key) => (body as Record<string, unknown>)[key])
+          : []),
+      ]) {
+        if (callback === undefined || callback === null || callback === '') continue
+        if (typeof callback !== 'string')
+          throw new Problem(400, 'invalid_request', 'Collegamento non valido.')
+        let target: URL
+        try {
+          target = new URL(callback, options.baseURL)
+        } catch {
+          throw new Problem(400, 'invalid_request', 'Collegamento non valido.')
+        }
+        if (target.origin !== url.origin || target.username || target.password)
+          throw new Problem(403, 'origin_forbidden', 'Collegamento non consentito.')
+      }
+    }
+    if (hosted && path === '/reset-password' && !recoveryTransaction) {
+      // Better Auth owns token consumption and password hashing. Run that entire flow,
+      // including all-session revocation, on one trusted transaction-bound adapter.
+      // Consume the quota outside it so a rejected reset cannot roll its attempt back.
+      const quota = await consumeQuota?.('password-reset-command', { window: 60, max: 5 })
+      if (!quota?.allowed)
+        return new Response(JSON.stringify({ code: 'rate_limited' }), {
+          status: 429,
+          headers: {
+            'content-type': 'application/json',
+            'retry-after': String(quota?.retryAfter ?? 60),
+          },
+        })
+      class ResetRejected extends Error {
+        constructor(readonly response: Response) {
+          super('Password reset rejected')
+        }
+      }
+      try {
+        return await options.db.transaction(async (db) => {
+          const response = await createIdentity(
+            { ...options, db },
+            { ...hosted, db },
+            true,
+          ).handler(request)
+          if (!response.ok) throw new ResetRejected(response)
+          return response
+        })
+      } catch (error) {
+        if (error instanceof ResetRejected) return error.response
+        throw error
+      }
+    }
     const credentialChanges = new Set([
       '/passkey/generate-register-options',
       '/passkey/verify-registration',
@@ -450,7 +624,21 @@ export function createLocalIdentity(options: LocalIdentityOptions) {
         if (stepUpAge < 0 || stepUpAge >= STEP_UP_SECONDS * 1000) throw reauthenticationRequired()
       }
     }
-    const response = await auth.handler(request)
+    const state = { failed: false }
+    const response = await deliveryState.run(state, () => auth.handler(request))
+    // The library intentionally catches background-task errors, even when awaiting them.
+    // Track delivery per request so hosted registration/recovery cannot claim success.
+    if (hosted && state.failed)
+      return new Response(
+        JSON.stringify({
+          code: 'EMAIL_DELIVERY_UNAVAILABLE',
+          message: 'Invio email non disponibile. Riprova.',
+        }),
+        {
+          status: 503,
+          headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+        },
+      )
     if (!response.headers.get('content-type')?.includes('application/json')) return response
     const headers = new Headers(response.headers)
     if (response.status === 429 && headers.has('x-retry-after'))

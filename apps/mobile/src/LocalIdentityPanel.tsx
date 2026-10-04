@@ -3,6 +3,7 @@ import { type BrandTheme, colors } from '@lilleri/brand'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -13,16 +14,19 @@ import {
 import { AccessibleDialog, AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { useI18n } from './i18n/context'
 import {
+  createHostedIdentityClient,
   createLocalIdentityClient,
   type LocalIdentitySession,
   type LocalPasskeyRecord,
   type LocalSessionRecord,
 } from './identity-client'
+import { consumeIdentityRecoveryLocation } from './identity-recovery'
 
 export type LocalIdentityChangeReason = 'signed-out' | 'session-renewed' | 'identity-changed'
 
 interface Props {
   readonly baseUrl: string
+  readonly hostedIdentity?: { readonly termsVersion: string; readonly termsUrl: string }
   readonly theme: BrandTheme
   readonly visible?: boolean
   readonly reauthenticationRequested?: boolean
@@ -39,6 +43,7 @@ interface Setup {
 /** Local browser authentication; native passkeys and biometrics need device validation. */
 export function LocalIdentityPanel({
   baseUrl,
+  hostedIdentity,
   theme,
   visible = true,
   reauthenticationRequested = false,
@@ -52,15 +57,35 @@ export function LocalIdentityPanel({
   language.current = i18n
   const t = i18n.t
   const date = i18n.instant
-  const client = useMemo(() => createLocalIdentityClient(baseUrl), [baseUrl]),
+  const client = useMemo(
+      () =>
+        hostedIdentity
+          ? createHostedIdentityClient(baseUrl, {
+              ...hostedIdentity,
+              browserOrigin: typeof window === 'undefined' ? baseUrl : window.location.origin,
+            })
+          : createLocalIdentityClient(baseUrl),
+      [baseUrl, hostedIdentity],
+    ),
     c = colors[theme],
     s = useMemo(() => styles(c), [c])
+  const [incomingRecovery] = useState(() =>
+    hostedIdentity && typeof window !== 'undefined'
+      ? consumeIdentityRecoveryLocation(window.location.href, (url) =>
+          window.history.replaceState(window.history.state, '', url),
+        )
+      : { token: null, invalid: false },
+  )
+  const [recoveryToken, setRecoveryToken] = useState(incomingRecovery.token),
+    [confirmationPassword, setConfirmationPassword] = useState('')
   const [session, setSession] = useState<LocalIdentitySession | null>(null),
     [checking, setChecking] = useState(true),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null),
     [notice, setNotice] = useState<string | null>(null),
-    [mode, setMode] = useState<'signin' | 'signup'>('signin'),
+    [mode, setMode] = useState<'signin' | 'signup' | 'recover' | 'reset'>(
+      incomingRecovery.token ? 'reset' : incomingRecovery.invalid ? 'recover' : 'signin',
+    ),
     [name, setName] = useState(''),
     [email, setEmail] = useState(''),
     [password, setPassword] = useState(''),
@@ -89,6 +114,7 @@ export function LocalIdentityPanel({
   const clearSecrets = useCallback(() => {
     secretEpoch.current += 1
     setPassword('')
+    setConfirmationPassword('')
     setCode('')
     setSetup(null)
     setBackupsSaved(false)
@@ -105,6 +131,7 @@ export function LocalIdentityPanel({
     setReauthVisible(false)
     setRevokeAllConfirmation(false)
     setMode('signin')
+    setRecoveryToken(null)
     setName('')
     setEmail('')
     setAdultAttested(false)
@@ -170,6 +197,13 @@ export function LocalIdentityPanel({
       return
     }
     identityEpoch.current += 1
+    if (incomingRecovery.token || incomingRecovery.invalid) {
+      forceSignedOut.current = true
+      callbacks.current.onSignedOut('signed-out')
+      if (incomingRecovery.invalid) setError(language.current.t('identityPanel.invalidRecovery'))
+      setChecking(false)
+      return
+    }
     forceSignedOut.current = false
     let cancelled = false
     refreshSession()
@@ -182,7 +216,7 @@ export function LocalIdentityPanel({
     return () => {
       cancelled = true
     }
-  }, [refreshSession])
+  }, [refreshSession, incomingRecovery])
   useEffect(() => {
     if (lostVersion.current !== sessionLostVersion) {
       lostVersion.current = sessionLostVersion
@@ -255,13 +289,15 @@ export function LocalIdentityPanel({
         cause instanceof ApiError
           ? cause.code === 'USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL'
             ? t('identityPanel.emailInUse')
-            : ['PASSWORD_TOO_SHORT', 'PASSWORD_TOO_LONG'].includes(cause.code)
-              ? t('identityPanel.invalidPassword')
-              : ['INVALID_CODE', 'INVALID_BACKUP_CODE'].includes(cause.code)
-                ? t('identityPanel.invalidCode')
-                : cause.status === 401 && cause.code !== 'reauthentication_required'
-                  ? t('identityPanel.invalidCredentials')
-                  : i18n.problemMessage(cause)
+            : cause.code === 'INVALID_TOKEN'
+              ? t('identityPanel.invalidRecovery')
+              : ['PASSWORD_TOO_SHORT', 'PASSWORD_TOO_LONG'].includes(cause.code)
+                ? t('identityPanel.invalidPassword')
+                : ['INVALID_CODE', 'INVALID_BACKUP_CODE'].includes(cause.code)
+                  ? t('identityPanel.invalidCode')
+                  : cause.status === 401 && cause.code !== 'reauthentication_required'
+                    ? t('identityPanel.invalidCredentials')
+                    : i18n.problemMessage(cause)
           : t('identityPanel.operationFailed'),
       )
       if (cause instanceof ApiError && cause.code === 'reauthentication_required') {
@@ -280,6 +316,7 @@ export function LocalIdentityPanel({
     } finally {
       if (expectedEpoch === identityEpoch.current) {
         setPassword('')
+        setConfirmationPassword('')
         setCode('')
       }
       setBusy(false)
@@ -330,8 +367,12 @@ export function LocalIdentityPanel({
         secureTextEntry
         autoCapitalize="none"
         autoCorrect={false}
-        autoComplete={mode === 'signup' && !session ? 'new-password' : 'current-password'}
-        textContentType={mode === 'signup' && !session ? 'newPassword' : 'password'}
+        autoComplete={
+          (mode === 'signup' || mode === 'reset') && !session ? 'new-password' : 'current-password'
+        }
+        textContentType={
+          (mode === 'signup' || mode === 'reset') && !session ? 'newPassword' : 'password'
+        }
         editable={!busy}
         maxLength={128}
         style={s.input}
@@ -363,7 +404,7 @@ export function LocalIdentityPanel({
     return (
       <View style={s.panel}>
         <Text accessibilityRole="header" aria-level={2} style={s.title}>
-          {t('identityPanel.localAccess')}
+          {hostedIdentity ? t('identityPanel.hostedAccess') : t('identityPanel.localAccess')}
         </Text>
         <Text style={s.body}>{t('identityPanel.nativeUnavailable')}</Text>
       </View>
@@ -372,9 +413,21 @@ export function LocalIdentityPanel({
   return (
     <View style={s.panel}>
       <Text accessibilityRole="header" aria-level={2} style={s.title}>
-        {session ? t('identityPanel.yourAccess') : t('identityPanel.signIn')}
+        {hostedIdentity
+          ? t(
+              session
+                ? 'identityPanel.hostedYourAccess'
+                : mode === 'recover' || mode === 'reset'
+                  ? 'identityPanel.recoveryHeading'
+                  : 'identityPanel.hostedAccess',
+            )
+          : session
+            ? t('identityPanel.yourAccess')
+            : t('identityPanel.signIn')}
       </Text>
-      <Text style={s.body}>{t('identityPanel.localHelp')}</Text>
+      <Text style={s.body}>
+        {t(hostedIdentity ? 'identityPanel.hostedHelp' : 'identityPanel.localHelp')}
+      </Text>
       {checking && (
         <ActivityIndicator accessibilityLabel={t('identityPanel.checking')} color={c.primary} />
       )}
@@ -389,104 +442,243 @@ export function LocalIdentityPanel({
         </AccessibleStatus>
       )}
       {busy && <ActivityIndicator accessibilityLabel={t('identityPanel.busy')} color={c.primary} />}
-      {!checking && !session && !secondFactorPending && (
-        <View style={s.group}>
-          {mode === 'signup' && (
+      {!checking &&
+        !session &&
+        !secondFactorPending &&
+        (mode === 'signin' || mode === 'signup') && (
+          <View style={s.group}>
+            {mode === 'signup' && (
+              <View style={s.field}>
+                <Text style={s.label}>{t('identityPanel.profileName')}</Text>
+                <TextInput
+                  accessibilityLabel={t('identityPanel.profileName')}
+                  value={name}
+                  onChangeText={setName}
+                  autoComplete="name"
+                  editable={!busy}
+                  maxLength={100}
+                  style={s.input}
+                />
+              </View>
+            )}
             <View style={s.field}>
-              <Text style={s.label}>{t('identityPanel.profileName')}</Text>
+              <Text style={s.label}>{t('identityPanel.email')}</Text>
               <TextInput
-                accessibilityLabel={t('identityPanel.profileName')}
-                value={name}
-                onChangeText={setName}
-                autoComplete="name"
+                accessibilityLabel={t('identityPanel.email')}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                keyboardType="email-address"
                 editable={!busy}
-                maxLength={100}
+                maxLength={254}
                 style={s.input}
               />
             </View>
-          )}
-          <View style={s.field}>
-            <Text style={s.label}>{t('identityPanel.email')}</Text>
-            <TextInput
-              accessibilityLabel={t('identityPanel.email')}
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoCorrect={false}
-              autoComplete="email"
-              keyboardType="email-address"
-              editable={!busy}
-              maxLength={254}
-              style={s.input}
-            />
-          </View>
-          {passwordField()}
-          {mode === 'signup' && (
-            <View style={s.group}>
-              <Text style={s.body}>{t('identityPanel.passwordLength')}</Text>
-              {check(t('identityPanel.adult'), adultAttested, () =>
-                setAdultAttested(!adultAttested),
-              )}
-              <View style={s.draft}>
-                <Text style={s.label}>{t('identityPanel.termsHeading')}</Text>
-                <Text style={s.body}>{t('identityPanel.termsCopy')}</Text>
+            {passwordField()}
+            {mode === 'signup' && (
+              <View style={s.group}>
+                <Text style={s.body}>{t('identityPanel.passwordLength')}</Text>
+                {check(t('identityPanel.adult'), adultAttested, () =>
+                  setAdultAttested(!adultAttested),
+                )}
+                <View style={s.draft}>
+                  {hostedIdentity ? (
+                    <>
+                      <Text
+                        accessibilityRole="link"
+                        style={s.buttonText}
+                        onPress={() => {
+                          void Linking.openURL(hostedIdentity.termsUrl)
+                        }}
+                      >
+                        {t('identityPanel.hostedTerms')}
+                      </Text>
+                      <Text style={s.body}>
+                        {t('identityPanel.hostedTermsVersion', {
+                          version: hostedIdentity.termsVersion,
+                        })}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={s.label}>{t('identityPanel.termsHeading')}</Text>
+                      <Text style={s.body}>{t('identityPanel.termsCopy')}</Text>
+                    </>
+                  )}
+                </View>
+                {check(
+                  t(
+                    hostedIdentity
+                      ? 'identityPanel.hostedTermsAccept'
+                      : 'identityPanel.termsAccept',
+                  ),
+                  termsAccepted,
+                  () => setTermsAccepted(!termsAccepted),
+                )}
               </View>
-              {check(t('identityPanel.termsAccept'), termsAccepted, () =>
-                setTermsAccepted(!termsAccepted),
-              )}
-            </View>
-          )}
-          {button(
-            mode === 'signup' ? t('identityPanel.create') : t('identityPanel.passwordSignIn'),
-            () => {
-              run(async (expectedEpoch) => {
-                if (mode === 'signup') {
-                  await client.signUp(name.trim(), email.trim(), password)
-                } else {
-                  const result = await client.signIn(email.trim(), password)
-                  if (expectedEpoch !== identityEpoch.current) return
-                  if (result.needsSecondFactor) {
-                    setSecondFactorPending(true)
-                    setBackupMode(false)
-                    return
-                  }
-                }
-                const next = await refreshSession(true, expectedEpoch)
-                if (!next && mode === 'signup') setNotice(t('identityPanel.created'))
-              })
-            },
-            true,
-            !email.trim() ||
-              password.length < 12 ||
-              (mode === 'signup' && (!name.trim() || !adultAttested || !termsAccepted)),
-          )}
-          {mode === 'signin' &&
-            button(
-              t('identityPanel.passkeySignIn'),
+            )}
+            {button(
+              mode === 'signup'
+                ? t(hostedIdentity ? 'identityPanel.hostedCreate' : 'identityPanel.create')
+                : t('identityPanel.passwordSignIn'),
               () => {
                 run(async (expectedEpoch) => {
-                  await client.signInPasskey()
-                  if (!(await refreshSession(true, expectedEpoch)))
-                    throw new Error('session unavailable')
+                  if (mode === 'signup') {
+                    await client.signUp(name.trim(), email.trim(), password)
+                    if (hostedIdentity) {
+                      if (expectedEpoch !== identityEpoch.current) return
+                      setMode('signin')
+                      setNotice(t('identityPanel.verifyRequired'))
+                      return
+                    }
+                  } else {
+                    const result = await client.signIn(email.trim(), password)
+                    if (expectedEpoch !== identityEpoch.current) return
+                    if (result.needsSecondFactor) {
+                      setSecondFactorPending(true)
+                      setBackupMode(false)
+                      return
+                    }
+                  }
+                  const next = await refreshSession(true, expectedEpoch)
+                  if (!next && mode === 'signup') setNotice(t('identityPanel.created'))
                 })
               },
-              false,
-              !passkeysSupported,
+              true,
+              !email.trim() ||
+                password.length < 12 ||
+                (mode === 'signup' && (!name.trim() || !adultAttested || !termsAccepted)),
             )}
-          {!passkeysSupported && mode === 'signin' && (
-            <Text style={s.body}>{t('identityPanel.passkeyUnsupported')}</Text>
+            {mode === 'signin' &&
+              button(
+                t('identityPanel.passkeySignIn'),
+                () => {
+                  run(async (expectedEpoch) => {
+                    await client.signInPasskey()
+                    if (!(await refreshSession(true, expectedEpoch)))
+                      throw new Error('session unavailable')
+                  })
+                },
+                false,
+                !passkeysSupported,
+              )}
+            {!passkeysSupported && mode === 'signin' && (
+              <Text style={s.body}>{t('identityPanel.passkeyUnsupported')}</Text>
+            )}
+            {hostedIdentity && mode === 'signin' && (
+              <>
+                {button(t('identityPanel.forgotPassword'), () => {
+                  clearSecrets()
+                  setError(null)
+                  setNotice(null)
+                  setMode('recover')
+                })}
+                {button(
+                  t('identityPanel.resendVerification'),
+                  () => {
+                    run(async (expectedEpoch) => {
+                      await client.resendVerification(email.trim())
+                      if (expectedEpoch === identityEpoch.current)
+                        setNotice(t('identityPanel.verificationRequested'))
+                    })
+                  },
+                  false,
+                  !email.trim(),
+                )}
+              </>
+            )}
+            {button(
+              mode === 'signup'
+                ? t('identityPanel.haveProfile')
+                : t(hostedIdentity ? 'identityPanel.hostedCreate' : 'identityPanel.createProfile'),
+              () => {
+                clearSecrets()
+                setAdultAttested(false)
+                setTermsAccepted(false)
+                setError(null)
+                setNotice(null)
+                setMode(mode === 'signup' ? 'signin' : 'signup')
+              },
+            )}
+          </View>
+        )}
+      {!checking && !session && hostedIdentity && (mode === 'recover' || mode === 'reset') && (
+        <View style={s.group}>
+          {mode === 'recover' ? (
+            <>
+              <Text style={s.body}>{t('identityPanel.emailRecoveryHelp')}</Text>
+              <Text style={s.label}>{t('identityPanel.email')}</Text>
+              <TextInput
+                accessibilityLabel={t('identityPanel.email')}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+                keyboardType="email-address"
+                editable={!busy}
+                maxLength={254}
+                style={s.input}
+              />
+              {button(
+                t('identityPanel.sendRecovery'),
+                () => {
+                  run(async (expectedEpoch) => {
+                    await client.requestPasswordReset(email.trim())
+                    if (expectedEpoch === identityEpoch.current)
+                      setNotice(t('identityPanel.recoveryRequested'))
+                  })
+                },
+                true,
+                !email.trim(),
+              )}
+            </>
+          ) : (
+            <>
+              {passwordField(t('identityPanel.newPassword'))}
+              <View style={s.field}>
+                <Text style={s.label}>{t('identityPanel.confirmNewPassword')}</Text>
+                <TextInput
+                  accessibilityLabel={t('identityPanel.confirmNewPassword')}
+                  value={confirmationPassword}
+                  onChangeText={setConfirmationPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="new-password"
+                  textContentType="newPassword"
+                  editable={!busy}
+                  maxLength={128}
+                  style={s.input}
+                />
+              </View>
+              <Text style={s.body}>{t('identityPanel.passwordLength')}</Text>
+              {button(
+                t('identityPanel.saveNewPassword'),
+                () => {
+                  run(async (expectedEpoch) => {
+                    if (!recoveryToken) return
+                    await client.resetPassword(recoveryToken, password)
+                    if (expectedEpoch !== identityEpoch.current) return
+                    clearIdentity()
+                    channel.current?.postMessage('signed-out')
+                    setNotice(t('identityPanel.passwordReset'))
+                  })
+                },
+                true,
+                !recoveryToken || password.length < 12 || password !== confirmationPassword,
+              )}
+            </>
           )}
-          {button(
-            mode === 'signup' ? t('identityPanel.haveProfile') : t('identityPanel.createProfile'),
-            () => {
-              clearSecrets()
-              setAdultAttested(false)
-              setTermsAccepted(false)
-              setError(null)
-              setNotice(null)
-              setMode(mode === 'signup' ? 'signin' : 'signup')
-            },
-          )}
+          {button(t('identityPanel.backSignIn'), () => {
+            clearSecrets()
+            setRecoveryToken(null)
+            setMode('signin')
+            setNotice(null)
+            setError(null)
+          })}
         </View>
       )}
       {secondFactorPending && !session && (

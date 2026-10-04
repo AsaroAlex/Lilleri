@@ -1,5 +1,55 @@
 /** Local identity surface: explicit paired copy, no secret-bearing error messages. */
 export const IDENTITY_PANEL_MESSAGE_PAIRS = {
+  'identityPanel.hostedAccess': ['Accedi a Lilleri', 'Sign in to Lilleri'],
+  'identityPanel.hostedYourAccess': ['Il tuo accesso', 'Your sign-in'],
+  'identityPanel.hostedHelp': [
+    'Verifica la tua email per iniziare. Puoi proteggere l’accesso con una passkey e un secondo fattore.',
+    'Verify your email to get started. You can protect sign-in with a passkey and a second factor.',
+  ],
+  'identityPanel.hostedCreate': ['Crea il tuo profilo', 'Create your profile'],
+  'identityPanel.hostedTerms': ['Leggi le condizioni di utilizzo', 'Read the terms of use'],
+  'identityPanel.hostedTermsVersion': [
+    'Versione delle condizioni: {version}',
+    'Terms version: {version}',
+  ],
+  'identityPanel.hostedTermsAccept': [
+    'Accetto le condizioni di utilizzo.',
+    'I accept the terms of use.',
+  ],
+  'identityPanel.verifyRequired': [
+    'Profilo creato. Apri il collegamento nella tua email, poi accedi.',
+    'Profile created. Open the link in your email, then sign in.',
+  ],
+  'identityPanel.forgotPassword': ['Hai dimenticato la password?', 'Forgot your password?'],
+  'identityPanel.recoveryHeading': ['Recupera l’accesso', 'Recover your sign-in'],
+  'identityPanel.emailRecoveryHelp': [
+    'Ti invieremo un collegamento per scegliere una nuova password. Il secondo fattore rimane attivo.',
+    'We will send you a link to choose a new password. Your second factor stays enabled.',
+  ],
+  'identityPanel.sendRecovery': ['Invia il collegamento di recupero', 'Send a recovery link'],
+  'identityPanel.recoveryRequested': [
+    'Se l’indirizzo è registrato, riceverai un’email con un collegamento valido per 15 minuti.',
+    'If the address is registered, you will receive an email with a link valid for 15 minutes.',
+  ],
+  'identityPanel.newPassword': ['Nuova password', 'New password'],
+  'identityPanel.confirmNewPassword': ['Ripeti la nuova password', 'Repeat the new password'],
+  'identityPanel.saveNewPassword': ['Salva la nuova password', 'Save the new password'],
+  'identityPanel.passwordReset': [
+    'Password aggiornata. Tutte le sessioni sono terminate. Accedi con la nuova password.',
+    'Password updated. All sessions have ended. Sign in with your new password.',
+  ],
+  'identityPanel.invalidRecovery': [
+    'Il collegamento non è valido o è scaduto. Richiedine uno nuovo.',
+    'The link is invalid or has expired. Request a new one.',
+  ],
+  'identityPanel.resendVerification': [
+    'Invia di nuovo l’email di verifica',
+    'Resend the verification email',
+  ],
+  'identityPanel.verificationRequested': [
+    'Se l’indirizzo richiede verifica, riceverai un’email con il collegamento.',
+    'If the address needs verification, you will receive an email with the link.',
+  ],
   'identityPanel.checkFailed': [
     'Non riesco a verificare la sessione. Riprova.',
     'I could not verify the session. Try again.',

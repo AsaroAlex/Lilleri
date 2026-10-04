@@ -60,12 +60,28 @@ import { SettingsPanel } from './src/SettingsPanel'
 import { UnderstandingPanel } from './UnderstandingPanel'
 
 declare const process: {
-  env: { EXPO_PUBLIC_API_URL?: string; EXPO_PUBLIC_LOCAL_AUTH_MODE?: string }
+  env: {
+    EXPO_PUBLIC_API_URL?: string
+    EXPO_PUBLIC_LOCAL_AUTH_MODE?: string
+    EXPO_PUBLIC_HOSTED_AUTH_MODE?: string
+    EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION?: string
+    EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL?: string
+  }
 }
-const localIdentityMode = process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1'
+const hostedIdentityMode = process.env.EXPO_PUBLIC_HOSTED_AUTH_MODE === '1'
+if (hostedIdentityMode && process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1')
+  throw new Error('Select either local or hosted browser identity')
+const identityMode = hostedIdentityMode || process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1'
+const hostedIdentity = hostedIdentityMode
+  ? {
+      termsVersion: process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION ?? '',
+      termsUrl: process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL ?? '',
+    }
+  : undefined
 const apiBaseUrl =
   process.env.EXPO_PUBLIC_API_URL ??
-  (localIdentityMode ? 'http://localhost:3001' : 'http://127.0.0.1:3001')
+  (hostedIdentityMode && typeof window !== 'undefined' ? window.location.origin : undefined) ??
+  (identityMode ? 'http://localhost:3001' : 'http://127.0.0.1:3001')
 const onlineApi = createApiClient(apiBaseUrl)
 const tabs = ['Home', 'Movimenti', 'Da controllare', 'Ricorrenti', 'Privacy'] as const
 type Tab = (typeof tabs)[number]
@@ -281,7 +297,7 @@ function AppSurface({
     (cause: unknown) => {
       if (!(cause instanceof ApiError) || cause.status !== 401) return false
       void offlineCache.discard('unauthorized')
-      if (!localIdentityMode) {
+      if (!identityMode) {
         clearFinancialState()
         setError(language.current.problemMessage(cause))
         return true
@@ -342,7 +358,7 @@ function AppSurface({
     async (overview: DemoOverview, epoch: number) => {
       if (epoch !== identityEpoch.current) return
       const session = verifiedSession.current
-      if (localIdentityMode && session && session.principal.profileId !== overview.profile.id) {
+      if (identityMode && session && session.principal.profileId !== overview.profile.id) {
         clearFinancialState()
         return
       }
@@ -353,7 +369,7 @@ function AppSurface({
       setNetworkUnavailable(false)
       setData(overview)
       setRetrievedAt(new Date().toISOString())
-      if (Platform.OS !== 'web' || (localIdentityMode && !session)) return
+      if (Platform.OS !== 'web' || (identityMode && !session)) return
       const context = JSON.stringify([
         epoch,
         overview.profile.id,
@@ -361,7 +377,7 @@ function AppSurface({
       ])
       if (cacheContext.current !== context) {
         const authorized = await offlineCache.authorize(
-          localIdentityMode && session
+          identityMode && session
             ? { mode: 'authenticated', session, identityEpoch: epoch }
             : {
                 mode: 'demo',
@@ -420,7 +436,7 @@ function AppSurface({
       if (epoch !== identityEpoch.current || ticket !== refreshTicket.current) return
       await acceptOnlineOverview(overview, epoch)
       if (epoch !== identityEpoch.current || ticket !== refreshTicket.current) return
-      if (localIdentityMode) setSignedIn(true)
+      if (identityMode) setSignedIn(true)
     } catch (cause) {
       if (
         epoch !== identityEpoch.current ||
@@ -768,7 +784,7 @@ function AppSurface({
         if (epoch !== identityEpoch.current) return
         offlineView.current = false
         void offlineCache.discard('deletion')
-        if (localIdentityMode) {
+        if (identityMode) {
           clearFinancialState()
           setSessionLostVersion((version) => version + 1)
         }
@@ -905,10 +921,11 @@ function AppSurface({
               />
             )}
           </View>
-          <Text style={s.demoIntro}>{t('app.intro')}</Text>
-          {localIdentityMode && (
+          {!hostedIdentityMode && <Text style={s.demoIntro}>{t('app.intro')}</Text>}
+          {identityMode && (
             <LocalIdentityPanel
               baseUrl={apiBaseUrl}
+              {...(hostedIdentity ? { hostedIdentity } : {})}
               theme={theme}
               visible={!signedIn || tab === 'Privacy' || reauthenticationRequested}
               sessionLostVersion={sessionLostVersion}
@@ -1041,10 +1058,14 @@ function AppSurface({
               </Text>
               <Text style={s.body}>
                 {t('app.erasedCopy')}{' '}
-                {localIdentityMode ? t('app.newLocalProfile') : t('app.newDemo')}
+                {hostedIdentityMode
+                  ? t('identityPanel.hostedCreate')
+                  : identityMode
+                    ? t('app.newLocalProfile')
+                    : t('app.newDemo')}
               </Text>
             </View>
-          ) : localIdentityMode && !signedIn ? null : !data ? (
+          ) : identityMode && !signedIn ? null : !data ? (
             <View style={s.card}>
               {loading ? (
                 <>
@@ -1869,7 +1890,11 @@ function AppSurface({
           <View style={s.pageEnd}>
             <Text style={s.caption}>{t('app.footer')}</Text>
             <Text style={s.caption}>
-              {localIdentityMode ? t('app.identityFooter') : t('app.unavailableFooter')}
+              {hostedIdentityMode
+                ? t('identityPanel.hostedHelp')
+                : identityMode
+                  ? t('app.identityFooter')
+                  : t('app.unavailableFooter')}
             </Text>
           </View>
         </ScrollView>
