@@ -28,9 +28,20 @@ of commit `73d0a08` failed because Railway Metal rejects secret mounts in RUN.
 The deployment Dockerfile now uses standard npm/pnpm installation steps; local
 Codex certificate handling belongs only in a temporary validation Dockerfile.
 The plugin attached volume `lilleri-data` (`4599b33e-5413-4388-9980-872cb2ca7ef2`,
-1024MB) at `/data` and set healthcheck `/api/health` (300s), memory limit2GB
+1024MB) at `/data` and set healthcheck `/api/health` (300s), memory limit3GB
 and graceful draining30s in production. Keep the current single replica.
-Online verification is still pending; do not report the service as ready yet.
+Fix commit `199f8f8` deployed successfully (`fa15d61b`); its redeploy `6975da48`
+also reached SUCCESS. Fresh public API reads after redeployment preserved the
+same synthetic connection and all five accounts with exact balances. Railway
+HTTP logs confirmed200 for `/`, `/api/health`, `/api/v1/demo` and the Expo bundle.
+Memory usage reached1.85GB during frontend compilation; the3GB cap leaves margin.
+Local validation on a NEW isolated loopback archive passed13 launcher tests,
+configuration lint16 consumers and all8 interactive browser checks, including
+exact manual amounts, reload persistence and verified ZIP exports, without
+console/page errors. These interactive writes were local, not on the public
+shared archive. The online synthetic preview is ready for user testing; the
+real-bank/public MVP remains incomplete. Detailed evidence is in
+`docs/operations/railway-preview-validation.json`.
 
 Preferred browser development command is now `pnpm dev:cloud`, after activating
 the pinned Node22/pnpm10 toolchain and installing the frozen lockfile. New

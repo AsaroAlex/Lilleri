@@ -1,0 +1,133 @@
+{
+  "date": "2026-10-04",
+  "timezone": "Europe/Rome",
+  "projectId": "515b8fe0-7c94-4449-9d7e-4b290fcb80c3",
+  "environmentId": "d5ee5896-0e66-4cd9-a6a4-8ee057da0330",
+  "serviceId": "bebdbda1-7f5e-48fc-8a3b-72ece8b9fefb",
+  "url": "https://lilleri-production.up.railway.app",
+  "commit": "199f8f8edd2677f7fd3f2de72684b7565f952993",
+  "firstSuccessfulDeployment": "fa15d61b-a5ad-4bc9-88eb-a8fa17103d8a",
+  "redeployment": {
+    "passed": true,
+    "baseline": {
+      "connectionId": "connection_85b0e5a3-2af4-4a90-8813-2a924291ba11",
+      "accounts": [
+        {
+          "id": "account_c36edd260c6c2a054793dd105a4e8158",
+          "name": "Carta dimostrativa",
+          "balance": {
+            "amountMinor": "-18500",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_54e818e625cc4b854e0c43c41308b414",
+          "name": "Contanti",
+          "balance": {
+            "amountMinor": "8000",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_f363fa03d93a9d5f2dd126369ee779d7",
+          "name": "Conto quotidiano",
+          "balance": {
+            "amountMinor": "243872",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_2d94c341fd84bc4d72e992adc8d82d50",
+          "name": "Conto in sterline",
+          "balance": {
+            "amountMinor": "12530",
+            "currency": "GBP"
+          }
+        },
+        {
+          "id": "account_61034e4f7e9f5f962df01a0b14b9e3d2",
+          "name": "Risparmi",
+          "balance": {
+            "amountMinor": "120000",
+            "currency": "EUR"
+          }
+        }
+      ],
+      "observedAt": "2026-10-04T09:36:33.176Z"
+    },
+    "after": {
+      "connectionId": "connection_85b0e5a3-2af4-4a90-8813-2a924291ba11",
+      "accounts": [
+        {
+          "id": "account_c36edd260c6c2a054793dd105a4e8158",
+          "name": "Carta dimostrativa",
+          "balance": {
+            "amountMinor": "-18500",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_54e818e625cc4b854e0c43c41308b414",
+          "name": "Contanti",
+          "balance": {
+            "amountMinor": "8000",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_f363fa03d93a9d5f2dd126369ee779d7",
+          "name": "Conto quotidiano",
+          "balance": {
+            "amountMinor": "243872",
+            "currency": "EUR"
+          }
+        },
+        {
+          "id": "account_2d94c341fd84bc4d72e992adc8d82d50",
+          "name": "Conto in sterline",
+          "balance": {
+            "amountMinor": "12530",
+            "currency": "GBP"
+          }
+        },
+        {
+          "id": "account_61034e4f7e9f5f962df01a0b14b9e3d2",
+          "name": "Risparmi",
+          "balance": {
+            "amountMinor": "120000",
+            "currency": "EUR"
+          }
+        }
+      ]
+    },
+    "deploymentId": "6975da48-f76d-4639-a895-4e47da9078bf",
+    "observedAt": "2026-10-04T09:39:08.283Z",
+    "healthOK": true
+  },
+  "configuration": {
+    "memoryLimitGB": 3,
+    "volumeId": "4599b33e-5413-4388-9980-872cb2ca7ef2",
+    "mountPath": "/data",
+    "healthcheckPath": "/api/health",
+    "healthcheckTimeoutSeconds": 300
+  },
+  "localValidation": {
+    "launcherTestsPassed": 13,
+    "configurationConsumersChecked": 16,
+    "builtPackages": 8,
+    "browserChecksPassed": 8,
+    "browserScope": "fresh isolated loopback synthetic archive",
+    "browserAPICalls": 24,
+    "consoleErrors": 0,
+    "pageErrors": 0
+  },
+  "hostedValidation": {
+    "mode": "synthetic",
+    "healthStatus": 200,
+    "rootStatus": 200,
+    "bundleStatus": 200,
+    "demoStatus": 200,
+    "method": "Exa fetch plus Railway HTTP logs; cache-busting query for persistence comparison",
+    "hostedInteractiveMutationsTested": false
+  }
+}

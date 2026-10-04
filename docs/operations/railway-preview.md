@@ -31,6 +31,8 @@ The Dockerfile must remain portable: Railway Metal accepts cache mounts but reje
 
 Railway's current trial provides $5 in one-time credits and a 1 GB RAM limit; Free provides $1 monthly credits and 0.5 GB RAM. The running development supervisor was observed using approximately **1.3 GB RSS** across API, Metro and Next before build/compile peaks. A real Docker test with a **1 GiB limit** started the prepared API, then was killed for insufficient memory during the first browser bundle compilation. Use **at least 2 GB runtime memory** for this configuration; Free/Trial is not a working fit. Skipping redundant startup compilation does not remove the browser bundler's memory needs.
 
+The live Railway preview reached approximately **1.85 GB** while compiling the frontend on 2026-10-04. Its memory cap is now **3 GB** to provide headroom. The cap is a limit; metered consumption determines resource charges.
+
 Hobby starts at **$5/month**, includes $5 of resource usage and charges additional usage above that amount. Current published RAM usage is $10/GB/month and CPU is $20/vCPU/month; this development service running continuously can exceed the $5 subscription. Review the dashboard's estimate and budget controls before activating a paid service. No subscription or payment has been activated by the repository work.
 
 ## Acceptance after the URL exists
@@ -42,6 +44,12 @@ Hobby starts at **$5/month**, includes $5 of resource usage and charges addition
 - Test a downloaded export. Only the gateway is public; the internal API, local identity and diagnostics remain unavailable directly.
 
 The local/cloud Codex instance keeps its own archive. Railway starts a separate synthetic archive; do not copy personal financial records or key material into it. The preview is ready only after these deployed checks pass.
+
+## Verified preview — 2026-10-04
+
+[Lilleri demo](https://lilleri-production.up.railway.app/) is deployed from fix commit `199f8f8`. Railway observed SUCCESS for deployment `fa15d61b` and redeployment `6975da48`. Public health, HTML, Expo bundle and demo API requests returned200. A fresh API read after redeployment preserved the original synthetic connection and all five account balances on `/data`.
+
+The same source passed13 launcher tests and all8 interactive browser checks against a new isolated local archive, including manual amounts, reload persistence, language settings and ZIP export verification; no console or page errors were observed. Public interactive writes and downloads still need user testing on the shared preview. Full evidence is in [railway-preview-validation.json](railway-preview-validation.json). This is a synthetic development preview; live banking and production MVP requirements remain open.
 
 ## References
 
