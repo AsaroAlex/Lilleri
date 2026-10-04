@@ -9,6 +9,7 @@ import {
 import { normalizeAccount, stableId } from '@lilleri/financial-providers'
 import { and, asc, desc, eq, or } from 'drizzle-orm'
 import type { ProfileEncryption } from './encryption.js'
+import { recordSyncFxEvidence } from './fx-evidence.js'
 import { pendingLifecycleProjection, recordPendingLifecycles } from './pending-lifecycle.js'
 import { pendingLifecycles } from './pending-lifecycle-schema.js'
 import { insertSourceObservation } from './retention.js'
@@ -488,6 +489,14 @@ export async function applySyncStage(
       outcome: 'duplicate_payload',
       reason: 'repeated_or_superseded_observation',
     })
+  await recordSyncFxEvidence(
+    db,
+    job,
+    resolved,
+    report.outcomes,
+    stage.snapshot.observedAt,
+    encryption,
+  )
   await persistSyncIdentities(db, job, resolved, at)
   report.processedRecords = report.outcomes.length
   if (report.processedRecords !== report.payloadRecords)

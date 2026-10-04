@@ -275,6 +275,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
 
 export type ApiClient = ReturnType<typeof createApiClient>
 
+export * from './fx-evidence.js'
 export * from './ledger-read.js'
 export {
   createManualClient,

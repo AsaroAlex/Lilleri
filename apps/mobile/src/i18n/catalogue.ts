@@ -1,5 +1,6 @@
 import { APP_MESSAGE_PAIRS } from './app-messages'
 import { CONNECTION_MESSAGE_PAIRS } from './connection-messages'
+import { FX_MESSAGE_PAIRS } from './fx-messages'
 import { IDENTITY_PANEL_MESSAGE_PAIRS } from './identity-panel-messages'
 import { LEDGER_MESSAGE_PAIRS } from './ledger-messages'
 import { MANUAL_MESSAGE_PAIRS } from './manual-messages'
@@ -421,6 +422,7 @@ export const MESSAGE_PAIRS = {
   ...MERCHANT_MESSAGE_PAIRS,
   ...IDENTITY_PANEL_MESSAGE_PAIRS,
   ...SOURCE_DECISION_MESSAGE_PAIRS,
+  ...FX_MESSAGE_PAIRS,
 } as const
 
 export type MessageKey = keyof typeof MESSAGE_PAIRS

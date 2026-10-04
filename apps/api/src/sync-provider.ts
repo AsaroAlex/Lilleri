@@ -12,6 +12,7 @@ import {
   type SyntheticSyncSnapshot,
 } from '@lilleri/financial-providers'
 import { z } from 'zod'
+import { providerFxEvidenceSchema } from './fx-evidence-dto.js'
 import type { SyncConfiguration } from './runtime-config.js'
 
 export class SyncContractError extends Error {
@@ -88,6 +89,7 @@ export const syncRecordSchema = z
         effectiveAt: z.string().datetime({ offset: true }).max(40),
       })
       .optional(),
+    fxEvidence: providerFxEvidenceSchema.optional(),
   })
   .strict()
 export function validateSyncSnapshot(

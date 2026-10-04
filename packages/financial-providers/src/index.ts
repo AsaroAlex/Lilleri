@@ -12,10 +12,12 @@ import type {
   SyntheticSyncPageRequest,
   SyntheticSyncSnapshot,
 } from './contracts.js'
+import type { ProviderFxEvidence } from './fx-evidence.js'
 
 export * from './contracts.js'
 export { parseBankCsv } from './csv.js'
 export * from './csv-mapper.js'
+export * from './fx-evidence.js'
 export * from './yapily-sandbox.js'
 
 export interface ProviderContext {
@@ -55,6 +57,7 @@ export interface ProviderTransaction {
     readonly evidenceReference: string
     readonly effectiveAt: string
   }
+  readonly fxEvidence?: ProviderFxEvidence
 }
 export interface ProviderPage {
   readonly transactions: readonly ProviderTransaction[]
