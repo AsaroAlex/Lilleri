@@ -7,6 +7,7 @@ const env = {
   ...process.env,
   EXPO_PUBLIC_API_URL: '/api',
   EXPO_PUBLIC_LOCAL_AUTH_MODE: '0',
+  EXPO_PUBLIC_HOSTED_AUTH_MODE: '0',
   EXPO_NO_DOTENV: '1',
   EXPO_OFFLINE: '1',
   EXPO_NO_TELEMETRY: '1',

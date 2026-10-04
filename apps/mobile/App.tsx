@@ -57,6 +57,7 @@ import {
 import { matchesVerifiedOverview, offlineGatedApi } from './src/offline-api'
 import { RulesPanel } from './src/RulesPanel'
 import { SettingsPanel } from './src/SettingsPanel'
+import { SourceDecisionsPanel } from './src/SourceDecisionsPanel'
 import { UnderstandingPanel } from './UnderstandingPanel'
 
 declare const process: {
@@ -1558,6 +1559,18 @@ function AppSurface({
             </>
           ) : tab === 'Da controllare' ? (
             <>
+              {!networkUnavailable && !offlineSnapshot && (
+                <SourceDecisionsPanel
+                  request={api.request}
+                  profileId={data.profile.id}
+                  resetKey={renderedIdentityEpoch}
+                  transactions={data.transactions}
+                  theme={theme}
+                  disabled={mutationsDisabled}
+                  onChanged={refreshAfterChange}
+                  onError={panelIdentityFailure}
+                />
+              )}
               <Button
                 label={t('merchant.title')}
                 onPress={() => setManage('merchants')}
