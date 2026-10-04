@@ -2389,9 +2389,9 @@ function styles(c: ThemeColors) {
       flexShrink: 1,
     },
     summaryDetails: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingTop: 8 },
-    narrowSummaryDetails: { flexDirection: 'column', gap: 12 },
-    metric: { gap: 4, minWidth: 110, flex: 1 },
-    narrowMetric: { flex: 0, minWidth: 0 },
+    narrowSummaryDetails: { flexDirection: 'column', flexWrap: 'nowrap', gap: 12 },
+    metric: { gap: 4, minWidth: 110, flexGrow: 1, flexShrink: 1, flexBasis: 0 },
+    narrowMetric: { flexGrow: 0, flexShrink: 0, flexBasis: 'auto', minWidth: 0 },
     summaryNote: {
       fontFamily: 'Geist',
       fontSize: 12,
