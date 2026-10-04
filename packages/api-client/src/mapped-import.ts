@@ -80,6 +80,21 @@ export interface MappedCsvPreviewDto {
     readonly rowNumbers: readonly number[]
     readonly reason: 'same_content_without_external_id'
   }[]
+  readonly crossSourceCandidates: readonly {
+    readonly rowNumber: number
+    readonly transactionId: string
+    readonly bookedOn: string
+    readonly description: string
+    readonly merchantName: string | null
+    readonly dateDistanceDays: number
+    readonly sameReference: boolean
+  }[]
+  readonly previousImports: readonly {
+    readonly rowNumber: number
+    readonly transactionId: string
+    readonly disposition: 'linked' | 'imported'
+    readonly linkedTransactionId: string | null
+  }[]
   readonly canImport: boolean
   readonly previewRevision: string
 }
@@ -121,6 +136,8 @@ export interface MappedCsvReportDto {
   readonly unchanged: number
   readonly rejected: number
   readonly importedAt: string
+  readonly linked: number
+  readonly receiptId: string
 }
 type Request = <T>(path: string, init?: RequestInit) => Promise<T>
 /** The provided request function carries the parent financial identity/epoch boundary. */
@@ -160,6 +177,7 @@ export function createMappedImportClient(request: Request) {
         previewRevision: string
         requestId: string
         acknowledgeGeneratedDuplicates: boolean
+        duplicateDecisions?: readonly { rowNumber: number; transactionId: string | null }[]
       },
     ) =>
       request<MappedCsvReportDto>('/v1/imports/mapped/commit', {

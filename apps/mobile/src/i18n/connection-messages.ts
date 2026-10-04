@@ -1,4 +1,20 @@
 export const CONNECTION_MESSAGE_PAIRS = {
+  'connections.historyInterruption': [
+    'Accesso interrotto dal {from} al rinnovo del {to}.',
+    'Access interrupted from {from} until renewal on {to}.',
+  ],
+  'connections.historyUnverified': [
+    'Una sincronizzazione completa deve ancora verificare quali date sono recuperabili. Le date mancanti non sono note.',
+    'A complete sync must still verify which dates can be recovered. Missing dates are unknown.',
+  ],
+  'connections.historyBankGap': [
+    'Intervallo non acquisito dalla banca: dal {from} al {to}. Un file può integrare lo storico; le righe importate non dimostrano da sole la completezza del periodo.',
+    'Interval not acquired from the bank: {from} to {to}. A file can supplement history; imported rows alone do not prove the period is complete.',
+  ],
+  'connections.recoverImport': [
+    'Recupera con CSV o Excel: {name}',
+    'Recover with CSV or Excel: {name}',
+  ],
   'connections.title': ['Collegamenti', 'Connections'],
   'connections.kind.current': ['Conto corrente', 'Current account'],
   'connections.kind.savings': ['Risparmi', 'Savings'],

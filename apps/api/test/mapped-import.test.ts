@@ -23,6 +23,7 @@ import {
   mappedImportProvenance,
   savedCsvMappings,
 } from '../src/mapped-import-schema.js'
+import { PrivacyService } from '../src/privacy.js'
 import { cleanupExpiredObservationPayloads, sourceObservationsForExport } from '../src/retention.js'
 import { DemoService } from '../src/service.js'
 import { readSourceFactEpochs, recordSourceFacts } from '../src/source-erasure.js'
@@ -155,7 +156,306 @@ function command(
   }
 }
 
+async function bankFixture() {
+  const f = await fixture()
+  const connection = await f.source.connect()
+  const [account] = await handle.db
+    .select()
+    .from(schema.accounts)
+    .where(eq(schema.accounts.connectionId, connection.id))
+  if (!account) throw new Error('Synthetic bank account required')
+  const transactionId = `synthetic_bank_${randomUUID()}`
+  const row = {
+    id: transactionId,
+    profileId: f.profileId,
+    accountId: account.id,
+    connectionId: connection.id,
+    providerId: 'mock-italian',
+    providerTransactionId: transactionId,
+    revision: 1,
+    source: 'bank' as const,
+    status: 'booked' as const,
+    amountMinor: -1234n,
+    currency: 'EUR' as const,
+    description: 'Synthetic imported purchase',
+    merchantKey: 'coop',
+    merchantName: 'Coop',
+    bookedOn: '2026-10-02',
+    observedAt: now(),
+    kind: 'expense' as const,
+    reference: 'explicit-proof',
+    contentHash: 'f'.repeat(64),
+  }
+  await handle.db
+    .insert(schema.transactions)
+    .values(await encryption.encryptTransactionRow(handle.db, row))
+  const importMapping: CsvMapping = {
+    ...mapping,
+    columns: {
+      ...mapping.columns,
+      externalId: 'ID',
+      merchant: 'Negozio',
+      reference: 'Riferimento',
+    },
+  }
+  const text = (date = '09/10/2026', id = 'file-id', reference = 'explicit-proof') =>
+    `ID;Data;Valuta;Importo;Descrizione;Negozio;Riferimento\n${id};${date};09/10/2026;-12,34;Synthetic imported purchase;Coop;${reference}\n`
+  return {
+    ...f,
+    bankAccount: account,
+    bankTransaction: row,
+    transactionId,
+    importInput: (date = '09/10/2026', id = 'file-id', reference = 'explicit-proof') => ({
+      accountId: account.id,
+      csv: text(date, id, reference),
+      mapping: importMapping,
+    }),
+  }
+}
+
 describe('mapped CSV imports with encrypted provenance and atomic reviewed commits', () => {
+  test('seven-day candidates require an explicit choice; linking preserves bank corrections, receipt, source audit and idempotent reimport', async () => {
+    const f = await bankFixture(),
+      request = f.importInput()
+    await f.source.correct(f.transactionId, 'groceries', 'once', 1)
+    const before = await counts(f.profileId)
+    const [bankBefore] = await handle.db
+      .select()
+      .from(schema.transactions)
+      .where(eq(schema.transactions.id, f.transactionId))
+    const preview = await f.mapped.preview(request)
+    expect(preview.crossSourceCandidates).toEqual([
+      {
+        rowNumber: 2,
+        transactionId: f.transactionId,
+        bookedOn: '2026-10-02',
+        description: 'Synthetic imported purchase',
+        merchantName: 'Coop',
+        dateDistanceDays: 7,
+        sameReference: true,
+      },
+    ])
+    expect(await counts(f.profileId)).toEqual(before)
+    const command = {
+      ...request,
+      previewRevision: preview.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+    }
+    await expect(f.mapped.commit(command)).rejects.toMatchObject({
+      code: 'import_cross_source_review_required',
+    })
+    const accepted = await f.mapped.commit({
+      ...command,
+      duplicateDecisions: [{ rowNumber: 2, transactionId: f.transactionId }],
+    })
+    expect(accepted).toMatchObject({
+      inserted: 0,
+      unchanged: 0,
+      linked: 1,
+      receiptId: command.requestId,
+    })
+    expect((await counts(f.profileId)).transactions).toBe((before.transactions ?? 0) + 1)
+    expect(
+      (
+        await handle.db
+          .select()
+          .from(schema.transactions)
+          .where(eq(schema.transactions.id, f.transactionId))
+      )[0],
+    ).toEqual(bankBefore)
+    const origin = (await exportMappedImportAudit(handle.db, f.profileId, encryption)).provenance[0]
+    expect(origin).toMatchObject({ rowNumber: 2 })
+    expect(origin?.transactionId).not.toBe(f.transactionId)
+    const fresh = await f.mapped.preview(request)
+    expect(fresh.previousImports).toEqual([
+      {
+        rowNumber: 2,
+        transactionId: origin?.transactionId,
+        disposition: 'linked',
+        linkedTransactionId: f.transactionId,
+      },
+    ])
+    expect(fresh.crossSourceCandidates).toEqual([])
+    expect(
+      await f.mapped.commit({
+        ...command,
+        previewRevision: fresh.previewRevision,
+        requestId: randomUUID(),
+      }),
+    ).toMatchObject({ inserted: 0, linked: 1 })
+    expect(
+      (await f.source.data()).analysis.classifications.find(
+        (row) => row.transactionId === f.transactionId,
+      )?.categoryId,
+    ).toBe('groceries')
+    await expect(
+      f.mapped.commit({
+        ...command,
+        previewRevision: fresh.previewRevision,
+        requestId: randomUUID(),
+        duplicateDecisions: [{ rowNumber: 2, transactionId: null }],
+      }),
+    ).rejects.toMatchObject({ code: 'import_preview_stale' })
+    const match = (await f.source.data()).analysis.matches.find(
+      (match) => match.type === 'duplicate' && match.transactionIds.includes(f.transactionId),
+    )
+    if (!match) throw new Error('Reversible duplicate evidence required')
+    await f.source.decide(match.id, 'undone', match.revision)
+    await cleanupExpiredObservationPayloads(handle.db, f.profileId, '2026-11-03T12:00:00.000Z')
+    const undonePreview = await f.mapped.preview(request)
+    expect(undonePreview.previousImports[0]?.disposition).toBe('imported')
+    expect(
+      await f.mapped.commit({
+        ...command,
+        previewRevision: undonePreview.previewRevision,
+        requestId: randomUUID(),
+      }),
+    ).toMatchObject({ inserted: 0, linked: 0 })
+    expect(
+      (await f.source.data()).analysis.matches.find((current) => current.id === match.id)?.state,
+    ).toBe('undone')
+  })
+
+  test('keep-separate rejects even a matching-reference proposal and reimport preserves this decision', async () => {
+    const f = await bankFixture(),
+      request = f.importInput(),
+      preview = await f.mapped.preview(request)
+    const result = await f.mapped.commit({
+      ...request,
+      previewRevision: preview.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+      duplicateDecisions: [{ rowNumber: 2, transactionId: null }],
+    })
+    expect(result).toMatchObject({ inserted: 1, linked: 0 })
+    const analysis = (await f.source.data()).analysis
+    const match = analysis.matches.find(
+      (match) => match.type === 'duplicate' && match.transactionIds.includes(f.transactionId),
+    )
+    expect(match?.state).toBe('rejected')
+    const decisions = await handle.db
+      .select()
+      .from(schema.matchDecisions)
+      .where(eq(schema.matchDecisions.profileId, f.profileId))
+    const fresh = await f.mapped.preview(request)
+    expect(fresh.previousImports[0]?.disposition).toBe('imported')
+    await f.mapped.commit({
+      ...request,
+      previewRevision: fresh.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+    })
+    expect(
+      await handle.db
+        .select()
+        .from(schema.matchDecisions)
+        .where(eq(schema.matchDecisions.profileId, f.profileId)),
+    ).toEqual(decisions)
+  })
+
+  test('a bank target already linked to another imported row stays unavailable until that decision is undone', async () => {
+    const f = await bankFixture(),
+      first = f.importInput(),
+      preview = await f.mapped.preview(first)
+    await f.mapped.commit({
+      ...first,
+      previewRevision: preview.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+      duplicateDecisions: [{ rowNumber: 2, transactionId: f.transactionId }],
+    })
+    const later = f.importInput('09/10/2026', 'another-file-id', 'different-reference')
+    expect((await f.mapped.preview(later)).crossSourceCandidates).toEqual([])
+    const match = (await f.source.data()).analysis.matches.find(
+      (item) => item.type === 'duplicate' && item.transactionIds.includes(f.transactionId),
+    )
+    if (!match) throw new Error('Confirmed CSV link required')
+    await f.source.decide(match.id, 'undone', match.revision)
+    expect((await f.mapped.preview(later)).crossSourceCandidates).toMatchObject([
+      { transactionId: f.transactionId },
+    ])
+  })
+
+  test('eight-day, pending, wrong-account and private records cannot become candidates; privacy changes stale an earlier gesture', async () => {
+    const f = await bankFixture()
+    expect((await f.mapped.preview(f.importInput('10/10/2026'))).crossSourceCandidates).toEqual([])
+    const request = f.importInput(),
+      preview = await f.mapped.preview(request)
+    const privacy = new PrivacyService(handle.db, f.profileId, now)
+    await privacy.updateTransaction(f.transactionId, 1, { private: true, quiet: false })
+    expect((await f.mapped.preview(request)).crossSourceCandidates).toEqual([])
+    await expect(
+      f.mapped.commit({
+        ...request,
+        previewRevision: preview.previewRevision,
+        requestId: randomUUID(),
+        acknowledgeGeneratedDuplicates: false,
+        duplicateDecisions: [{ rowNumber: 2, transactionId: f.transactionId }],
+      }),
+    ).rejects.toMatchObject({ code: 'import_preview_stale' })
+    await privacy.updateTransaction(f.transactionId, 2, { private: false, quiet: false })
+    const wrong = await f.mapped.preview({ ...request, accountId: f.account.id })
+    expect(wrong.crossSourceCandidates).toEqual([])
+    const pendingMapping = {
+      ...request.mapping,
+      columns: { ...request.mapping.columns, status: 'Stato' },
+      statusValues: { HOLD: 'pending' as const },
+    }
+    const pendingCsv = request.csv
+      .replace('Riferimento\n', 'Riferimento;Stato\n')
+      .replace('explicit-proof\n', 'explicit-proof;HOLD\n')
+    expect(
+      (await f.mapped.preview({ ...request, mapping: pendingMapping, csv: pendingCsv }))
+        .crossSourceCandidates,
+    ).toEqual([])
+  })
+
+  test('two file rows cannot consume one bank target and foreign or duplicate decision rows fail atomically over actual HTTP', async () => {
+    const f = await bankFixture(),
+      request = f.importInput()
+    const repeated = {
+      ...request,
+      csv: `${request.csv}file-id-two;09/10/2026;09/10/2026;-12,34;Synthetic imported purchase;Coop;explicit-proof\n`,
+    }
+    const preview = await f.mapped.preview(repeated),
+      before = await counts(f.profileId)
+    const commit = {
+      ...repeated,
+      previewRevision: preview.previewRevision,
+      requestId: randomUUID(),
+      acknowledgeGeneratedDuplicates: false,
+      duplicateDecisions: [
+        { rowNumber: 2, transactionId: f.transactionId },
+        { rowNumber: 3, transactionId: f.transactionId },
+      ],
+    }
+    const rejected = await f.app.inject({
+      method: 'POST',
+      url: '/v1/imports/mapped/commit',
+      payload: commit,
+    })
+    expect(rejected.statusCode, rejected.payload).toBe(422)
+    expect(rejected.json().code).toBe('import_duplicate_target_reused')
+    expect(await counts(f.profileId)).toEqual(before)
+    const foreign = await bankFixture()
+    for (const decisions of [
+      [{ rowNumber: 2, transactionId: foreign.transactionId }],
+      [
+        { rowNumber: 2, transactionId: null },
+        { rowNumber: 2, transactionId: null },
+      ],
+    ]) {
+      const response = await f.app.inject({
+        method: 'POST',
+        url: '/v1/imports/mapped/commit',
+        payload: { ...commit, requestId: randomUUID(), duplicateDecisions: decisions },
+      })
+      expect(response.statusCode).toBe(409)
+    }
+    expect(await counts(f.profileId)).toEqual(before)
+  })
+
   test.each(['csv', 'xlsx'] as const)(
     '%s HTTP commit with an advancing clock and current journal shares one signed revision instant and retries once',
     async (format) => {

@@ -119,6 +119,25 @@ export const mappedPreviewDto = z.strictObject({
       reason: z.literal('same_content_without_external_id'),
     }),
   ),
+  crossSourceCandidates: z.array(
+    z.strictObject({
+      rowNumber: z.number().int().positive(),
+      transactionId: identifier,
+      bookedOn: z.string(),
+      description: z.string(),
+      merchantName: z.string().nullable(),
+      dateDistanceDays: z.number().int().min(0).max(7),
+      sameReference: z.boolean(),
+    }),
+  ),
+  previousImports: z.array(
+    z.strictObject({
+      rowNumber: z.number().int().positive(),
+      transactionId: identifier,
+      disposition: z.enum(['linked', 'imported']),
+      linkedTransactionId: identifier.nullable(),
+    }),
+  ),
   canImport: z.boolean(),
   previewRevision: digestSchema,
 })

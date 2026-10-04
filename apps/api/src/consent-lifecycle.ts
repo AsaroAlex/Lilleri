@@ -14,6 +14,7 @@ import { and, asc, desc, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
+import { type ConsentHistoryRecovery, readConsentHistoryRecovery } from './consent-history-gap.js'
 import {
   type ConsentEventAction,
   consentEvents,
@@ -51,6 +52,7 @@ export interface ConsentLifecycle {
   readonly updatedAt: string
   readonly lastSyncedAt: string | null
   readonly blockedReason: string | null
+  readonly historyRecovery: ConsentHistoryRecovery | null
 }
 type ConnectionRow = typeof schema.connections.$inferSelect
 type ConsentRow = typeof schema.consents.$inferSelect
@@ -306,6 +308,7 @@ export async function readConsentLifecycle(
     providerMetadata,
     updatedAt: row?.updatedAt ?? consent?.grantedAt ?? connection.createdAt,
     lastSyncedAt: connection.lastSyncedAt,
+    historyRecovery: await readConsentHistoryRecovery(db, profileId, connectionId),
   }
 }
 async function appendEvent(
@@ -721,6 +724,15 @@ export const consentLifecycleDto = z.object({
   updatedAt: z.string(),
   lastSyncedAt: z.string().nullable(),
   blockedReason: z.string().nullable(),
+  historyRecovery: z
+    .object({
+      interruptedAt: z.string(),
+      renewedAt: z.string(),
+      status: z.enum(['unverified', 'covered', 'bank_gap']),
+      intervals: z.array(z.object({ from: z.string(), to: z.string() })),
+      evidenceJobIds: z.array(z.string()),
+    })
+    .nullable(),
 })
 export const consentEventDto = z.object({
   id: z.string(),

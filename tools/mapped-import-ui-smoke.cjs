@@ -238,7 +238,9 @@ async function noOverflow(page, name) {
       button(page, 'Importa righe dell’anteprima').click(),
     )
     await page
-      .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti.', { exact: false })
+      .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
+        exact: false,
+      })
       .waitFor()
     assert.equal(accepted.inserted, 2)
     assert.equal(acceptedBodies.length, 2)
@@ -257,7 +259,9 @@ async function noOverflow(page, name) {
       button(page, 'Importa righe dell’anteprima').click(),
     )
     await page
-      .getByText('0 nuovi movimenti, 0 aggiornati, 2 già presenti.', { exact: false })
+      .getByText('0 nuovi movimenti, 0 aggiornati, 2 già presenti; 0 collegati alla banca.', {
+        exact: false,
+      })
       .waitFor()
     assert.equal(repeated.unchanged, 2)
     assertFinancialUnchanged(afterFirst, await request('/v1/demo'), report, true)
@@ -290,7 +294,9 @@ async function noOverflow(page, name) {
       button(page, 'Importa righe dell’anteprima').click(),
     )
     await page
-      .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti.', { exact: false })
+      .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
+        exact: false,
+      })
       .waitFor()
     assert.equal(kept.inserted, 2)
     assert.equal((await manualAccount(account.id)).balanceMinor, duplicateBalance)
@@ -343,7 +349,9 @@ async function noOverflow(page, name) {
       button(page, 'Importa righe dell’anteprima').click(),
     )
     await page
-      .getByText('1 nuovo movimento, 0 aggiornati, 0 già presenti.', { exact: false })
+      .getByText('1 nuovo movimento, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
+        exact: false,
+      })
       .waitFor()
     assert.equal((await manualAccount(account.id)).balanceMinor, finalBalance)
     check(

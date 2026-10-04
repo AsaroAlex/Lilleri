@@ -39,6 +39,7 @@ export interface MappedImportPanelProps {
   readonly theme: BrandTheme
   readonly request: Request
   readonly resetKey: number | string
+  readonly recoveryAccountId?: string
   readonly onChanged: () => Promise<void>
   readonly onError?: (cause: unknown) => boolean
 }
@@ -73,6 +74,7 @@ export function MappedImportPanel({
   theme,
   request,
   resetKey,
+  recoveryAccountId,
   onChanged,
   onError,
 }: MappedImportPanelProps) {
@@ -188,12 +190,14 @@ export function MappedImportPanel({
   const handlers = useRef({ onChanged, onError })
   handlers.current = { onChanged, onError }
   const firstAccount =
+    overview.accounts.find((account) => account.id === recoveryAccountId) ??
     overview.accounts.find((account) =>
       overview.connections.some(
         (connection) =>
           connection.id === account.connectionId && connection.providerId === 'local-manual',
       ),
-    ) ?? overview.accounts[0]
+    ) ??
+    overview.accounts[0]
   const [dataScope, setDataScope] = useState(scope)
   const [accountId, setAccountId] = useState(firstAccount?.id ?? '')
   const [csv, setCsv] = useState('')
@@ -214,6 +218,9 @@ export function MappedImportPanel({
     edit: number
   } | null>(null)
   const [acknowledged, setAcknowledged] = useState(false)
+  const [duplicateDecisions, setDuplicateDecisions] = useState<
+    Readonly<Record<number, string | null>>
+  >({})
   const [mappings, setMappings] = useState<readonly SavedCsvMappingDto[]>([])
   const [selectedSavedId, setSelectedSavedId] = useState<string | null>(null)
   const [mappingName, setMappingName] = useState('')
@@ -233,6 +240,7 @@ export function MappedImportPanel({
     pending.current = null
     setPreview(null)
     setAcknowledged(false)
+    setDuplicateDecisions({})
     setVisibleRows(10)
     setError(null)
     setNotice(null)
@@ -241,6 +249,23 @@ export function MappedImportPanel({
       setExpandedColumn(null)
     }
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Recovery is applied once per requested account and trusted profile/session scope; ledger refreshes must not discard file edits.
+  useEffect(() => {
+    if (
+      !recoveryAccountId ||
+      !overview.accounts.some((account) => account.id === recoveryAccountId)
+    )
+      return
+    editVersion.current++
+    pending.current = null
+    setAccountId(recoveryAccountId)
+    setPreview(null)
+    setAcknowledged(false)
+    setDuplicateDecisions({})
+    const account = overview.accounts.find((account) => account.id === recoveryAccountId)
+    setMapping(emptyMapping(account?.balance.currency ?? 'EUR'))
+    setSelectedSavedId(null)
+  }, [recoveryAccountId, scope])
   const changeMapping = (next: MappedCsvMappingDto, clearLayout = false) => {
     invalidate(clearLayout)
     if (next.statusValues !== mapping.statusValues)
@@ -475,6 +500,7 @@ export function MappedImportPanel({
       const value = await client.preview(input)
       if (!current(epoch) || edit !== editVersion.current) return
       setPreview({ value, input, edit })
+      setDuplicateDecisions({})
       setAcknowledged(false)
       setVisibleRows(10)
       pending.current = null
@@ -491,7 +517,17 @@ export function MappedImportPanel({
         throw new MappedValidationError(
           t('mapped.show_a_valid_preview_and_review_repeated_rows_before_importing'),
         )
-      const fingerprint = `${preview.value.previewRevision}:${acknowledged}`
+      if (
+        preview.value.crossSourceCandidates.some(
+          (candidate) => !Object.hasOwn(duplicateDecisions, candidate.rowNumber),
+        )
+      )
+        throw new MappedValidationError(t('mapped.crossSourceReview'))
+      const decisions = Object.entries(duplicateDecisions).map(([rowNumber, transactionId]) => ({
+        rowNumber: Number(rowNumber),
+        transactionId,
+      }))
+      const fingerprint = `${preview.value.previewRevision}:${acknowledged}:${JSON.stringify(decisions)}`
       if (!pending.current || pending.current.fingerprint !== fingerprint)
         pending.current = { fingerprint, requestId: manualRequestId() }
       const result = await client.commit({
@@ -499,6 +535,7 @@ export function MappedImportPanel({
         previewRevision: preview.value.previewRevision,
         requestId: pending.current.requestId,
         acknowledgeGeneratedDuplicates: acknowledged,
+        duplicateDecisions: decisions,
       })
       if (!current(epoch)) return
       editVersion.current++
@@ -518,6 +555,7 @@ export function MappedImportPanel({
           updated: result.updated,
           unchanged: result.unchanged,
           rejected: result.rejected,
+          linked: result.linked,
         }),
       )
     }, true)
@@ -637,15 +675,16 @@ export function MappedImportPanel({
     }
     input.click()
   }
-  const button = (label: string, action: () => void, disabled = false) => (
+  const button = (label: string, action: () => void, disabled = false, unselected?: boolean) => (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
+      aria-pressed={unselected === undefined ? undefined : !unselected}
       accessibilityState={{ disabled: disabled || busy }}
       aria-disabled={disabled || busy}
       disabled={disabled || busy}
       onPress={action}
-      style={[s.button, (disabled || busy) && s.disabled]}
+      style={[s.button, unselected === false && s.selected, (disabled || busy) && s.disabled]}
     >
       <Text style={s.buttonText}>{label}</Text>
     </Pressable>
@@ -737,7 +776,10 @@ export function MappedImportPanel({
       preview.edit === editVersion.current &&
       !preview.value.errors.length &&
       preview.value.rows.length &&
-      (preview.value.canImport || (duplicateReview && acknowledged)),
+      (preview.value.canImport || (duplicateReview && acknowledged)) &&
+      preview.value.crossSourceCandidates.every((candidate) =>
+        Object.hasOwn(duplicateDecisions, candidate.rowNumber),
+      ),
   )
   return (
     <View style={s.panel}>
@@ -1197,6 +1239,57 @@ export function MappedImportPanel({
                     original: row.provenance.rawValueOn ?? '',
                   })}
                 </Text>
+              )}
+              {preview.value.previousImports.some(
+                (previous) => previous.rowNumber === row.rowNumber,
+              ) && <Text style={s.body}>{t('mapped.previousDecision')}</Text>}
+              {preview.value.crossSourceCandidates.some(
+                (candidate) => candidate.rowNumber === row.rowNumber,
+              ) && (
+                <View style={s.field}>
+                  <Text style={s.body}>{t('mapped.crossSourceReview')}</Text>
+                  {preview.value.crossSourceCandidates
+                    .filter((candidate) => candidate.rowNumber === row.rowNumber)
+                    .map((candidate) => (
+                      <View key={candidate.transactionId}>
+                        <Text style={s.body}>
+                          {candidate.description}
+                          {candidate.merchantName ? ` · ${candidate.merchantName}` : ''}
+                        </Text>
+                        <Text style={s.small}>
+                          {t('mapped.bankCandidate', {
+                            date: i18n.calendarDate(candidate.bookedOn),
+                            days: candidate.dateDistanceDays,
+                            reference: candidate.sameReference
+                              ? t('mapped.sameReference')
+                              : t('mapped.unprovenReference'),
+                          })}
+                        </Text>
+                        {button(
+                          t('mapped.linkBank', { date: i18n.calendarDate(candidate.bookedOn) }),
+                          () => {
+                            pending.current = null
+                            setDuplicateDecisions((value) => ({
+                              ...value,
+                              [row.rowNumber]: candidate.transactionId,
+                            }))
+                          },
+                          false,
+                          duplicateDecisions[row.rowNumber] !== candidate.transactionId,
+                        )}
+                      </View>
+                    ))}
+                  {button(
+                    t('mapped.keepSeparate'),
+                    () => {
+                      pending.current = null
+                      setDuplicateDecisions((value) => ({ ...value, [row.rowNumber]: null }))
+                    },
+                    false,
+                    !Object.hasOwn(duplicateDecisions, row.rowNumber) ||
+                      duplicateDecisions[row.rowNumber] !== null,
+                  )}
+                </View>
               )}
               <Text style={s.small}>
                 {t('mapped.identity')}{' '}

@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { type Database, schema } from '@lilleri/database'
+import { parseDecimal } from '@lilleri/domain'
 import {
   type CsvMapping,
   csvMappingDigest,
@@ -30,6 +31,8 @@ import {
   mappedImportProvenance,
   savedCsvMappings,
 } from './mapped-import-schema.js'
+import { PrivacyService } from './privacy.js'
+import { transactionPrivacy } from './privacy-schema.js'
 import { notFound, Problem } from './problem.js'
 import { DemoService } from './service.js'
 
@@ -58,6 +61,15 @@ const commitInput = importBase
     previewRevision: digestSchema,
     requestId: z.string().regex(/^[A-Za-z0-9_-]{16,128}$/),
     acknowledgeGeneratedDuplicates: z.boolean(),
+    duplicateDecisions: z
+      .array(
+        z.strictObject({
+          rowNumber: z.number().int().positive(),
+          transactionId: identifier.nullable(),
+        }),
+      )
+      .max(1000)
+      .optional(),
   })
   .refine(
     (value) =>
@@ -71,6 +83,8 @@ const reportDto = z.strictObject({
   unchanged: z.number().int().min(0),
   rejected: z.number().int().min(0),
   importedAt: z.string(),
+  linked: z.number().int().min(0),
+  receiptId: z.string(),
 })
 type ImportInput = z.infer<typeof importInput>
 type CommitInput = z.infer<typeof commitInput>
@@ -364,6 +378,13 @@ export class MappedImportService {
         revision: schema.transactions.revision,
         contentHash: schema.transactions.contentHash,
         status: schema.transactions.status,
+        providerTransactionId: schema.transactions.providerTransactionId,
+        source: schema.transactions.source,
+        amountMinor: schema.transactions.amountMinor,
+        currency: schema.transactions.currency,
+        bookedOn: schema.transactions.bookedOn,
+        reference: schema.transactions.reference,
+        relatedTransactionId: schema.transactions.relatedTransactionId,
       })
       .from(schema.transactions)
       .where(
@@ -373,6 +394,125 @@ export class MappedImportService {
         ),
       )
       .orderBy(asc(schema.transactions.id))
+    const data = await this.source.data(db)
+    const privacy = await new PrivacyService(db, this.profileId, this.source.now).analysisContext(
+      db,
+      data.analysis.classifications,
+    )
+    const privacyFlags = await db
+      .select()
+      .from(transactionPrivacy)
+      .where(eq(transactionPrivacy.profileId, this.profileId))
+      .orderBy(asc(transactionPrivacy.transactionId))
+    const excluded = new Set([
+      ...privacy.excludedTransactionIds,
+      ...data.merchantContext.excludedTransactionIds,
+    ])
+    const activeIds = new Set(data.transactions.map((transaction) => transaction.id))
+    const activeTransactions = new Map(
+      data.transactions.map((transaction) => [transaction.id, transaction]),
+    )
+    const unavailableTargets = new Set(
+      data.analysis.matches
+        .filter(
+          (match) =>
+            match.state === 'confirmed' &&
+            [
+              'duplicate',
+              'pending_to_booked',
+              'internal_transfer',
+              'card_settlement',
+              'cash_transfer',
+            ].includes(match.type),
+        )
+        .flatMap((match) => match.transactionIds),
+    )
+    const origins = await db
+      .select({
+        transactionId: mappedImportProvenance.transactionId,
+        providerRecordId: schema.observations.providerRecordId,
+      })
+      .from(mappedImportProvenance)
+      .innerJoin(
+        schema.observations,
+        and(
+          eq(schema.observations.profileId, mappedImportProvenance.profileId),
+          eq(schema.observations.id, mappedImportProvenance.observationId),
+        ),
+      )
+      .where(
+        and(
+          eq(mappedImportProvenance.profileId, this.profileId),
+          eq(mappedImportProvenance.accountId, input.accountId),
+        ),
+      )
+    const previousImports: z.infer<typeof mappedPreviewDto>['previousImports'] = []
+    const crossSourceCandidates: z.infer<typeof mappedPreviewDto>['crossSourceCandidates'] = []
+    for (const row of preview.rows) {
+      const previous = origins.filter((origin) => origin.providerRecordId === row.record.id)
+      const known = [...new Set(previous.map((origin) => origin.transactionId))]
+      const canonical = ledger.find(
+        (transaction) =>
+          transaction.source === 'csv' && transaction.providerTransactionId === row.record.id,
+      )
+      if (known.length > 1) throw stale()
+      const previousId = known[0] ?? canonical?.id
+      if (previousId) {
+        const transaction = ledger.find((transaction) => transaction.id === previousId)
+        if (!transaction) throw stale()
+        previousImports.push({
+          rowNumber: row.rowNumber,
+          transactionId: transaction.id,
+          disposition: data.analysis.matches.some(
+            (match) =>
+              match.type === 'duplicate' &&
+              match.state === 'confirmed' &&
+              match.transactionIds.includes(transaction.id),
+          )
+            ? 'linked'
+            : 'imported',
+          linkedTransactionId: transaction.relatedTransactionId,
+        })
+        continue
+      }
+      if (row.record.status !== 'booked' || !row.record.bookedOn) continue
+      const amount = parseDecimal(row.record.amount, row.record.currency).amountMinor
+      for (const transaction of ledger) {
+        if (
+          transaction.source !== 'bank' ||
+          transaction.status !== 'booked' ||
+          unavailableTargets.has(transaction.id) ||
+          excluded.has(transaction.id) ||
+          !activeIds.has(transaction.id) ||
+          !transaction.bookedOn ||
+          transaction.currency !== row.record.currency ||
+          transaction.amountMinor !== amount
+        )
+          continue
+        const distance =
+          Math.abs(Date.parse(row.record.bookedOn) - Date.parse(transaction.bookedOn)) / 86_400_000
+        if (distance > 7) continue
+        const decryptedReference =
+          this.source.encryption && transaction.reference
+            ? await this.source.encryption.decryptText(
+                db,
+                context(this.profileId, 'transactions', 'reference', transaction.id),
+                transaction.reference,
+              )
+            : transaction.reference
+        crossSourceCandidates.push({
+          rowNumber: row.rowNumber,
+          transactionId: transaction.id,
+          bookedOn: transaction.bookedOn,
+          description: activeTransactions.get(transaction.id)?.description ?? '',
+          merchantName: activeTransactions.get(transaction.id)?.merchantName ?? null,
+          dateDistanceDays: distance,
+          sameReference: Boolean(
+            row.record.reference && row.record.reference === decryptedReference,
+          ),
+        })
+      }
+    }
     const [manual] = await db
       .select()
       .from(manualAccounts)
@@ -392,6 +532,8 @@ export class MappedImportService {
       ...preview,
       rows: errors.length ? [] : preview.rows,
       errors,
+      crossSourceCandidates: errors.length ? [] : crossSourceCandidates,
+      previousImports: errors.length ? [] : previousImports,
       canImport: errors.length === 0 && preview.canImport,
       previewRevision: hash({
         format: 'lilleri.mapped-preview-revision.v1',
@@ -399,6 +541,15 @@ export class MappedImportService {
         account,
         manual: manual ?? null,
         ledger,
+        reconciliation: data.analysis.matches
+          .filter((match) =>
+            match.transactionIds.some((id) => ledger.some((transaction) => transaction.id === id)),
+          )
+          .map((match) => ({ id: match.id, revision: match.revision })),
+        origins,
+        privacyRevision: privacy.revision,
+        privacyFlags,
+        excluded: [...excluded].sort(),
         fileDigest: preview.fileDigest,
         mappingDigest: preview.mappingDigest,
         savedMapping: selected.identity,
@@ -430,6 +581,7 @@ export class MappedImportService {
       mappingId: input.mappingId ?? null,
       previewRevision: input.previewRevision,
       acknowledgeGeneratedDuplicates: input.acknowledgeGeneratedDuplicates,
+      duplicateDecisions: input.duplicateDecisions ?? [],
     }
     return new ManualService(
       this.db,
@@ -447,6 +599,50 @@ export class MappedImportService {
           'import_duplicate_review_required',
           'Le righe uguali possono essere acquisti distinti. Controlla l’anteprima e conferma di mantenerle tutte.',
         )
+      const decisions = new Map(
+        (input.duplicateDecisions ?? []).map((decision) => [
+          decision.rowNumber,
+          decision.transactionId,
+        ]),
+      )
+      if (
+        decisions.size !== (input.duplicateDecisions ?? []).length ||
+        [...decisions.keys()].some(
+          (rowNumber) => !dto.rows.some((row) => row.rowNumber === rowNumber),
+        )
+      )
+        throw stale()
+      const links = dto.rows.map((row) => {
+        const previous = dto.previousImports.find(
+          (previous) => previous.rowNumber === row.rowNumber,
+        )
+        if (previous) {
+          const saved = previous.linkedTransactionId
+          if (decisions.has(row.rowNumber) && decisions.get(row.rowNumber) !== saved) throw stale()
+          return saved
+        }
+        const candidates = dto.crossSourceCandidates.filter(
+          (candidate) => candidate.rowNumber === row.rowNumber,
+        )
+        if (candidates.length && !decisions.has(row.rowNumber))
+          throw new Problem(
+            422,
+            'import_cross_source_review_required',
+            'Controlla i possibili duplicati e scegli se collegarli o mantenere le righe separate.',
+          )
+        const linkedId = decisions.get(row.rowNumber) ?? null
+        if (linkedId && !candidates.some((candidate) => candidate.transactionId === linkedId))
+          throw stale()
+        return linkedId
+      })
+      const targets = links.filter(Boolean)
+      if (new Set(targets).size !== targets.length)
+        throw new Problem(
+          422,
+          'import_duplicate_target_reused',
+          'Due righe non possono essere collegate allo stesso movimento bancario. Controlla le ripetizioni.',
+        )
+      const importedIds = new Map<number, string>()
       const source = new DemoService(
         tx,
         this.profileId,
@@ -457,10 +653,11 @@ export class MappedImportService {
         this.source.recurringPolicy,
         this.source.recordSourceFacts,
       )
-      return source.importRecords(
+      const report = await source.importRecords(
         input.accountId,
         dto.rows.map((row) => row.record as Parameters<DemoService['importRecords']>[1][number]),
         {
+          duplicateTransactionIds: links,
           sourcePayloads: dto.rows.map((row) => ({
             format: dto.workbook ? 'lilleri.xlsx-observation.v1' : 'lilleri.csv-observation.v1',
             ...(dto.workbook ? { workbook: dto.workbook } : {}),
@@ -472,6 +669,7 @@ export class MappedImportService {
           })),
           afterObservation: async (db, { index, transaction, observationId }) => {
             const row = dto.rows[index]
+            if (row) importedIds.set(row.rowNumber, transaction.id)
             if (!row || !dto.fileDigest || !dto.mappingDigest) throw invalid()
             await db
               .insert(mappedImportProvenance)
@@ -495,6 +693,70 @@ export class MappedImportService {
           },
         },
       )
+      for (const [index, target] of links.entries()) {
+        const row = dto.rows[index],
+          importedId = row ? importedIds.get(row.rowNumber) : undefined
+        if (
+          !row ||
+          !target ||
+          !importedId ||
+          dto.previousImports.some((previous) => previous.rowNumber === row.rowNumber)
+        )
+          continue
+        const match = (await source.data(tx)).analysis.matches.find(
+          (match) =>
+            match.type === 'duplicate' &&
+            match.transactionIds.includes(importedId) &&
+            match.transactionIds.includes(target),
+        )
+        if (!match) throw stale()
+        await source.decide(match.id, 'confirmed', match.revision)
+      }
+      const kept = new Set(
+        [...decisions]
+          .filter(
+            ([row, target]) =>
+              target === null &&
+              !dto.previousImports.some((previous) => previous.rowNumber === row),
+          )
+          .map(([row]) => importedIds.get(row)),
+      )
+      if (kept.size) {
+        const { analysis } = await source.data(tx)
+        for (const match of analysis.matches) {
+          if (match.type === 'duplicate' && match.transactionIds.some((id) => kept.has(id))) {
+            const current = (await source.data(tx)).analysis.matches.find(
+              (current) => current.id === match.id,
+            )
+            if (current) await source.decide(current.id, 'rejected', current.revision)
+          }
+        }
+      }
+      const analysis = (await source.data(tx)).analysis
+      const linked = [...importedIds.values()].filter((id) =>
+        analysis.matches.some(
+          (match) =>
+            match.type === 'duplicate' &&
+            match.state === 'confirmed' &&
+            match.transactionIds.includes(id),
+        ),
+      ).length
+      const newlyLinked = dto.rows.filter(
+        (row) =>
+          !dto.previousImports.some((previous) => previous.rowNumber === row.rowNumber) &&
+          analysis.matches.some(
+            (match) =>
+              match.type === 'duplicate' &&
+              match.state === 'confirmed' &&
+              match.transactionIds.includes(importedIds.get(row.rowNumber) ?? ''),
+          ),
+      ).length
+      return {
+        ...report,
+        inserted: report.inserted - newlyLinked,
+        linked,
+        receiptId: input.requestId,
+      }
     })
   }
 }

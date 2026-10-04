@@ -41,6 +41,7 @@ export interface ConnectionsPanelProps {
   readonly resetKey: number | string
   readonly onRefresh: () => Promise<void>
   readonly onManualFallback: () => void
+  readonly onRecoverHistory?: (accountId: string) => void
   readonly onError?: (cause: unknown) => boolean
 }
 const kindLabels: Readonly<Record<ConnectionAccountKind, ConnectionMessageKey>> = {
@@ -107,6 +108,7 @@ export function ConnectionsPanel({
   resetKey,
   onRefresh,
   onManualFallback,
+  onRecoverHistory,
   onError,
 }: ConnectionsPanelProps) {
   const i18n = useI18n(),
@@ -604,6 +606,45 @@ export function ConnectionsPanel({
                       ),
                     })}
                   </Text>
+                  {lifecycle.historyRecovery && lifecycle.historyRecovery.status !== 'covered' && (
+                    <View style={s.institution}>
+                      <Text style={s.body}>
+                        {t('connections.historyInterruption', {
+                          from: formatInstant(
+                            lifecycle.historyRecovery.interruptedAt,
+                            overview.profile.timezone,
+                          ),
+                          to: formatInstant(
+                            lifecycle.historyRecovery.renewedAt,
+                            overview.profile.timezone,
+                          ),
+                        })}
+                      </Text>
+                      {lifecycle.historyRecovery.status === 'unverified' ? (
+                        <Text style={s.body}>{t('connections.historyUnverified')}</Text>
+                      ) : (
+                        lifecycle.historyRecovery.intervals.map((interval) => (
+                          <Text key={`${interval.from}:${interval.to}`} style={s.body}>
+                            {t('connections.historyBankGap', {
+                              from: i18n.calendarDate(interval.from),
+                              to: i18n.calendarDate(interval.to),
+                            })}
+                          </Text>
+                        ))
+                      )}
+                      {onRecoverHistory &&
+                        accounts.map((account) => (
+                          <View key={account.id}>
+                            {button(
+                              t('connections.recoverImport', { name: account.name }),
+                              () => onRecoverHistory(account.id),
+                              false,
+                              true,
+                            )}
+                          </View>
+                        ))}
+                    </View>
+                  )}
                   {lifecycle.source === 'legacy' && (
                     <Text style={s.body}>{t('connections.legacyDates')}</Text>
                   )}

@@ -201,7 +201,7 @@ export function reconcile(
           ? 'suggested'
           : (options.matchOverrides?.[id] ?? (confirmed ? 'confirmed' : 'suggested')),
       confidence: confirmed ? 1 : 0,
-      algorithmVersion: ENGINE_VERSION,
+      algorithmVersion: type === 'duplicate' ? 'cross-source-duplicate-v2' : ENGINE_VERSION,
       explanation,
       evidence,
     })
@@ -256,23 +256,33 @@ export function reconcile(
         second.status === 'booked' &&
         sameAmount &&
         first.source !== second.source &&
-        first.merchantKey &&
-        first.merchantKey === second.merchantKey &&
-        firstDate === secondDate
+        ((first.merchantKey && first.merchantKey === second.merchantKey) ||
+          uniqueReference ||
+          directLink) &&
+        firstDate &&
+        secondDate &&
+        Math.abs(Date.parse(firstDate) - Date.parse(secondDate)) <= 7 * 86_400_000
       ) {
         addMatch(
           'duplicate',
           first,
           second,
-          uniqueReference,
+          uniqueReference || directLink,
           [
             'different-sources',
-            'same-account-merchant-date-amount',
-            uniqueReference ? 'unique-provider-reference' : 'relationship-unproven',
+            'same-account-amount-within-seven-days',
+            first.merchantKey === second.merchantKey ? 'same-merchant' : 'merchant-not-proven',
+            directLink
+              ? 'explicit-source-link'
+              : uniqueReference
+                ? 'unique-provider-reference'
+                : 'relationship-unproven',
           ],
-          uniqueReference
-            ? 'Stesso movimento presente in due fonti con un riferimento condiviso.'
-            : 'Questi movimenti si assomigliano. Restano entrambi finché non confermi il duplicato.',
+          directLink
+            ? 'Hai collegato esplicitamente questi movimenti presenti in due fonti.'
+            : uniqueReference
+              ? 'Stesso movimento presente in due fonti con un riferimento condiviso.'
+              : 'Questi movimenti si assomigliano. Restano entrambi finché non confermi il duplicato.',
         )
       }
       const opposite =

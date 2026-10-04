@@ -115,6 +115,13 @@ export interface ConnectionLifecycleDto {
   readonly updatedAt: string
   readonly lastSyncedAt: string | null
   readonly blockedReason: string | null
+  readonly historyRecovery: {
+    readonly interruptedAt: string
+    readonly renewedAt: string
+    readonly status: 'unverified' | 'covered' | 'bank_gap'
+    readonly intervals: readonly { readonly from: string; readonly to: string }[]
+    readonly evidenceJobIds: readonly string[]
+  } | null
 }
 export interface ConnectionConsentEventDto {
   readonly id: string

@@ -1,5 +1,40 @@
 /** CSV/XLSX importer: Italian master and British English messages. */
 export const MAPPED_IMPORT_MESSAGE_PAIRS = {
+  'evidence.sameAccountSevenDays': [
+    'Stesso conto, importo e valuta, a distanza di non più di sette giorni.',
+    'Same account, amount and currency, no more than seven days apart.',
+  ],
+  'evidence.sameMerchant': ['Stesso esercente riconosciuto.', 'Same recognised merchant.'],
+  'evidence.merchantNotProven': [
+    'La corrispondenza dell’esercente non è dimostrata.',
+    'The merchant match is unproven.',
+  ],
+  'evidence.explicitSourceLink': [
+    'Hai scelto di collegare questa riga importata al movimento bancario.',
+    'You chose to link this imported row to the bank transaction.',
+  ],
+  'mapped.crossSourceReview': [
+    'Possibili duplicati bancari: stesso conto, importo e valuta, entro sette giorni. Controlla il file e scegli se collegare la riga o conservarla come movimento distinto.',
+    'Possible bank duplicates: same account, amount and currency, within seven days. Check your file and choose whether to link this row or keep it as a separate transaction.',
+  ],
+  'mapped.bankCandidate': [
+    'Movimento bancario del {date}, distanza {days} giorni. {reference}',
+    'Bank transaction dated {date}, {days} days apart. {reference}',
+  ],
+  'mapped.sameReference': ['Il riferimento coincide.', 'The reference matches.'],
+  'mapped.unprovenReference': [
+    'Il collegamento non è dimostrato.',
+    'The relationship is unproven.',
+  ],
+  'mapped.linkBank': [
+    'Collega al movimento bancario del {date}',
+    'Link to the bank transaction dated {date}',
+  ],
+  'mapped.keepSeparate': ['Conserva come movimento distinto', 'Keep as a separate transaction'],
+  'mapped.previousDecision': [
+    'Riga già acquisita: conserviamo il collegamento o la scelta precedente.',
+    'Previously acquired row: we preserve its earlier link or decision.',
+  ],
   'mapped.xlsxTitle': ['Importa Excel con associazioni', 'Import Excel with mappings'],
   'mapped.issueRow': ['Riga {row}{field}: {message}', 'Row {row}{field}: {message}'],
   'mapped.headersRead': [
@@ -7,8 +42,8 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     '{headers} headers and {rows} rows read. Map the columns before previewing.',
   ],
   'mapped.importResult': [
-    '{inserted, plural, one {# nuovo movimento} other {# nuovi movimenti}}, {updated, plural, one {# aggiornato} other {# aggiornati}}, {unchanged, plural, one {# già presente} other {# già presenti}}{rejected, plural, =0 {} one {; # non acquisito} other {; # non acquisiti}}. Controlla il saldo e lo storico del conto.',
-    '{inserted, plural, one {# new transaction} other {# new transactions}}, {updated} updated, {unchanged} already present{rejected, plural, =0 {} one {; # not acquired} other {; # not acquired}}. Review the account balance and history.',
+    '{inserted, plural, one {# nuovo movimento} other {# nuovi movimenti}}, {updated, plural, one {# aggiornato} other {# aggiornati}}, {unchanged, plural, one {# già presente} other {# già presenti}}; {linked} collegati alla banca{rejected, plural, =0 {} one {; # non acquisito} other {; # non acquisiti}}. Controlla il saldo e lo storico del conto.',
+    '{inserted, plural, one {# new transaction} other {# new transactions}}, {updated} updated, {unchanged} already present; {linked} linked to the bank{rejected, plural, =0 {} one {; # not acquired} other {; # not acquired}}. Review the account balance and history.',
   ],
   'mapped.accountChoice': [
     'Conto per importazione: {name}, {currency}',

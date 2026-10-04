@@ -83,6 +83,33 @@ describe('conservative reconciliation and accounting invariants', () => {
   it('does not connect unrelated pending and booked items', () => {
     expect(reconcile([account()], [txn('a', { status: 'pending' }), txn('b')])).toHaveLength(0)
   })
+  it('seven-day matches need reference or explicit source proof and remain reversible across different descriptors', () => {
+    const bank = txn('bank', { bookedOn: '2026-03-28', reference: 'unique' })
+    const imported = txn('file', {
+      source: 'csv',
+      bookedOn: '2026-04-04',
+      merchantKey: 'different',
+      reference: 'unique',
+    })
+    const proved = reconcile([account()], [bank, imported])
+    expect(proved[0]).toMatchObject({
+      type: 'duplicate',
+      state: 'confirmed',
+      algorithmVersion: 'cross-source-duplicate-v2',
+    })
+    expect(effectiveTransactions([bank, imported], proved)).toEqual([bank])
+    const unproven = { ...imported, reference: null, merchantKey: bank.merchantKey }
+    expect(reconcile([account()], [bank, unproven])[0]?.state).toBe('suggested')
+    expect(reconcile([account()], [bank, { ...unproven, bookedOn: '2026-04-05' }])).toEqual([])
+    const explicit = { ...imported, reference: null, relatedTransactionId: bank.id }
+    const links = reconcile([account()], [bank, explicit])
+    expect(links[0]?.state).toBe('confirmed')
+    const undo = reconcile([account()], [bank, explicit], {
+      matchOverrides: { [links[0]?.id ?? '']: 'undone' },
+    })
+    expect(effectiveTransactions([bank, explicit], undo)).toEqual([bank, explicit])
+  })
+
   it('suppresses a cross-source duplicate only with a shared unique reference', () => {
     const rows = [txn('bank', { reference: 'r' }), txn('csv', { reference: 'r', source: 'csv' })]
     const matches = reconcile([account()], rows)

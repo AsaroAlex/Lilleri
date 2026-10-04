@@ -715,6 +715,8 @@ export class DemoService {
     records: readonly ProviderTransaction[],
     options: {
       readonly sourcePayloads?: readonly Record<string, unknown>[]
+      /** Explicit, validated CSV links; preserves bank identity, revisions and corrections. */
+      readonly duplicateTransactionIds?: readonly (string | null)[]
       readonly afterObservation?: (
         db: Database,
         row: {
@@ -741,7 +743,7 @@ export class DemoService {
       if (!account) throw notFound()
       const importedAt = this.now(),
         context = { profileId: this.profileId, connectionId: account.connectionId }
-      let transactions: readonly Transaction[]
+      let transactions: Transaction[]
       try {
         if (
           !records.length ||
@@ -754,10 +756,12 @@ export class DemoService {
               record.id.includes('\u0000'),
           ) ||
           new Set(records.map((record) => record.id)).size !== records.length ||
-          (options.sourcePayloads && options.sourcePayloads.length !== records.length)
+          (options.sourcePayloads && options.sourcePayloads.length !== records.length) ||
+          (options.duplicateTransactionIds &&
+            options.duplicateTransactionIds.length !== records.length)
         )
           throw new Error('Empty CSV or wrong currency')
-        transactions = records.map((record) => ({
+        transactions = records.map((record, index) => ({
           ...normalizeTransaction(
             'csv-import',
             context,
@@ -765,6 +769,9 @@ export class DemoService {
             importedAt,
           ),
           accountId,
+          ...(options.duplicateTransactionIds?.[index]
+            ? { relatedTransactionId: options.duplicateTransactionIds[index] ?? null }
+            : {}),
         }))
       } catch {
         throw new Problem(
@@ -775,7 +782,7 @@ export class DemoService {
       }
       const report = { inserted: 0, updated: 0, unchanged: 0, rejected: 0, importedAt }
       const recordedObservations: { id: string; accountId: string }[] = []
-      for (const transaction of transactions) {
+      for (const [index, transaction] of transactions.entries()) {
         if (
           transaction.amount.amountMinor < -9_223_372_036_854_775_808n ||
           transaction.amount.amountMinor > 9_223_372_036_854_775_807n
@@ -794,6 +801,33 @@ export class DemoService {
               eq(schema.transactions.id, transaction.id),
             ),
           )
+        const linkedId = options.duplicateTransactionIds?.[index]
+        if (linkedId && !existing) {
+          const [linked] = await tx
+            .select()
+            .from(schema.transactions)
+            .where(
+              and(
+                eq(schema.transactions.profileId, this.profileId),
+                eq(schema.transactions.accountId, accountId),
+                eq(schema.transactions.id, linkedId),
+              ),
+            )
+          if (
+            linked?.source !== 'bank' ||
+            linked.status !== 'booked' ||
+            transaction.status !== 'booked' ||
+            linked.amountMinor !== transaction.amount.amountMinor ||
+            linked.currency !== transaction.amount.currency ||
+            !linked.bookedOn ||
+            !transaction.bookedOn ||
+            Math.abs(Date.parse(linked.bookedOn) - Date.parse(transaction.bookedOn)) >
+              7 * 86_400_000
+          )
+            throw conflict(
+              'Il movimento collegato non corrisponde più alla riga importata. Mostra una nuova anteprima.',
+            )
+        }
         if (existing && existing.contentHash !== transactionHash(transaction))
           throw conflict(
             'Una riga CSV usa un’identità già salvata con dati diversi. Correggi l’identità e riprova.',

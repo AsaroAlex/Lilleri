@@ -80,6 +80,14 @@ export const PROBLEM_MESSAGES = {
     'Controlla i possibili duplicati prima di importare.',
     'Review possible duplicates before importing.',
   ],
+  import_cross_source_review_required: [
+    'Controlla i possibili duplicati bancari e scegli se collegare o conservare ogni riga.',
+    'Review possible bank duplicates and choose whether to link or keep each row.',
+  ],
+  import_duplicate_target_reused: [
+    'Due righe usano lo stesso movimento bancario. Controlla le ripetizioni e scegli di nuovo.',
+    'Two rows use the same bank transaction. Review the repeated rows and choose again.',
+  ],
   import_preview_stale: [
     'L’anteprima è cambiata. Creala di nuovo prima di importare.',
     'The preview changed. Create it again before importing.',

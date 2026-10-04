@@ -19,6 +19,7 @@ import {
 import { consentEvents, consentLifecycles } from '../src/consent-lifecycle-schema.js'
 import { Problem } from '../src/problem.js'
 import { enqueueRevocation } from '../src/revocation-outbox.js'
+import { DEFAULT_RUNTIME_CONFIGURATION, RuntimeConfigurationStore } from '../src/runtime-config.js'
 
 let handle: DatabaseHandle
 const profiles: string[] = []
@@ -95,6 +96,80 @@ afterAll(async () => {
 })
 
 describe('scoped append-only consent lifecycle', () => {
+  test('actual lifecycle routes distinguish unknown recovery from an exact uncovered interval and verified catch-up', async () => {
+    const f = await fixture(true)
+    const expiredAt = '2026-10-02T12:00:00.000Z'
+    await handle.db
+      .update(schema.consents)
+      .set({ expiresAt: expiredAt })
+      .where(eq(schema.consents.id, f.consentId))
+    const configuration = await new RuntimeConfigurationStore(handle.db).ensure(
+      DEFAULT_RUNTIME_CONFIGURATION,
+    )
+    const app = await createApp({
+      db: handle.db,
+      financialScope: handle.withProfile,
+      syncConfiguration: async () => configuration,
+      demoMode: true,
+      seed: false,
+      profileId: f.profileId,
+      provider: f.provider,
+      now: f.now,
+    })
+    try {
+      const renewed = await app.inject({
+        method: 'POST',
+        url: `/v1/connections/${f.connectionId}/renew`,
+        payload: { revision: 0 },
+      })
+      expect(renewed.statusCode, renewed.payload).toBe(200)
+      expect(renewed.json().historyRecovery).toMatchObject({
+        status: 'unverified',
+        interruptedAt: expiredAt,
+        intervals: [],
+      })
+      const complete = async (from: string) => {
+        const started = await app.inject({
+          method: 'POST',
+          url: '/v1/sync/start',
+          payload: {
+            connectionId: f.connectionId,
+            requestId: randomUUID(),
+            mode: 'user_present',
+            from,
+            to: '2026-10-03',
+          },
+        })
+        expect(started.statusCode, started.payload).toBe(200)
+        let job = started.json()
+        for (let attempt = 0; job.state !== 'completed' && attempt < 10; attempt++) {
+          const resumed = await app.inject({
+            method: 'POST',
+            url: `/v1/sync/${job.id}/resume`,
+            payload: {},
+          })
+          expect(resumed.statusCode, resumed.payload).toBe(200)
+          job = resumed.json()
+        }
+        expect(job.state).toBe('completed')
+        return job
+      }
+      const resumed = await complete('2026-10-03')
+      const gap = await app.inject(`/v1/connections/${f.connectionId}/lifecycle`)
+      expect(gap.statusCode, gap.payload).toBe(200)
+      expect(gap.json().historyRecovery).toMatchObject({
+        status: 'bank_gap',
+        intervals: [{ from: '2026-10-02', to: '2026-10-02' }],
+        evidenceJobIds: [resumed.id],
+      })
+      await complete('2026-10-02')
+      const caught = await app.inject(`/v1/connections/${f.connectionId}/lifecycle`)
+      expect(caught.json().historyRecovery).toMatchObject({ status: 'covered', intervals: [] })
+    } finally {
+      await app.close()
+    }
+  })
+
   test('an advancing clock keeps each transition and its journal identical and permits actual JSON/ZIP export', async () => {
     for (const legacy of [false, true]) {
       const f = await fixture(legacy)
