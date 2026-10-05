@@ -1,5 +1,24 @@
 # Lilleri delivery status
 
+## Private real-account connector prepared — 2026-10-05
+
+Implemented a separate Enable Banking personal AIS client and local operator tool,
+with authorization, session-bound reads, complete bounded pagination and session
+closure. The provider's own-account restricted Production route allows a private
+individual to activate their own accounts; public/third-party use needs a separate
+agreement. Session storage and optional financial exports are encrypted outside
+the repository, with an explicit private-terminal reader. No private data is
+imported into the shared Railway application.
+
+Validation passed: 38 new client tests, 381 total provider tests, 18 CLI/storage
+tests, provider/API/mobile typechecks, dependency builds and scoped checks. These
+are protocol/software tests with injected responses, not a live bank acceptance.
+Registration, private PEM, account whitelist, registered HTTPS callback and the
+account holder's bank SCA are still needed. No authenticated bank calls, provider
+signup or Railway changes occurred; the web banking flow remains inactive.
+See [activation commands and official sources](operations/enable-banking-personal.md)
+and [preparation evidence](operations/enable-banking-personal-preparation-20261005.json).
+
 ## Dedicated bank details — 2026-10-05
 
 Published commit `42bdd7c`, Railway `e5119bb6-8e44-4279-b8fa-5a3439aa2831`

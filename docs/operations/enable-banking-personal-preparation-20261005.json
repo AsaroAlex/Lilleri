@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-05",
+  "status": "software_prepared_live_acceptance_not_executed",
+  "provider": "enable-banking",
+  "scope": "private_individual_own_personal_accounts",
+  "providerActivation": "operator_registration_and_account_whitelist_required",
+  "publicApplicationEnabled": false,
+  "financialLedgerImportEnabled": false,
+  "providerCredentialsConfiguredByThisTask": false,
+  "authenticatedProviderCalls": 0,
+  "bankAuthorizationsExecuted": 0,
+  "providerAccountsCreated": 0,
+  "paymentsExecuted": 0,
+  "railwayConfigurationChanged": false,
+  "railwayDeploymentTriggered": false,
+  "financialDatabaseChanged": false,
+  "validation": {
+    "newClientTestsPassed": 38,
+    "providerSuiteTestsPassed": 381,
+    "providerSuiteFilesPassed": 10,
+    "cliAndStorageTestsPassed": 18,
+    "typechecks": ["financial-providers", "api", "mobile"],
+    "dependencyBuildsPassed": true,
+    "scopedBiomePassed": true,
+    "operationalConfigurationLintPassed": true,
+    "diffCheckPassed": true,
+    "defaultCheck": "blocked_missing_configuration_zero_file_and_network_io",
+    "liveBankAcceptance": "not_executed",
+    "testData": "original_synthetic_injected_responses_and_temporary_local_files"
+  },
+  "storage": {
+    "session": "aes_256_gcm_private_local_outside_repository",
+    "key": "separate_private_local_file",
+    "financialCaptureByDefault": "memory_only",
+    "optionalExport": "encrypted_new_private_file_no_overwrite",
+    "exportReader": "explicit_private_interactive_terminal_only"
+  },
+  "requiredOwnerSteps": [
+    "register_enable_banking_production_application",
+    "retain_private_pem_on_owner_device",
+    "activate_each_own_account_in_control_panel",
+    "register_and_verify_exact_https_callback",
+    "configure_private_local_tool",
+    "complete_bank_login_and_sca"
+  ],
+  "officialSources": [
+    "https://enablebanking.com/docs/api/linked-accounts/",
+    "https://enablebanking.com/terms/",
+    "https://enablebanking.com/docs/api/control-panel/",
+    "https://enablebanking.com/docs/faq",
+    "https://enablebanking.com/docs/api/reference/",
+    "https://enablebanking.com/blog/2026/06/12/enable-banking-changelog-may-2026"
+  ]
+}

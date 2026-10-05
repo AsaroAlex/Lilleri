@@ -25,6 +25,30 @@ DECISION: implement the synthetic Italian provider first; merchant/institution f
 
 RFP asks named Italian institutions, card/prepaid account completeness, pending/stable ID behaviour, available/booked balances, history per institution, source timestamps, expiry/SCA/token distinctions, unattended rate allowance, callbacks, revoke/delete behaviour, incident SLA, subprocessors/transfers and fixed/minimum/per-account charges. Run a consented authorised pilot with coverage/fill-rate, replay and match precision fixtures. Use primary plus fallback only when contract/pilot evidence shows value; a fallback is not a promise that switching recreates lost history. Institution/source identities are namespaced so vendor migration remains reviewable.
 
+## Personal real-account pilot — 2026-10-05
+
+The user requests a way to connect their actual accounts. Current first-party
+Enable Banking documentation supplies a bounded route distinct from a public
+beta: a Production application activated by linking each own account, for
+individual personal use or evaluation. The January 2026 terms provide free access
+within those restrictions. Provider console linking must be followed by a new API
+authorization. It neither activates third-party accounts nor grants commercial use.
+
+Prepare one isolated personal AIS client and operator tool for this route. Keep
+session material and any financial capture encrypted locally outside the repository
+and shared preview; do not pass it into the current synthetic ledger or change its
+admission flags. Fresh application/ASPSP metadata, exact country/bank and registered
+HTTPS callback, a one-request state/code exchange, paginated reads and session
+closure are the executable scope. Source protocol tests are not official live
+acceptance. Missing provider registration/key material and bank SCA remain explicit.
+
+This changes the first own-account pilot choice to Enable Banking, without choosing
+or purchasing a commercial provider contract. The broader conditional shortlist
+and hosted release boundaries remain unresolved. The current public Railway
+application still has no authenticated live financial runtime. See the
+[personal setup guide](../operations/enable-banking-personal.md) and its linked
+first-party sources for eligibility, callback and coverage limits.
+
 ## Consequences
 
 Mock delivery is unblocked by unknown contracts and validates the core value before paying for aggregation. Negative: real-bank completeness, refresh and beta date cannot be promised. The shortlist may change after current registry verification and quotes. Source-specific data minimisation and revocation requirements may force adapter changes. Users see real supported institutions only after validation; no 'all Italian banks' copy based on dated marketing coverage. Vendor licensing and data-recipient route are legal questions for counsel/provider, not resolved by an ADR.

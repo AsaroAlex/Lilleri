@@ -1,5 +1,32 @@
 # PROJECT STATE — Lilleri
 
+## Own-account Enable Banking connector prepared — 2026-10-05
+
+The user's request for actual account linking has a concrete first-party route:
+Enable Banking Production restricted for the operator's own personal accounts.
+January 2026 terms allow free access within that scope; public/third-party use
+requires separate commercial activation. Implemented an isolated personal AIS
+client and local operator CLI: application/ASPSP checks, JWT RS256, authorization,
+one-attempt state/code exchange, session binding, balances, paginated transactions
+and exact session deletion. Financial values retain source decimal strings and
+balance kinds; missing/unstable IDs never fabricate identity or deduplication.
+Session metadata is encrypted in private local storage outside the repository;
+financial captures are memory-only by default. Optional encrypted export has an
+explicit private-terminal reader. Unknown exchange/cleanup outcomes require
+provider review; later read failures preserve a valid session for retry.
+
+Software validation: 38 new client tests, all 381 provider tests, 18 CLI/storage
+tests, provider/API/mobile typechecks and dependency builds passed. Scoped Biome,
+operational configuration lint and diff checks passed. Tests use original injected
+responses and temporary files: no credentialed provider/bank calls, signup, consent,
+payments, database mutation or Railway configuration/deployment occurred.
+The safe default check reports missing configuration without I/O. Live acceptance
+remains unexecuted pending owner registration, PEM, account whitelist, registered
+HTTPS callback and bank SCA. The published web runtime remains unchanged and
+synthetic-only; this tool does not import private finance into that shared site.
+See `docs/operations/enable-banking-personal.md` and
+`docs/operations/enable-banking-personal-preparation-20261005.json`.
+
 ## Current selected bank layout release — 2026-10-05 (Europe/Rome)
 
 Published commit `42bdd7c6d586c08115ddf1833425dcc1c684e125`, Railway deployment

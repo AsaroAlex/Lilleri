@@ -74,6 +74,16 @@ Operational foundations include audited runtime configuration, content-free Open
 
 For synthetic browser sign-up, sessions, passkeys and TOTP, use the explicitly opt-in [local identity workflow](docs/architecture/local-identity.md). Set `DEMO_MODE=0`, `LOCAL_AUTH_MODE=1`, `EXPO_PUBLIC_LOCAL_AUTH_MODE=1` and matching localhost API/client origins. Supply a stable `LOCAL_AUTH_SECRET` securely in the process environment; no secret is included in the repository. Signup starts with an empty owned profile and connects no source automatically. Production and non-loopback binding remain refused.
 
+## Private access to your own bank accounts
+
+Enable Banking supports a restricted Production application for a private
+individual's own linked accounts. A separate personal AIS client and local command
+are available; provider registration, account whitelist activation and bank
+authorization must be completed by the account holder. The
+[personal setup guide](docs/operations/enable-banking-personal.md) covers the exact
+commands, private storage, official terms and coverage limits. This tool does not
+enable bank access in the shared Railway application or import its output there.
+
 ## Quality commands
 
 ```bash
