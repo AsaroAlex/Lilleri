@@ -1,5 +1,31 @@
 import type { ProfileLocale } from '@lilleri/domain'
 
+/** Market labels stay explicit even when the same bank is present in several countries. */
+export const BANK_DIRECTORY_COUNTRY_NAMES = {
+  IT: ['Italia', 'Italy'],
+  FR: ['Francia', 'France'],
+  DE: ['Germania', 'Germany'],
+  ES: ['Spagna', 'Spain'],
+  PT: ['Portogallo', 'Portugal'],
+  NL: ['Paesi Bassi', 'Netherlands'],
+  BE: ['Belgio', 'Belgium'],
+  AT: ['Austria', 'Austria'],
+  IE: ['Irlanda', 'Ireland'],
+  GB: ['Regno Unito', 'United Kingdom'],
+  CH: ['Svizzera', 'Switzerland'],
+  SE: ['Svezia', 'Sweden'],
+  DK: ['Danimarca', 'Denmark'],
+  NO: ['Norvegia', 'Norway'],
+  FI: ['Finlandia', 'Finland'],
+  PL: ['Polonia', 'Poland'],
+} as const satisfies Readonly<Record<string, readonly [string, string]>>
+
+export function bankCountryLabel(countryCode: string, locale: ProfileLocale): string {
+  const names =
+    BANK_DIRECTORY_COUNTRY_NAMES[countryCode as keyof typeof BANK_DIRECTORY_COUNTRY_NAMES]
+  return names?.[locale === 'it-IT' ? 0 : 1] ?? countryCode
+}
+
 const messages = {
   title: ['Trova la tua banca', 'Find your bank'],
   intro: [
@@ -8,6 +34,8 @@ const messages = {
   ],
   search: ['Cerca una banca o un servizio', 'Search for a bank or service'],
   clearSearch: ['Cancella la ricerca', 'Clear search'],
+  country: ['Paese', 'Country'],
+  allCountries: ['Tutti i paesi', 'All countries'],
   all: ['Tutti', 'All'],
   bank: ['Banche', 'Banks'],
   card: ['Carte', 'Cards'],
@@ -22,7 +50,10 @@ const messages = {
   ],
   retry: ['Riprova', 'Try again'],
   empty: ['Nessun servizio trovato', 'No services found'],
-  emptyHelp: ['Prova il nome completo o un’altra ricerca.', 'Try the full name or another search.'],
+  emptyHelp: [
+    'Prova un altro nome oppure cambia il paese o il tipo di servizio.',
+    'Try another name or change the country or service type.',
+  ],
   emptyDirectory: [
     'L’elenco dei servizi non è ancora disponibile.',
     'The service directory is not available yet.',

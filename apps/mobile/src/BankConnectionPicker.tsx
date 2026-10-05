@@ -11,6 +11,7 @@ import {
   Linking,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -19,9 +20,9 @@ import {
 } from 'react-native'
 import { AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './accessibility/web-focus'
-import { matchesBankService } from './bank-directory-search'
+import { bankServiceCountry, filterBankServices } from './bank-directory-search'
 import { FinanceVisual } from './FinanceVisual'
-import { bankPickerCopy } from './i18n/bank-picker-messages'
+import { bankCountryLabel, bankPickerCopy } from './i18n/bank-picker-messages'
 import { useI18n } from './i18n/context'
 
 export interface BankConnectionPickerProps {
@@ -99,6 +100,8 @@ export function BankConnectionPicker({
     scope: Scope
     value: 'all' | ConnectionDirectoryKind
   }>({ scope: resetKey, value: 'all' })
+  const [countryState, setCountry] = useState({ scope: resetKey, value: 'IT' })
+  const [countryMenuState, setCountryMenu] = useState({ scope: resetKey, open: false })
   const [selection, setSelection] = useState<{ scope: Scope; id: string | null }>({
     scope: resetKey,
     id: null,
@@ -143,6 +146,19 @@ export function BankConnectionPicker({
   const directory = currentState ? state.value : null
   const query = queryState.scope === resetKey ? queryState.value : ''
   const filter = filterState.scope === resetKey ? filterState.value : 'all'
+  const country =
+    countryState.scope === resetKey ? countryState.value : (directory?.country ?? 'IT')
+  const countryMenuOpen = countryMenuState.scope === resetKey && countryMenuState.open
+  const countries = [
+    ...new Set([
+      directory?.country ?? 'IT',
+      ...((
+        directory as (ConnectionDirectoryDto & { readonly countries?: readonly string[] }) | null
+      )?.countries ??
+        directory?.entries.map(bankServiceCountry) ??
+        []),
+    ]),
+  ]
   const selected =
     selection.scope === resetKey
       ? directory?.entries.find((entry) => entry.id === selection.id)
@@ -152,10 +168,7 @@ export function BankConnectionPicker({
   const listWidth = selected && !compact ? width - 340 - 24 : width
   const columns = listWidth >= 940 ? 4 : listWidth >= 600 ? 3 : listWidth >= 248 ? 2 : 1
   const tileWidth = (listWidth - (columns - 1) * 8) / columns
-  const filtered =
-    directory?.entries.filter(
-      (entry) => (filter === 'all' || entry.kind === filter) && matchesBankService(entry, query),
-    ) ?? []
+  const filtered = filterBankServices(directory?.entries ?? [], query, filter, country)
 
   useEffect(() => {
     if (selected && focusDetail.current) {
@@ -177,6 +190,13 @@ export function BankConnectionPicker({
   }
   const clearSelection = () => {
     returnToSearch.current = true
+    setSelection({ scope: resetKey, id: null })
+  }
+  const chooseCountry = (value: string) => {
+    setCountry({ scope: resetKey, value })
+    setCountryMenu({ scope: resetKey, open: false })
+    focusDetail.current = false
+    returnToSearch.current = false
     setSelection({ scope: resetKey, id: null })
   }
   const serviceKinds = ['bank', 'card', 'wallet'] as const
@@ -270,7 +290,9 @@ export function BankConnectionPicker({
             <Text ref={headingRef} accessibilityRole="header" aria-level={3} style={s.detailTitle}>
               {entry.name}
             </Text>
-            <Text style={s.caption}>{kindLabel(entry.kind)}</Text>
+            <Text style={s.caption}>
+              {kindLabel(entry.kind)} · {bankCountryLabel(bankServiceCountry(entry), locale)}
+            </Text>
           </View>
         </View>
         <View style={s.route}>
@@ -405,23 +427,90 @@ export function BankConnectionPicker({
                   </Pressable>
                 )}
               </View>
-              <View style={s.filters}>
-                {(['all', ...serviceKinds] as const).map((kind) => (
-                  <Pressable
-                    key={kind}
-                    accessibilityRole="button"
-                    accessibilityLabel={copy[kind]}
-                    accessibilityState={{ selected: filter === kind }}
-                    aria-pressed={filter === kind}
-                    onPress={() => setFilter({ scope: resetKey, value: kind })}
-                    style={[s.filter, filter === kind && s.selectedFilter]}
-                  >
-                    <Text style={[s.filterText, filter === kind && s.selectedFilterText]}>
-                      {copy[kind]}
-                    </Text>
-                  </Pressable>
-                ))}
+              <View style={s.controls}>
+                <View style={s.countryField}>
+                  <Text style={s.caption}>{copy.country}</Text>
+                  {Platform.OS === 'web' ? (
+                    <select
+                      aria-label={copy.country}
+                      value={country}
+                      onChange={(event) => chooseCountry(event.target.value)}
+                      style={{
+                        color: c.textPrimary,
+                        backgroundColor: c.surface,
+                        colorScheme: theme,
+                        border: `1px solid ${c.borderStrong}`,
+                        borderRadius: 8,
+                        fontFamily: 'Geist',
+                        fontSize: 14,
+                        padding: '0 10px',
+                        height: 44,
+                        minWidth: 0,
+                        width: '100%',
+                        flex: 1,
+                      }}
+                    >
+                      {countries.map((code) => (
+                        <option key={code} value={code}>
+                          {bankCountryLabel(code, locale)}
+                        </option>
+                      ))}
+                      <option value="all">{copy.allCountries}</option>
+                    </select>
+                  ) : (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${copy.country}: ${country === 'all' ? copy.allCountries : bankCountryLabel(country, locale)}`}
+                      accessibilityState={{ expanded: countryMenuOpen }}
+                      onPress={() => setCountryMenu({ scope: resetKey, open: !countryMenuOpen })}
+                      style={s.countryButton}
+                    >
+                      <Text style={s.countryText}>
+                        {country === 'all' ? copy.allCountries : bankCountryLabel(country, locale)}
+                      </Text>
+                      <Text aria-hidden={true} style={s.caption}>
+                        ▾
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+                <View style={s.filters}>
+                  {(['all', ...serviceKinds] as const).map((kind) => (
+                    <Pressable
+                      key={kind}
+                      accessibilityRole="button"
+                      accessibilityLabel={copy[kind]}
+                      accessibilityState={{ selected: filter === kind }}
+                      aria-pressed={filter === kind}
+                      onPress={() => setFilter({ scope: resetKey, value: kind })}
+                      style={[s.filter, filter === kind && s.selectedFilter]}
+                    >
+                      <Text style={[s.filterText, filter === kind && s.selectedFilterText]}>
+                        {copy[kind]}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
               </View>
+              {Platform.OS !== 'web' && countryMenuOpen && (
+                <ScrollView style={s.countryMenu}>
+                  <View accessibilityRole="radiogroup" accessibilityLabel={copy.country}>
+                    {[...countries, 'all'].map((code) => (
+                      <Pressable
+                        key={code}
+                        accessibilityRole="radio"
+                        accessibilityState={{ checked: country === code }}
+                        onPress={() => chooseCountry(code)}
+                        style={[s.countryOption, country === code && s.selectedTile]}
+                      >
+                        <Text style={s.countryText}>
+                          {code === 'all' ? copy.allCountries : bankCountryLabel(code, locale)}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
             </>
           )}
           <View style={[s.content, selected && !compact && s.contentWide]}>
@@ -471,7 +560,7 @@ export function BankConnectionPicker({
                               key={entry.id}
                               testID={`bank-service-${entry.id}`}
                               accessibilityRole="button"
-                              accessibilityLabel={entry.name}
+                              accessibilityLabel={`${entry.name}, ${bankCountryLabel(bankServiceCountry(entry), locale)}`}
                               accessibilityHint={copy.choose}
                               accessibilityState={{ selected: selected?.id === entry.id }}
                               aria-pressed={selected?.id === entry.id}
@@ -486,7 +575,12 @@ export function BankConnectionPicker({
                               <View accessible={false} aria-hidden={true} style={s.monogram}>
                                 <Text style={s.monogramText}>{monogram(entry.name)}</Text>
                               </View>
-                              <Text style={s.bankName}>{entry.name}</Text>
+                              <View style={s.bankIdentity}>
+                                <Text style={s.bankName}>{entry.name}</Text>
+                                <Text style={s.caption}>
+                                  {bankCountryLabel(bankServiceCountry(entry), locale)}
+                                </Text>
+                              </View>
                             </Pressable>
                           ))}
                         </View>
@@ -539,6 +633,36 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
     },
     clearSearch: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
     clearGlyph: { color: c.textSecondary, fontFamily: 'Geist', fontSize: 24, lineHeight: 28 },
+    controls: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 14,
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    countryField: {
+      flexDirection: 'row',
+      gap: 10,
+      alignItems: 'center',
+      width: 250,
+      maxWidth: '100%',
+    },
+    countryButton: {
+      flex: 1,
+      minHeight: 44,
+      paddingHorizontal: 10,
+      borderWidth: 1,
+      borderColor: c.borderStrong,
+      borderRadius: 8,
+      backgroundColor: c.surface,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 10,
+    },
+    countryText: { color: c.textPrimary, fontFamily: 'Geist', fontSize: 14, lineHeight: 21 },
+    countryMenu: { maxHeight: 280, borderWidth: 1, borderColor: c.border, borderRadius: 8 },
+    countryOption: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 },
     filters: {
       flexDirection: 'row',
       flexWrap: 'wrap',
@@ -589,6 +713,7 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
       lineHeight: 18,
     },
     bankName: { color: c.textPrimary, fontFamily: 'GeistMedium', fontSize: 14, lineHeight: 20 },
+    bankIdentity: { gap: 3 },
     details: { minWidth: 0, gap: 18 },
     detailsWide: {
       width: 340,
