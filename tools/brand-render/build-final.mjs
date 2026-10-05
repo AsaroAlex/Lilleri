@@ -393,7 +393,9 @@ for (const [from, to, bg, width] of [
     colors.dark.background,
     1400,
   ],
-  ['logo/lilleri-wordmark.svg', 'png/wordmark.png', colors.light.background, 1000],
+  // Native headers use the outlined wordmarks without an embedded background.
+  ['logo/lilleri-wordmark.svg', 'png/wordmark.png', undefined, 1000],
+  ['logo/lilleri-wordmark-on-dark.svg', 'png/wordmark-dark.png', undefined, 1000],
 ])
   write(to, renderSvg(fs.readFileSync(path.join(out, from), 'utf8'), { width, background: bg }))
 const biome = path.join(root, 'node_modules/.bin/biome')

@@ -239,9 +239,16 @@
       "height": 64
     },
     {
+      "path": "png/wordmark-dark.png",
+      "bytes": 18463,
+      "sha256": "d7731f489fedbc4ef66605119b0b86d2f8bac815ae6d80a4113fd027f9026dd9",
+      "width": 1000,
+      "height": 349
+    },
+    {
       "path": "png/wordmark.png",
-      "bytes": 16719,
-      "sha256": "8ee6ffbf671c019948841121d704fb4521762f12997067a16d01d5f1d0fe3c13",
+      "bytes": 17619,
+      "sha256": "14a736944256705d5f670be3dba41b3ae356e6591d148b7a899cfa0a133afc34",
       "width": 1000,
       "height": 349
     },

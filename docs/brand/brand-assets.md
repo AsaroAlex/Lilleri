@@ -4,7 +4,7 @@
 
 ## Final deliverable inventory
 
-Every final asset/token/font file is listed below. Exact byte sizes, raster dimensions and SHA256 are in `packages/brand/tokens/assets-manifest.json` (61 indexed files, excluding the manifest's own circular hash). Main vectors are paths with no external font references; wordmark outlines use licensed Geist glyphs plus original l/dot geometry. App icon raster is 1024×1024, full-bleed opaque field. PNG 16/24 symbols use the optical small cut, PNG 32/64/1024 use the main mark.
+Every final asset/token/font file is listed below. Exact byte sizes, raster dimensions and SHA256 are in `packages/brand/tokens/assets-manifest.json` (62 indexed files, excluding the manifest's own circular hash). Main vectors are paths with no external font references; wordmark outlines use licensed Geist glyphs plus original l/dot geometry. App icon raster is 1024×1024, full-bleed opaque field. PNG 16/24 symbols use the optical small cut, PNG 32/64/1024 use the main mark.
 
 | File | Format | Intended use | Status |
 |---|---|---|---|
@@ -49,6 +49,7 @@ Every final asset/token/font file is listed below. Exact byte sizes, raster dime
 | `packages/brand/png/symbol-24.png` | PNG | Raster export / placement review | Generated evaluation/export; not user validation |
 | `packages/brand/png/symbol-32.png` | PNG | Raster export / placement review | Generated evaluation/export; not user validation |
 | `packages/brand/png/symbol-64.png` | PNG | Raster export / placement review | Generated evaluation/export; not user validation |
+| `packages/brand/png/wordmark-dark.png` | PNG | Raster export / placement review | Generated evaluation/export; not user validation |
 | `packages/brand/png/wordmark.png` | PNG | Raster export / placement review | Generated evaluation/export; not user validation |
 | `packages/brand/tokens/colors.json` | JSON | Direct light/dark semantic roles | Generated source/evidence; build checked |
 | `packages/brand/tokens/contrast-report.json` | JSON | Measured WCAG pair evidence | Generated source/evidence; build checked |

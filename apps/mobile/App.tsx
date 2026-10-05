@@ -923,9 +923,13 @@ function AppSurface({
       <View style={[s.appHeader, windowWidth < 400 && s.compactHeader]}>
         <Image
           source={
-            theme === 'dark'
-              ? require('../../packages/brand/png/lockup-dark.png')
-              : require('../../packages/brand/png/lockup-light.png')
+            Platform.OS === 'web'
+              ? theme === 'dark'
+                ? require('../../packages/brand/logo/lilleri-wordmark-on-dark.svg')
+                : require('../../packages/brand/logo/lilleri-wordmark.svg')
+              : theme === 'dark'
+                ? require('../../packages/brand/png/wordmark-dark.png')
+                : require('../../packages/brand/png/wordmark.png')
           }
           style={[s.logo, wide && s.wideLogo, windowWidth < 400 && s.compactLogo]}
           resizeMode="contain"
@@ -2199,11 +2203,11 @@ function styles(c: ThemeColors) {
       borderBottomWidth: 1,
       borderColor: c.border,
     },
-    logo: { width: 122, height: 40 },
+    logo: { width: 90, height: 32 },
     compactHeader: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
-    compactLogo: { width: 106, height: 36 },
+    compactLogo: { width: 78, height: 28 },
     compactHeaderActions: { gap: 4 },
-    wideLogo: { width: 146, height: 48 },
+    wideLogo: { width: 108, height: 38 },
     headerActions: {
       flexDirection: 'row',
       flexWrap: 'wrap',

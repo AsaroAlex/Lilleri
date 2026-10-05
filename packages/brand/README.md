@@ -21,4 +21,6 @@ Subpaths: `@lilleri/brand/tokens.css`, `/tokens.json` (DTCG-like design intercha
 
 Canonical generation: `node tools/brand-render/build-final.mjs`; proof generation: `node tools/brand-render/accessibility-proof.mjs`; type specimens: `python3 tools/brand-render/type-specimens.py` with fontTools + Brotli installed. Existing full font sources and recorded SHA256 are included in explorations/type; no download is required to regenerate. Renderer prerequisite: frozen install in tools/brand-render. This package itself only needs root TypeScript for build.
 
+The product header uses the wordmark alone, avoiding a repeated “li” before “lilleri”. Web loads the outlined light/dark SVGs; native uses the transparent 1000px `png/wordmark.png` and `png/wordmark-dark.png` fallbacks. The separate monogram remains available for app icons and other compact placements.
+
 Validation: `pnpm --filter @lilleri/brand build` / `typecheck`; generation asserts80 required text/UI contrast pairs. `tokens/contrast-report.json` records every pair. Decorative borders/tints/chart fills are excluded; use labels/outlines for charts. The new glyph specimen workflow corrected older Latin-ext-only toolkit font inputs. Final assets/font licence inventory and source assumptions are in `docs/brand/brand-assets.md`.
