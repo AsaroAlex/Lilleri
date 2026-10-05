@@ -1,6 +1,55 @@
 # PROJECT STATE — Lilleri
 
-## Current integration and release handoff — 2026-10-04 (Europe/Rome)
+## Current finance UI and clean-data release — 2026-10-05 (Europe/Rome)
+
+The latest user request is to remove test data, begin real-bank testing, improve the
+visual hierarchy of Home/accounts/transactions/review decisions, and move Privacy
+inside Settings. Continued parallel work and tested Railway publication are already
+authorized. The optional question asking for the first bank, country and any existing
+provider account has not been answered.
+
+Published commit `875973dbd2b8780f0c8981e2c0f8ee89ad7dc1df`, Railway deployment
+`a7fb1b6c-619f-4a16-a24f-b9eb2d0f89d9` **SUCCESS**, at
+https://lilleri-production.up.railway.app/. Original illustrations distinguish
+accounts/categories/navigation; movements group by date; filters are compact and
+expandable; review decisions explain their effects; Privacy and ownership controls
+are nested in Settings. Balance observation dates use the profile timezone.
+
+`DEV_DEMO_FIXTURES=empty` is live. Public Home/search/90-day history contain **zero
+active accounts, transactions or connections**. Exactly **35 proven mock rows,
+5 accounts and 1 connection** are retired from active views. A read-only public
+ownership export independently confirms the original **35/5/1** canonical records,
+retirement revision **1** and **one immutable event** after both deployments.
+No physical archive/key erasure or public financial validation write occurred.
+Manual/CSV/explicit keep-manual ownership is protected; public protected counts are
+currently zero. The same volume, database/recovery paths and one replica remain.
+Do not unset the flag to simulate bank access: retirement remains durable, mock
+reconnect/sync is blocked, and unauthenticated personal payloads are rejected.
+
+Validation: repository check **23/23 Turbo tasks**, API **583 passed/3 skipped** on
+PGlite and **585 passed/1 skipped** on PostgreSQL (46 files), provider **265** and
+mobile **45**. PostgreSQL restore passed **8/8** against **37 frozen migrations**;
+production backup acceptance remains false. Browser checks passed 14 visual,
+8 interactive, 5 source and 7 guided groups, plus empty screens at
+320/390/768/1440px and a read-only midnight/timezone fixture. A local transition
+preserved one manual account/expense and exact EUR **97.75** balance. Final UI-only
+heading/date refinements passed mobile typecheck/build and targeted browser checks
+after the full repository check.
+
+**Real bank access is not active.** The official Yapily Modelo sandbox authorization
+protocol client is now implemented/tested separately from its reader; neither is
+registered. Protected runtime/callback/store, sync admission, external key/journal
+adapters, provider application/consent and a live adapter remain prerequisites.
+Never invite real financial uploads into the shared preview or ask for secrets in
+chat. Bank/country/provider availability is the next missing user information.
+All 40 roadmap epics retain unfinished stories; no real-bank acceptance is claimed.
+
+Evidence: `docs/operations/finance-ui-clean-release-20261005.json`,
+`docs/design/finance-ui-review-20261004.md`, and
+`docs/operations/empty-preview-fixtures.md`. Local reports are under
+`/workspace/.lilleri-validation/finance-*` and `clean-data-postgres-*`.
+
+## Previous integration and release handoff — 2026-10-04 (Europe/Rome)
 
 Persistent user goal: execute the seven development phases in parallel, publish tested
 increments frequently on the existing Railway URL, and make the visual design original.

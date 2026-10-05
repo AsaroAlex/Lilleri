@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 06:53:09 UTC",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "875973dbd2b8780f0c8981e2c0f8ee89ad7dc1df",
+  "deploymentId": "a7fb1b6c-619f-4a16-a24f-b9eb2d0f89d9",
+  "deploymentStatus": "SUCCESS",
+  "initialCleanDeploymentId": "e6d6a0ed-95cc-4e0c-93be-1bfa3c9a9770",
+  "bundle": "/_expo/static/js/web/index-fed48241ecf1beecb5d3337b18974095.js",
+  "configuration": {
+    "DEV_DEMO_FIXTURES": "empty",
+    "existingVolumeId": "4599b33e-5413-4388-9980-872cb2ca7ef2",
+    "mountPath": "/data",
+    "databasePath": "/data/database",
+    "recoveryPath": "/data/recovery",
+    "namespaceAndReplicaPreserved": true
+  },
+  "publicVerification": {
+    "mode": "synthetic",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "cleanup": {
+      "retiredTransactions": 35,
+      "retiredAccounts": 5,
+      "retiredConnections": 1,
+      "protectedTransactions": 0,
+      "protectedAccounts": 0,
+      "protectedConnections": 0,
+      "userDecisions": 0,
+      "archivePreserved": true
+    },
+    "ownedArchive": {
+      "accounts": 5,
+      "transactions": 35,
+      "connections": 1,
+      "fixtureAuditState": "retired",
+      "fixtureAuditRevision": 1,
+      "fixtureAuditEvents": 1
+    },
+    "ledgerSearchItems": 0,
+    "ledgerProjectionItems": 0,
+    "ledgerProjectionAccounts": 0,
+    "syntheticInstitutions": 0,
+    "merchantResolutions": 0,
+    "financialMutationsSentByValidation": 0,
+    "httpRequests": [
+      {
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/_expo/static/js/web/index-fed48241ecf1beecb5d3337b18974095.js",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/ledger/search",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/ledger/projection",
+        "status": 200
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/demo",
+        "status": 200
+      }
+    ]
+  },
+  "localVerification": {
+    "repositoryCheck": {
+      "turboTasksPassed": 23,
+      "turboTasksTotal": 23,
+      "apiPGlite": {
+        "passed": 583,
+        "skipped": 3,
+        "files": 46
+      },
+      "apiPostgreSql": {
+        "passed": 585,
+        "skipped": 1,
+        "files": 46
+      },
+      "providersPassed": 265,
+      "mobilePassed": 45
+    },
+    "postgresRestore": {
+      "checksPassed": 8,
+      "checksTotal": 8,
+      "frozenMigrations": 37,
+      "productionBackupAccepted": false
+    },
+    "browser": {
+      "visualChecks": 14,
+      "interactiveChecks": 8,
+      "sourceChecks": 5,
+      "guidedSourceChecks": 7,
+      "emptyWidths": [
+        320,
+        390,
+        768,
+        1440
+      ],
+      "profileTimezoneMidnightPassed": true,
+      "readOnlyTimezoneFixture": true
+    },
+    "transition": {
+      "retiredMockTransactions": 35,
+      "preservedManualTransactions": 1,
+      "preservedManualBalanceMinor": "9775",
+      "currency": "EUR",
+      "personalWritesBlockedBeforeParsing": true,
+      "mockReconnectBlocked": true
+    }
+  },
+  "realBankConnection": {
+    "active": false,
+    "providerResourcesSupplied": false,
+    "protectedPublicRuntimeConfigured": false,
+    "sandboxAuthorisationProtocolImplemented": true,
+    "sandboxClientRegistered": false,
+    "liveAdapterImplemented": false
+  }
+}

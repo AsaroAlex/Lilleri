@@ -1,5 +1,33 @@
 # Lilleri delivery status
 
+## Visual finance UI and empty preview — 2026-10-05
+
+Published at [Lilleri](https://lilleri-production.up.railway.app/): commit `875973d`,
+Railway `a7fb1b6c-619f-4a16-a24f-b9eb2d0f89d9` **SUCCESS**. Original illustrations,
+compact account tiles, dated transaction groups, expandable filters, guided decisions
+and Settings → Privacy are live. Observation dates follow the profile timezone.
+
+Public Home, ledger search and 90-day history show zero accounts/transactions.
+Exactly 35 mock rows, 5 accounts and 1 connection were retired. A read-only public
+ownership export still contains all 35/5/1 canonical records, retirement revision 1
+and one immutable event after the second deployment. Archive/recovery paths and the
+existing volume remain unchanged. The empty preview prevents mock reappearance and
+refuses personal uploads until protected identity exists.
+
+The complete check passed 23/23 tasks: API 583/3 skipped on PGlite, 585/1 skipped on
+PostgreSQL, 46 files; provider 265 and mobile 45. PostgreSQL restore passed 8/8 with
+37 migrations. Browser proof includes 14 visual, 8 interactive, 5 source and 7 guided
+groups; final empty layouts and midnight/timezone display passed separately. A local
+cleanup retained a manual expense and exact EUR97.75 balance. Final UI-only refinements
+passed typecheck/build and targeted browser checks after the full repository run.
+
+The official Modelo authorization protocol client is prepared but unregistered;
+live bank access, provider resources and protected hosted runtime remain incomplete.
+The first bank/country/provider account is still missing user information.
+[Review](design/finance-ui-review-20261004.md) ·
+[release evidence](operations/finance-ui-clean-release-20261005.json) ·
+[cleanup semantics](operations/empty-preview-fixtures.md).
+
 ## Neutral UI / UX iteration — 2026-10-04
 
 The founder's colour feedback is applied at [Lilleri](https://lilleri-production.up.railway.app/):
