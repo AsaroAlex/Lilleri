@@ -1,4 +1,4 @@
-import { bigint, boolean, index, pgTable, text } from 'drizzle-orm/pg-core'
+import { bigint, boolean, index, integer, jsonb, pgTable, text } from 'drizzle-orm/pg-core'
 
 /** Stripe's documented subscription statuses; the migration enforces the same set. */
 export const BILLING_SUBSCRIPTION_STATUSES = [
@@ -47,5 +47,17 @@ export const billingEvents = pgTable('billing_events', {
   id: text('id').primaryKey(),
   type: text('type').notNull(),
   receivedAt: text('received_at').notNull(),
+})
+/**
+ * Cancellations owed by a profile deletion (trusted only, no foreign key): armed before the
+ * erasure, removed once Stripe confirms, retried with backoff until then.
+ */
+export const billingCancellations = pgTable('billing_cancellations', {
+  profileId: text('profile_id').primaryKey(),
+  stripeCustomerId: text('stripe_customer_id'),
+  subscriptionIds: jsonb('subscription_ids').$type<string[]>().notNull(),
+  attempts: integer('attempts').notNull().default(0),
+  armedAt: text('armed_at').notNull(),
+  nextAttemptAt: text('next_attempt_at').notNull(),
 })
 export type BillingSubscriptionRow = typeof billingSubscriptions.$inferSelect

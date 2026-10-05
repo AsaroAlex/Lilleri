@@ -5,18 +5,28 @@ import { eq, inArray, sql } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 import { createApp } from '../src/app.js'
 import {
+  armBillingCancellation,
+  BILLING_CANCELLATION_GRACE_MS,
   type BillingConfiguration,
+  type BillingExtensionOptions,
   type BillingLogEntry,
   billingConfigurationFromEnvironment,
   CHECKOUT_WITHDRAWAL_NOTICE,
   cancelBillingForProfile,
   createBillingExtension,
   profilePlan,
+  runBillingCancellations,
   STRIPE_API_VERSION,
+  settleBillingCancellation,
   verifiedPlusState,
   verifyStripeSignature,
 } from '../src/billing.js'
-import { billingCustomers, billingEvents, billingSubscriptions } from '../src/billing-schema.js'
+import {
+  billingCancellations,
+  billingCustomers,
+  billingEvents,
+  billingSubscriptions,
+} from '../src/billing-schema.js'
 import type { IdentityMailMessage } from '../src/identity-mail.js'
 import * as identity from '../src/identity-schema.js'
 
@@ -211,14 +221,17 @@ const configurationFor = (
   ...extra,
 })
 // Every app shares one identity secret, so a session works against each billing variant.
-const appFor = async (billing: BillingConfiguration | null) => {
+const appFor = async (
+  billing: BillingConfiguration | null,
+  options: BillingExtensionOptions = {},
+) => {
   const app = await createApp({
     db: handle.db,
     demoMode: false,
     environment: 'production',
     financialScope: handle.withProfile,
     hostedIdentity,
-    extensions: [createBillingExtension(billing)],
+    extensions: [createBillingExtension(billing, options)],
   })
   apps.push(app)
   return app
@@ -335,6 +348,10 @@ afterAll(async () => {
   for (const id of users) await handle.db.delete(identity.user).where(eq(identity.user.id, id))
   for (const id of profiles)
     await handle.db.delete(schema.profiles).where(eq(schema.profiles.id, id))
+  if (profiles.length)
+    await handle.db
+      .delete(billingCancellations)
+      .where(inArray(billingCancellations.profileId, profiles))
   if (events.length) await handle.db.delete(billingEvents).where(inArray(billingEvents.id, events))
   await handle.close()
 })
@@ -998,5 +1015,134 @@ describe('billing availability and isolation', () => {
         .from(billingSubscriptions)
         .where(eq(billingSubscriptions.profileId, second)),
     ).toEqual([])
+  })
+})
+
+describe('Plus purchase gate and deletion cancellations', () => {
+  test('Plus is not sold while its benefit cannot be delivered; Stripe is never called', async () => {
+    const stripe = new FakeStripe()
+    let open = false
+    const app = await appFor(configurationFor(stripe), { purchaseGate: async () => open })
+    const owner = await person(app)
+    expect((await billing(app, owner.cookie)).purchaseAvailable).toBe(false)
+    const refused = await post(app, '/v1/billing/checkout', owner.cookie, { interval: 'month' })
+    expect(refused.statusCode).toBe(409)
+    expect(refused.json().code).toBe('plus_unavailable')
+    expect(stripe.count('POST', '/v1/')).toBe(0)
+    open = true
+    expect((await billing(app, owner.cookie)).purchaseAvailable).toBe(true)
+    const accepted = await post(app, '/v1/billing/checkout', owner.cookie, { interval: 'month' })
+    expect(accepted.statusCode, accepted.payload).toBe(200)
+  })
+
+  test('the cancellation queue is trusted-only and forced under row-level security', async () => {
+    const [table] = (
+      (await handle.db.execute(
+        sql`SELECT relrowsecurity, relforcerowsecurity,
+        has_table_privilege('lilleri_runtime','billing_cancellations','SELECT') AS runtime_read,
+        has_table_privilege('lilleri_runtime','billing_cancellations','INSERT') AS runtime_insert
+        FROM pg_class WHERE relname='billing_cancellations'`,
+      )) as unknown as { rows: Record<string, boolean>[] }
+    ).rows
+    expect(table).toEqual({
+      relrowsecurity: true,
+      relforcerowsecurity: true,
+      runtime_read: false,
+      runtime_insert: false,
+    })
+  })
+
+  test('a deleted profile is never charged again, even when Stripe is down at deletion', async () => {
+    const stripe = new FakeStripe()
+    const deferred: BillingLogEntry[] = []
+    const configuration = configurationFor(stripe, { log: (entry) => deferred.push(entry) })
+    const profileId = await syntheticProfile()
+    expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(false)
+    const row = await storedSubscription(profileId)
+    const stored = stripe.subscription(row.stripeCustomerId, 'active')
+    stripe.subscriptions.delete(stored.id)
+    stripe.subscriptions.set(row.id, { ...stored, id: row.id })
+    // Created by a checkout whose webhook has not arrived yet: known only to Stripe.
+    const inFlight = stripe.subscription(row.stripeCustomerId, 'trialing')
+    expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(true)
+    await handle.db.delete(schema.profiles).where(eq(schema.profiles.id, profileId))
+    expect(
+      await handle.db
+        .select()
+        .from(billingSubscriptions)
+        .where(eq(billingSubscriptions.profileId, profileId)),
+    ).toEqual([])
+
+    stripe.outage = true
+    expect(
+      await settleBillingCancellation(configuration, handle.db, profileId, { discardKept: true }),
+    ).toBe('deferred')
+    expect(deferred).toEqual([
+      { event: 'billing_cancellation_deferred', attempts: 1, transient: true },
+    ])
+    expect(JSON.stringify(deferred)).not.toContain(profileId)
+    const [queued] = await handle.db
+      .select()
+      .from(billingCancellations)
+      .where(eq(billingCancellations.profileId, profileId))
+    expect(queued).toMatchObject({ attempts: 1, stripeCustomerId: row.stripeCustomerId })
+    expect(queued?.subscriptionIds).toEqual([row.id])
+    expect(Date.parse(queued?.nextAttemptAt ?? '')).toBeGreaterThan(Date.parse(clock))
+
+    stripe.outage = false
+    const runAt = (at: string) =>
+      runBillingCancellations({ ...configuration, now: () => at }, handle.db)
+    expect((await runAt(clock)).canceled).toBe(0)
+    expect(await runAt(new Date(Date.parse(clock) + 2 * 60 * 1000).toISOString())).toMatchObject({
+      canceled: 1,
+      deferred: 0,
+    })
+    expect(stripe.subscriptions.get(row.id)?.status).toBe('canceled')
+    expect(inFlight.status).toBe('canceled')
+    expect(
+      await handle.db
+        .select()
+        .from(billingCancellations)
+        .where(eq(billingCancellations.profileId, profileId)),
+    ).toEqual([])
+    expect(await settleBillingCancellation(configuration, handle.db, profileId)).toBe('none')
+  })
+
+  test('an armed cancellation whose deletion never committed charges on as before', async () => {
+    const stripe = new FakeStripe()
+    const configuration = configurationFor(stripe)
+    const profileId = await syntheticProfile()
+    const row = await storedSubscription(profileId)
+    stripe.subscriptions.set(row.id, {
+      ...stripe.subscription(row.stripeCustomerId, 'active'),
+      id: row.id,
+    })
+    const queued = async () =>
+      handle.db
+        .select()
+        .from(billingCancellations)
+        .where(eq(billingCancellations.profileId, profileId))
+    // A pump run during the deletion request keeps the record until the grace has passed.
+    expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(true)
+    expect(await runBillingCancellations(configuration, handle.db)).toMatchObject({
+      profile_kept: 1,
+      canceled: 0,
+    })
+    expect((await queued())[0]?.nextAttemptAt).toBe(
+      new Date(Date.parse(clock) + BILLING_CANCELLATION_GRACE_MS).toISOString(),
+    )
+    const later = new Date(Date.parse(clock) + BILLING_CANCELLATION_GRACE_MS).toISOString()
+    expect(
+      await runBillingCancellations({ ...configuration, now: () => later }, handle.db),
+    ).toMatchObject({ profile_kept: 1 })
+    expect(await queued()).toEqual([])
+    // The deletion request itself discards its record as soon as it finishes without erasing.
+    expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(true)
+    expect(
+      await settleBillingCancellation(configuration, handle.db, profileId, { discardKept: true }),
+    ).toBe('profile_kept')
+    expect(await queued()).toEqual([])
+    expect(stripe.count('DELETE', '/v1/subscriptions/')).toBe(0)
+    expect(stripe.subscriptions.get(row.id)?.status).toBe('active')
   })
 })

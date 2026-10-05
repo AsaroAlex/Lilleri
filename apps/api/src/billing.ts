@@ -1,7 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
-import type { Database } from '@lilleri/database'
+import { type Database, schema } from '@lilleri/database'
 import type { VerifiedPlusState } from '@lilleri/domain'
-import { and, asc, desc, eq, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, lte, sql } from 'drizzle-orm'
 import type { FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
@@ -11,6 +11,7 @@ import {
   type BillingInterval,
   type BillingSubscriptionRow,
   type BillingSubscriptionStatus,
+  billingCancellations,
   billingCustomers,
   billingEvents,
   billingSubscriptions,
@@ -57,11 +58,18 @@ export type BillingIgnoreReason =
   | 'customer_mismatch'
   | 'reference_mismatch'
 /** Content-free operational record: no identifiers, e-mails, amounts or Stripe bodies. */
-export interface BillingLogEntry {
-  readonly event: 'billing_webhook_ignored'
-  readonly reason: BillingIgnoreReason
-  readonly count: number
-}
+export type BillingLogEntry =
+  | {
+      readonly event: 'billing_webhook_ignored'
+      readonly reason: BillingIgnoreReason
+      readonly count: number
+    }
+  | {
+      /** A deleted profile's subscription could not be cancelled yet; it is retried. */
+      readonly event: 'billing_cancellation_deferred'
+      readonly attempts: number
+      readonly transient: boolean
+    }
 export interface BillingConfiguration {
   /** Secret (`sk_`) or restricted (`rk_`) API key; never logged or returned. */
   readonly secretKey: string
@@ -701,6 +709,140 @@ async function cancelSubscription(configuration: BillingConfiguration, id: strin
   }
 }
 
+/** An armed cancellation whose profile still exists this long after arming never committed. */
+export const BILLING_CANCELLATION_GRACE_MS = 15 * 60 * 1000
+const CANCELLATION_RETRY_BASE_MS = 60 * 1000
+const CANCELLATION_RETRY_MAX_MS = 6 * 60 * 60 * 1000
+const SUBSCRIPTION_ID = /^sub_[A-Za-z0-9]{1,250}$/
+export type BillingCancellationOutcome = 'none' | 'profile_kept' | 'canceled' | 'deferred'
+
+/**
+ * Profile deletion, step 1, before the erasure transaction: durably records the Stripe customer
+ * and open subscriptions, because the profile cascade erases the billing rows. Returns false when
+ * the profile has nothing Stripe could still charge.
+ */
+export async function armBillingCancellation(
+  trustedDb: Database,
+  profileId: string,
+  now = new Date().toISOString(),
+): Promise<boolean> {
+  const [customer] = await trustedDb
+    .select({ id: billingCustomers.stripeCustomerId })
+    .from(billingCustomers)
+    .where(eq(billingCustomers.profileId, profileId))
+  const stored = await trustedDb
+    .select({ id: billingSubscriptions.id, status: billingSubscriptions.status })
+    .from(billingSubscriptions)
+    .where(eq(billingSubscriptions.profileId, profileId))
+  const [previous] = await trustedDb
+    .select()
+    .from(billingCancellations)
+    .where(eq(billingCancellations.profileId, profileId))
+  const subscriptionIds = [
+    ...new Set([
+      ...(previous?.subscriptionIds ?? []),
+      ...stored.filter((row) => !TERMINAL.has(row.status)).map((row) => row.id),
+    ]),
+  ]
+  const stripeCustomerId = customer?.id ?? previous?.stripeCustomerId ?? null
+  if (!stripeCustomerId && subscriptionIds.length === 0) return false
+  const at = new Date(instant(now)).toISOString()
+  await trustedDb
+    .insert(billingCancellations)
+    .values({ profileId, stripeCustomerId, subscriptionIds, armedAt: at, nextAttemptAt: at })
+    .onConflictDoUpdate({
+      target: billingCancellations.profileId,
+      set: { stripeCustomerId, subscriptionIds, armedAt: at, nextAttemptAt: at },
+    })
+  return true
+}
+
+/**
+ * Profile deletion, step 2: once the erasure has committed, cancels every open subscription of
+ * the armed customer and removes the record. While the profile still exists the deletion has not
+ * committed: the record is discarded when `discardKept` (the deletion request has finished) or
+ * once the arming grace has passed. A Stripe failure keeps it for a retry with backoff.
+ */
+export async function settleBillingCancellation(
+  configuration: BillingConfiguration,
+  trustedDb: Database,
+  profileId: string,
+  options: { readonly discardKept?: boolean } = {},
+): Promise<BillingCancellationOutcome> {
+  assertBillingConfiguration(configuration)
+  const now = instant(configuration.now?.() ?? new Date().toISOString())
+  const [row] = await trustedDb
+    .select()
+    .from(billingCancellations)
+    .where(eq(billingCancellations.profileId, profileId))
+  if (!row) return 'none'
+  const armed = and(
+    eq(billingCancellations.profileId, profileId),
+    eq(billingCancellations.armedAt, row.armedAt),
+  )
+  const [profile] = await trustedDb
+    .select({ id: schema.profiles.id })
+    .from(schema.profiles)
+    .where(eq(schema.profiles.id, profileId))
+  if (profile) {
+    const expires = instant(row.armedAt) + BILLING_CANCELLATION_GRACE_MS
+    if (options.discardKept || now >= expires)
+      await trustedDb.delete(billingCancellations).where(armed)
+    else
+      await trustedDb
+        .update(billingCancellations)
+        .set({ nextAttemptAt: new Date(expires).toISOString() })
+        .where(armed)
+    return 'profile_kept'
+  }
+  try {
+    const pending = new Set(row.subscriptionIds)
+    if (row.stripeCustomerId)
+      for (const id of await openSubscriptionIds(configuration, row.stripeCustomerId))
+        pending.add(id)
+    for (const id of pending) {
+      if (!SUBSCRIPTION_ID.test(id)) throw new Error('Invalid subscription identifier')
+      await cancelSubscription(configuration, id)
+    }
+  } catch (error) {
+    const attempts = row.attempts + 1
+    const delay = Math.min(
+      CANCELLATION_RETRY_MAX_MS,
+      CANCELLATION_RETRY_BASE_MS * 2 ** Math.min(row.attempts, 20),
+    )
+    await trustedDb
+      .update(billingCancellations)
+      .set({ attempts, nextAttemptAt: new Date(now + delay).toISOString() })
+      .where(armed)
+    ;(configuration.log ?? ((entry: BillingLogEntry) => console.warn(JSON.stringify(entry))))({
+      event: 'billing_cancellation_deferred',
+      attempts,
+      transient: error instanceof StripeRequestError && error.transient,
+    })
+    return 'deferred'
+  }
+  await trustedDb.delete(billingCancellations).where(armed)
+  return 'canceled'
+}
+
+/** Settles due cancellations owed by deleted profiles; the hosted server runs it periodically. */
+export async function runBillingCancellations(
+  configuration: BillingConfiguration,
+  trustedDb: Database,
+  limit = 20,
+): Promise<Record<BillingCancellationOutcome, number>> {
+  const now = new Date(instant(configuration.now?.() ?? new Date().toISOString())).toISOString()
+  const due = await trustedDb
+    .select({ profileId: billingCancellations.profileId })
+    .from(billingCancellations)
+    .where(lte(billingCancellations.nextAttemptAt, now))
+    .orderBy(asc(billingCancellations.nextAttemptAt))
+    .limit(limit)
+  const outcomes = { none: 0, profile_kept: 0, canceled: 0, deferred: 0 }
+  for (const { profileId } of due)
+    outcomes[await settleBillingCancellation(configuration, trustedDb, profileId)]++
+  return outcomes
+}
 /**
  * Profile deletion: immediately cancels every subscription that is not already ended, both those
  * stored locally and any Stripe lists for the profile's customer (a webhook may still be in
@@ -804,7 +946,17 @@ const toProblem = (error: unknown) =>
  * Registers `/v1/billing*` (profile-scoped, hosted session) and, when configured, the
  * signature-authenticated `POST /webhooks/stripe`. All writes use the trusted handle.
  */
-export function createBillingExtension(configuration: BillingConfiguration | null): AppExtension {
+export interface BillingExtensionOptions {
+  /**
+   * Plus is sold only while its benefit can be delivered (an active bank provider with contracted
+   * capacity left). Evaluated after the request's profile transaction, on the trusted handle.
+   */
+  readonly purchaseGate?: () => Promise<boolean>
+}
+export function createBillingExtension(
+  configuration: BillingConfiguration | null,
+  options: BillingExtensionOptions = {},
+): AppExtension {
   if (configuration) assertBillingConfiguration(configuration)
   return async (app, context: AppExtensionContext) => {
     const routes = app.withTypeProvider<ZodTypeProvider>()
@@ -860,7 +1012,8 @@ export function createBillingExtension(configuration: BillingConfiguration | nul
             result.purchaseAvailable =
               Boolean(current.month && current.year) &&
               context.principal(request)?.role === 'owner' &&
-              rows.every((row) => TERMINAL.has(row.status))
+              rows.every((row) => TERMINAL.has(row.status)) &&
+              (options.purchaseGate ? await options.purchaseGate() : true)
           })
         return result
       },
@@ -891,6 +1044,12 @@ export function createBillingExtension(configuration: BillingConfiguration | nul
         const interval = request.body.interval
         const result = { url: '' }
         await afterScope(request, async () => {
+          if (options.purchaseGate && !(await options.purchaseGate()))
+            throw new Problem(
+              409,
+              'plus_unavailable',
+              'Lilleri Plus non è ancora acquistabile: lo attiveremo appena il collegamento con le banche sarà disponibile per te.',
+            )
           try {
             const now = clock()
             const customer = await ensureCustomer(
