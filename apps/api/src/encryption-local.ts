@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto'
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto'
 import { constants } from 'node:fs'
 import { lstat, mkdir, open, readdir, unlink } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
@@ -87,17 +87,67 @@ async function destroyed(directory: string): Promise<boolean> {
   }
 }
 
+/** Seals each per-DEK wrapping key at rest; absent for the local synthetic vault. */
+interface WrappingKeySealer {
+  seal(profileToken: string, keyId: string, wrappingKey: Buffer): Buffer
+  open(profileToken: string, keyId: string, sealed: Buffer): Buffer
+}
+const SEALED_KEY_BYTES = 12 + 32 + 16
+function sealedKeyAad(profileToken: string, keyId: string) {
+  return Buffer.from(JSON.stringify(['lilleri-sealed-vault', 1, profileToken, keyId]))
+}
+function masterKeySealer(masterKey: Buffer): WrappingKeySealer {
+  const key = Buffer.from(masterKey)
+  return {
+    seal(profileToken, keyId, wrappingKey) {
+      if (wrappingKey.length !== 32) throw new EncryptionFailure()
+      const nonce = randomBytes(12)
+      const cipher = createCipheriv('aes-256-gcm', key, nonce, { authTagLength: 16 })
+      cipher.setAAD(sealedKeyAad(profileToken, keyId))
+      const sealed = Buffer.concat([cipher.update(wrappingKey), cipher.final()])
+      return Buffer.concat([nonce, sealed, cipher.getAuthTag()])
+    },
+    open(profileToken, keyId, sealed) {
+      try {
+        if (sealed.length !== SEALED_KEY_BYTES) throw new EncryptionFailure()
+        const decipher = createDecipheriv('aes-256-gcm', key, sealed.subarray(0, 12), {
+          authTagLength: 16,
+        })
+        decipher.setAAD(sealedKeyAad(profileToken, keyId))
+        decipher.setAuthTag(sealed.subarray(12 + 32))
+        return Buffer.concat([decipher.update(sealed.subarray(12, 12 + 32)), decipher.final()])
+      } catch {
+        throw new EncryptionFailure()
+      }
+    },
+  }
+}
+
 /**
- * Synthetic Linux/filesystem adapter. Never include this directory in a database backup.
+ * Linux/filesystem adapter. Never include this directory in a database backup.
  * A separate wrapping key for every DEK means a restored database key row is insufficient.
- * Filesystem snapshots, disk remanence and copied vaults are explicitly outside this local proof.
+ * The synthetic vault stores wrapping keys in clear files; the hosted vault seals each one
+ * with a master key held only in the host's secret environment, so neither a copied volume
+ * nor a database backup alone can decrypt financial fields.
  */
-class LocalSyntheticKeyManagement implements KeyManagementPort {
-  readonly kind = 'local-synthetic' as const
-  constructor(readonly directory: string) {}
+class FilesystemKeyManagement implements KeyManagementPort {
+  constructor(
+    readonly directory: string,
+    readonly kind: 'local-synthetic' | 'sealed-volume',
+    private readonly sealer?: WrappingKeySealer,
+  ) {}
 
   private profileDirectory(profileId: string) {
     return join(this.directory, profileToken(profileId))
+  }
+  private async readWrappingKey(profileId: string, directory: string, keyId: string) {
+    const stored = await readPrivate(join(directory, `${keyId}.key`))
+    if (!this.sealer) return stored
+    try {
+      return this.sealer.open(profileToken(profileId), keyId, stored)
+    } finally {
+      stored.fill(0)
+    }
   }
   private async removeKeys(directory: string) {
     const files = await readdir(directory)
@@ -136,7 +186,10 @@ class LocalSyntheticKeyManagement implements KeyManagementPort {
       )
         throw new EncryptionFailure()
       keyId = createEncryptionKeyId()
-      await writeExclusive(join(directory, `${keyId}.key`), wrappingKey)
+      await writeExclusive(
+        join(directory, `${keyId}.key`),
+        this.sealer ? this.sealer.seal(profileToken(profileId), keyId, wrappingKey) : wrappingKey,
+      )
       await syncDirectory(directory)
       // A destroy marker wins over a concurrently prepared candidate.
       if (await destroyed(directory)) {
@@ -158,7 +211,7 @@ class LocalSyntheticKeyManagement implements KeyManagementPort {
       const directory = this.profileDirectory(profileId)
       await privateDirectory(directory)
       if (await destroyed(directory)) throw new EncryptionFailure()
-      wrappingKey = await readPrivate(join(directory, `${keyId}.key`))
+      wrappingKey = await this.readWrappingKey(profileId, directory, keyId)
       if (wrappingKey.length !== 32 || (await destroyed(directory))) throw new EncryptionFailure()
       return unwrapDataKey(profileId, keyId, wrappingKey, wrappedKey)
     } catch {
@@ -188,7 +241,7 @@ class LocalSyntheticKeyManagement implements KeyManagementPort {
         if (expectedKeyId !== undefined && expectedKeyId !== null) {
           assertEncryptionKeyId(expectedKeyId)
           // A differently configured vault cannot certify destruction of another vault's key.
-          expectedWrappingKey = await readPrivate(join(directory, `${expectedKeyId}.key`))
+          expectedWrappingKey = await this.readWrappingKey(profileId, directory, expectedKeyId)
           if (expectedWrappingKey.length !== 32) throw new EncryptionFailure()
         }
         try {
@@ -230,8 +283,40 @@ export async function createLocalSyntheticKeyManagement(options: {
     throw new EncryptionFailure()
   const directory = resolve(options.directory)
   await privateDirectory(directory)
-  const provider = new LocalSyntheticKeyManagement(directory)
+  const provider = new FilesystemKeyManagement(directory, 'local-synthetic')
   // A crash after the irreversible marker cannot leave a key usable on the next boot.
+  await provider.cleanDestroyedProfiles()
+  return provider
+}
+
+/** Decodes the hosted vault master key: exactly 32 random bytes, base64url without padding. */
+export function hostedVaultMasterKey(value: string | undefined): Buffer {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(value)) throw new EncryptionFailure()
+  const decoded = Buffer.from(value, 'base64url')
+  if (decoded.length !== 32 || decoded.toString('base64url') !== value)
+    throw new EncryptionFailure()
+  if (decoded.every((byte) => byte === decoded[0])) throw new EncryptionFailure()
+  return decoded
+}
+
+/**
+ * Hosted vault on a persistent volume that is never part of the PostgreSQL service or its
+ * backups. Destroying a profile removes its sealed wrapping keys (crypto-shredding of every
+ * database copy); the master key alone cannot decrypt anything without the volume files.
+ */
+export async function createSealedVolumeKeyManagement(options: {
+  readonly directory: string
+  readonly masterKey: Buffer
+}): Promise<KeyManagementPort> {
+  if (!options.directory || options.directory.includes('\0') || options.masterKey.length !== 32)
+    throw new EncryptionFailure()
+  const directory = resolve(options.directory)
+  await privateDirectory(directory)
+  const provider = new FilesystemKeyManagement(
+    directory,
+    'sealed-volume',
+    masterKeySealer(options.masterKey),
+  )
   await provider.cleanDestroyedProfiles()
   return provider
 }

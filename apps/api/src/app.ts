@@ -3,7 +3,7 @@ import { type Database, ProfileScopeError } from '@lilleri/database'
 import { type Account, CATEGORIES } from '@lilleri/domain'
 import { DEFAULT_RECURRING_POLICY, type RecurringEvidence } from '@lilleri/engines'
 import { type FinancialDataProvider, MockItalianProvider } from '@lilleri/financial-providers'
-import Fastify, { type FastifyRequest } from 'fastify'
+import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify'
 import {
   jsonSchemaTransform,
   serializerCompiler,
@@ -382,8 +382,33 @@ const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ])
+/** Request accessors handed to trusted server modules that register their own routes. */
+export interface AppExtensionContext {
+  /** Trusted migration/identity handle: never use it for a caller-selected profile. */
+  readonly db: Database
+  /** Profile-bound service for `/v1/*` routes, RLS-scoped when a financial scope is configured. */
+  readonly service: (request: FastifyRequest) => DemoService
+  /** Authenticated principal for `/v1/*` routes when an identity is configured. */
+  readonly principal: (request: FastifyRequest) => FinancialPrincipal | undefined
+  /** Registers work that must run only after the request's scoped transaction commits. */
+  readonly afterCommit: (request: FastifyRequest, effect: () => Promise<void>) => void
+}
+export type AppExtension = (
+  app: FastifyInstance,
+  context: AppExtensionContext,
+) => Promise<void> | void
+/** Third parties (payment webhooks, bank redirects) call these paths without a browser origin.
+ * Their handlers must authenticate every request themselves (signatures, single-use state).
+ */
+export const EXTERNAL_ROUTE_PREFIXES = ['/webhooks/', '/connect/'] as const
+const externalRoute = (path: string) =>
+  EXTERNAL_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix))
 export interface AppOptions {
   readonly db: Database
+  /** Trusted modules registered after the core routes; see AppExtensionContext. */
+  readonly extensions?: readonly AppExtension[]
+  /** Platform health-check hosts allowed to read `/health` only (e.g. healthcheck.railway.app). */
+  readonly healthHosts?: readonly string[]
   /** Trusted server-derived financial profile scope; the server always supplies this. */
   readonly financialScope?: FinancialScope
   readonly observability?: Observability
@@ -830,8 +855,13 @@ export async function createApp(options: AppOptions) {
   })
   app.addHook('onRequest', async (request, reply) => {
     const host = request.headers.host
+    const healthProbe =
+      request.method === 'GET' &&
+      (request.url === '/health' || request.url === '/health/') &&
+      !!host &&
+      (options.healthHosts ?? []).includes(host)
     if (options.hostedIdentity) {
-      if (host !== new URL(options.hostedIdentity.baseURL).host)
+      if (host !== new URL(options.hostedIdentity.baseURL).host && !healthProbe)
         throw new Problem(403, 'host_forbidden', 'Questo indirizzo non può usare il servizio.')
     } else if (host) {
       let hostname = ''
@@ -875,6 +905,7 @@ export async function createApp(options: AppOptions) {
     if (identity) {
       const path = request.routeOptions.url ?? request.url.split('?')[0] ?? '/'
       const mutation = !['GET', 'HEAD'].includes(request.method)
+      if (externalRoute(path)) return
       identity.checkOrigin(requestHeaders(request), mutation)
       const publicDirectory =
         (path === '/v1/connection-directory' ||
@@ -1157,14 +1188,17 @@ export async function createApp(options: AppOptions) {
     { schema: { response: { 200: z.object({ revocations: z.array(revocationDto) }), ...errors } } },
     async (request) => serviceFor(request).revocations(),
   )
+  const healthMode = options.hostedIdentity ? ('hosted' as const) : ('synthetic' as const)
   app.get(
     '/health',
     {
       schema: {
-        response: { 200: z.object({ status: z.literal('ok'), mode: z.literal('synthetic') }) },
+        response: {
+          200: z.object({ status: z.literal('ok'), mode: z.enum(['synthetic', 'hosted']) }),
+        },
       },
     },
-    async () => ({ status: 'ok' as const, mode: 'synthetic' as const }),
+    async () => ({ status: 'ok' as const, mode: healthMode }),
   )
   app.get('/openapi.json', async () => app.swagger())
   registerConnectionDirectoryRoutes(app, Boolean(identity))
@@ -1543,5 +1577,16 @@ export async function createApp(options: AppOptions) {
       return reply.code(204).send(null)
     },
   )
+  const extensionContext: AppExtensionContext = {
+    db: options.db,
+    service: serviceFor,
+    principal: (request) => principals.get(request),
+    afterCommit: (request, effect) => {
+      const effects = afterCommit.get(request) ?? []
+      effects.push(effect)
+      afterCommit.set(request, effects)
+    },
+  }
+  for (const extension of options.extensions ?? []) await extension(app, extensionContext)
   return app
 }

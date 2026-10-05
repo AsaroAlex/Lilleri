@@ -38,7 +38,7 @@ export interface WrappedDataKey {
 
 /** Real adapters own independent key durability, authentication, expiry and destruction evidence. */
 export interface KeyManagementPort {
-  readonly kind: 'local-synthetic' | 'external'
+  readonly kind: 'local-synthetic' | 'sealed-volume' | 'external'
   create(profileId: string, dataKey: Uint8Array): Promise<WrappedDataKey>
   unwrap(profileId: string, keyId: string, wrappedKey: string): Promise<Buffer>
   /** A staged key identifier must belong to this provider before destruction can be certified. */

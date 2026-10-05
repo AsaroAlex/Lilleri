@@ -114,7 +114,8 @@ export class SourceErasureJournal {
     private readonly secret: Buffer,
     readonly keys: KeyManagementPort,
   ) {
-    if (secret.length !== 32 || keys.kind !== 'local-synthetic') throw failure()
+    if (secret.length !== 32 || (keys.kind !== 'local-synthetic' && keys.kind !== 'sealed-volume'))
+      throw failure()
     this.keyId = createHash('sha256')
       .update('lilleri-source-journal-key-v1\0')
       .update(secret)
@@ -357,10 +358,15 @@ export async function createSourceErasureJournal(options: {
   directory: string
   anchorDirectory: string
   keys: KeyManagementPort
-  mode: 'demo' | 'local-auth'
+  mode: 'demo' | 'local-auth' | 'hosted'
   requireExisting?: boolean
 }) {
-  if (!['demo', 'local-auth'].includes(options.mode) || options.keys.kind !== 'local-synthetic')
+  // Synthetic modes keep the synthetic vault; the hosted service must use its sealed volume vault.
+  if (
+    options.mode === 'hosted'
+      ? options.keys.kind !== 'sealed-volume'
+      : !['demo', 'local-auth'].includes(options.mode) || options.keys.kind !== 'local-synthetic'
+  )
     throw failure()
   const journalPath = resolve(options.directory),
     anchors = resolve(options.anchorDirectory),
