@@ -1,5 +1,16 @@
 # Lilleri delivery status
 
+## Product interface and shared access — 2026-10-05
+
+Release candidate: removed prototype framing and updated Italian/English import and
+rule workflows without bypassing confirmation. Public display preferences are local
+to each device, public financial/profile writes and deletion are protected, and
+personal manual-account shortcuts remain available with authenticated identity.
+Internal provenance and archives are preserved. Hosted personal access and live bank
+activation remain necessary. Repository 23/23, API 592/3 skipped, mobile 62,
+provider 337, focused PostgreSQL 10/10. Final frontend and 8 browser groups (134 surfaces) passed; publication pending.
+See [scope and validation](operations/product-release-20261005.md).
+
 ## Italian banks, cards and wallet selector — 2026-10-05
 
 Published commit `33e050a`, Railway deployment

@@ -5,7 +5,7 @@ export const APP_MESSAGE_PAIRS = {
   'app.settings': ['Impostazioni', 'Settings'],
   'app.privacyAndData': ['Privacy e dati', 'Privacy and data'],
   'app.preferences': ['Preferenze', 'Preferences'],
-  'app.preferencesHelp': ['Lingua, fuso orario e valuta', 'Language, timezone and currency'],
+  'app.preferencesHelp': ['Lingua e fuso orario', 'Language and time zone'],
   'app.privacyHelp': [
     'Consensi, esportazione e gestione dei dati',
     'Consent, export and data management',
@@ -391,8 +391,8 @@ export const APP_MESSAGE_PAIRS = {
   'app.exportData': ['Esporta i dati', 'Export data'],
   'app.downloadArchive': ['Scarica archivio ZIP', 'Download ZIP archive'],
   'app.downloadStarted': [
-    'Il file è pronto e il download è stato avviato. Puoi anche selezionare il contenuto qui sotto.',
-    'The file is ready and the download has started. You can also select its contents below.',
+    'Il file è pronto e il download è stato avviato.',
+    'The file is ready and the download has started.',
   ],
   'app.exportCopy': [
     'Esportazione pronta. Puoi selezionare e copiare il contenuto qui sotto.',

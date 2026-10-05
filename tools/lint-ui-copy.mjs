@@ -18,6 +18,7 @@ export const UI_COPY_CONSUMERS = Object.freeze([
   'apps/mobile/src/RulesPanel.tsx',
   'apps/mobile/src/LocalIdentityPanel.tsx',
   'apps/mobile/src/LanguagePicker.tsx',
+  'apps/mobile/src/LocalDisplayPreferencesPanel.tsx',
 ])
 const attributes = new Set(['accessibilityLabel', 'accessibilityHint', 'placeholder', 'title'])
 // Brand names, language autonyms and literal technical formats are not translated financial copy.

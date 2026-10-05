@@ -45,6 +45,10 @@ import {
   WebAccessibilityStyles,
 } from './src/accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './src/accessibility/web-focus'
+import {
+  readBrowserDisplayPreferences,
+  writeBrowserDisplayPreferences,
+} from './src/browser-display-preferences'
 import { FinanceHome } from './src/FinanceHome'
 import { CategoryVisual, FinanceVisual } from './src/FinanceVisual'
 import { FxEvidencePanel } from './src/FxEvidencePanel'
@@ -52,6 +56,7 @@ import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
 import type { LocalIdentitySession } from './src/identity-client'
 import { EMPTY_LEDGER_FILTERS, LedgerSearchFilters } from './src/LedgerSearchFilters'
+import { LocalDisplayPreferencesPanel } from './src/LocalDisplayPreferencesPanel'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
 import { NotificationsPanel } from './src/NotificationsPanel'
 import {
@@ -118,8 +123,10 @@ const defaultDisplayPreferences: DisplayPreferences = {
   timezone: 'Europe/Rome',
 }
 export default function App() {
-  const [displayPreferences, setDisplayPreferences] =
-    useState<DisplayPreferences>(defaultDisplayPreferences)
+  const [displayPreferences, setDisplayPreferences] = useState<DisplayPreferences>(() => ({
+    ...defaultDisplayPreferences,
+    ...(!identityMode ? readBrowserDisplayPreferences() : {}),
+  }))
   return (
     <I18nProvider {...displayPreferences}>
       <AppSurface onDisplayPreferences={setDisplayPreferences} />
@@ -184,6 +191,7 @@ function AppSurface({
   })
   const [tab, setTab] = useState<Tab>('Home')
   const [data, setData] = useState<DemoOverview | null>(null)
+  const publicShared = !identityMode && data !== null && data.fixtureMode !== 'seeded'
   const datetime = (value: string | null | undefined) =>
     value ? i18n.instant(value) : t('app.notUpdated')
   const [loading, setLoading] = useState(true)
@@ -219,9 +227,7 @@ function AppSurface({
   const [undoCategory, setUndoCategory] = useState<{ id: string; category: CategoryId } | null>(
     null,
   )
-  const [confirm, setConfirm] = useState<
-    { type: 'disconnect'; id: string } | { type: 'erase' } | null
-  >(null)
+  const [confirm, setConfirm] = useState<{ type: 'erase' } | null>(null)
   const [exported, setExported] = useState<string | null>(null)
   const [erased, setErased] = useState(false)
   const [signedIn, setSignedIn] = useState(false)
@@ -284,7 +290,7 @@ function AppSurface({
     [offlineCache],
   )
   const settingsClient = useMemo(() => createSettingsClient(api.request), [api])
-  const mutationsDisabled = !!busy || networkUnavailable || offlineSnapshot !== null
+  const mutationsDisabled = publicShared || !!busy || networkUnavailable || offlineSnapshot !== null
   const clearFinancialState = useCallback(
     (options?: { preserveNavigation: boolean }) => {
       identityEpoch.current++
@@ -356,7 +362,7 @@ function AppSurface({
   }, [route, renderedIdentityEpoch, confirm])
   const profileId = data?.profile.id
   useEffect(() => {
-    if (!profileId) return
+    if (!profileId || publicShared) return
     const epoch = renderedIdentityEpoch
     let cancelled = false
     void settingsClient
@@ -371,7 +377,14 @@ function AppSurface({
     return () => {
       cancelled = true
     }
-  }, [profileId, renderedIdentityEpoch, identityFailure, onDisplayPreferences, settingsClient])
+  }, [
+    profileId,
+    publicShared,
+    renderedIdentityEpoch,
+    identityFailure,
+    onDisplayPreferences,
+    settingsClient,
+  ])
   // biome-ignore lint/correctness/useExhaustiveDependencies: These state changes reveal the relevant route, confirmation, or feedback at the top of the screen.
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false })
@@ -664,10 +677,6 @@ function AppSurface({
   const history = dates.length
     ? `${date(dates[0])} – ${date(dates[dates.length - 1])}`
     : t('app.noPeriod')
-  const activeConnections =
-    data?.connections.filter(
-      (connection) => connection.status === 'active' && connection.providerId !== 'local-manual',
-    ) ?? []
   const reviewCount = data?.analysis.reviewItems.length ?? 0
   const emptyFixtures = Boolean(data && 'fixtureMode' in data && data.fixtureMode === 'empty')
   const navIcons = {
@@ -826,7 +835,7 @@ function AppSurface({
         const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }))
         const anchor = document.createElement('a')
         anchor.href = url
-        anchor.download = 'lilleri-dati-dimostrativi.json'
+        anchor.download = 'lilleri-dati.json'
         anchor.click()
         URL.revokeObjectURL(url)
       }
@@ -848,7 +857,7 @@ function AppSurface({
       const url = URL.createObjectURL(new Blob([archive], { type: 'application/zip' }))
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = 'lilleri-dati-dimostrativi.zip'
+      anchor.download = 'lilleri-dati.zip'
       anchor.click()
       URL.revokeObjectURL(url)
       setNotice(t('app.archiveReady'))
@@ -861,34 +870,29 @@ function AppSurface({
   }
   const confirmAction = async () => {
     if (!confirm || busy || networkBlocked.current) return
-    if (confirm.type === 'disconnect') {
-      if (await mutate('disconnect', () => api.disconnect(confirm.id), t('app.disconnected')))
-        setConfirm(null)
-    } else {
-      const epoch = identityEpoch.current
-      setBusy('erase')
-      setError(null)
-      try {
-        await api.erase()
-        if (epoch !== identityEpoch.current) return
-        offlineView.current = false
-        void offlineCache.discard('deletion')
-        if (identityMode) {
-          clearFinancialState()
-          setSessionLostVersion((version) => version + 1)
-        }
-        setData(null)
-        setErased(true)
-        setConfirm(null)
-        setDetailId(null)
-        setExported(null)
-        setNotice(null)
-      } catch (cause) {
-        if (epoch !== identityEpoch.current || identityFailure(cause)) return
-        setError(cause instanceof Error ? i18n.problemMessage(cause) : t('app.eraseFailed'))
-      } finally {
-        if (epoch === identityEpoch.current) setBusy(null)
+    const epoch = identityEpoch.current
+    setBusy('erase')
+    setError(null)
+    try {
+      await api.erase()
+      if (epoch !== identityEpoch.current) return
+      offlineView.current = false
+      void offlineCache.discard('deletion')
+      if (identityMode) {
+        clearFinancialState()
+        setSessionLostVersion((version) => version + 1)
       }
+      setData(null)
+      setErased(true)
+      setConfirm(null)
+      setDetailId(null)
+      setExported(null)
+      setNotice(null)
+    } catch (cause) {
+      if (epoch !== identityEpoch.current || identityFailure(cause)) return
+      setError(cause instanceof Error ? i18n.problemMessage(cause) : t('app.eraseFailed'))
+    } finally {
+      if (epoch === identityEpoch.current) setBusy(null)
     }
   }
 
@@ -928,9 +932,6 @@ function AppSurface({
           accessibilityLabel="Lilleri"
         />
         <View style={[s.headerActions, windowWidth < 400 && s.compactHeaderActions]}>
-          <Text style={[s.demoBadge, windowWidth < 400 && s.compactDemoBadge]}>
-            {emptyFixtures ? t('app.cleanBadge') : t('app.demoBadge')}
-          </Text>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={theme === 'dark' ? t('app.lightTheme') : t('app.darkTheme')}
@@ -1017,9 +1018,6 @@ function AppSurface({
               </View>
             )}
           </View>
-          {!hostedIdentityMode && emptyFixtures && tab === 'Home' && !manage && !selected && (
-            <Text style={s.demoIntro}>{emptyFixtures ? t('app.cleanIntro') : t('app.intro')}</Text>
-          )}
           {identityMode && (
             <LocalIdentityPanel
               baseUrl={apiBaseUrl}
@@ -1111,14 +1109,8 @@ function AppSurface({
               resetKey={renderedIdentityEpoch}
               isCurrent={() => renderedIdentityEpoch === identityEpoch.current}
               mayRestoreFocus={() => renderedIdentityEpoch === identityEpoch.current}
-              title={
-                confirm.type === 'erase' ? t('app.eraseQuestion') : t('app.disconnectQuestion')
-              }
-              description={
-                confirm.type === 'erase'
-                  ? t('app.eraseConsequences')
-                  : t('app.disconnectConsequences')
-              }
+              title={t('app.eraseQuestion')}
+              description={t('app.eraseConsequences')}
               headingStyle={s.sectionTitle}
               descriptionStyle={s.body}
               initialFocusSelector='[data-testid="confirmation-cancel"]'
@@ -1127,9 +1119,7 @@ function AppSurface({
             >
               <View style={s.actions}>
                 <Button
-                  label={
-                    confirm.type === 'erase' ? t('app.confirmErase') : t('app.confirmDisconnect')
-                  }
+                  label={t('app.confirmErase')}
                   onPress={() => void confirmAction()}
                   destructive
                   disabled={mutationsDisabled}
@@ -1197,9 +1187,10 @@ function AppSurface({
                 <View style={s.card}>
                   <Text style={s.body}>{t('app.offlinePanel')}</Text>
                 </View>
-              ) : emptyFixtures &&
-                !identityMode &&
-                (manage === 'mapped-import' || manage === 'import') ? (
+              ) : publicShared &&
+                ['mapped-import', 'import', 'notifications', 'merchants', 'rules'].includes(
+                  manage,
+                ) ? (
                 <View style={s.card}>
                   <FinanceVisual kind="bank" size={64} mode={theme} />
                   <Text style={s.sectionTitle}>{t('app.connectionSetup')}</Text>
@@ -1272,6 +1263,7 @@ function AppSurface({
                   onManualFallback={() => setManage('import')}
                   onStatementImport={() => setManage('mapped-import')}
                   protectedPersonalAccess={hostedIdentityMode && signedIn}
+                  readOnly={publicShared}
                   onRecoverHistory={(accountId) => {
                     if (renderedIdentityEpoch !== identityEpoch.current) return
                     setRecoveryAccount({
@@ -1284,172 +1276,109 @@ function AppSurface({
                   onError={panelIdentityFailure}
                 />
               ) : manage === 'privacy' ? (
-                <>
-                  <PrivacyControlsPanel
-                    overview={data}
-                    theme={theme}
-                    request={api.request}
-                    resetKey={renderedIdentityEpoch}
-                    onChanged={refreshAfterChange}
-                    onError={panelIdentityFailure}
-                  />
+                publicShared ? (
                   <View style={s.card}>
+                    <FinanceVisual kind="review" size={48} mode={theme} />
                     <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                      {t('app.demoDataHeading')}
+                      {t('privacy.accessTitle')}
                     </Text>
-                    <Text style={s.body}>
-                      {t('app.demoOwnership', { name: data.profile.name })}
-                    </Text>
-                    <View style={s.divider} />
-                    <Text style={s.strong}>{t('app.realBankUnavailable')}</Text>
-                    <Text style={s.caption}>{t('app.simulatedSourceHelp')}</Text>
+                    <Text style={s.body}>{t('privacy.accessHelp')}</Text>
+                    <Text style={s.caption}>{t('app.personalAccessNeeded')}</Text>
                   </View>
-                  <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                    {t('app.simulatedSource')}
-                  </Text>
-                  {data.connections
-                    .filter((connection) => connection.providerId !== 'local-manual')
-                    .map((connection) => (
-                      <View style={s.card} key={connection.id}>
-                        <Text style={s.strong}>
-                          {t('app.sourceState', {
-                            status:
-                              connection.status === 'active'
-                                ? t('app.active')
-                                : connection.status === 'revoked'
-                                  ? t('app.disconnectedState')
-                                  : connection.status === 'expired'
-                                    ? t('app.expired')
-                                    : t('app.updateFailed'),
-                          })}
-                        </Text>
-                        <Text style={s.caption}>
-                          {t('app.sourceUpdatedAt', { date: datetime(connection.lastSyncedAt) })}
-                        </Text>
-                        <Text style={s.caption}>{t('app.simulatedAccess')}</Text>
-                        <View style={s.actions}>
-                          {connection.status === 'active' ? (
-                            <>
-                              <Button
-                                label={t('app.updateSource')}
-                                onPress={() =>
-                                  void mutate(
-                                    'sync',
-                                    async () => {
-                                      const result = await api.sync(connection.id)
-                                      setNotice(
-                                        t('app.syncCounts', {
-                                          inserted: result.inserted,
-                                          updated: result.updated,
-                                          unchanged: result.unchanged,
-                                        }),
-                                      )
-                                      return result
-                                    },
-                                    t('app.sourceUpdated'),
-                                  )
-                                }
-                                disabled={mutationsDisabled}
-                                c={c}
-                                s={s}
-                              />
-                              <Button
-                                label={t('app.disconnectSource')}
-                                onPress={() =>
-                                  setConfirm({ type: 'disconnect', id: connection.id })
-                                }
-                                quiet
-                                disabled={mutationsDisabled}
-                                c={c}
-                                s={s}
-                              />
-                            </>
-                          ) : (
-                            <Text style={s.body}>{t('app.updatesStopped')}</Text>
-                          )}
-                        </View>
-                      </View>
-                    ))}
-                  {!emptyFixtures && !activeConnections.length && (
-                    <Button
-                      label={t('app.activateSource')}
-                      onPress={() =>
-                        void mutate('connect', () => api.connectMock(), t('app.sourceActivated'))
-                      }
-                      disabled={mutationsDisabled}
-                      c={c}
-                      s={s}
+                ) : (
+                  <>
+                    <PrivacyControlsPanel
+                      overview={data}
+                      theme={theme}
+                      request={api.request}
+                      resetKey={renderedIdentityEpoch}
+                      onChanged={refreshAfterChange}
+                      onError={panelIdentityFailure}
                     />
-                  )}
-                  <View style={s.card}>
-                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                      {t('app.exportHeading')}
-                    </Text>
-                    <Text style={s.body}>{t('app.exportHelp')}</Text>
-                    <Button
-                      label={t('app.exportData')}
-                      onPress={() => void exportData()}
-                      disabled={mutationsDisabled}
-                      c={c}
-                      s={s}
-                    />
-                    {Platform.OS === 'web' && (
+                    <View style={s.card}>
+                      <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                        {t('app.exportHeading')}
+                      </Text>
+                      <Text style={s.body}>{t('app.exportHelp')}</Text>
                       <Button
-                        label={t('app.downloadArchive')}
-                        onPress={() => void exportArchive()}
+                        label={t('app.exportData')}
+                        onPress={() => void exportData()}
                         disabled={mutationsDisabled}
-                        quiet
                         c={c}
                         s={s}
                       />
-                    )}
-                    {exported && (
-                      <>
-                        <Text accessibilityLiveRegion="polite" style={s.caption}>
-                          {Platform.OS === 'web' ? t('app.downloadStarted') : t('app.exportCopy')}
-                        </Text>
-                        <ScrollView style={s.exportPreview} nestedScrollEnabled>
-                          <Text selectable style={s.exportText}>
-                            {exported}
+                      {Platform.OS === 'web' && (
+                        <Button
+                          label={t('app.downloadArchive')}
+                          onPress={() => void exportArchive()}
+                          disabled={mutationsDisabled}
+                          quiet
+                          c={c}
+                          s={s}
+                        />
+                      )}
+                      {exported && (
+                        <>
+                          <Text accessibilityLiveRegion="polite" style={s.caption}>
+                            {Platform.OS === 'web' ? t('app.downloadStarted') : t('app.exportCopy')}
                           </Text>
-                        </ScrollView>
-                      </>
-                    )}
-                  </View>
-                  <View style={s.card}>
-                    <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
-                      {t('app.eraseHeading')}
-                    </Text>
-                    <Text style={s.body}>{t('app.eraseHelp')}</Text>
-                    <Button
-                      label={t('app.eraseButton')}
-                      onPress={() => setConfirm({ type: 'erase' })}
-                      destructive
-                      disabled={mutationsDisabled}
-                      c={c}
-                      s={s}
-                    />
-                  </View>
-                </>
+                          {Platform.OS !== 'web' && (
+                            <ScrollView style={s.exportPreview} nestedScrollEnabled>
+                              <Text selectable style={s.exportText}>
+                                {exported}
+                              </Text>
+                            </ScrollView>
+                          )}
+                        </>
+                      )}
+                    </View>
+                    <View style={s.card}>
+                      <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
+                        {t('app.eraseHeading')}
+                      </Text>
+                      <Text style={s.body}>{t('app.eraseHelp')}</Text>
+                      <Button
+                        label={t('app.eraseButton')}
+                        onPress={() => setConfirm({ type: 'erase' })}
+                        destructive
+                        disabled={mutationsDisabled}
+                        c={c}
+                        s={s}
+                      />
+                    </View>
+                  </>
+                )
               ) : manage === 'preferences' ? (
-                <SettingsPanel
-                  request={api.request}
-                  theme={theme}
-                  resetKey={renderedIdentityEpoch}
-                  onChanged={async (settings: ProfileSettings) => {
-                    if (renderedIdentityEpoch !== identityEpoch.current) return
-                    onDisplayPreferences({ locale: settings.locale, timezone: settings.timezone })
-                    await refreshAfterChange()
-                  }}
-                  onError={panelIdentityFailure}
-                />
+                publicShared ? (
+                  <LocalDisplayPreferencesPanel
+                    theme={theme}
+                    locale={i18n.locale}
+                    timezone={i18n.timezone}
+                    onChanged={(preferences) => {
+                      writeBrowserDisplayPreferences(preferences)
+                      onDisplayPreferences(preferences)
+                    }}
+                  />
+                ) : (
+                  <SettingsPanel
+                    request={api.request}
+                    theme={theme}
+                    resetKey={renderedIdentityEpoch}
+                    onChanged={async (settings: ProfileSettings) => {
+                      if (renderedIdentityEpoch !== identityEpoch.current) return
+                      onDisplayPreferences({ locale: settings.locale, timezone: settings.timezone })
+                      await refreshAfterChange()
+                    }}
+                    onError={panelIdentityFailure}
+                  />
+                )
               ) : manage === 'merchants' ? (
                 <MerchantPanel
                   overview={data}
                   theme={theme}
                   request={api.request}
                   resetKey={renderedIdentityEpoch}
-                  disabled={loading || !!busy}
+                  disabled={loading || mutationsDisabled}
                   onChanged={refreshAfterChange}
                   onError={panelIdentityFailure}
                 />
@@ -1566,11 +1495,11 @@ function AppSurface({
                       accessibilityRole="button"
                       accessibilityState={{
                         selected: category === id,
-                        disabled: networkUnavailable,
+                        disabled: mutationsDisabled,
                       }}
                       aria-pressed={category === id}
-                      aria-disabled={networkUnavailable}
-                      disabled={networkUnavailable}
+                      aria-disabled={mutationsDisabled}
+                      disabled={mutationsDisabled}
                       onPress={() => setCategory(id)}
                       style={[s.categoryOption, category === id && s.selectedOption]}
                     >
@@ -1589,10 +1518,10 @@ function AppSurface({
                 >
                   <Pressable
                     accessibilityRole="radio"
-                    accessibilityState={{ checked: scope === 'once', disabled: networkUnavailable }}
+                    accessibilityState={{ checked: scope === 'once', disabled: mutationsDisabled }}
                     aria-checked={scope === 'once'}
-                    aria-disabled={networkUnavailable}
-                    disabled={networkUnavailable}
+                    aria-disabled={mutationsDisabled}
+                    disabled={mutationsDisabled}
                     onPress={() => setScope('once')}
                     style={[s.scopeChoice, scope === 'once' && s.selectedOption]}
                   >
@@ -1606,12 +1535,12 @@ function AppSurface({
                     accessibilityRole="radio"
                     accessibilityState={{
                       checked: scope === 'merchant',
-                      disabled: !selected.merchantKey || networkUnavailable,
+                      disabled: !selected.merchantKey || mutationsDisabled,
                     }}
                     aria-checked={scope === 'merchant'}
-                    aria-disabled={!selected.merchantKey || networkUnavailable}
+                    aria-disabled={!selected.merchantKey || mutationsDisabled}
                     onPress={() => setScope('merchant')}
-                    disabled={!selected.merchantKey || networkUnavailable}
+                    disabled={!selected.merchantKey || mutationsDisabled}
                     style={[
                       s.scopeChoice,
                       scope === 'merchant' && s.selectedOption,
@@ -1645,7 +1574,9 @@ function AppSurface({
                 theme={theme}
                 history={history}
                 emptyFixtures={emptyFixtures}
-                protectedIdentity={identityMode}
+                {...(identityMode && signedIn
+                  ? { onManualAccount: () => setManage('import') }
+                  : {})}
                 onConnections={() => setManage('connections')}
                 onAccount={(accountId) => {
                   go('Movimenti')
@@ -1715,6 +1646,15 @@ function AppSurface({
                   c={c}
                   s={s}
                 />
+                {identityMode && signedIn && (
+                  <Button
+                    label={t('home.manualAccount')}
+                    onPress={() => setManage('import')}
+                    quiet
+                    c={c}
+                    s={s}
+                  />
+                )}
               </View>
             ) : (
               <>
@@ -1882,13 +1822,15 @@ function AppSurface({
                     onError={panelIdentityFailure}
                   />
                 )}
-              <Button
-                label={t('merchant.title')}
-                onPress={() => setManage('merchants')}
-                quiet
-                c={c}
-                s={s}
-              />
+              {!publicShared && (
+                <Button
+                  label={t('merchant.title')}
+                  onPress={() => setManage('merchants')}
+                  quiet
+                  c={c}
+                  s={s}
+                />
+              )}
               {data.analysis.reviewItems.some((item) => item.type === 'classification') && (
                 <>
                   <Text accessibilityRole="header" aria-level={2} style={s.sectionTitle}>
@@ -2040,9 +1982,16 @@ function AppSurface({
               )}
             </>
           ) : tab === 'Ricorrenti' ? (
-            offlineSnapshot ? (
+            publicShared && !data.analysis.recurring.length ? (
+              <View style={s.empty}>
+                <FinanceVisual kind="recurring" size={64} mode={theme} />
+                <Text style={s.sectionTitle}>{t('recurring.empty')}</Text>
+              </View>
+            ) : publicShared || offlineSnapshot ? (
               <View style={s.card}>
-                <Text style={s.body}>{t('app.offlineRecurring')}</Text>
+                <Text style={s.body}>
+                  {t(publicShared ? 'recurring.notContract' : 'app.offlineRecurring')}
+                </Text>
                 {data.analysis.recurring.map((series) => (
                   <View key={series.id} style={s.currencySummary}>
                     <Text style={s.strong}>{series.merchantKey}</Text>
@@ -2101,34 +2050,38 @@ function AppSurface({
                   },
                   { destination: 'merchants', kind: 'wallet', title: 'merchant.title', help: null },
                 ] as const
-              ).map((item) => (
-                <Pressable
-                  key={item.destination}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(item.title)}
-                  onPress={() => setManage(item.destination)}
-                  style={s.settingsRow}
-                >
-                  <FinanceVisual kind={item.kind} size={40} mode={theme} />
-                  <View style={s.settingsCopy}>
-                    <Text style={s.strong}>{t(item.title)}</Text>
-                    {item.help && <Text style={s.caption}>{t(item.help)}</Text>}
-                  </View>
-                  <Text style={s.caption}>›</Text>
-                </Pressable>
-              ))}
+              )
+                .filter(
+                  (item) =>
+                    !publicShared ||
+                    (item.destination !== 'notifications' && item.destination !== 'merchants'),
+                )
+                .map((item) => (
+                  <Pressable
+                    key={item.destination}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(item.title)}
+                    onPress={() => setManage(item.destination)}
+                    style={s.settingsRow}
+                  >
+                    <FinanceVisual kind={item.kind} size={40} mode={theme} />
+                    <View style={s.settingsCopy}>
+                      <Text style={s.strong}>{t(item.title)}</Text>
+                      {item.help && (
+                        <Text style={s.caption}>
+                          {t(
+                            publicShared && item.destination === 'privacy'
+                              ? 'privacy.accessSummary'
+                              : item.help,
+                          )}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={s.caption}>›</Text>
+                  </Pressable>
+                ))}
             </View>
           )}
-          <View style={s.pageEnd}>
-            <Text style={s.caption}>{t('app.footer')}</Text>
-            <Text style={s.caption}>
-              {hostedIdentityMode
-                ? t('identityPanel.hostedHelp')
-                : identityMode
-                  ? t('app.identityFooter')
-                  : t('app.unavailableFooter')}
-            </Text>
-          </View>
         </ScrollView>
       </View>
       {!wide && (
@@ -2250,24 +2203,12 @@ function styles(c: ThemeColors) {
     compactHeader: { paddingHorizontal: 20, paddingVertical: 16, gap: 8 },
     compactLogo: { width: 106, height: 36 },
     compactHeaderActions: { gap: 4 },
-    compactDemoBadge: { fontSize: 11, paddingHorizontal: 8 },
     wideLogo: { width: 146, height: 48 },
     headerActions: {
       flexDirection: 'row',
       flexWrap: 'wrap',
       gap: 8,
       alignItems: 'center',
-      flexShrink: 1,
-    },
-    demoBadge: {
-      fontFamily: 'GeistMedium',
-      fontSize: tokens.typography.scale.caption.size,
-      lineHeight: 16,
-      color: c.textSecondary,
-      borderLeftWidth: 2,
-      borderColor: c.borderStrong,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
       flexShrink: 1,
     },
     themeButton: {
@@ -2342,13 +2283,6 @@ function styles(c: ThemeColors) {
       letterSpacing: -0.7,
     },
     wideHeading: { fontSize: 36, lineHeight: 44, letterSpacing: -1 },
-    demoIntro: {
-      fontFamily: 'Geist',
-      fontSize: type.bodySmall.size,
-      lineHeight: type.bodySmall.lineHeight,
-      color: c.textSecondary,
-      marginBottom: 8,
-    },
     body: {
       fontFamily: 'Geist',
       fontSize: type.body.size,
@@ -2616,7 +2550,6 @@ function styles(c: ThemeColors) {
       flexShrink: 1,
     },
     footerNote: { gap: 16, paddingVertical: 24 },
-    pageEnd: { gap: 4, paddingTop: 32, borderTopWidth: 1, borderColor: c.border, marginTop: 8 },
     detailMerchant: {
       fontFamily: 'GeistSemibold',
       fontSize: type.h2.size,

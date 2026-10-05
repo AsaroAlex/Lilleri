@@ -56,7 +56,7 @@ export const CORE_MESSAGE_PAIRS = {
     'The service is unavailable. Try again shortly.',
   ],
   'common.estimate': ['Stima', 'Estimate'],
-  'common.synthetic': ['Dati sintetici', 'Synthetic data'],
+  'common.synthetic': ['Ambiente locale', 'Local environment'],
   'common.backToTransactions': ['← Torna ai movimenti', '← Back to transactions'],
   'settings.title': ['Profilo e formato', 'Profile and display'],
   'settings.language': ['Lingua', 'Language'],
@@ -84,14 +84,14 @@ export const CORE_MESSAGE_PAIRS = {
     'The time zone changes how times are displayed. Transaction booking dates remain the dates provided by the source.',
   ],
   'settings.lastChange': ['Ultima modifica: {date}', 'Last changed: {date}'],
-  'settings.freeBetaTitle': ['Beta gratuita', 'Free beta'],
+  'settings.freeBetaTitle': ['Funzioni disponibili', 'Available features'],
   'settings.freeBetaCopy': [
-    'Stai usando dati sintetici. Questo prototipo non vende abbonamenti e non effettua addebiti.',
-    'You are using synthetic data. This prototype does not sell subscriptions or charge you.',
+    'Nessun abbonamento attivo e nessun addebito.',
+    'No active subscription and no charges.',
   ],
   'settings.freeBetaCapabilities': [
-    'Correggere i movimenti, usare le regole, controllare le corrispondenze, gestire la privacy, esportare ed eliminare i dati restano funzioni gratuite. Conti manuali e importazioni CSV non hanno un limite commerciale.',
-    'Correcting transactions, using rules, checking links, managing privacy, exporting and deleting data remain free. Manual accounts and CSV imports have no commercial limit.',
+    'Puoi correggere i movimenti, creare regole, controllare le corrispondenze e gestire i tuoi dati. Sono disponibili conti manuali e importazioni CSV.',
+    'You can correct transactions, create rules, check links and manage your data. Manual accounts and CSV imports are available.',
   ],
   'settings.saved': ['Impostazioni salvate.', 'Settings saved.'],
   'settings.loadFailed': [
@@ -107,10 +107,8 @@ export const CORE_MESSAGE_PAIRS = {
     'Settings changed. I refreshed the saved values: review them before saving again.',
   ],
   'settings.updatedAt': ['Impostazioni aggiornate: {date}', 'Settings updated: {date}'],
-  'settings.beta': [
-    'La prova locale è gratuita. Nessun acquisto o addebito automatico.',
-    'The local trial is free. No purchases or automatic charges.',
-  ],
+  'settings.beta': ['Nessun acquisto o addebito automatico.', 'No purchases or automatic charges.'],
+  'home.manualAccount': ['Aggiungi un conto manuale', 'Add a manual account'],
   'home.title': ['I tuoi soldi, in ordine.', 'Your money, in order.'],
   'home.balance': ['Saldo osservato', 'Observed balance'],
   'home.spending': ['Spese', 'Spending'],
@@ -161,6 +159,15 @@ export const CORE_MESSAGE_PAIRS = {
     'A recurring pattern does not confirm a contract or a future charge.',
   ],
   'recurring.empty': ['Nessuna ricorrenza proposta.', 'No recurring payments suggested.'],
+  'privacy.accessTitle': ['I tuoi dati, sotto il tuo controllo', 'Your data, under your control'],
+  'privacy.accessHelp': [
+    'Nel tuo profilo puoi scegliere le preferenze di riservatezza, esportare i dati ed eliminare l’account.',
+    'In your profile you can choose privacy preferences, export your data and delete your account.',
+  ],
+  'privacy.accessSummary': [
+    'Accesso al profilo e gestione dei dati',
+    'Profile access and data management',
+  ],
   'privacy.title': ['Le tue preferenze di riservatezza', 'Your privacy preferences'],
   'privacy.rulesTitle': ['Come riconosciamo i movimenti', 'How we recognise transactions'],
   'privacy.rulesOnly': ['Usa solo le mie regole', 'Use only my rules'],
@@ -270,8 +277,8 @@ export const CORE_MESSAGE_PAIRS = {
     'I confirm that I am at least 18 years old.',
   ],
   'identity.terms': [
-    'Accetto le condizioni locali di prova, bozza v1.',
-    'I accept the local trial terms, draft v1.',
+    'Accetto le condizioni dell’ambiente locale.',
+    'I accept the local environment terms.',
   ],
   'identity.sessionExpired': ['Accedi di nuovo per continuare.', 'Sign in again to continue.'],
   'identity.verify': ['Conferma la tua identità', 'Verify your identity'],
@@ -286,8 +293,8 @@ export const CORE_MESSAGE_PAIRS = {
   'identity.totp': ['Verifica in due passaggi', 'Two-step verification'],
   'identity.dismissSecrets': ['Ho conservato i codici', 'I have saved the codes'],
   'identity.localOnly': [
-    'Accesso locale per dati sintetici. I collegamenti bancari reali non sono disponibili.',
-    'Local sign-in for synthetic data. Real bank connections are unavailable.',
+    'Ambiente locale: usa soltanto dati di esempio. I collegamenti bancari reali non sono disponibili.',
+    'Local environment: use example data only. Real bank connections are unavailable.',
   ],
   'evidence.userCorrection': [
     'Hai corretto la categoria di questo movimento.',
@@ -310,12 +317,12 @@ export const CORE_MESSAGE_PAIRS = {
     'You chose the category for this merchant.',
   ],
   'evidence.dictionary': [
-    'Esercente riconosciuto nei dati dimostrativi: {merchant}.',
-    'Merchant recognised in the demo data: {merchant}.',
+    'Esercente riconosciuto dal catalogo: {merchant}.',
+    'Merchant recognised in the catalogue: {merchant}.',
   ],
   'evidence.dictionaryUnknown': [
-    'Esercente riconosciuto nei dati dimostrativi.',
-    'Merchant recognised in the demo data.',
+    'Esercente riconosciuto dal catalogo.',
+    'Merchant recognised in the catalogue.',
   ],
   'evidence.sameAccount': [
     'I movimenti riguardano lo stesso conto.',
@@ -367,8 +374,8 @@ export const CORE_MESSAGE_PAIRS = {
     'The transactions come from different sources.',
   ],
   'evidence.ownedAccounts': [
-    'Entrambi i conti sono inclusi nel profilo dimostrativo.',
-    'Both accounts belong to the demo profile.',
+    'Entrambi i conti sono inclusi nel profilo.',
+    'Both accounts belong to the profile.',
   ],
   'evidence.oppositeAmounts': [
     'Gli importi hanno lo stesso valore con segni opposti.',

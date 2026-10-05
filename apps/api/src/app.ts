@@ -473,10 +473,10 @@ export async function createApp(options: AppOptions) {
   await app.register(swagger, {
     openapi: {
       info: {
-        title: 'Lilleri synthetic demo API',
+        title: 'Lilleri API',
         version: '0.1.0',
         description:
-          'Loopback-only synthetic data. Production authentication and real bank connectivity are not implemented.',
+          'Profile, financial history and source management. Authentication and bank routes depend on the configured environment; source modes remain explicit in responses.',
       },
     },
     transform: (input) => {
@@ -1441,7 +1441,7 @@ export async function createApp(options: AppOptions) {
       },
     },
     async (request, reply) => {
-      reply.header('Content-Disposition', 'attachment; filename="lilleri-demo-export.json"')
+      reply.header('Content-Disposition', 'attachment; filename="lilleri-dati.json"')
       const exported = await ownedExportFor(request)
       return exportDto.parse(
         identity ? { ...exported, identity: identityExports.get(request) } : exported,

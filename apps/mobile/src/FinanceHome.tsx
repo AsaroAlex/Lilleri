@@ -12,7 +12,7 @@ interface Props {
   readonly theme: BrandTheme
   readonly history: string
   readonly emptyFixtures: boolean
-  readonly protectedIdentity: boolean
+  readonly onManualAccount?: () => void
   readonly onConnections: () => void
   readonly onAccount: (accountId: string) => void
 }
@@ -23,7 +23,7 @@ export function FinanceHome({
   theme,
   history,
   emptyFixtures,
-  protectedIdentity,
+  onManualAccount,
   onConnections,
   onAccount,
 }: Props) {
@@ -103,6 +103,15 @@ export function FinanceHome({
             <Pressable accessibilityRole="button" onPress={onConnections} style={s.primaryButton}>
               <Text style={s.primaryText}>{t('app.connectionSetup')}</Text>
             </Pressable>
+            {onManualAccount && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={onManualAccount}
+                style={s.detailsButton}
+              >
+                <Text style={s.link}>{t('home.manualAccount')}</Text>
+              </Pressable>
+            )}
           </View>
         </View>
         <View style={s.categoryPreview} aria-hidden={true} accessible={false}>
@@ -110,9 +119,6 @@ export function FinanceHome({
             <CategoryVisual key={id} categoryId={id} size={48} mode={theme} />
           ))}
         </View>
-        {emptyFixtures && !protectedIdentity && (
-          <Text style={s.small}>{t('app.personalAccessNeeded')}</Text>
-        )}
       </View>
     )
   return (
