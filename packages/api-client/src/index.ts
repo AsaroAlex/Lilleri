@@ -4,6 +4,7 @@ import type {
   CategoryId,
   Classification,
   Connection,
+  ConnectionDirectory,
   CurrencyCode,
   Transaction,
 } from '@lilleri/domain'
@@ -80,6 +81,8 @@ export interface ConnectionInstitutionCatalogueDto {
   readonly environment: 'synthetic' | 'sandbox' | 'live'
   readonly institutions: readonly ConnectionInstitutionDto[]
 }
+export type ConnectionDirectoryDto = ConnectionDirectory
+export type { ConnectionDirectoryEntry, ConnectionDirectoryKind } from '@lilleri/domain'
 export interface ConnectionAuthorizationDto {
   readonly providerId: string
   readonly institutionId: string
@@ -202,6 +205,8 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
     overview: (signal?: AbortSignal) => request<DemoOverview>('/v1/demo', signal ? { signal } : {}),
     connectMock: () => request<Connection>('/v1/connections/mock', { method: 'POST', body: '{}' }),
     institutions: () => request<ConnectionInstitutionCatalogueDto>('/v1/institutions'),
+    connectionDirectory: (signal?: AbortSignal) =>
+      request<ConnectionDirectoryDto>('/v1/connection-directory', signal ? { signal } : {}),
     connectInstitution: (institutionId: string, accountKind: ConnectionAccountKind) =>
       request<Connection>('/v1/connections', {
         method: 'POST',

@@ -14,6 +14,7 @@ import type {
 } from './contracts.js'
 import type { ProviderFxEvidence } from './fx-evidence.js'
 
+export * from './connection-directory.js'
 export * from './contracts.js'
 export { parseBankCsv } from './csv.js'
 export * from './csv-mapper.js'

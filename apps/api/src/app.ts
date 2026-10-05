@@ -17,6 +17,7 @@ import {
   cancelRestoredConnectionCreationIntents,
   compensateConnectionCreationIntent,
 } from './connection-creation.js'
+import { registerConnectionDirectoryRoutes } from './connection-directory-http.js'
 import {
   type ConsentLifecycleOptions,
   ConsentLifecycleService,
@@ -781,6 +782,7 @@ export async function createApp(options: AppOptions) {
           route.url === '/v1/connections' ||
           route.url === '/v1/connections/mock')) ||
       !route.url.startsWith('/v1/') ||
+      route.url === '/v1/connection-directory' ||
       route.url.startsWith('/v1/auth/')
     )
       return
@@ -875,7 +877,9 @@ export async function createApp(options: AppOptions) {
       const path = request.routeOptions.url ?? request.url.split('?')[0] ?? '/'
       const mutation = !['GET', 'HEAD'].includes(request.method)
       identity.checkOrigin(requestHeaders(request), mutation)
-      if (path.startsWith('/v1/') && !path.startsWith('/v1/auth/')) {
+      const publicDirectory =
+        path === '/v1/connection-directory' && ['GET', 'HEAD'].includes(request.method)
+      if (path.startsWith('/v1/') && !path.startsWith('/v1/auth/') && !publicDirectory) {
         const principal = await identity.financialPrincipal(requestHeaders(request), {
           mutation,
           ownerOnly:
@@ -1162,6 +1166,7 @@ export async function createApp(options: AppOptions) {
     async () => ({ status: 'ok' as const, mode: 'synthetic' as const }),
   )
   app.get('/openapi.json', async () => app.swagger())
+  registerConnectionDirectoryRoutes(app, Boolean(identity))
   const institutionDto = z.object({
     id: z.string(),
     providerId: z.string(),
