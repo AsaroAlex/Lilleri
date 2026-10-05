@@ -522,30 +522,27 @@ export async function createApp(options: AppOptions) {
       )
   await demoService?.bootstrap(options.demoFixtures === 'empty' ? false : (options.seed ?? false))
   if (options.demoFixtures === 'empty') await demoService?.retireFixtures()
-  // Empty public previews cannot accept personal payloads or recreate synthetic bank data.
+  // A shared service without identity cannot mutate a retired financial profile.
   app.addHook('onRequest', async (request) => {
     const path = request.routeOptions.url ?? ''
-    if (identity || request.method === 'GET' || request.method === 'DELETE' || !demoService) return
-    const personal =
-      path.startsWith('/v1/manual/') ||
-      path.startsWith('/v1/imports/') ||
-      path.startsWith('/v1/import-mappings')
-    const synthetic = path.startsWith('/v1/connections') || path.startsWith('/v1/sync/')
-    if (!personal && !synthetic) return
+    if (identity || ['GET', 'HEAD', 'OPTIONS'].includes(request.method) || !demoService) return
     const empty =
       options.demoFixtures === 'empty' ||
       (await fixtureRetirement(options.db, demoService.profileId))
     if (!empty) return
-    if (personal)
+    const synthetic =
+      request.method !== 'DELETE' &&
+      (path.startsWith('/v1/connections') || path.startsWith('/v1/sync/'))
+    if (synthetic)
       throw new Problem(
-        401,
-        'public_identity_required',
-        'Per inserire dati personali serve un accesso privato. Questa anteprima condivisa non accetta movimenti o file finanziari reali.',
+        409,
+        'synthetic_fixtures_disabled',
+        'Il collegamento bancario richiede un accesso personale e un consenso autorizzato.',
       )
     throw new Problem(
-      409,
-      'synthetic_fixtures_disabled',
-      'I dati di prova sono stati rimossi. Per usare una banca reale serve un collegamento personale autorizzato.',
+      401,
+      'public_identity_required',
+      'Per modificare i tuoi dati serve un accesso personale protetto.',
     )
   })
   const requestServices = new WeakMap<FastifyRequest, DemoService>()
