@@ -19,6 +19,12 @@ This preview remains a shared synthetic development instance. Use a private work
 
 To keep editing in Codex and test through an online HTTPS URL, the [Railway preview setup](docs/operations/railway-preview.md) connects this development branch to a persistent single-service deployment. Updates arrive after a tested commit is deployed; they are not filesystem hot reload from this cloud task. The root Dockerfile is a synthetic development image, not a production banking image.
 
+## Hosted production service
+
+`deploy/production.Dockerfile` builds the hosted service (`apps/api/dist/server-hosted.js`): one HTTPS origin serving the API, the web app and the legal pages, with email sign-up and recovery, PostgreSQL with forced row-level security, a sealed key vault on a separate volume, Stripe subscriptions (Gratis free forever, Plus €6.99/month or €69.99/year) and redirect-based bank connections through Enable Banking for Plus members. Configuration is validated at startup and refuses any synthetic/demo setting. Provider choices and the cost model at 100/1,000/10,000 users are in [value for money](docs/business/value-for-money-20261005.md); accounts, variables and the go-live checklist are in the [production release runbook](docs/operations/production-release.md).
+
+The synthetic preview below remains separate and unchanged.
+
 ## Run the local demo
 
 Use Node 22.12+ and pnpm 10 (the repository pins pnpm 10.28.0). In the supplied cloud workspace, the optional installed toolchain can be activated with `. /workspace/.lilleri-toolchain/env.sh`.

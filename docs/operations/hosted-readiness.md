@@ -1,5 +1,14 @@
 # Hosted release readiness inspection
 
+> **Update 2026-10-05.** The hosted entry point now exists: `apps/api/dist/server-hosted.js`
+> validates its own configuration at startup (see
+> [production release runbook](production-release.md)). It uses a sealed volume key vault and a
+> volume-backed erasure journal kept outside PostgreSQL and its backups, and the Enable Banking
+> adapter with the durable sync runtime. This inspection still describes the stricter reference
+> architecture (external KMS, separate runtime database login with `verify-full` TLS, external
+> deletion journal); treat its remaining gates as hardening targets, not as blockers of the
+> hosted entry point.
+
 Date: 2026-10-04. `apps/api/src/hosted-readiness.ts` and
 `tools/hosted-readiness.mjs` implement a zero-network inspection of proposed hosted
 configuration. They do not start a service, create infrastructure, send email,
