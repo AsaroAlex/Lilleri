@@ -1,5 +1,15 @@
 # Lilleri delivery status
 
+## Artwork sharpness — 2026-10-05
+
+Published commit `3ceab75`, Railway `aeb7741c-790b-4cbf-9117-c273c6b8f43b`
+**SUCCESS**, verified at 11:58 Europe/Rome. Existing SVGs replace web finance PNGs;
+the native welcome-wallet fallback is 640px. Mobile typecheck, scoped checks/build,
+24 artwork layouts (DPR 1–4, both themes, 200% zoom) and 8 product browser groups
+(134 surfaces) passed. Exact bundle and both wallet SVGs returned HTTP 200.
+Finance and retirement audit are unchanged; no infrastructure settings changed.
+See [release proof](operations/artwork-sharpness-release-20261005.json).
+
 ## European bank directory — 2026-10-05
 
 Published commit `d377327e67310086833e220543c11c0bb21c3413`, Railway deployment

@@ -1,5 +1,22 @@
 # PROJECT STATE — Lilleri
 
+## Current artwork sharpness release — 2026-10-05 (Europe/Rome)
+
+Published commit `3ceab75a1158acca39d4bdf1677b26baf20d892a`, Railway deployment
+`aeb7741c-790b-4cbf-9117-c273c6b8f43b` **SUCCESS**, verified at 11:58 Europe/Rome.
+The annotated Home wallet used a 192px raster at 160 CSS pixels. Web now selects
+the existing SVG artwork through a generated platform registry; native retains PNGs
+with 640px light/dark wallet fallbacks. Artwork, tint and decorative accessibility
+are preserved. No dependencies were added. Mobile typecheck, scoped Biome checks,
+preview build, reproducible generation, 24 artwork layouts at DPR 1–4 and 200% zoom,
+and 8 product browser groups/134 surfaces passed. Native resolution was inspected;
+no native emulator was run. The matching bundle `index-30e9d47ccd4ded406ffe7f63c84e4585.js`,
+both wallet SVGs and public read endpoints returned HTTP 200. Canonical owned finance
+and retirement audit are unchanged; active finance remains empty. No migrations,
+financial POST or Railway settings changed. Owned preview stopped, archive retained.
+Proof: `docs/operations/artwork-sharpness-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current European directory release — 2026-10-05 (Europe/Rome)
 
 Published commit `d377327e67310086833e220543c11c0bb21c3413`, Railway deployment

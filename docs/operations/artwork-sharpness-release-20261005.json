@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 09:58:08 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 11:58:08",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "3ceab75a1158acca39d4bdf1677b26baf20d892a",
+  "deploymentId": "aeb7741c-790b-4cbf-9117-c273c6b8f43b",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-30e9d47ccd4ded406ffe7f63c84e4585.js",
+  "change": {
+    "cause": "192px raster enlarged to 160 CSS pixels, insufficient at device pixel ratios 2–4",
+    "web": "Existing vector artwork selected through generated finance-assets.web.ts",
+    "native": "640px light/dark wallet PNG fallback for 160pt at 4x",
+    "artworkDesignUnchanged": true,
+    "financeVisualAccessibilityAndTintUnchanged": true,
+    "newDependencies": 0
+  },
+  "localVerification": {
+    "mobileTypecheck": "passed",
+    "scopedBiomeCheck": "passed",
+    "previewBuild": "passed",
+    "artworkGenerationReproducible": true,
+    "artworkLayouts": 24,
+    "widths": [
+      390,
+      650,
+      1440
+    ],
+    "devicePixelRatios": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "zoomPercent": 200,
+    "vectorAssetsChecked": 19,
+    "vectorMime": "image/svg+xml; nosniff",
+    "bankPickerVectors": true,
+    "productBrowserGroups": 8,
+    "productSurfaces": 134,
+    "productWidths": [
+      320,
+      390,
+      768,
+      1440
+    ],
+    "productLocales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "browser": "Chromium",
+    "pageErrors": 0,
+    "financialBrowserWrites": 0,
+    "financesUnchanged": true,
+    "serverSettingsUnchanged": true,
+    "nativeEmulatorVerification": false,
+    "ownedPreviewStopped": true,
+    "localArchivePreserved": true
+  },
+  "publicVerification": {
+    "health": "ok",
+    "mode": "synthetic",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "canonicalArchiveAndRetirementAuditUnchanged": true,
+    "directoryEntries": 62,
+    "countries": 16,
+    "financialMutationsSent": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-30e9d47ccd4ded406ffe7f63c84e4585.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/finance/wallet-light.712e9b7c400e32bd2f3350f5b685ae88.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/finance/wallet-dark.e4b183235e6427a71f8929b7877be1be.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    }
+  ],
+  "configuration": {
+    "railwaySettingsChanged": false,
+    "migrationsChanged": 0,
+    "financialMutationsSent": 0,
+    "namespacePreserved": true
+  }
+}
