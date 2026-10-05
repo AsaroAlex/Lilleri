@@ -1,5 +1,20 @@
 # Lilleri delivery status
 
+## Hosted production service — 2026-10-05
+
+Published commit `69cb45c`, Railway `8ba4a6d3-9b2b-4ffc-b055-7aa9e287875d` **SUCCESS**,
+verified at 17:28 Europe/Rome; the shared preview itself stays synthetic. The repository now
+contains the hosted production service (`deploy/production.Dockerfile`, `server-hosted.js`):
+configuration validated at startup, PostgreSQL with forced row-level security, a sealed volume key
+vault, Scaleway or Resend identity mail, Stripe Gratis/Plus subscriptions with signed webhooks, a
+durable Stripe cancellation queue for deleted profiles, a bank-capacity purchase gate and Enable
+Banking redirect connections reserved to Plus. **No real Stripe, Scaleway or Enable Banking
+credential was used**: every integration is proved against local fakes. Full API suite (646
+passed, 3 skipped), clean-checkout `pnpm check` (23/23 tasks), preview build and a 4-group hosted
+browser smoke with 0 page errors passed. Accounts, variables and checklist:
+[production release runbook](operations/production-release.md); providers and costs:
+[value for money](business/value-for-money-20261005.md).
+
 ## Connection action for every service — 2026-10-05
 
 Published commit `8b1f411`, Railway `754641f9-26f2-4362-a16d-68e8ba05b4a1`

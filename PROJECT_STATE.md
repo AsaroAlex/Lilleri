@@ -1,5 +1,22 @@
 # PROJECT STATE — Lilleri
 
+## Current hosted production service release — 2026-10-05 (Europe/Rome)
+
+Published commit `69cb45c394bc212b8c7459ca49db2e935f77e276`, Railway deployment
+`8ba4a6d3-9b2b-4ffc-b055-7aa9e287875d` **SUCCESS**, verified at 17:28 Europe/Rome (HTTP 200,
+`/api/health` synthetic). The preview service is unchanged in nature (synthetic, US region); the
+new hosted production entry point is built by `deploy/production.Dockerfile` and is not deployed
+yet: it needs a separate Railway Pro project in EU West with PostgreSQL PITR and a `/data` volume.
+Implemented: validated hosted configuration, sealed volume vault, Scaleway/Resend identity mail,
+Enable Banking adapter with redirect authorizations, Plus guard and capacity cap, Stripe billing
+with signed webhooks, a bank-capacity purchase gate and a durable cancellation queue so a deleted
+profile is never charged again, legal pages, installable web app. Verified: full API suite 646
+passed/3 skipped, clean-checkout `pnpm check` 23/23, preview build, hosted browser smoke 4 groups
+with 0 page errors. Not verified: any real Enable Banking, Stripe or Scaleway credential. Push
+protection flagged a synthetic `rk_live_` fixture in `apps/api/test/billing.test.ts`; the owner
+allowed it on GitHub. Docs: `docs/operations/production-release.md`,
+`docs/business/value-for-money-20261005.md`.
+
 ## Current per-service connection entry release — 2026-10-05 (Europe/Rome)
 
 Published commit `8b1f41199714fa1aafa88831c0273264af586f2d`, Railway deployment

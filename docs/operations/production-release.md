@@ -10,7 +10,9 @@ non-commercial Railway service. Provider choices and costs:
 
 | Concern | Implementation | Code |
 | --- | --- | --- |
-| HTTP | One Fastify process on `0.0.0.0:$PORT` serving the API, the legal pages and the compiled Expo web app from the same HTTPS origin | `hosted-server.ts`, `web-app.ts` |
+| HTTP | One Fastify process on `0.0.0.0:$PORT` serving the API, the public home page (`/`, `/en`), the legal pages and the compiled Expo web app under **`/app`** from the same HTTPS origin; old `/?bank=…`, `/?billing=…`, `/?identity=…` links are forwarded to `/app` | `hosted-server.ts`, `landing-page.ts`, `web-app.ts` |
+| Home page | Server-rendered, no scripts, Italian and English, live Plus prices from Stripe (omitted until read), operator details and VAT number in the footer, `robots.txt` and `sitemap.xml` | `landing-page.ts` |
+| Plus Fondatori | While Plus cannot be bought, the owner can join a list (`/v1/plus/waitlist`); when capacity opens, members receive **one** email in joining order, at most as many per run as there are free connections (every 15 minutes) | `plus-waitlist.ts` |
 | Identity | Email + password (≥ 12 chars), mandatory email verification, password recovery, optional passkeys and TOTP, 30-day Secure/HttpOnly/SameSite=Strict cookies | `identity.ts` (hosted mode) |
 | Email | Scaleway Transactional Email (default) or Resend | `identity-mail.ts` |
 | Database | PostgreSQL ≥ 16; migrations run at startup under an advisory lock; financial requests use `SET LOCAL ROLE lilleri_runtime` with forced row-level security, or a separate runtime login if `DATABASE_RUNTIME_URL` is set | `packages/database` |
@@ -99,7 +101,10 @@ Startup refuses `DEMO_MODE=1`, `LOCAL_AUTH_MODE=1`, `PGLITE_PATH`, local vault p
 2. Deploy; wait for the healthcheck; check logs for `bank_provider_check` (`active`, `environmentMatches`
    and `redirectRegistered` must all be `true` once Enable Banking is configured).
 3. Open `https://<domain>/legal/privacy` and `/legal/terms`; confirm the company details.
-4. Sign up with a real mailbox, verify the email, sign in, enable TOTP, sign out/in.
+4. Open `https://<domain>/` and `/en`: check the company name, address and VAT number in the
+   footer, the Plus prices (they appear once Stripe answers) and that "Inizia gratis" opens `/app`.
+   Sign up with a real mailbox, verify the email, sign in, enable TOTP, sign out/in.
+   While Plus is closed, join the Fondatori list from Settings › Abbonamento and check your place.
 5. Stripe test mode first (`sk_test_…` + test webhook secret): buy monthly with card `4242…`, confirm
    the plan becomes Plus within seconds, open the portal, cancel, confirm `cancelAtPeriodEnd`.
 6. Bank: with the restricted Enable Banking application, connect your own bank, confirm accounts,
@@ -120,6 +125,11 @@ Startup refuses `DEMO_MODE=1`, `LOCAL_AUTH_MODE=1`, `PGLITE_PATH`, local vault p
 - **Scaling:** one instance handles the expected 10,000-user load; scale vertically. Horizontal scaling
   requires moving the vault/journal off the local volume first.
 - **Cost guard:** raise `BANK_MAX_ACTIVE_CONNECTIONS` only together with the provider contract.
+  Raising it also opens Plus to the Fondatori list: the oldest members are emailed first, at most
+  as many per run as there are free connections (log line `plus_waitlist_notified`).
+- **Founders price promise:** the home page and the notice promise that list members keep the
+  price they start Plus with for as long as they stay subscribed. Never migrate those Stripe
+  subscriptions to a new price, and have counsel add the promise to the terms before launch.
 - **Owed cancellations:** a `billing_cancellation_deferred` log line means Stripe could not confirm
   the cancellation of a deleted profile's subscription; it is retried automatically (backoff up to
   6 hours). Rows in `billing_cancellations` with `attempts > 3` need a look at the Stripe status page
@@ -132,6 +142,8 @@ Startup refuses `DEMO_MODE=1`, `LOCAL_AUTH_MODE=1`, `PGLITE_PATH`, local vault p
   available to this implementation).
 - A separate PostgreSQL runtime login is optional; without it the API uses the owner connection with
   `SET LOCAL ROLE lilleri_runtime` (row-level security still enforced per request).
-- Native iOS/Android builds are not part of this release; the web app runs in desktop and mobile browsers.
+- Native iOS/Android builds are not part of this release; the web app runs in desktop and mobile
+  browsers and can be installed on the home screen. Domain choice, store rules, fees and the
+  remaining native work: [domain and native apps](native-apps-and-domain.md).
 - Legal texts must be reviewed by Italian counsel before publication; see the review list in
   `apps/api/src/legal-pages.ts`.
