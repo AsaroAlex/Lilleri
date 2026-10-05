@@ -1218,7 +1218,11 @@ function AppSurface({
               baseUrl={apiBaseUrl}
               {...(hostedIdentity ? { hostedIdentity } : {})}
               theme={theme}
-              visible={!signedIn || tab === 'Impostazioni' || reauthenticationRequested}
+              visible={
+                !signedIn ||
+                (tab === 'Impostazioni' && manage === null) ||
+                reauthenticationRequested
+              }
               sessionLostVersion={sessionLostVersion}
               reauthenticationRequested={reauthenticationRequested}
               onSignedIn={async (session) => {
@@ -1619,6 +1623,11 @@ function AppSurface({
                       plusConfirmation?.epoch === renderedIdentityEpoch
                         ? plusConfirmation.request
                         : 0
+                    }
+                    onPlusConfirmed={() =>
+                      setReturnNotice((shown) =>
+                        shown?.key === 'billingReturn.success' ? null : shown,
+                      )
                     }
                     onError={panelIdentityFailure}
                   />

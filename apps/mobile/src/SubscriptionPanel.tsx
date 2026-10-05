@@ -24,6 +24,8 @@ export interface SubscriptionPanelProps {
   readonly owner: boolean
   /** A new value after a successful checkout waits for the payment webhook to switch the plan. */
   readonly confirmPlusRequest?: number
+  /** Called whenever the server reports Plus, so stale "waiting for payment" notices can close. */
+  readonly onPlusConfirmed?: () => void
   readonly onError?: (cause: unknown) => boolean
 }
 type Confirmation = 'waiting' | 'confirmed' | 'slow' | null
@@ -50,6 +52,7 @@ export function SubscriptionPanel({
   resetKey,
   owner,
   confirmPlusRequest = 0,
+  onPlusConfirmed,
   onError,
 }: SubscriptionPanelProps) {
   const i18n = useI18n()
@@ -76,8 +79,8 @@ export function SubscriptionPanel({
   const problem = problemState?.scope === scope ? problemState.value : null
   const setProblem = (value: Problem | null) =>
     setProblemState(value ? { scope: current.current.scope, value } : null)
-  const handlers = useRef({ onError })
-  handlers.current = { onError }
+  const handlers = useRef({ onError, onPlusConfirmed })
+  handlers.current = { onError, onPlusConfirmed }
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -92,8 +95,9 @@ export function SubscriptionPanel({
     const key = `${scopeAtStart}:${attempt}`
     void api.billing(abort.signal).then(
       (value) => {
-        if (!abort.signal.aborted && current.current.loadKey === key)
-          setBilling({ scope: scopeAtStart, key, value, failed: false })
+        if (abort.signal.aborted || current.current.loadKey !== key) return
+        setBilling({ scope: scopeAtStart, key, value, failed: false })
+        if (value.plan === 'plus') handlers.current.onPlusConfirmed?.()
       },
       (cause: unknown) => {
         if (abort.signal.aborted || current.current.loadKey !== key) return
@@ -122,6 +126,7 @@ export function SubscriptionPanel({
         setBilling({ scope: scopeAtStart, key: current.current.loadKey, value, failed: false })
         if (value.plan === 'plus') {
           setConfirmation({ key, state: 'confirmed' })
+          handlers.current.onPlusConfirmed?.()
           return
         }
       } catch (cause) {

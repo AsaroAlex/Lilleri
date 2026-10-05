@@ -6,6 +6,10 @@ export const IDENTITY_PANEL_MESSAGE_PAIRS = {
     'Verifica la tua email per iniziare. Puoi proteggere l’accesso con una passkey e un secondo fattore.',
     'Verify your email to get started. You can protect sign-in with a passkey and a second factor.',
   ],
+  'identityPanel.hostedSignedInHelp': [
+    'Puoi proteggere l’accesso con una passkey e un secondo fattore.',
+    'You can protect sign-in with a passkey and a second factor.',
+  ],
   'identityPanel.hostedCreate': ['Crea il tuo profilo', 'Create your profile'],
   'identityPanel.hostedTerms': ['Leggi le condizioni di utilizzo', 'Read the terms of use'],
   'identityPanel.hostedPrivacy': ['Informativa privacy', 'Privacy notice'],
@@ -238,6 +242,10 @@ export const IDENTITY_PANEL_MESSAGE_PAIRS = {
   'identityPanel.sessionExpiry': [
     'Sessione valida fino al {date}. Il servizio applica un limite di 90 giorni.',
     'Session valid until {date}. The service applies a 90-day limit.',
+  ],
+  'identityPanel.hostedSessionExpiry': [
+    'Sessione valida fino al {date}. Per sicurezza ti chiediamo di accedere di nuovo almeno ogni 30 giorni.',
+    'Session valid until {date}. For your security we ask you to sign in again at least every 30 days.',
   ],
   'identityPanel.factorState': ['Secondo fattore: {state}.', 'Second factor: {state}.'],
   'identityPanel.identityExpiry': [

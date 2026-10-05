@@ -433,7 +433,13 @@ export function LocalIdentityPanel({
             : t('identityPanel.signIn')}
       </Text>
       <Text style={s.body}>
-        {t(hostedIdentity ? 'identityPanel.hostedHelp' : 'identityPanel.localHelp')}
+        {t(
+          hostedIdentity
+            ? session
+              ? 'identityPanel.hostedSignedInHelp'
+              : 'identityPanel.hostedHelp'
+            : 'identityPanel.localHelp',
+        )}
       </Text>
       {checking && (
         <ActivityIndicator accessibilityLabel={t('identityPanel.checking')} color={c.primary} />
@@ -734,7 +740,12 @@ export function LocalIdentityPanel({
           <Text style={s.label}>{session.user.name}</Text>
           <Text style={s.body}>{session.user.email}</Text>
           <Text style={s.body}>
-            {t('identityPanel.sessionExpiry', { date: date(session.expiresAt) })}
+            {t(
+              hostedIdentity ? 'identityPanel.hostedSessionExpiry' : 'identityPanel.sessionExpiry',
+              {
+                date: date(session.expiresAt),
+              },
+            )}
           </Text>
           <Text style={s.body}>
             {t('identityPanel.factorState', {
