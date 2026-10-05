@@ -53,9 +53,21 @@ import {
 import { FinanceHome } from './src/FinanceHome'
 import { CategoryVisual, FinanceVisual } from './src/FinanceVisual'
 import { FxEvidencePanel } from './src/FxEvidencePanel'
+import {
+  BANK_RETURN_MESSAGES,
+  BILLING_RETURN_MESSAGES,
+  consumeHostedReturnLocation,
+  FIRST_SYNC_POLL_INTERVAL_MS,
+  FIRST_SYNC_POLL_LIMIT_MS,
+  firstSyncOutcome,
+  type HostedReturn,
+  NO_HOSTED_RETURN,
+  newestBankConnection,
+} from './src/hosted-flows'
 import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
 import type { LocalIdentitySession } from './src/identity-client'
+import { resolveSameOriginNoticeUrl, sameOriginNoticeUrl } from './src/identity-recovery'
 import { EMPTY_LEDGER_FILTERS, LedgerSearchFilters } from './src/LedgerSearchFilters'
 import { LocalDisplayPreferencesPanel } from './src/LocalDisplayPreferencesPanel'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
@@ -69,6 +81,7 @@ import { matchesVerifiedOverview, offlineGatedApi } from './src/offline-api'
 import { RulesPanel } from './src/RulesPanel'
 import { SettingsPanel } from './src/SettingsPanel'
 import { SourceDecisionsPanel } from './src/SourceDecisionsPanel'
+import { SubscriptionPanel } from './src/SubscriptionPanel'
 import { useLedgerSearch } from './src/useLedgerSearch'
 import { UnderstandingPanel } from './UnderstandingPanel'
 
@@ -79,18 +92,36 @@ declare const process: {
     EXPO_PUBLIC_HOSTED_AUTH_MODE?: string
     EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION?: string
     EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL?: string
+    EXPO_PUBLIC_HOSTED_AUTH_PRIVACY_URL?: string
   }
 }
 const hostedIdentityMode = process.env.EXPO_PUBLIC_HOSTED_AUTH_MODE === '1'
 if (hostedIdentityMode && process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1')
   throw new Error('Select either local or hosted browser identity')
 const identityMode = hostedIdentityMode || process.env.EXPO_PUBLIC_LOCAL_AUTH_MODE === '1'
+const browserOrigin =
+  Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : undefined
+// Notices may be configured as same-origin paths ("/legal/terms"); identity validation is unchanged.
+const hostedPrivacyUrl = hostedIdentityMode
+  ? sameOriginNoticeUrl(process.env.EXPO_PUBLIC_HOSTED_AUTH_PRIVACY_URL, browserOrigin)
+  : null
 const hostedIdentity = hostedIdentityMode
   ? {
       termsVersion: process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION ?? '',
-      termsUrl: process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL ?? '',
+      termsUrl: resolveSameOriginNoticeUrl(
+        process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL ?? '',
+        browserOrigin,
+      ),
+      ...(hostedPrivacyUrl ? { privacyUrl: hostedPrivacyUrl } : {}),
     }
   : undefined
+/** Bank and payment pages return with a one-time outcome; it never stays in the address bar. */
+const initialHostedReturn: HostedReturn =
+  hostedIdentityMode && browserOrigin && typeof window.history?.replaceState === 'function'
+    ? consumeHostedReturnLocation(window.location.href, (url) =>
+        window.history.replaceState(window.history.state, '', url),
+      )
+    : NO_HOSTED_RETURN
 const apiBaseUrl =
   process.env.EXPO_PUBLIC_API_URL ??
   (hostedIdentityMode && typeof window !== 'undefined' ? window.location.origin : undefined) ??
@@ -117,6 +148,7 @@ const manageMessages = {
   merchants: 'merchant.title',
   privacy: 'app.privacyAndData',
   preferences: 'app.preferences',
+  subscription: 'subscription.title',
 } as const satisfies Record<string, MessageKey>
 type DisplayPreferences = { readonly locale: ProfileLocale; readonly timezone: string }
 const defaultDisplayPreferences: DisplayPreferences = {
@@ -212,6 +244,7 @@ function AppSurface({
     | 'merchants'
     | 'privacy'
     | 'preferences'
+    | 'subscription'
     | null
   >(null)
   const [showVerified, setShowVerified] = useState(false)
@@ -234,6 +267,19 @@ function AppSurface({
   const [signedIn, setSignedIn] = useState(false)
   const [reauthenticationRequested, setReauthenticationRequested] = useState(false)
   const [sessionLostVersion, setSessionLostVersion] = useState(0)
+  const pendingReturn = useRef<HostedReturn>(initialHostedReturn)
+  const [returnNotice, setReturnNotice] = useState<{
+    readonly epoch: number
+    readonly key: MessageKey
+  } | null>(null)
+  const [firstSync, setFirstSync] = useState<{
+    readonly epoch: number
+    readonly startedAt: number
+  } | null>(null)
+  const [plusConfirmation, setPlusConfirmation] = useState<{
+    readonly epoch: number
+    readonly request: number
+  } | null>(null)
   const identityEpoch = useRef(0)
   const verifiedSession = useRef<LocalIdentitySession | null>(null)
   const verifiedSnapshot = useRef<string | null>(null)
@@ -317,6 +363,9 @@ function AppSurface({
       setLedgerFilters(EMPTY_LEDGER_FILTERS)
       setManage(null)
       setRecoveryAccount(null)
+      setReturnNotice(null)
+      setFirstSync(null)
+      setPlusConfirmation(null)
       if (!options?.preserveNavigation) setTab('Home')
       setReauthenticationRequested(false)
       setCategory('uncategorised')
@@ -609,6 +658,81 @@ function AppSurface({
       throw cause
     }
   }, [identityFailure, api, acceptOnlineOverview])
+  const latestOverview = useRef(data)
+  latestOverview.current = data
+  // A bank or payment return is applied once, after the signed-in profile's data is available.
+  useEffect(() => {
+    const pending = pendingReturn.current
+    if ((!pending.bank && !pending.billing) || !data || erased || (identityMode && !signedIn))
+      return
+    pendingReturn.current = NO_HOSTED_RETURN
+    const epoch = identityEpoch.current
+    setDetailId(null)
+    setConfirm(null)
+    setTab('Impostazioni')
+    if (pending.bank) {
+      setManage('connections')
+      setReturnNotice({ epoch, key: BANK_RETURN_MESSAGES[pending.bank] })
+      if (pending.bank === 'connected') setFirstSync({ epoch, startedAt: Date.now() })
+    } else if (pending.billing) {
+      setManage('subscription')
+      setReturnNotice({ epoch, key: BILLING_RETURN_MESSAGES[pending.billing] })
+      if (pending.billing === 'success') setPlusConfirmation({ epoch, request: Date.now() })
+    }
+  }, [data, erased, signedIn])
+  // The first bank synchronisation runs in the background: poll calmly for a bounded time.
+  useEffect(() => {
+    if (!firstSync || firstSync.epoch !== renderedIdentityEpoch) return
+    const epoch = firstSync.epoch
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const live = () => !cancelled && epoch === identityEpoch.current
+    const finish = (key: MessageKey) => {
+      if (!live()) return
+      setFirstSync(null)
+      setReturnNotice({ epoch, key })
+    }
+    const poll = async () => {
+      timer = null
+      try {
+        let overview = await api.overview()
+        if (!live()) return
+        if (JSON.stringify(overview) !== JSON.stringify(latestOverview.current))
+          await acceptOnlineOverview(overview, epoch)
+        if (!live()) return
+        const connection = newestBankConnection(overview.connections)
+        if (connection) {
+          const outcome = connection.lastSyncedAt
+            ? 'done'
+            : firstSyncOutcome(connection, await api.connectionSyncJobs(connection.id))
+          if (!live()) return
+          if (outcome === 'done' && !connection.lastSyncedAt) {
+            // The completed job has written the ledger; show it before announcing the result.
+            overview = await api.overview()
+            if (!live()) return
+            await acceptOnlineOverview(overview, epoch)
+          }
+          if (outcome) {
+            finish(outcome === 'done' ? 'bankReturn.syncDone' : 'bankReturn.syncFailed')
+            return
+          }
+        }
+      } catch (cause) {
+        if (!live() || identityFailure(cause)) return
+      }
+      if (!live()) return
+      if (Date.now() - firstSync.startedAt >= FIRST_SYNC_POLL_LIMIT_MS) {
+        finish('bankReturn.syncSlow')
+        return
+      }
+      timer = setTimeout(() => void poll(), FIRST_SYNC_POLL_INTERVAL_MS)
+    }
+    void poll()
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
+  }, [firstSync, renderedIdentityEpoch, api, acceptOnlineOverview, identityFailure])
 
   const mutate = async (
     key: string,
@@ -1162,6 +1286,24 @@ function AppSurface({
               )}
             </AccessibleStatus>
           )}
+          {returnNotice && returnNotice.epoch === renderedIdentityEpoch && (
+            <AccessibleStatus testID="hosted-return-notice" style={s.notice}>
+              <Text style={s.body}>{t(returnNotice.key)}</Text>
+              <Button
+                label={t('hostedReturn.dismiss')}
+                onPress={() => setReturnNotice(null)}
+                quiet
+                c={c}
+                s={s}
+              />
+            </AccessibleStatus>
+          )}
+          {firstSync && firstSync.epoch === renderedIdentityEpoch && (
+            <AccessibleStatus testID="bank-first-sync" style={s.busy}>
+              <ActivityIndicator color={c.primary} size="small" />
+              <Text style={s.caption}>{t('bankReturn.reading')}</Text>
+            </AccessibleStatus>
+          )}
           {busy && (
             <AccessibleStatus style={s.busy}>
               <ActivityIndicator color={c.primary} size="small" />
@@ -1261,9 +1403,14 @@ function AppSurface({
                   <Text style={s.body}>{t('app.offlinePanel')}</Text>
                 </View>
               ) : publicShared &&
-                ['mapped-import', 'import', 'notifications', 'merchants', 'rules'].includes(
-                  manage,
-                ) ? (
+                [
+                  'mapped-import',
+                  'import',
+                  'notifications',
+                  'merchants',
+                  'rules',
+                  'subscription',
+                ].includes(manage) ? (
                 <View style={s.card}>
                   <FinanceVisual kind="bank" size={64} mode={theme} />
                   <Text style={s.sectionTitle}>{t('app.connectionSetup')}</Text>
@@ -1337,6 +1484,17 @@ function AppSurface({
                   onManualFallback={() => setManage('import')}
                   onStatementImport={() => setManage('mapped-import')}
                   protectedPersonalAccess={hostedIdentityMode && signedIn}
+                  {...(hostedIdentityMode && signedIn
+                    ? {
+                        bankAuthorization: {
+                          onOpenPlus: () => {
+                            if (renderedIdentityEpoch === identityEpoch.current)
+                              setManage('subscription')
+                          },
+                          onError: panelIdentityFailure,
+                        },
+                      }
+                    : {})}
                   readOnly={publicShared}
                   onRecoverHistory={(accountId) => {
                     if (renderedIdentityEpoch !== identityEpoch.current) return
@@ -1445,6 +1603,29 @@ function AppSurface({
                     }}
                     onError={panelIdentityFailure}
                   />
+                )
+              ) : manage === 'subscription' ? (
+                hostedIdentityMode && signedIn ? (
+                  <SubscriptionPanel
+                    api={api}
+                    theme={theme}
+                    resetKey={renderedIdentityEpoch}
+                    owner={
+                      verifiedSession.current
+                        ? verifiedSession.current.principal.role === 'owner'
+                        : true
+                    }
+                    confirmPlusRequest={
+                      plusConfirmation?.epoch === renderedIdentityEpoch
+                        ? plusConfirmation.request
+                        : 0
+                    }
+                    onError={panelIdentityFailure}
+                  />
+                ) : (
+                  <View style={s.card}>
+                    <Text style={s.body}>{t('app.personalAccessNeeded')}</Text>
+                  </View>
                 )
               ) : manage === 'merchants' ? (
                 <MerchantPanel
@@ -2122,13 +2303,20 @@ function AppSurface({
                     title: 'app.privacyAndData',
                     help: 'app.privacyHelp',
                   },
+                  {
+                    destination: 'subscription',
+                    kind: 'card',
+                    title: 'subscription.title',
+                    help: 'subscription.settingsHelp',
+                  },
                   { destination: 'merchants', kind: 'wallet', title: 'merchant.title', help: null },
                 ] as const
               )
                 .filter(
                   (item) =>
-                    !publicShared ||
-                    (item.destination !== 'notifications' && item.destination !== 'merchants'),
+                    (item.destination !== 'subscription' || (hostedIdentityMode && signedIn)) &&
+                    (!publicShared ||
+                      (item.destination !== 'notifications' && item.destination !== 'merchants')),
                 )
                 .map((item) => (
                   <Pressable

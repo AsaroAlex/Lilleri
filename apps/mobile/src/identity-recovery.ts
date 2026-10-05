@@ -32,6 +32,45 @@ export function assertHostedIdentityClientConfiguration(
     throw new Error('Hosted sign-in requires an explicit reviewed terms version')
 }
 
+/**
+ * Hosted builds may configure a notice as a same-origin path such as "/legal/terms". Resolve it
+ * against the browser origin; any other value is returned unchanged for the existing validation.
+ */
+export function resolveSameOriginNoticeUrl(value: string, origin: string | undefined): string {
+  if (!origin || !value.startsWith('/') || value.startsWith('//') || value.includes('\\'))
+    return value
+  try {
+    const base = new URL(origin)
+    const resolved = new URL(value, base.origin)
+    return resolved.origin === base.origin ? resolved.href : value
+  } catch {
+    return value
+  }
+}
+
+/** Optional notice links render only for an exact same-origin HTTPS page without query or fragment. */
+export function sameOriginNoticeUrl(
+  value: string | undefined,
+  origin: string | undefined,
+): string | null {
+  if (!value || !origin) return null
+  try {
+    const base = new URL(origin)
+    const notice = new URL(resolveSameOriginNoticeUrl(value, origin))
+    return notice.protocol === 'https:' &&
+      notice.origin === base.origin &&
+      !notice.username &&
+      !notice.password &&
+      !notice.search &&
+      !notice.hash &&
+      notice.pathname !== '/'
+      ? notice.href
+      : null
+  } catch {
+    return null
+  }
+}
+
 /** Take the recovery token into volatile memory and immediately remove it from browser history. */
 export function consumeIdentityRecoveryLocation(href: string, replace: (url: string) => void) {
   const url = new URL(href)

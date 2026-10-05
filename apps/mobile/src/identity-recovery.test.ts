@@ -3,6 +3,8 @@ import { createHostedIdentityClient, createLocalIdentityClient } from './identit
 import {
   assertHostedIdentityClientConfiguration,
   consumeIdentityRecoveryLocation,
+  resolveSameOriginNoticeUrl,
+  sameOriginNoticeUrl,
 } from './identity-recovery'
 
 const origin = 'https://identity.lilleri.example'
@@ -37,6 +39,50 @@ describe('hosted identity client and recovery lifecycle without real transport',
         termsVersion: 'local-synthetic-terms-v1',
       }),
     ).toThrow(/terms version/)
+  })
+  test('a configured same-origin terms path resolves against the browser origin and still passes validation', () => {
+    const termsUrl = resolveSameOriginNoticeUrl('/legal/terms', origin)
+    expect(termsUrl).toBe(`${origin}/legal/terms`)
+    expect(() =>
+      assertHostedIdentityClientConfiguration(origin, { ...options, termsUrl }),
+    ).not.toThrow()
+    expect(resolveSameOriginNoticeUrl(`${origin}/condizioni`, origin)).toBe(`${origin}/condizioni`)
+    expect(resolveSameOriginNoticeUrl('/legal/terms', undefined)).toBe('/legal/terms')
+    expect(resolveSameOriginNoticeUrl('', origin)).toBe('')
+    for (const outside of [
+      '//attacker.example/terms',
+      '/\\attacker.example/terms',
+      'legal/terms',
+    ]) {
+      const value = resolveSameOriginNoticeUrl(outside, origin)
+      expect(value, outside).toBe(outside)
+      expect(() =>
+        assertHostedIdentityClientConfiguration(origin, { ...options, termsUrl: value }),
+      ).toThrow()
+    }
+    expect(() =>
+      assertHostedIdentityClientConfiguration(origin, {
+        ...options,
+        termsUrl: resolveSameOriginNoticeUrl('/legal/terms?v=2', origin),
+      }),
+    ).toThrow(/terms URL/)
+  })
+  test('the optional privacy notice link is shown only for an exact same-origin HTTPS page', () => {
+    expect(sameOriginNoticeUrl('/legal/privacy', origin)).toBe(`${origin}/legal/privacy`)
+    expect(sameOriginNoticeUrl(`${origin}/privacy`, origin)).toBe(`${origin}/privacy`)
+    for (const value of [
+      undefined,
+      '',
+      '/',
+      '//attacker.example/privacy',
+      'https://attacker.example/privacy',
+      `${origin}/privacy?ref=1`,
+      `${origin}/privacy#top`,
+      'http://identity.lilleri.example/privacy',
+      'javascript:alert(1)',
+    ])
+      expect(sameOriginNoticeUrl(value, origin), String(value)).toBeNull()
+    expect(sameOriginNoticeUrl('/legal/privacy', undefined)).toBeNull()
   })
   test('takes a valid recovery token into memory and removes it from history before making any network request', () => {
     const replace = vi.fn<(url: string) => void>()

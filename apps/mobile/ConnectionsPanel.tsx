@@ -10,11 +10,21 @@ import {
   type SyncJobDto,
 } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
+import type { Connection } from '@lilleri/domain'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { BankConnectionPicker, type BankConnectionScreen } from './src/BankConnectionPicker'
+import type { BankAuthorizationRoute } from './src/BankInstitutionPicker'
+import {
+  BANK_AUTHORIZATION_PROBLEM_MESSAGES,
+  bankAuthorizationProblem,
+  bankInstitutionName,
+  bankRenewalInput,
+  renewalRoute,
+} from './src/hosted-flows'
 import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
 import { useI18n } from './src/i18n/context'
+import { leaveForSecureUrl } from './src/secure-redirect'
 
 type ConnectionMessageKey = keyof typeof CONNECTION_MESSAGE_PAIRS
 
@@ -35,6 +45,8 @@ type ConnectionClient = Pick<
   | 'syncJob'
   | 'connectionSyncJobs'
   | 'disconnect'
+  | 'bankInstitutions'
+  | 'startBankAuthorization'
 >
 export interface ConnectionsPanelProps {
   readonly overview: DemoOverview
@@ -48,6 +60,8 @@ export interface ConnectionsPanelProps {
   readonly protectedPersonalAccess?: boolean
   /** Live authorization must use its own admitted route, never the fixture writer. */
   readonly onSelectBankConnect?: (institutionId: string, providerId: string) => void
+  /** Hosted, signed-in profiles connect and renew real banks through the authorised provider. */
+  readonly bankAuthorization?: BankAuthorizationRoute
   readonly onBankSignIn?: () => void
   readonly onBankScreenChange?: (screen: BankConnectionScreen) => void
   /** Shared profiles expose discovery and saved source information without write controls. */
@@ -122,6 +136,7 @@ export function ConnectionsPanel({
   onStatementImport,
   protectedPersonalAccess = false,
   onSelectBankConnect,
+  bankAuthorization,
   onBankSignIn,
   onBankScreenChange,
   readOnly = false,
@@ -171,6 +186,7 @@ export function ConnectionsPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  const [plusOffer, setPlusOffer] = useState(false)
   const [disconnectChoice, setDisconnectChoice] = useState<{
     connectionId: string
     data: 'retain' | 'erase'
@@ -240,6 +256,7 @@ export function ConnectionsPanel({
       setBusy(false)
       setError(null)
       setNotice(null)
+      setPlusOffer(false)
       setDataScope(scope)
     }
     setLoading(true)
@@ -269,6 +286,7 @@ export function ConnectionsPanel({
     setBusy(true)
     setError(null)
     setNotice(null)
+    setPlusOffer(false)
     setHistory(null)
     historyVersion.current++
     let saved = false
@@ -330,6 +348,41 @@ export function ConnectionsPanel({
       if (!current(epoch) || version !== historyVersion.current || handlers.onError?.(cause)) return
       setHistory(null)
       setError(i18n.problemMessage(cause))
+    }
+  }
+  /** Enable Banking renewal is a new authorisation at the bank for the same connection. */
+  const renewAtBank = async (connection: Connection) => {
+    const epoch = context.current.epoch
+    if (readOnlyRef.current || busyEpoch.current === epoch) return
+    busyEpoch.current = epoch
+    const handlers = callbacks.current
+    setBusy(true)
+    setError(null)
+    setNotice(null)
+    setPlusOffer(false)
+    let leaving = false
+    try {
+      const result = await api.startBankAuthorization(bankRenewalInput(connection, i18n.locale))
+      if (!current(epoch)) return
+      const outcome = leaveForSecureUrl(result?.url)
+      leaving = outcome === 'left'
+      if (outcome === 'blocked') setError(t('bankInstitutions.unsafeRedirect'))
+      else setNotice(t('bankInstitutions.redirecting'))
+    } catch (cause) {
+      if (!current(epoch) || handlers.onError?.(cause)) return
+      const problem = bankAuthorizationProblem(cause)
+      setError(
+        problem === 'unknown'
+          ? i18n.problemMessage(cause)
+          : t(BANK_AUTHORIZATION_PROBLEM_MESSAGES[problem]),
+      )
+      setPlusOffer(problem === 'plus_required' && !!bankAuthorization)
+    } finally {
+      // The page keeps its busy state while the browser leaves for the bank.
+      if (current(epoch) && !leaving) {
+        busyEpoch.current = null
+        setBusy(false)
+      }
     }
   }
   const rememberJob = (job: SyncJobDto) => {
@@ -479,6 +532,11 @@ export function ConnectionsPanel({
           {error}
         </Text>
       )}
+      {plusOffer && bankAuthorization && (
+        <View style={s.row}>
+          {button(t('bankInstitutions.plusAction'), () => bankAuthorization.onOpenPlus())}
+        </View>
+      )}
       {notice && (
         <Text accessibilityLiveRegion="polite" style={s.notice}>
           {notice}
@@ -502,6 +560,9 @@ export function ConnectionsPanel({
             ? { onManualAccount: () => onManualFallback() }
             : {})}
           {...(!readOnly && onSelectBankConnect ? { onSelectConnect: onSelectBankConnect } : {})}
+          {...(!readOnly && protectedPersonalAccess && bankAuthorization
+            ? { bankAuthorization }
+            : {})}
           {...(!readOnly && onStatementImport
             ? { onImportStatement: () => onStatementImport() }
             : {})}
@@ -600,16 +661,25 @@ export function ConnectionsPanel({
               lifecycle.state !== 'expired' &&
               lifecycle.authorization.state === 'active',
           )
-          const canRenew = Boolean(
-            lifecycle?.consentId &&
-              lifecycle.state !== 'revoked' &&
-              (lifecycle.providerMetadata?.renewal === 'supported' ||
-                (lifecycle.source === 'legacy' && connection.providerId === 'mock-italian')),
-          )
+          const bankRenewal = renewalRoute(connection) === 'bank_authorization'
+          const canRenew = bankRenewal
+            ? connection.status !== 'revoked' && lifecycle?.state !== 'revoked'
+            : Boolean(
+                lifecycle?.consentId &&
+                  lifecycle.state !== 'revoked' &&
+                  (lifecycle.providerMetadata?.renewal === 'supported' ||
+                    (lifecycle.source === 'legacy' && connection.providerId === 'mock-italian')),
+              )
+          const sourceName =
+            institution?.name ??
+            (bankRenewal
+              ? (accounts[0]?.institutionName ?? bankInstitutionName(connection.institutionId))
+              : null) ??
+            t(bankRenewal ? 'connections.bankSource' : 'connections.source')
           return (
             <View key={connection.id} style={s.card}>
               <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
-                {institution?.name ?? t('connections.source')}
+                {sourceName}
               </Text>
               <Text style={s.state}>
                 {lifecycle ? t(stateLabels[lifecycle.state]) : t('connections.state.unavailable')}
@@ -769,9 +839,10 @@ export function ConnectionsPanel({
                       true,
                     )}
                 {mutationButton(
-                  t('connections.renew'),
+                  t(bankRenewal ? 'connections.renewAtBank' : 'connections.renew'),
                   () => {
-                    if (lifecycle)
+                    if (bankRenewal) void renewAtBank(connection)
+                    else if (lifecycle)
                       void run(async () => {
                         await api.renewConnection(connection.id, lifecycle.revision)
                       }, t('connections.renewed'))

@@ -44,6 +44,12 @@ const messages = {
     'If you have a CSV or XLSX file, you can review the columns before importing it.',
   ],
   manualAccount: ['Aggiungi un conto manuale', 'Add a manual account'],
+  bankTitle: ['Collega con la tua banca', 'Connect with your bank'],
+  bankHelp: [
+    'Scegli la tua banca nell’elenco del servizio di collegamento autorizzato. Prima di lasciare Lilleri ti mostriamo che cosa verrà condiviso.',
+    'Choose your bank from the authorised connection service’s list. Before you leave Lilleri, we show you what will be shared.',
+  ],
+  connectWithBank: ['Collega con la tua banca', 'Connect with your bank'],
 } as const satisfies Readonly<Record<string, readonly [string, string]>>
 
 export const BANK_CONNECTION_FLOW_MESSAGE_PAIRS = Object.fromEntries(

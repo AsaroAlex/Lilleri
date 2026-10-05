@@ -8,6 +8,7 @@ export const IDENTITY_PANEL_MESSAGE_PAIRS = {
   ],
   'identityPanel.hostedCreate': ['Crea il tuo profilo', 'Create your profile'],
   'identityPanel.hostedTerms': ['Leggi le condizioni di utilizzo', 'Read the terms of use'],
+  'identityPanel.hostedPrivacy': ['Informativa privacy', 'Privacy notice'],
   'identityPanel.hostedTermsVersion': [
     'Versione delle condizioni: {version}',
     'Terms version: {version}',

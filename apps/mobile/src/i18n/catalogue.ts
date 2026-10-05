@@ -1,5 +1,6 @@
 import { APP_MESSAGE_PAIRS } from './app-messages'
 import { BANK_CONNECTION_FLOW_MESSAGE_PAIRS } from './bank-connection-flow-messages'
+import { BANK_INSTITUTION_MESSAGE_PAIRS } from './bank-institution-messages'
 import { BANK_PICKER_MESSAGE_PAIRS } from './bank-picker-messages'
 import { CONNECTION_MESSAGE_PAIRS } from './connection-messages'
 import { FX_MESSAGE_PAIRS } from './fx-messages'
@@ -10,6 +11,7 @@ import { MAPPED_IMPORT_MESSAGE_PAIRS } from './mapped-import-messages'
 import { MERCHANT_MESSAGE_PAIRS } from './merchant-messages'
 import { PANEL_MESSAGE_PAIRS } from './panel-messages'
 import { SOURCE_DECISION_MESSAGE_PAIRS } from './source-decision-messages'
+import { SUBSCRIPTION_MESSAGE_PAIRS } from './subscription-messages'
 
 /** Italian is the master; every explicit key has the corresponding British English message. */
 export const CORE_MESSAGE_PAIRS = {
@@ -425,6 +427,8 @@ export const MESSAGE_PAIRS = {
   ...APP_MESSAGE_PAIRS,
   ...BANK_PICKER_MESSAGE_PAIRS,
   ...BANK_CONNECTION_FLOW_MESSAGE_PAIRS,
+  ...BANK_INSTITUTION_MESSAGE_PAIRS,
+  ...SUBSCRIPTION_MESSAGE_PAIRS,
   ...LEDGER_MESSAGE_PAIRS,
   ...MAPPED_IMPORT_MESSAGE_PAIRS,
   ...MANUAL_MESSAGE_PAIRS,

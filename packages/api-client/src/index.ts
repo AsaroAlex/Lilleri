@@ -9,6 +9,7 @@ import type {
   CurrencyCode,
   Transaction,
 } from '@lilleri/domain'
+import { createBankBillingClient } from './bank-billing.js'
 import { createLedgerReadClient } from './ledger-read.js'
 import { createSyncClient } from './sync.js'
 
@@ -203,6 +204,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
   return {
     ...createSyncClient(request),
     ...createLedgerReadClient(request),
+    ...createBankBillingClient(request),
     request,
     overview: (signal?: AbortSignal) => request<DemoOverview>('/v1/demo', signal ? { signal } : {}),
     connectMock: () => request<Connection>('/v1/connections/mock', { method: 'POST', body: '{}' }),
@@ -299,6 +301,7 @@ export function createApiClient(baseUrl: string, fetcher: typeof fetch = fetch) 
 
 export type ApiClient = ReturnType<typeof createApiClient>
 
+export * from './bank-billing.js'
 export * from './fx-evidence.js'
 export * from './ledger-read.js'
 export {

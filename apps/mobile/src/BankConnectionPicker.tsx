@@ -21,16 +21,20 @@ import {
 import { AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './accessibility/web-focus'
 import { BankConnectionFlow } from './BankConnectionFlow'
+import { type BankAuthorizationRoute, BankInstitutionPicker } from './BankInstitutionPicker'
 import { BankServiceLogo } from './BankServiceLogo'
 import { bankServiceCountry, filterBankServices } from './bank-directory-search'
 import { FinanceVisual } from './FinanceVisual'
 import { bankCountryLabel, bankPickerCopy } from './i18n/bank-picker-messages'
 import { useI18n } from './i18n/context'
 
-export type BankConnectionScreen = 'directory' | 'detail' | 'connect'
+export type BankConnectionScreen = 'directory' | 'detail' | 'connect' | 'institutions'
 
 export interface BankConnectionPickerProps {
-  readonly api: Pick<ApiClient, 'connectionDirectory' | 'connectionCheck'>
+  readonly api: Pick<
+    ApiClient,
+    'connectionDirectory' | 'connectionCheck' | 'bankInstitutions' | 'startBankAuthorization'
+  >
   readonly theme: BrandTheme
   /** A profile/session change invalidates pending reads and the visible selection. */
   readonly resetKey: string | number
@@ -41,6 +45,8 @@ export interface BankConnectionPickerProps {
   readonly onSignIn?: () => void
   /** Only a verified, available provider institution can reach this callback. */
   readonly onSelectConnect?: (institutionId: string, providerId: string) => void
+  /** Hosted, signed-in profiles can authorise a real bank through the provider's list. */
+  readonly bankAuthorization?: BankAuthorizationRoute
 }
 
 type Scope = BankConnectionPickerProps['resetKey']
@@ -72,6 +78,7 @@ export function BankConnectionPicker({
   onManualAccount,
   onSignIn,
   onSelectConnect,
+  bankAuthorization,
 }: BankConnectionPickerProps) {
   const { locale } = useI18n()
   const copy = useMemo(() => bankPickerCopy(locale), [locale])
@@ -101,6 +108,10 @@ export function BankConnectionPicker({
     scope: Scope
     id: string | null
   }>({ scope: resetKey, id: null })
+  const [bankChoice, setBankChoice] = useState<{ scope: Scope; id: string | null }>({
+    scope: resetKey,
+    id: null,
+  })
   const requestEpoch = useRef(0)
   const scopeRef = useRef(resetKey)
   scopeRef.current = resetKey
@@ -167,13 +178,25 @@ export function BankConnectionPicker({
       : undefined
   const connecting =
     selected && connectionSelection.scope === resetKey && connectionSelection.id === selected.id
+  const choosingBank =
+    connecting &&
+    !!bankAuthorization &&
+    protectedPersonalAccess &&
+    bankChoice.scope === resetKey &&
+    bankChoice.id === selected.id
   const showingDirectory = !selected
   const listWidth = width
   const columns = listWidth >= 940 ? 4 : listWidth >= 600 ? 3 : listWidth >= 248 ? 2 : 1
   const tileWidth = (listWidth - (columns - 1) * 8) / columns
   const filtered = filterBankServices(directory?.entries ?? [], query, filter, country)
 
-  const screen: BankConnectionScreen = selected ? (connecting ? 'connect' : 'detail') : 'directory'
+  const screen: BankConnectionScreen = selected
+    ? choosingBank
+      ? 'institutions'
+      : connecting
+        ? 'connect'
+        : 'detail'
+    : 'directory'
   useEffect(() => {
     screenCallback.current?.(screen)
   }, [screen])
@@ -201,15 +224,18 @@ export function BankConnectionPicker({
     focusDetail.current = true
     setOptionsSelection({ scope: resetKey, id: null })
     setConnectionSelection({ scope: resetKey, id: null })
+    setBankChoice({ scope: resetKey, id: null })
     setSelection({ scope: resetKey, id: entry.id })
   }
   const clearSelection = () => {
     setConnectionSelection({ scope: resetKey, id: null })
+    setBankChoice({ scope: resetKey, id: null })
     returnToService.current = selected?.id ?? null
     setSelection({ scope: resetKey, id: null })
   }
   const chooseCountry = (value: string) => {
     setConnectionSelection({ scope: resetKey, id: null })
+    setBankChoice({ scope: resetKey, id: null })
     setCountry({ scope: resetKey, value })
     setCountryMenu({ scope: resetKey, open: false })
     focusDetail.current = false
@@ -259,6 +285,22 @@ export function BankConnectionPicker({
   }
 
   function details(entry: ConnectionDirectoryEntry) {
+    if (choosingBank && bankAuthorization)
+      return (
+        <View style={s.details}>
+          <BankInstitutionPicker
+            key={`${String(resetKey)}:${entry.id}`}
+            api={api}
+            entry={entry}
+            theme={theme}
+            resetKey={resetKey}
+            route={bankAuthorization}
+            onBack={() => setBankChoice({ scope: resetKey, id: null })}
+            {...(onImportStatement ? { onImportStatement } : {})}
+            {...(onManualAccount ? { onManualAccount } : {})}
+          />
+        </View>
+      )
     if (connecting)
       return (
         <View style={s.details}>
@@ -276,6 +318,14 @@ export function BankConnectionPicker({
             {...(onImportStatement ? { onImportStatement } : {})}
             {...(onManualAccount ? { onManualAccount } : {})}
             {...(onSelectConnect ? { onSelectConnect } : {})}
+            {...(bankAuthorization && protectedPersonalAccess
+              ? {
+                  onConnectWithBank: () => {
+                    if (scopeRef.current === resetKey)
+                      setBankChoice({ scope: resetKey, id: entry.id })
+                  },
+                }
+              : {})}
           />
         </View>
       )
@@ -290,15 +340,17 @@ export function BankConnectionPicker({
     const automaticCopy =
       entry.automatic.state === 'unsupported'
         ? copy.automaticUnsupported
-        : entry.automatic.state === 'unverified'
-          ? copy.automaticUnverified
-          : available
-            ? copy.automaticReady
-            : directory?.prerequisites.bankProvider === 'required' && !protectedPersonalAccess
-              ? copy.automaticSetup
-              : !protectedPersonalAccess || directory?.prerequisites.privateAccess === 'required'
-                ? copy.automaticPrivateAccess
-                : copy.automaticProviderSetup
+        : bankAuthorization && protectedPersonalAccess
+          ? copy.automaticBank
+          : entry.automatic.state === 'unverified'
+            ? copy.automaticUnverified
+            : available
+              ? copy.automaticReady
+              : directory?.prerequisites.bankProvider === 'required' && !protectedPersonalAccess
+                ? copy.automaticSetup
+                : !protectedPersonalAccess || directory?.prerequisites.privateAccess === 'required'
+                  ? copy.automaticPrivateAccess
+                  : copy.automaticProviderSetup
     const canImport =
       entry.statement.state !== 'unsupported' &&
       entry.statement.formats.length > 0 &&
@@ -665,9 +717,11 @@ export function BankConnectionPicker({
             )}
             {selected && details(selected)}
           </View>
-          {!selected && directory.prerequisites.bankProvider === 'required' && (
-            <Text style={s.caption}>{copy.publicSetup}</Text>
-          )}
+          {!selected &&
+            directory.prerequisites.bankProvider === 'required' &&
+            !(bankAuthorization && protectedPersonalAccess) && (
+              <Text style={s.caption}>{copy.publicSetup}</Text>
+            )}
         </>
       )}
     </View>

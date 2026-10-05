@@ -26,7 +26,12 @@ export type LocalIdentityChangeReason = 'signed-out' | 'session-renewed' | 'iden
 
 interface Props {
   readonly baseUrl: string
-  readonly hostedIdentity?: { readonly termsVersion: string; readonly termsUrl: string }
+  readonly hostedIdentity?: {
+    readonly termsVersion: string
+    readonly termsUrl: string
+    /** Optional published privacy notice, shown next to the terms when sign-up is offered. */
+    readonly privacyUrl?: string
+  }
   readonly theme: BrandTheme
   readonly visible?: boolean
   readonly reauthenticationRequested?: boolean
@@ -57,11 +62,13 @@ export function LocalIdentityPanel({
   language.current = i18n
   const t = i18n.t
   const date = i18n.instant
+  const privacyUrl = hostedIdentity?.privacyUrl
   const client = useMemo(
       () =>
         hostedIdentity
           ? createHostedIdentityClient(baseUrl, {
-              ...hostedIdentity,
+              termsVersion: hostedIdentity.termsVersion,
+              termsUrl: hostedIdentity.termsUrl,
               browserOrigin: typeof window === 'undefined' ? baseUrl : window.location.origin,
             })
           : createLocalIdentityClient(baseUrl),
@@ -495,6 +502,17 @@ export function LocalIdentityPanel({
                       >
                         {t('identityPanel.hostedTerms')}
                       </Text>
+                      {privacyUrl && (
+                        <Text
+                          accessibilityRole="link"
+                          style={s.buttonText}
+                          onPress={() => {
+                            void Linking.openURL(privacyUrl)
+                          }}
+                        >
+                          {t('identityPanel.hostedPrivacy')}
+                        </Text>
+                      )}
                       <Text style={s.body}>
                         {t('identityPanel.hostedTermsVersion', {
                           version: hostedIdentity.termsVersion,

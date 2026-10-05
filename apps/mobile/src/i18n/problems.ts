@@ -262,6 +262,34 @@ export const PROBLEM_MESSAGES = {
     'Il servizio non è disponibile. Riprova tra poco.',
     'The service is unavailable. Try again shortly.',
   ],
+  plus_required: [
+    'Il collegamento automatico con la banca è incluso in Plus.',
+    'Automatic bank connection is included in Plus.',
+  ],
+  bank_capacity_reached: [
+    'I collegamenti automatici sono al completo per ora. Riprova nei prossimi giorni.',
+    'Automatic connections are full for now. Try again in the next few days.',
+  ],
+  bank_provider_unavailable: [
+    'Il collegamento automatico con la banca non è ancora attivo.',
+    'Automatic bank connection is not active yet.',
+  ],
+  already_connected: [
+    'Questa banca è già collegata. Puoi rinnovarla da Collegamenti.',
+    'This bank is already connected. You can renew it from Connections.',
+  ],
+  connection_creation_pending: [
+    'Un collegamento con questa banca è ancora in corso. Attendi e aggiorna.',
+    'A connection with this bank is still being completed. Wait, then refresh.',
+  ],
+  already_subscribed: [
+    'Il profilo ha già un abbonamento attivo.',
+    'This profile already has an active subscription.',
+  ],
+  no_billing_account: [
+    'Non c’è un abbonamento da gestire per questo profilo.',
+    'There is no subscription to manage for this profile.',
+  ],
   forbidden: [
     'Questa azione non è disponibile per il tuo accesso.',
     'This action is unavailable for your access.',

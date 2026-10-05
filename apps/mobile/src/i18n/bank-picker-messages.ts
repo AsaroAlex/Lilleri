@@ -78,6 +78,10 @@ const messages = {
     'Il servizio bancario deve ancora essere attivato.',
     'The bank service still needs to be activated.',
   ],
+  automaticBank: [
+    'Scegli la tua banca nell’elenco del servizio di collegamento autorizzato e autorizza la lettura dei conti sul sito della banca. La disponibilità dipende dalla tua banca.',
+    'Choose your bank from the authorised connection service’s list and authorise access on your bank’s website. Availability depends on your bank.',
+  ],
   automaticUnverified: [
     'La disponibilità per questo servizio e per il tuo tipo di conto deve essere verificata.',
     'Availability for this service and your account type still needs to be verified.',

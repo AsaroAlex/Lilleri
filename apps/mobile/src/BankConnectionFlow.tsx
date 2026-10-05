@@ -20,6 +20,8 @@ export interface BankConnectionFlowProps {
   readonly onImportStatement?: (entryId: string) => void
   readonly onManualAccount?: (entryId: string) => void
   readonly onSelectConnect?: (institutionId: string, providerId: string) => void
+  /** Hosted, signed-in profiles choose their bank from the authorised provider's list. */
+  readonly onConnectWithBank?: () => void
 }
 
 type ConnectionCheck = Awaited<ReturnType<ApiClient['connectionCheck']>>
@@ -43,6 +45,7 @@ export function BankConnectionFlow({
   onImportStatement,
   onManualAccount,
   onSelectConnect,
+  onConnectWithBank,
 }: BankConnectionFlowProps) {
   const { locale } = useI18n()
   const copy = useMemo(() => bankConnectionFlowCopy(locale), [locale])
@@ -130,30 +133,37 @@ export function BankConnectionFlow({
     check.entry.statement.formats.length > 0 &&
     !!onImportStatement
   const canAddManual = !!check && protectedPersonalAccess && !!onManualAccount
+  // The provider's own institution list decides availability; the directory only rules out
+  // services that cannot connect a personal account at all.
+  const bankRoute = !!onConnectWithBank && protectedPersonalAccess && !loading && !unsupported
   const title = loading
     ? copy.checkingTitle
+    : bankRoute
+      ? copy.bankTitle
+      : failed
+        ? copy.failedTitle
+        : unsupported
+          ? copy.unsupportedTitle
+          : unverified
+            ? copy.unverifiedTitle
+            : ready
+              ? copy.readyTitle
+              : needsSignIn
+                ? copy.signInTitle
+                : copy.activationTitle
+  const explanation = bankRoute
+    ? copy.bankHelp
     : failed
-      ? copy.failedTitle
+      ? copy.failedHelp
       : unsupported
-        ? copy.unsupportedTitle
+        ? copy.unsupportedHelp
         : unverified
-          ? copy.unverifiedTitle
+          ? copy.unverifiedHelp
           : ready
-            ? copy.readyTitle
+            ? copy.readyHelp
             : needsSignIn
-              ? copy.signInTitle
-              : copy.activationTitle
-  const explanation = failed
-    ? copy.failedHelp
-    : unsupported
-      ? copy.unsupportedHelp
-      : unverified
-        ? copy.unverifiedHelp
-        : ready
-          ? copy.readyHelp
-          : needsSignIn
-            ? copy.signInHelp
-            : copy.activationHelp
+              ? copy.signInHelp
+              : copy.activationHelp
   const isCurrent = () =>
     context.current.scope === resetKey &&
     context.current.entryId === entry.id &&
@@ -198,11 +208,23 @@ export function BankConnectionFlow({
         </AccessibleStatus>
       ) : (
         <>
-          <AccessibleStatus urgent={failed}>
+          <AccessibleStatus urgent={failed && !bankRoute}>
             <Text style={s.body}>{explanation}</Text>
           </AccessibleStatus>
           <View style={s.actions}>
-            {ready && (
+            {bankRoute && (
+              <Pressable
+                testID="bank-connect-with-bank"
+                accessibilityRole="button"
+                onPress={() => {
+                  if (isCurrent() && bankRoute) onConnectWithBank?.()
+                }}
+                style={[s.button, s.primaryButton]}
+              >
+                <Text style={s.primaryText}>{copy.connectWithBank}</Text>
+              </Pressable>
+            )}
+            {!bankRoute && ready && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
@@ -214,7 +236,7 @@ export function BankConnectionFlow({
                 <Text style={s.primaryText}>{copy.continueInBank}</Text>
               </Pressable>
             )}
-            {canSignIn && (
+            {!bankRoute && canSignIn && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
@@ -225,7 +247,7 @@ export function BankConnectionFlow({
                 <Text style={s.primaryText}>{copy.signIn}</Text>
               </Pressable>
             )}
-            {!ready && (
+            {!ready && !bankRoute && (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {

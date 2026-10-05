@@ -158,6 +158,8 @@ export const CONNECTION_MESSAGE_PAIRS = {
     'Connection paused. History and expiry are preserved.',
   ],
   'connections.renew': ['Rinnova autorizzazione locale', 'Renew local authorisation'],
+  'connections.renewAtBank': ['Rinnova l’accesso presso la banca', 'Renew access at your bank'],
+  'connections.bankSource': ['Banca collegata', 'Connected bank'],
   'connections.renewed': [
     'Rinnovo confermato dalla fonte locale. Controlla la scadenza comunicata qui sopra.',
     'Renewal confirmed by the local source. Check the expiry shown above.',
