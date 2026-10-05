@@ -45,6 +45,8 @@ export interface ConnectionsPanelProps {
   readonly onManualFallback: () => void
   readonly onStatementImport?: () => void
   readonly protectedPersonalAccess?: boolean
+  /** Shared profiles expose discovery and saved source information without write controls. */
+  readonly readOnly?: boolean
   readonly onRecoverHistory?: (accountId: string) => void
   readonly onError?: (cause: unknown) => boolean
 }
@@ -114,6 +116,7 @@ export function ConnectionsPanel({
   onManualFallback,
   onStatementImport,
   protectedPersonalAccess = false,
+  readOnly = false,
   onRecoverHistory,
   onError,
 }: ConnectionsPanelProps) {
@@ -125,7 +128,9 @@ export function ConnectionsPanel({
       : t('connections.dateUnknown')
   const c = colors[theme]
   const s = useMemo(() => styles(c), [c])
-  const scope = `${overview.profile.id}:${String(resetKey)}`
+  const scope = `${overview.profile.id}:${String(resetKey)}:${readOnly ? 'read-only' : 'editable'}`
+  const readOnlyRef = useRef(readOnly)
+  readOnlyRef.current = readOnly
   const context = useRef({ scope, epoch: 0 })
   if (context.current.scope !== scope) context.current = { scope, epoch: context.current.epoch + 1 }
   const mounted = useRef(true)
@@ -238,9 +243,10 @@ export function ConnectionsPanel({
   const run = async (
     action: () => Promise<readonly string[]> | Promise<void>,
     success: string | (() => string),
+    mutation = true,
   ) => {
     const epoch = context.current.epoch
-    if (busyEpoch.current === epoch) return
+    if ((mutation && readOnlyRef.current) || busyEpoch.current === epoch) return
     busyEpoch.current = epoch
     const handlers = callbacks.current
     setBusy(true)
@@ -325,7 +331,7 @@ export function ConnectionsPanel({
   }
   const runSync = async (connectionId: string, jobId?: string) => {
     const epoch = context.current.epoch
-    if (busyEpoch.current === epoch) return
+    if (readOnlyRef.current || busyEpoch.current === epoch) return
     busyEpoch.current = epoch
     setBusy(true)
     setError(null)
@@ -429,6 +435,12 @@ export function ConnectionsPanel({
       <Text style={[s.buttonText, secondary && s.secondaryButtonText]}>{label}</Text>
     </Pressable>
   )
+  const mutationButton = (
+    label: string,
+    action: () => void,
+    disabled = false,
+    secondary = false,
+  ) => (readOnly ? null : button(label, action, disabled, secondary))
   if (dataScope !== scope)
     return (
       <View accessibilityLabel={t('connections.loadingProfile')}>
@@ -437,7 +449,7 @@ export function ConnectionsPanel({
     )
   return (
     <View style={s.panel}>
-      {!emptyFixtures && !protectedPersonalAccess && (
+      {!readOnly && !emptyFixtures && !protectedPersonalAccess && (
         <>
           <Text accessibilityRole="header" aria-level={2} style={s.title}>
             {t('connections.title')}
@@ -461,13 +473,15 @@ export function ConnectionsPanel({
           <Text style={s.body}>{t('connections.loading')}</Text>
         </View>
       )}
-      {emptyFixtures || protectedPersonalAccess ? (
+      {readOnly || emptyFixtures || protectedPersonalAccess ? (
         <BankConnectionPicker
           api={api}
           theme={theme}
           resetKey={scope}
-          protectedPersonalAccess={protectedPersonalAccess}
-          {...(onStatementImport ? { onImportStatement: () => onStatementImport() } : {})}
+          protectedPersonalAccess={!readOnly && protectedPersonalAccess}
+          {...(!readOnly && onStatementImport
+            ? { onImportStatement: () => onStatementImport() }
+            : {})}
         />
       ) : (
         <View style={s.card}>
@@ -653,7 +667,8 @@ export function ConnectionsPanel({
                           </Text>
                         ))
                       )}
-                      {onRecoverHistory &&
+                      {!readOnly &&
+                        onRecoverHistory &&
                         accounts.map((account) => (
                           <View key={account.id}>
                             {button(
@@ -683,7 +698,7 @@ export function ConnectionsPanel({
                 </>
               )}
               <View style={s.row}>
-                {button(
+                {mutationButton(
                   t('connections.update'),
                   () => {
                     void runSync(connection.id)
@@ -692,7 +707,7 @@ export function ConnectionsPanel({
                 )}
                 {activeJob &&
                   activeJob.mode === 'user_present' &&
-                  button(
+                  mutationButton(
                     t('connections.syncContinue'),
                     () => {
                       void runSync(connection.id, activeJob.id)
@@ -709,7 +724,7 @@ export function ConnectionsPanel({
                   true,
                 )}
                 {lifecycle?.paused
-                  ? button(
+                  ? mutationButton(
                       t('connections.resume'),
                       () => {
                         void run(async () => {
@@ -719,7 +734,7 @@ export function ConnectionsPanel({
                       !canResume || loading,
                       true,
                     )
-                  : button(
+                  : mutationButton(
                       t('connections.pause'),
                       () => {
                         if (lifecycle)
@@ -730,7 +745,7 @@ export function ConnectionsPanel({
                       !canPause || loading,
                       true,
                     )}
-                {button(
+                {mutationButton(
                   t('connections.renew'),
                   () => {
                     if (lifecycle)
@@ -751,7 +766,7 @@ export function ConnectionsPanel({
                   loading,
                   true,
                 )}
-                {button(
+                {mutationButton(
                   t('connections.disconnectChoice'),
                   () => {
                     setDisconnectChoice({
@@ -766,7 +781,7 @@ export function ConnectionsPanel({
                   true,
                 )}
               </View>
-              {disconnectChoice?.connectionId === connection.id && (
+              {!readOnly && disconnectChoice?.connectionId === connection.id && (
                 <View style={s.history}>
                   <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
                     {t('connections.disconnectQuestion')}
@@ -1004,7 +1019,7 @@ export function ConnectionsPanel({
         {button(
           t('connections.reloadAvailability'),
           () => {
-            void run(async () => undefined, t('connections.availabilityUpdated'))
+            void run(async () => undefined, t('connections.availabilityUpdated'), false)
           },
           false,
           true,
