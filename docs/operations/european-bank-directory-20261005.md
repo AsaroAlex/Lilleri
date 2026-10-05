@@ -36,5 +36,15 @@ alias/accent search, combined filters, focus, unavailable-directory retry and re
 Existing Italian acceptance passed 6 groups and product/privacy/preferences acceptance
 passed 8 groups/134 surfaces. No API writes, finance changes or shared preference
 changes occurred. Full repository check passed 23/23 tasks: API 592 passed/3 skipped
-in 48 files, provider 343 and mobile 66. Publication is pending; the tested bundle is
-`/_expo/static/js/web/index-ac1a7308521b77d2d05060977c6ac5c6.js`.
+in 48 files, provider 343 and mobile 66.
+
+Published commit `d377327e67310086833e220543c11c0bb21c3413`, Railway deployment
+`804c2af2-1ab5-4a99-9719-ec7d592f3e51` **SUCCESS**, verified at 09:41 UTC / 11:41
+Europe/Rome. The exact tested bundle
+`/_expo/static/js/web/index-ac1a7308521b77d2d05060977c6ac5c6.js`, health, directory,
+overview and ownership export returned HTTP 200. Public directory exposes the expected
+62 entries in 16 countries, all configuration required. Active finance remains empty;
+all 5 owned accounts, 35 transactions, one connection and the complete immutable
+fixture-retirement audit compare identical before and after publication. No financial
+validation mutation was sent publicly. The owned local runtime was stopped with its
+archive preserved. Bounded proof: `european-bank-directory-release-20261005.json`.

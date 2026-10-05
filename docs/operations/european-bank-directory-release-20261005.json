@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 09:41:58 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 11:41:58",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "d377327e67310086833e220543c11c0bb21c3413",
+  "deploymentId": "804c2af2-1ab5-4a99-9719-ec7d592f3e51",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-ac1a7308521b77d2d05060977c6ac5c6.js",
+  "publicVerification": {
+    "health": "ok",
+    "mode": "synthetic",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "fixtureState": "retired",
+    "fixtureRevision": 1,
+    "fixtureEvents": 1,
+    "canonicalArchiveUnchanged": true,
+    "directoryEntries": 62,
+    "countries": [
+      "IT",
+      "FR",
+      "DE",
+      "ES",
+      "PT",
+      "NL",
+      "BE",
+      "AT",
+      "IE",
+      "GB",
+      "CH",
+      "SE",
+      "DK",
+      "NO",
+      "FI",
+      "PL"
+    ],
+    "entriesByCountry": {
+      "IT": 18,
+      "FR": 4,
+      "DE": 5,
+      "ES": 4,
+      "PT": 2,
+      "NL": 4,
+      "BE": 2,
+      "AT": 2,
+      "IE": 2,
+      "GB": 6,
+      "CH": 2,
+      "SE": 2,
+      "DK": 2,
+      "NO": 2,
+      "FI": 2,
+      "PL": 3
+    },
+    "kinds": {
+      "bank": 59,
+      "card": 2,
+      "wallet": 1
+    },
+    "defaultCountry": "IT",
+    "automaticAvailable": 0,
+    "automaticConfigurationRequired": 62,
+    "financialMutationsSent": 0
+  },
+  "configuration": {
+    "variablesChanged": false,
+    "migrationsChanged": 0,
+    "volumeId": "4599b33e-5413-4388-9980-872cb2ca7ef2",
+    "mountPath": "/data",
+    "databasePath": "/data/database",
+    "recoveryPath": "/data/recovery",
+    "replicas": 1,
+    "namespacePreserved": true
+  },
+  "localVerification": {
+    "repositoryCheckTasksPassed": 23,
+    "repositoryCheckTasksTotal": 23,
+    "api": {
+      "passed": 592,
+      "skipped": 3,
+      "files": 48,
+      "driver": "PGlite"
+    },
+    "providerTestsPassed": 343,
+    "mobileTestsPassed": 66,
+    "directoryProviderTestsPassed": 25,
+    "directoryApiTestsOnPostgresPassed": 3,
+    "migrationChecksumsMatched": 37,
+    "europeBrowserGroups": 9,
+    "europeLayouts": 56,
+    "italianBrowserGroups": 6,
+    "productBrowserGroups": 8,
+    "productSurfaces": 134,
+    "locales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "widths": [
+      320,
+      390,
+      599,
+      768,
+      960,
+      1440
+    ],
+    "financialBrowserWrites": 0,
+    "serverSettingsUnchanged": true,
+    "financesUnchanged": true,
+    "legacyItalianCompatibility": true,
+    "countryQualifiedAccessibleNames": true
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-ac1a7308521b77d2d05060977c6ac5c6.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    }
+  ],
+  "sourceReference": "docs/research/european-bank-directory-20261005.md",
+  "activation": {
+    "protectedHostedPersonalAccess": "pending",
+    "liveProviderIntegration": "pending",
+    "durableConsentCallbackSync": "pending",
+    "newBankStatementFormats": "unverified"
+  }
+}

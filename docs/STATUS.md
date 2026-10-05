@@ -2,6 +2,8 @@
 
 ## European bank directory — 2026-10-05
 
+Published commit `d377327e67310086833e220543c11c0bb21c3413`, Railway deployment
+`804c2af2-1ab5-4a99-9719-ec7d592f3e51` **SUCCESS**, verified at 11:41 Europe/Rome.
 Latest request: add European banks. Added 44 country-specific entries, making 62
 services across 16 markets (59 bank entries, 2 cards, 1 wallet). Italy remains the
 18-choice default; the country selector, translated market labels and combined
@@ -14,8 +16,15 @@ Targeted provider directory 25, API 3 on PGlite and PostgreSQL passed. Read-only
 acceptance: European 9 groups/56 layouts, Italian 6 groups, product 8 groups/134 surfaces,
 no API writes or server-settings/finance changes. Repository check passed 23/23 tasks:
 API 592 passed/3 skipped, mobile 66, provider 343. Matching compiled bundle
-`index-ac1a7308521b77d2d05060977c6ac5c6.js` was tested locally. Publication is in progress. See `docs/operations/european-bank-directory-20261005.md` and
-`docs/research/european-bank-directory-20261005.md`.
+`index-ac1a7308521b77d2d05060977c6ac5c6.js` was tested locally and served HTTP 200
+by the final deployment, together with health/directory/overview/export. Public metadata
+has 62 configuration-required entries and 16 markets; active finance is still empty.
+The full canonical owned archive (5 accounts/35 transactions/1 connection) and immutable
+retirement audit compare identical before/after. No migrations, financial verification
+POST or Railway settings changed. The owned local runtime is stopped, archive retained.
+Post-release evidence is committed locally until the next functional push. See `docs/operations/european-bank-directory-20261005.md` and
+`docs/research/european-bank-directory-20261005.md`; release evidence is in
+`docs/operations/european-bank-directory-release-20261005.json`.
 
 ## Product interface and shared access — 2026-10-05
 
