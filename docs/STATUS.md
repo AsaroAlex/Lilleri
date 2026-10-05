@@ -1,5 +1,20 @@
 # Lilleri delivery status
 
+## Dedicated bank details — 2026-10-05
+
+Published commit `42bdd7c`, Railway `e5119bb6-8e44-4279-b8fa-5a3439aa2831`
+**SUCCESS**, verified at 13:38 Europe/Rome. Bank details replace the chooser at all
+widths, with one service logo/name and immediate connection action. Secondary file
+and website help is expandable. Return preserves country/type/query/scroll/focus;
+keyboard skip-to-content and session invalidation remain intact. The generic saved
+source footer only appears in the directory. Final typecheck/copy/scoped checks,
+15 catalogue/search tests, build, 8 flow groups/62 services/74 layouts and 8 product
+groups/134 layouts passed; bank/Europe candidate compatibility passed 6/9 groups.
+Matching bundle and public reads returned HTTP 200; owned finance and retirement
+audit are unchanged. Real banking remains inactive pending the provider/personal
+access/live runtime. No financial writes, migrations or Railway configuration changed.
+See [release proof](operations/bank-detail-layout-release-20261005.json).
+
 ## Connection action for every service — 2026-10-05
 
 Published commit `8b1f411`, Railway `754641f9-26f2-4362-a16d-68e8ba05b4a1`

@@ -1,5 +1,30 @@
 # PROJECT STATE — Lilleri
 
+## Current selected bank layout release — 2026-10-05 (Europe/Rome)
+
+Published commit `42bdd7c6d586c08115ddf1833425dcc1c684e125`, Railway deployment
+`e5119bb6-8e44-4279-b8fa-5a3439aa2831` **SUCCESS**, verified at 13:38 Europe/Rome.
+Selecting a service now replaces the directory at every width. The search intro,
+generic page title/back and saved-source footer disappear; the screen shows one
+verified bank mark, bank name and connection action. Statement/file and official
+website help remain in the initially closed “Altre opzioni” / “More options” section.
+Outer scrolling resets for detail/check; return restores the directory's query,
+country, type, scroll position and clicked tile focus. Skip-to-content names and
+focuses the bank heading, and a session change clears previous scroll state.
+Final mobile typecheck, copy/scoped checks, 15 catalogue/search tests and build passed.
+Final flow acceptance passed 8 groups/all 62 services/74 layouts, including 650×768
+visible actions and keyboard focus; final product acceptance passed 8 groups/134 layouts.
+Bank/Europe candidate compatibility passed 6/9 groups, Europe 56 layouts; the final
+flow/product suites cover the subsequent saved-source footer refinement. Native
+emulator not run. Matching bundle `index-6e26adb926746362726ccaa4c2dc07ad.js`, health,
+overview and BPER check returned HTTP 200 on the exact successful deployment.
+Canonical owned finance and retirement audit remain unchanged; active finance is
+empty. Real banking still needs personal access, provider and live runtime activation.
+No API/provider changes, financial POST, migrations or Railway settings changed.
+Owned preview stopped; its archive is retained. Proof:
+`docs/operations/bank-detail-layout-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current per-service connection entry release — 2026-10-05 (Europe/Rome)
 
 Published commit `8b1f41199714fa1aafa88831c0273264af586f2d`, Railway deployment

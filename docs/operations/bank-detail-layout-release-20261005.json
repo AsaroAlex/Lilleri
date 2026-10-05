@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 11:38:03 UTC",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "42bdd7c6d586c08115ddf1833425dcc1c684e125",
+  "deploymentId": "e5119bb6-8e44-4279-b8fa-5a3439aa2831",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-6e26adb926746362726ccaa4c2dc07ad.js",
+  "change": {
+    "dedicatedServiceDetailAtEveryWidth": true,
+    "searchIntroHiddenAfterSelection": true,
+    "oneServiceLogo": true,
+    "connectionActionAboveFoldAt650x768": true,
+    "secondaryStatementAndOfficialSiteOptionsCollapsedByDefault": true,
+    "directoryQueryCountryTypeScrollAndFocusRestored": true,
+    "skipToContentPreserved": true,
+    "identityChangeResetsScroll": true,
+    "sharedSavedSourceFooterHiddenInSelectedScreens": true
+  },
+  "localVerification": {
+    "mobileTypecheck": "passed",
+    "copyLint": "passed",
+    "scopedBiomeCheck": "passed",
+    "catalogueAndDirectoryTestsPassed": 15,
+    "previewBuild": "passed",
+    "finalFlowBrowserGroups": 8,
+    "servicesChecked": 62,
+    "finalFlowLayouts": 74,
+    "finalProductBrowserGroups": 8,
+    "finalProductLayouts": 134,
+    "bankCompatibilityBrowserGroups": 6,
+    "europeCompatibilityBrowserGroups": 9,
+    "europeCompatibilityLayouts": 56,
+    "bankAndEuropeScope": "Candidate layout compatibility; final availability flow and product suites rerun after hiding saved-source footer",
+    "locales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "errors": 0,
+    "financialWrites": 0,
+    "externalBankNavigations": 0,
+    "archiveUnchanged": true,
+    "nativeEmulatorRun": false,
+    "previewStopped": true,
+    "localArchivePreserved": true
+  },
+  "publicVerification": {
+    "archiveUnchanged": true,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "health": "ok",
+    "fixtureMode": "empty",
+    "check": "configuration_required",
+    "http": [
+      {
+        "timestamp": "2026-10-05T11:36:20.165235923Z",
+        "method": "GET",
+        "path": "/",
+        "status": 200
+      },
+      {
+        "timestamp": "2026-10-05T11:36:20.253086630Z",
+        "method": "GET",
+        "path": "/_expo/static/js/web/index-6e26adb926746362726ccaa4c2dc07ad.js",
+        "status": 200
+      },
+      {
+        "timestamp": "2026-10-05T11:36:20.539132508Z",
+        "method": "GET",
+        "path": "/api/v1/demo",
+        "status": 200
+      },
+      {
+        "timestamp": "2026-10-05T11:36:20.552572902Z",
+        "method": "GET",
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "timestamp": "2026-10-05T11:36:20.553581263Z",
+        "method": "GET",
+        "path": "/api/v1/connection-directory/bper/connect",
+        "status": 200
+      }
+    ]
+  },
+  "activationStatus": {
+    "realBankingActive": false,
+    "personalAccess": "not_enabled",
+    "openBankingProvider": "not_configured",
+    "liveRuntime": "not_implemented_or_enabled"
+  },
+  "operations": {
+    "migrationsRun": false,
+    "RailwayConfigurationChanged": false,
+    "financialPost": false,
+    "postReleaseEvidence": "Local commit; publish with next functional change"
+  }
+}
