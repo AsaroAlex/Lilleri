@@ -1,5 +1,8 @@
 import { describe, expect, test, vi } from 'vitest'
-import { createResendIdentityDelivery } from '../src/identity-mail.js'
+import {
+  createResendIdentityDelivery,
+  createScalewayIdentityDelivery,
+} from '../src/identity-mail.js'
 
 const baseURL = 'https://identity.lilleri.example'
 const email = 'synthetic@example.invalid'
@@ -78,5 +81,70 @@ describe('configured identity mail transport without network or real recipients'
           url: `${baseURL}/api/auth/verify-email?token=synthetic`,
         }),
       ).rejects.toThrow(/^Identity mail delivery is unavailable$/)
+  })
+})
+
+describe('Scaleway Transactional Email identity transport', () => {
+  const scaleway = {
+    secretKey: 'synthetic-scaleway-secret',
+    projectId: '11111111-2222-4333-8444-555555555555',
+    from: 'identity@example.invalid',
+    baseURL,
+  }
+  test('rejects missing secrets, malformed projects, senders and origins', () => {
+    expect(() => createScalewayIdentityDelivery({ ...scaleway, secretKey: ' ' })).toThrow(/secret/)
+    expect(() => createScalewayIdentityDelivery({ ...scaleway, projectId: 'project' })).toThrow(
+      /project/,
+    )
+    expect(() => createScalewayIdentityDelivery({ ...scaleway, from: 'not-an-address' })).toThrow(
+      /sender/,
+    )
+    expect(() =>
+      createScalewayIdentityDelivery({ ...scaleway, baseURL: `${baseURL}/path` }),
+    ).toThrow(/HTTPS/)
+  })
+  test('posts one recipient per message to the EU endpoint and awaits a receipt', async () => {
+    const transport = vi.fn<typeof fetch>().mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ emails: [{ id: 'synthetic-email', status: 'new' }] }), {
+          status: 200,
+        }),
+    )
+    const delivery = createScalewayIdentityDelivery({ ...scaleway, fetch: transport })
+    await delivery.sendVerification({
+      email,
+      url: `${baseURL}/api/auth/verify-email?token=synthetic-verification`,
+    })
+    const [endpoint, options] = transport.mock.calls[0] ?? []
+    expect(endpoint).toBe(
+      'https://api.scaleway.com/transactional-email/v1alpha1/regions/fr-par/emails',
+    )
+    expect(options?.redirect).toBe('error')
+    expect(new Headers(options?.headers).get('x-auth-token')).toBe(scaleway.secretKey)
+    const payload = JSON.parse(String(options?.body))
+    expect(payload).toEqual({
+      from: { email: scaleway.from, name: 'Lilleri' },
+      to: [{ email }],
+      subject: 'Conferma la tua email per Lilleri',
+      text: expect.stringContaining(
+        `${baseURL}/api/auth/verify-email?token=synthetic-verification`,
+      ),
+      project_id: scaleway.projectId,
+    })
+  })
+  test('failed, missing or rejected receipts are generic failures', async () => {
+    for (const response of [
+      new Response(JSON.stringify({ emails: [{ id: 'synthetic', status: 'failed' }] })),
+      new Response(JSON.stringify({ emails: [] })),
+      new Response('private-recipient', { status: 403 }),
+    ]) {
+      const delivery = createScalewayIdentityDelivery({
+        ...scaleway,
+        fetch: vi.fn<typeof fetch>().mockResolvedValue(response),
+      })
+      await expect(
+        delivery.sendPasswordReset({ email, url: `${baseURL}/api/auth/reset-password/synthetic` }),
+      ).rejects.toThrow(/^Identity mail delivery is unavailable$/)
+    }
   })
 })

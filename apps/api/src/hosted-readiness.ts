@@ -1,5 +1,5 @@
 import { assertHostedIdentityConfiguration, type HostedIdentityOptions } from './identity.js'
-import { createResendIdentityDelivery } from './identity-mail.js'
+import { createResendIdentityDelivery, createScalewayIdentityDelivery } from './identity-mail.js'
 
 type Environment = Readonly<Record<string, string | undefined>>
 export type ReadinessStatus = 'missing' | 'invalid' | 'configured' | 'unverified' | 'blocked'
@@ -33,22 +33,36 @@ const reference = (value: string | undefined) => present(value) && value.length 
  */
 export function hostedIdentityOptionsFromEnvironment(
   environment: Environment,
+  transport?: { readonly fetch?: typeof globalThis.fetch },
 ): Omit<HostedIdentityOptions, 'db'> {
   if (![...identityVariables, ...mailVariables].every((key) => present(environment[key])))
     throw new Error('Hosted identity configuration is incomplete')
-  if (environment.IDENTITY_MAIL_PROVIDER !== 'resend')
+  const provider = environment.IDENTITY_MAIL_PROVIDER
+  if (provider !== 'resend' && provider !== 'scaleway')
     throw new Error('Hosted identity mail provider is unsupported')
+  if (provider === 'scaleway' && !present(environment.IDENTITY_MAIL_PROJECT_ID))
+    throw new Error('Hosted identity configuration is incomplete')
   try {
     const baseURL = environment.HOSTED_AUTH_BASE_URL ?? ''
     const options: Omit<HostedIdentityOptions, 'db'> = {
       baseURL,
       secret: environment.HOSTED_AUTH_SECRET ?? '',
       termsVersion: environment.HOSTED_AUTH_TERMS_VERSION ?? '',
-      delivery: createResendIdentityDelivery({
-        apiKey: environment.IDENTITY_MAIL_API_KEY ?? '',
-        from: environment.IDENTITY_MAIL_FROM ?? '',
-        baseURL,
-      }),
+      delivery:
+        provider === 'scaleway'
+          ? createScalewayIdentityDelivery({
+              secretKey: environment.IDENTITY_MAIL_API_KEY ?? '',
+              projectId: environment.IDENTITY_MAIL_PROJECT_ID ?? '',
+              from: environment.IDENTITY_MAIL_FROM ?? '',
+              baseURL,
+              ...(transport?.fetch ? { fetch: transport.fetch } : {}),
+            })
+          : createResendIdentityDelivery({
+              apiKey: environment.IDENTITY_MAIL_API_KEY ?? '',
+              from: environment.IDENTITY_MAIL_FROM ?? '',
+              baseURL,
+              ...(transport?.fetch ? { fetch: transport.fetch } : {}),
+            }),
     }
     assertHostedIdentityConfiguration(options)
     return options
