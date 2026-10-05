@@ -1,0 +1,122 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 09:14:25 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 11:14:25",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "c837feb4ddc46231931866aee17c581a1db5c140",
+  "deploymentId": "dad4c7dc-1254-479b-88be-082606471cc5",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-719eb38f70b1f9c87fc34a68c430054e.js",
+  "publicVerification": {
+    "health": "ok",
+    "mode": "synthetic",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "fixtureState": "retired",
+    "fixtureRevision": 1,
+    "fixtureEvents": 1,
+    "canonicalArchiveUnchanged": true,
+    "directoryEntries": 18,
+    "automaticAvailable": 0,
+    "automaticConfigurationRequired": 18,
+    "financialMutationsSent": 0
+  },
+  "configuration": {
+    "variablesChanged": false,
+    "migrationsChanged": 0,
+    "volumeId": "4599b33e-5413-4388-9980-872cb2ca7ef2",
+    "mountPath": "/data",
+    "databasePath": "/data/database",
+    "recoveryPath": "/data/recovery",
+    "replicas": 1,
+    "namespacePreserved": true
+  },
+  "localVerification": {
+    "repositoryCheckTasksPassed": 23,
+    "repositoryCheckTasksTotal": 23,
+    "api": {
+      "passed": 592,
+      "skipped": 3,
+      "files": 48,
+      "driver": "PGlite"
+    },
+    "providerTestsPassed": 337,
+    "mobileTestsPassed": 62,
+    "focusedApiTestsOnPostgresPassed": 10,
+    "finalMobileTypecheck": true,
+    "finalCopyGuardConsumers": 15,
+    "finalFormatCheck": true,
+    "productBrowserGroups": 8,
+    "productBrowserSurfaces": 134,
+    "bankBrowserGroups": 6,
+    "locales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "productWidths": [
+      320,
+      390,
+      768,
+      1440
+    ],
+    "bankWidths": [
+      320,
+      390,
+      599,
+      768,
+      960,
+      1440
+    ],
+    "financialBrowserWrites": 0,
+    "devicePreferencesIsolated": true,
+    "legacyOverviewFailsClosed": true,
+    "legacySharedSettingsReads": 0,
+    "legacyWritingHelpersRerun": false
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-719eb38f70b1f9c87fc34a68c430054e.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    }
+  ],
+  "remainingActivation": [
+    "Protected hosted personal identity and persistent hosted storage",
+    "Live provider resources and institution-specific account coverage",
+    "Durable live consent/callback, renewal, revocation and sync"
+  ]
+}

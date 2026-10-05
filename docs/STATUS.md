@@ -2,14 +2,20 @@
 
 ## Product interface and shared access — 2026-10-05
 
-Release candidate: removed prototype framing and updated Italian/English import and
+Published at [Lilleri](https://lilleri-production.up.railway.app/): commit `c837feb`,
+Railway `dad4c7dc-1254-479b-88be-082606471cc5` **SUCCESS**, verified at 11:14
+Europe/Rome. Removed prototype framing and updated Italian/English import and
 rule workflows without bypassing confirmation. Public display preferences are local
 to each device, public financial/profile writes and deletion are protected, and
 personal manual-account shortcuts remain available with authenticated identity.
 Internal provenance and archives are preserved. Hosted personal access and live bank
 activation remain necessary. Repository 23/23, API 592/3 skipped, mobile 62,
-provider 337, focused PostgreSQL 10/10. Final frontend and 8 browser groups (134 surfaces) passed; publication pending.
-See [scope and validation](operations/product-release-20261005.md).
+provider 337, focused PostgreSQL 10/10. Final frontend and 8 browser groups
+(134 surfaces) passed. The exact new web bundle and public read endpoints returned
+HTTP 200; active finance stays empty and canonical owned archive/retirement audit
+remain unchanged. No migrations or Railway settings changed.
+See [scope and validation](operations/product-release-20261005.md) and
+[release proof](operations/product-release-20261005.json).
 
 ## Italian banks, cards and wallet selector — 2026-10-05
 

@@ -24,10 +24,20 @@ Validation: repository check 23/23; API 592 passed, 3 skipped in 48 files on PGl
 mobile 62; provider 337. Shared guard/retirement focused checks passed 10/10 on actual
 PostgreSQL. Read-only browser acceptance checks both languages and themes at
 320/390/768/1440px, preference isolation/reload, unavailable-data retry and public
-privacy controls, including missing fixture metadata: 8 groups and 134 surfaces. Separate bank acceptance covers 18 services at 320–1440px.
+privacy controls, including missing fixture metadata: 8 groups and 134 surfaces.
+Separate bank acceptance covers 18 services at 320–1440px.
 Browser helpers abort any attempted API write. Older writing helpers have updated
 selectors and syntax checks but were not rerun on the shared empty runtime.
 
-Publication verification and archive comparison will be recorded in
-`product-release-20261005.json` after the functional deployment succeeds. No migrations,
-Railway variables, volume paths or provider resources are changed by this release.
+Published commit `c837feb4ddc46231931866aee17c581a1db5c140`, Railway deployment
+`dad4c7dc-1254-479b-88be-082606471cc5` **SUCCESS**, verified at 09:14 UTC / 11:14
+Europe/Rome. The exact final bundle
+`/_expo/static/js/web/index-719eb38f70b1f9c87fc34a68c430054e.js` and public
+health/directory/overview/export returned HTTP 200. Active finance remains empty;
+all 5 owned accounts, 35 transactions, one connection and the full retirement audit
+compare identical before and after publication. No financial mutation was sent to
+the public service. The owned empty local runtime was stopped with its archive retained.
+
+Inspect `product-release-20261005.json` for bounded release evidence. No migrations,
+Railway variables, volume paths or provider resources changed. Personal access and
+live bank activation remain pending; UI cleanup does not activate either capability.

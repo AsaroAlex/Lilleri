@@ -1,7 +1,9 @@
 # PROJECT STATE — Lilleri
 
-## Current product interface release candidate — 2026-10-05 (Europe/Rome)
+## Current product interface release — 2026-10-05 (Europe/Rome)
 
+Published commit `c837feb4ddc46231931866aee17c581a1db5c140`, Railway deployment
+`dad4c7dc-1254-479b-88be-082606471cc5` **SUCCESS**, verified at 11:14 Europe/Rome.
 The latest user request removes preview/draft/mock branding and moves towards a
 finished app. Product copy is updated in both languages; header/intro/footer
 prototype framing and the Privacy mock-source block are removed. Device display
@@ -13,9 +15,16 @@ owned archives remain explicit/preserved; live bank access is not activated by r
 Repository check: 23/23 tasks, API 592 passed/3 skipped in 48 files, mobile 62 and
 provider 337; focused guard/retirement PostgreSQL 10/10. Read-only browser validation
 covers language/device isolation, reload, responsive themes, all public destinations,
-retry and 18-service bank selection. Final frontend typecheck/build, copy checks and 8 browser groups (134 surfaces)
-passed on bundle `index-719eb38f70b1f9c87fc34a68c430054e.js`. Railway publication
-is in progress. See `docs/operations/product-release-20261005.md`.
+retry and 18-service bank selection. Final frontend typecheck/build, copy checks and
+8 browser groups (134 surfaces) passed on bundle
+`index-719eb38f70b1f9c87fc34a68c430054e.js`. The exact deployed bundle, health,
+directory, overview and export returned HTTP 200. Active finance remains 0/0/0;
+owned accounts/transactions/connections 5/35/1 and the full immutable retirement
+audit compare identical before/after. No financial verification POST, migrations
+or Railway configuration changes. The fresh owned local runtime was stopped,
+preserving its archive. Scope and proof: `docs/operations/product-release-20261005.md`
+and `docs/operations/product-release-20261005.json`. This post-release evidence is
+committed locally until the next functional push to avoid deploying the same app twice.
 
 ## Current Italian bank selection release — 2026-10-05 (Europe/Rome)
 
