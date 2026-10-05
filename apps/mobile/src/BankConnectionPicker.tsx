@@ -58,6 +58,10 @@ function monogram(name: string) {
   if (name === 'American Express') return 'Amex'
   if (name === 'Banco BPM') return 'BPM'
   if (name === 'Intesa Sanpaolo') return 'IS'
+  if (name === 'Monte dei Paschi di Siena') return 'MPS'
+  if (name === 'BNL BNP Paribas') return 'BNL'
+  if (name === 'BPER Banca') return 'BPER'
+  if (name === 'ING' || name === 'N26') return name
   const words = name.split(/[\s-]+/).filter(Boolean)
   return words.length > 1
     ? words
@@ -146,7 +150,7 @@ export function BankConnectionPicker({
   const compact = width < 760
   const showingDirectory = !selected || !compact
   const listWidth = selected && !compact ? width - 340 - 24 : width
-  const columns = listWidth >= 940 ? 4 : listWidth >= 600 ? 3 : listWidth >= 280 ? 2 : 1
+  const columns = listWidth >= 940 ? 4 : listWidth >= 600 ? 3 : listWidth >= 248 ? 2 : 1
   const tileWidth = (listWidth - (columns - 1) * 8) / columns
   const filtered =
     directory?.entries.filter(
@@ -482,9 +486,7 @@ export function BankConnectionPicker({
                               <View accessible={false} aria-hidden={true} style={s.monogram}>
                                 <Text style={s.monogramText}>{monogram(entry.name)}</Text>
                               </View>
-                              <Text numberOfLines={2} style={s.bankName}>
-                                {entry.name}
-                              </Text>
+                              <Text style={s.bankName}>{entry.name}</Text>
                             </Pressable>
                           ))}
                         </View>
