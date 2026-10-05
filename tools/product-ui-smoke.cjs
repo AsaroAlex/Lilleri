@@ -273,6 +273,68 @@ async function allSurfaces(page, locale) {
     assert.deepEqual(await read('/v1/settings'), initialSettings)
     pass('An independent device keeps Italian and Rome; shared server settings remain unchanged')
 
+    const legacyContext = await browser.newContext({ viewport: { width: 390, height: 844 } })
+    await observe(legacyContext, 'legacy-overview')
+    const legacySettingsReads = []
+    legacyContext.on('request', (request) => {
+      if (request.method() === 'GET' && new URL(request.url()).pathname === '/api/v1/settings')
+        legacySettingsReads.push(request.url())
+    })
+    const legacyOverview = { ...initial }
+    delete legacyOverview.fixtureMode
+    await legacyContext.route(`${origin}/api/v1/demo`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(legacyOverview),
+      }),
+    )
+    const legacyPage = await legacyContext.newPage()
+    await legacyPage.goto(origin)
+    await button(legacyPage, 'Scegli la tua banca').waitFor()
+    await assertSurface(legacyPage, 'legacy overview without fixture mode')
+    await openPreferences(legacyPage, 'it-IT')
+    assert.equal(await legacyPage.getByRole('textbox').count(), 0)
+    assert.equal(
+      await legacyPage
+        .getByRole('radio', { name: 'Italiano', exact: true })
+        .getAttribute('aria-checked'),
+      'true',
+    )
+    await assertSurface(legacyPage, 'legacy overview uses actual device-only preference panel')
+    await nav(legacyPage, 'Impostazioni')
+    await button(legacyPage, 'Privacy e dati').click()
+    await heading(legacyPage, 'I tuoi dati, sotto il tuo controllo').waitFor()
+    await legacyPage.getByText(copy['it-IT'].privacyAccess, { exact: true }).waitFor()
+    assert.equal(
+      await legacyPage
+        .getByRole('button', { name: /Elimina|Esporta|Scarica|Delete|Export|Download/i })
+        .count(),
+      0,
+    )
+    await assertSurface(legacyPage, 'legacy overview hides shared export and erasure actions')
+    await nav(legacyPage, 'Impostazioni')
+    await button(legacyPage, 'Collegamenti e fonti').click()
+    await heading(legacyPage, 'Trova la tua banca').waitFor()
+    await button(legacyPage, 'Intesa Sanpaolo').waitFor()
+    assert.equal(
+      await legacyPage.locator('[data-testid^="bank-service-"][role="button"]').count(),
+      18,
+    )
+    assert.equal(
+      await legacyPage
+        .getByRole('button', {
+          name: /Collega la fonte locale|Rinnova autorizzazione locale|Collega il conto/,
+        })
+        .count(),
+      0,
+    )
+    await assertSurface(legacyPage, 'legacy overview shows eighteen bank directory choices')
+    assert.deepEqual(legacySettingsReads, [])
+    pass(
+      'An older overview without fixture mode stays read-only, uses device preferences and bank directory, and never reads shared profile settings',
+    )
+
     const failureContext = await browser.newContext({ viewport: { width: 320, height: 844 } })
     await observe(failureContext, 'unavailable-data')
     await failureContext.route(`${origin}/api/v1/demo`, (route) =>
@@ -330,6 +392,8 @@ async function allSurfaces(page, locale) {
           financesUnchanged: true,
           devicePreferences: { locale: 'en-GB', timezone: 'UTC' },
           independentDevice: { locale: 'it-IT', timezone: 'Europe/Rome' },
+          legacyOverviewReadonly: true,
+          legacySharedSettingsReads: legacySettingsReads,
         },
         null,
         2,
