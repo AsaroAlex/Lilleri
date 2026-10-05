@@ -1,6 +1,41 @@
 # PROJECT STATE — Lilleri
 
-## Current finance UI and clean-data release — 2026-10-05 (Europe/Rome)
+## Current Italian bank selection release — 2026-10-05 (Europe/Rome)
+
+The user requested the main Italian banks, Amex and Satispay. Published commit
+`33e050a54202470ab1b75d1076cbbd6b1495231a`, Railway deployment
+`4ddd2a8a-b2e0-4988-ab7a-21594c4c6899` **SUCCESS**, verified at 10:41 Europe/Rome.
+Home → Choose your bank opens 18 services (15 banks, Postepay/Amex cards,
+Satispay wallet), search by aliases/accent/spacing, type filters and focused details
+with official links. Mobile names are complete and duplicate introductory headings
+were removed. Amex/Satispay personal PDF guides are linked without unsupported
+CSV/XLSX import claims. No automatic route is presently available.
+
+The separate public read-only connection directory, shared DTO/client, fail-closed
+future exact live bindings and server-only app-specific Yapily LIVE/IT discovery
+are implemented. The latter remains unregistered, without account-kind evidence or
+live consent/callback wiring. A provider account/resource availability question is
+pending; do not request secret keys in chat. Live identity/storage, provider access,
+durable consent/callback, renewal/revocation/sync and institution-specific coverage
+are still required. Adding credentials alone cannot activate this runtime.
+
+Verification: repository 23/23 tasks; API 586 passed/3 skipped in 47 files on
+PGlite, provider 337, mobile 48; the 3 new API tests also passed on actual
+PostgreSQL. Final mobile typecheck/copy checks and six read-only browser flows plus
+retry/English/dark cases passed at 320–1440px. Public health/directory/demo/export
+and the matching new web bundle returned HTTP 200. The catalogue has 18 setup
+routes and zero available routes. Active finance remains 0/0/0; owned 5 accounts,
+35 transactions, 1 connection and the complete retirement audit compare identical
+before/after deployment. No financial validation POST or Railway setting change.
+
+The final bundle is `index-b36cc0aa476786b5c0ed1ca8f9e396bf.js`. The owned fresh
+empty local preview was stopped, preserving its archive. Evidence and activation
+scope are in `docs/operations/italian-connections-20261005.md` and
+`docs/operations/italian-connections-release-20261005.json`. Post-release evidence
+is a local docs commit until the next functional publication, avoiding an extra
+deployment of the same application.
+
+## Previous finance UI and clean-data release — 2026-10-05 (Europe/Rome)
 
 The latest user request is to remove test data, begin real-bank testing, improve the
 visual hierarchy of Home/accounts/transactions/review decisions, and move Privacy

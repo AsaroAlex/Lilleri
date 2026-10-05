@@ -1,5 +1,24 @@
 # Lilleri delivery status
 
+## Italian banks, cards and wallet selector — 2026-10-05
+
+Published commit `33e050a`, Railway deployment
+`4ddd2a8a-b2e0-4988-ab7a-21594c4c6899` **SUCCESS** at
+[Lilleri](https://lilleri-production.up.railway.app/). Home opens 18 services,
+including the major Italian banks, Amex and Satispay, with search, type filters,
+focused details and official links. All automatic routes still require activation;
+personal Amex/Satispay CSV/XLSX exports remain unverified. Their PDF guides do not
+enable PDF import. App-specific server-only Yapily LIVE/IT discovery is implemented
+as an unregistered read-only adapter; live authorization/identity/storage are pending.
+
+The repository check passed 23/23 tasks (API 586/3 skipped, provider 337, mobile 48).
+Three new API tests passed on PostgreSQL. Final mobile/type/copy and read-only
+browser acceptance cover 320–1440px, search, routing, focus, retry, English and dark
+display. Public health/catalogue/demo/export and the exact new web asset returned
+HTTP 200. Active finance stays empty; all owned 35/5/1 rows and retirement audit
+compare identical before/after. No Railway configuration or migration changes.
+See [release proof](operations/italian-connections-release-20261005.json).
+
 ## Visual finance UI and empty preview — 2026-10-05
 
 Published at [Lilleri](https://lilleri-production.up.railway.app/): commit `875973d`,

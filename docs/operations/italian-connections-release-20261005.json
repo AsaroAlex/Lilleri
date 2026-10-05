@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 08:41:07 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 10:41:07",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "33e050a54202470ab1b75d1076cbbd6b1495231a",
+  "deploymentId": "4ddd2a8a-b2e0-4988-ab7a-21594c4c6899",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-b36cc0aa476786b5c0ed1ca8f9e396bf.js",
+  "publicVerification": {
+    "health": "ok",
+    "directoryEntries": 18,
+    "automaticAvailable": 0,
+    "automaticConfigurationRequired": 18,
+    "amex": "card",
+    "satispay": "wallet",
+    "mode": "synthetic",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "fixtureState": "retired",
+    "fixtureRevision": 1,
+    "fixtureEvents": 1,
+    "canonicalArchiveUnchanged": true,
+    "financialMutationsSent": 0
+  },
+  "configuration": {
+    "variablesChanged": false,
+    "volumeId": "4599b33e-5413-4388-9980-872cb2ca7ef2",
+    "mountPath": "/data",
+    "databasePath": "/data/database",
+    "recoveryPath": "/data/recovery",
+    "replicas": 1,
+    "namespacePreserved": true
+  },
+  "localVerification": {
+    "repositoryCheckTasksPassed": 23,
+    "repositoryCheckTasksTotal": 23,
+    "api": {
+      "passed": 586,
+      "skipped": 3,
+      "files": 47,
+      "driver": "PGlite"
+    },
+    "providerTestsPassed": 337,
+    "mobileTestsPassed": 48,
+    "newApiTestsOnPostgresPassed": 3,
+    "finalMobileTypecheck": true,
+    "finalCopyChecks": true,
+    "browserFlows": 6,
+    "extraBrowserCases": [
+      "final compatibility copy",
+      "503 and explicit retry",
+      "English and dark theme"
+    ],
+    "widths": [
+      320,
+      390,
+      599,
+      768,
+      960,
+      1440
+    ],
+    "financialBrowserWrites": 0,
+    "migrationsChanged": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-b36cc0aa476786b5c0ed1ca8f9e396bf.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-b36cc0aa476786b5c0ed1ca8f9e396bf.js",
+      "status": 200
+    }
+  ],
+  "remainingActivation": [
+    "Protected production identity and storage",
+    "Provider application access and country/account coverage",
+    "Durable live consent/callback, renewal, revocation and sync admission"
+  ],
+  "realBankConnectionActivated": false,
+  "realProviderRequestSent": false
+}
