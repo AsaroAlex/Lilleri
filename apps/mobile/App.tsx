@@ -1645,7 +1645,7 @@ function AppSurface({
                 <Text style={s.sectionTitle}>{t('app.transactionsPlaceholder')}</Text>
                 <Text style={s.body}>{t('app.emptyTransactions')}</Text>
                 <Button
-                  label={t('app.connectionSetup')}
+                  label={t('app.addAccount')}
                   onPress={() => setManage('connections')}
                   c={c}
                   s={s}

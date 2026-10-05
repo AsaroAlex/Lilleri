@@ -45,7 +45,7 @@ const apiWrites = []
 const pageErrors = []
 const copy = {
   'it-IT': {
-    choose: 'Scegli la tua banca',
+    choose: 'Aggiungi conto',
     title: 'Trova la tua banca',
     country: 'Paese',
     allCountries: 'Tutti i paesi',
@@ -67,7 +67,7 @@ const copy = {
     retry: 'Riprova',
   },
   'en-GB': {
-    choose: 'Choose your bank',
+    choose: 'Add account',
     title: 'Find your bank',
     country: 'Country',
     allCountries: 'All countries',
@@ -215,7 +215,7 @@ async function detail(page, entry, locale) {
     await observe(context, 'italian')
     const page = await context.newPage()
     await page.goto(origin)
-    await button(page, 'Scegli la tua banca').waitFor()
+    await button(page, 'Aggiungi conto').waitFor()
     await openDirectory(page, 'it-IT')
     const country = page.getByRole('combobox', { name: 'Paese', exact: true })
     assert.equal(await country.inputValue(), 'IT')
@@ -363,7 +363,7 @@ async function detail(page, entry, locale) {
     await page.getByRole('radio', { name: 'English', exact: true }).click()
     await heading(page, 'Language and time').waitFor()
     await page.reload()
-    await button(page, 'Choose your bank').waitFor()
+    await button(page, 'Add account').waitFor()
     await openDirectory(page, 'en-GB')
     const englishCountry = page.getByRole('combobox', { name: 'Country', exact: true })
     assert.equal(await englishCountry.inputValue(), 'IT')
@@ -395,7 +395,7 @@ async function detail(page, entry, locale) {
     await observe(retryContext, 'directory-retry')
     const retryPage = await retryContext.newPage()
     await retryPage.goto(origin)
-    await button(retryPage, 'Scegli la tua banca').waitFor()
+    await button(retryPage, 'Aggiungi conto').waitFor()
     await openPreferences(retryPage, 'it-IT')
     await retryPage.getByRole('radio', { name: 'English', exact: true }).click()
     await heading(retryPage, 'Language and time').waitFor()

@@ -208,7 +208,7 @@ async function allSurfaces(page, locale) {
     await observe(context, 'primary')
     const page = await context.newPage()
     await page.goto(origin)
-    await button(page, 'Scegli la tua banca').waitFor()
+    await button(page, 'Aggiungi conto').waitFor()
     await checkLanguage(page, 'it-IT')
     await allSurfaces(page, 'it-IT')
     pass(
@@ -229,7 +229,7 @@ async function allSurfaces(page, locale) {
     )
     assert.deepEqual(await preferenceValue(page), { version: 1, locale: 'en-GB', timezone: 'UTC' })
     await page.reload()
-    await button(page, 'Choose your bank').waitFor()
+    await button(page, 'Add account').waitFor()
     await checkLanguage(page, 'en-GB')
     await openPreferences(page, 'en-GB')
     assert.equal(
@@ -253,7 +253,7 @@ async function allSurfaces(page, locale) {
     await observe(separate, 'independent-device')
     const separatePage = await separate.newPage()
     await separatePage.goto(origin)
-    await button(separatePage, 'Scegli la tua banca').waitFor()
+    await button(separatePage, 'Aggiungi conto').waitFor()
     await checkLanguage(separatePage, 'it-IT')
     await openPreferences(separatePage, 'it-IT')
     assert.equal(await preferenceValue(separatePage), null)
@@ -291,7 +291,7 @@ async function allSurfaces(page, locale) {
     )
     const legacyPage = await legacyContext.newPage()
     await legacyPage.goto(origin)
-    await button(legacyPage, 'Scegli la tua banca').waitFor()
+    await button(legacyPage, 'Aggiungi conto').waitFor()
     await assertSurface(legacyPage, 'legacy overview without fixture mode')
     await openPreferences(legacyPage, 'it-IT')
     assert.equal(await legacyPage.getByRole('textbox').count(), 0)
@@ -356,7 +356,7 @@ async function allSurfaces(page, locale) {
     )
     await failureContext.unroute(`${origin}/api/v1/demo`)
     await button(failurePage, 'Riprova').click()
-    await button(failurePage, 'Scegli la tua banca').waitFor()
+    await button(failurePage, 'Aggiungi conto').waitFor()
     pass(
       'A read-only unavailable-data response shows an honest product retry and recovers without local service instructions',
     )

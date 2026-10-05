@@ -74,7 +74,7 @@ async function fits(page, label) {
         writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
     })
     await page.goto(origin)
-    await button(page, 'Scegli la tua banca').click()
+    await button(page, 'Aggiungi conto').click()
     await page.getByRole('heading', { name: 'Trova la tua banca', exact: true }).waitFor()
     await page.getByRole('combobox', { name: 'Paese', exact: true }).waitFor()
     assert.equal(
@@ -142,7 +142,7 @@ async function fits(page, label) {
     assert.deepEqual(after.transactions, initial.transactions)
     assert.deepEqual(after.connections, initial.connections)
     await page.reload()
-    await button(page, 'Scegli la tua banca').waitFor()
+    await button(page, 'Aggiungi conto').waitFor()
     pass('Selection makes no financial writes; reload keeps the preview empty')
     await writeFile(
       reportPath,

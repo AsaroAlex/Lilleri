@@ -23,6 +23,7 @@ export const APP_MESSAGE_PAIRS = {
     'Balances, spending and transactions, each in its place.',
   ],
   'app.connectionSetup': ['Scegli la tua banca', 'Choose your bank'],
+  'app.addAccount': ['Aggiungi conto', 'Add account'],
   'app.personalAccessNeeded': [
     'L’accesso personale protetto deve essere attivato prima di aggiungere i tuoi dati finanziari.',
     'Protected personal sign-in must be enabled before adding your financial data.',

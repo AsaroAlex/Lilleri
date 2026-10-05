@@ -101,7 +101,7 @@ export function FinanceHome({
             </Text>
             <Text style={s.copy}>{t('app.emptyHomeCopy')}</Text>
             <Pressable accessibilityRole="button" onPress={onConnections} style={s.primaryButton}>
-              <Text style={s.primaryText}>{t('app.connectionSetup')}</Text>
+              <Text style={s.primaryText}>{t('app.addAccount')}</Text>
             </Pressable>
             {onManualAccount && (
               <Pressable
