@@ -1,5 +1,61 @@
 # Financial provider integration
 
+## Live Italian institution discovery — 2026-10-05
+
+`YapilyLiveInstitutionDiscovery` is a separate server-only discovery client. It
+uses application credentials supplied to its constructor and makes one GET to
+`https://api.yapily.com/institutions`. It does not read environment/browser
+configuration, accept an alternate API origin, follow redirects/provider links,
+create consent, read accounts or register itself as `FinancialDataProviderV2`.
+No credentials or financial/raw/media fields appear in its output or errors.
+
+The official endpoint returns institutions **within the configured application**.
+The client validates the complete response before selecting institutions whose
+`environmentType` is exactly `LIVE` and whose `countries[].countryCode2` declares
+`IT`. It preserves exact provider IDs and separate business/card variants; names,
+ID suffixes and brands never create an automatic identity/coverage match. For
+example, published BPER and Crédit Agricole IDs remain only documentation
+candidates until present in an actual authorized application's live Italian list.
+An absent entry means not reported by that application, not globally unsupported.
+
+The four feature declarations remain distinct: `ACCOUNTS`, `ACCOUNT_BALANCES`,
+`ACCOUNT_TRANSACTIONS` and `INITIATE_ACCOUNT_REQUEST`. Other reported feature codes
+are preserved without guessed equivalences. Account-kind, balance-kind and
+history evidence are absent from the institution schema, so `accountTypes` stays
+empty; a `_card` ID or bank name is not card-account coverage. Each result retains
+`connectionAvailability: configuration_required` and the catalogue retains
+`productionAdmission: blocked`. Actual consent routing, private access and a
+live financial adapter remain separate application requirements.
+
+The GET route documents no paging parameters. Generic wrapper pagination is
+accepted only when coherent with a whole list; count mismatches, nonzero offset,
+continuation metadata and `next` links fail as `partial_catalogue`. The client
+never guesses a cursor or follows a provider-supplied URL. Response bytes,
+institution count, nested JSON, duplicates and whole-operation time are bounded.
+Only one request runs per instance. Cancellation interrupts fetch/body reads,
+including noncooperating transports; no error body or transport cause is logged,
+returned or retained. A 429 returns a bounded Retry-After hint without retrying.
+
+The official references were read on 2026-10-05. This retrieval of the institution
+reference identifies **12.13.0**, while the earlier sandbox reference retrieval
+identified 12.16.0. `referenceApiVersion` records the documentation used, not an
+API deployment version measured from an authenticated provider call. The test
+fixtures are original synthetic responses. No actual Yapily credentials, account
+entitlement, consent or live bank call was available or exercised.
+
+Verification: all **318 provider tests** passed, including 53 new discovery
+cases; provider typecheck/build and Biome passed. Tests cover exact identities,
+IT/live filtering, independent feature declarations, unknown kinds, malformed and
+partial catalogues, response bounds, errors, cancellation, late responses and
+credential/financial-field exclusion.
+
+References:
+
+- [Get institutions](https://docs.yapily.com/api-reference/institutions/get-institutions)
+- [Server Basic authentication](https://docs.yapily.com/getting-started/integration-setup/api-authentication)
+- [BPER exact IDs and distinct variants](https://docs.yapily.com/institution-configurations/italy/CBI-Globe-BPER)
+- [Crédit Agricole exact IDs](https://docs.yapily.com/institution-configurations/italy/CBI-Globe-Credit-Agricole)
+
 ## Official Yapily sandbox preparation — 2026-10-04
 
 FACT: `YapilySandboxReadAdapter` implements a **read-only subset of the documented
