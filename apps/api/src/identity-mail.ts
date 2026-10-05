@@ -5,7 +5,11 @@ export interface IdentityMailMessage {
 export interface IdentityDelivery {
   readonly sendVerification: (message: IdentityMailMessage) => Promise<void>
   readonly sendPasswordReset: (message: IdentityMailMessage) => Promise<void>
+  /** The single notice a "Plus Fondatori" list member asked for; links to `/app?fondatori=1`. */
+  readonly sendPlusAvailable?: (message: IdentityMailMessage) => Promise<void>
 }
+/** The only page a "Plus is available" notice may link to. */
+export const PLUS_AVAILABLE_PATH = '/app?fondatori=1'
 export interface ResendIdentityDeliveryOptions {
   readonly apiKey: string
   readonly from: string
@@ -30,7 +34,7 @@ interface PreparedMessage {
   readonly subject: string
   readonly text: string
 }
-type Kind = 'verification' | 'reset'
+type Kind = 'verification' | 'reset' | 'plus'
 
 function applicationOrigin(baseURL: string): URL {
   const base = new URL(baseURL)
@@ -45,31 +49,34 @@ function assertSender(from: string) {
 function secret(value: string, label: string) {
   if (!value.trim() || /[\r\n]/.test(value)) throw new Error(`${label} is required`)
 }
-/** Only links to this exact origin's verification/reset routes can be mailed. */
+const SUBJECTS: Readonly<Record<Kind, string>> = {
+  verification: 'Conferma la tua email per Lilleri',
+  reset: 'Recupera l’accesso a Lilleri',
+  plus: 'Lilleri Plus è disponibile per te',
+}
+const texts: Readonly<Record<Kind, (link: string) => string>> = {
+  verification: (link) =>
+    `Conferma la tua email aprendo questo collegamento:\n\n${link}\n\nSe non hai richiesto un account Lilleri, ignora questa email.`,
+  reset: (link) =>
+    `Per scegliere una nuova password, apri questo collegamento entro 15 minuti:\n\n${link}\n\nSe non hai richiesto il recupero, ignora questa email. La tua password rimarrà invariata.`,
+  plus: (link) =>
+    `Ti eri iscritto alla lista Fondatori di Lilleri Plus: ora puoi collegare la tua banca e ricevere saldi e movimenti in automatico.\n\nApri Lilleri e attiva Plus da Impostazioni › Abbonamento:\n\n${link}\n\nCome Fondatore, il prezzo con cui attivi Plus resta lo stesso finché mantieni l’abbonamento.\n\nTi scriviamo una sola volta perché lo avevi chiesto tu nell’app. Non riceverai altri messaggi su questo.`,
+}
+const linkAllowed = (link: URL, kind: Kind) =>
+  kind === 'verification'
+    ? link.pathname === '/api/auth/verify-email'
+    : kind === 'reset'
+      ? /^\/api\/auth\/reset-password\/[A-Za-z0-9_-]+$/.test(link.pathname)
+      : `${link.pathname}${link.search}` === PLUS_AVAILABLE_PATH && !link.hash
+
+/** Only links to this exact origin's verification/reset routes and the Plus page can be mailed. */
 function prepare(base: URL, message: IdentityMailMessage, kind: Kind): PreparedMessage {
   if (!EMAIL.test(message.email) || message.email.length > 254)
     throw new Error('Invalid identity mail recipient')
   const link = new URL(message.url)
-  if (
-    link.origin !== base.origin ||
-    link.username ||
-    link.password ||
-    (kind === 'verification'
-      ? link.pathname !== '/api/auth/verify-email'
-      : !/^\/api\/auth\/reset-password\/[A-Za-z0-9_-]+$/.test(link.pathname))
-  )
+  if (link.origin !== base.origin || link.username || link.password || !linkAllowed(link, kind))
     throw new Error('Invalid identity mail link')
-  return {
-    email: message.email,
-    subject:
-      kind === 'verification'
-        ? 'Conferma la tua email per Lilleri'
-        : 'Recupera l’accesso a Lilleri',
-    text:
-      kind === 'verification'
-        ? `Conferma la tua email aprendo questo collegamento:\n\n${link.href}\n\nSe non hai richiesto un account Lilleri, ignora questa email.`
-        : `Per scegliere una nuova password, apri questo collegamento entro 15 minuti:\n\n${link.href}\n\nSe non hai richiesto il recupero, ignora questa email. La tua password rimarrà invariata.`,
-  }
+  return { email: message.email, subject: SUBJECTS[kind], text: texts[kind](link.href) }
 }
 function delivery(
   base: URL,
@@ -87,6 +94,7 @@ function delivery(
   return {
     sendVerification: (message) => send(message, 'verification'),
     sendPasswordReset: (message) => send(message, 'reset'),
+    sendPlusAvailable: (message) => send(message, 'plus'),
   }
 }
 const nonEmptyId = (value: unknown) => typeof value === 'string' && value.length > 0

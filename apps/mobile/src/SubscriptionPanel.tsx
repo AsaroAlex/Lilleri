@@ -13,10 +13,19 @@ import {
 } from './hosted-flows'
 import type { MessageKey } from './i18n'
 import { useI18n } from './i18n/context'
+import { PlusFoundersCard } from './PlusFoundersCard'
 import { leaveForSecureUrl } from './secure-redirect'
 
 export interface SubscriptionPanelProps {
-  readonly api: Pick<ApiClient, 'billing' | 'startCheckout' | 'openBillingPortal'>
+  readonly api: Pick<
+    ApiClient,
+    | 'billing'
+    | 'startCheckout'
+    | 'openBillingPortal'
+    | 'plusWaitlist'
+    | 'joinPlusWaitlist'
+    | 'leavePlusWaitlist'
+  >
   readonly theme: BrandTheme
   /** Identity epoch from the parent; a session change discards every pending billing read. */
   readonly resetKey: number | string
@@ -384,6 +393,14 @@ export function SubscriptionPanel({
           )}
         </View>
       </View>
+      {!plus && !value.purchaseAvailable && !notOwner && (
+        <PlusFoundersCard
+          api={api}
+          theme={theme}
+          resetKey={resetKey}
+          {...(onError ? { onError } : {})}
+        />
+      )}
       {notOwner && (
         <AccessibleStatus>
           <Text style={s.body}>{t('subscription.ownerOnly')}</Text>

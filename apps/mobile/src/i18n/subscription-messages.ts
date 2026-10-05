@@ -121,4 +121,33 @@ export const SUBSCRIPTION_MESSAGE_PAIRS = {
     'Sei tornato dalla gestione dell’abbonamento. Le modifiche possono richiedere qualche istante.',
     'You are back from subscription management. Changes may take a moment to appear.',
   ],
+  'founders.title': ['Plus Fondatori', 'Plus Founders'],
+  'founders.offer': [
+    'Attiviamo il collegamento con le banche un gruppo di persone alla volta. Ti scriviamo una sola email quando Plus è pronto per te.',
+    'We are opening bank connections to a group of people at a time. We will send you a single email when Plus is ready for you.',
+  ],
+  'founders.promise': [
+    'Chi entra dalla lista mantiene il prezzo con cui attiva Plus finché resta abbonato.',
+    'People who join from the list keep the price they start Plus with for as long as they stay subscribed.',
+  ],
+  'founders.join': ['Avvisami quando è disponibile', 'Notify me when it is available'],
+  'founders.joined': ['Sei nella lista Fondatori.', 'You are on the Founders list.'],
+  'founders.position': [
+    'Sei al posto numero {position, number}.',
+    'You are number {position, number}.',
+  ],
+  'founders.waiting': [
+    'Ti scriveremo una sola email, all’indirizzo del tuo account, quando Plus sarà disponibile per te.',
+    'We will send a single email to your account address when Plus is available for you.',
+  ],
+  'founders.notified': [
+    'Ti abbiamo scritto che Plus era disponibile. Se ora non riesci ad attivarlo, i posti di questo gruppo sono esauriti: riprova tra qualche giorno.',
+    'We emailed you that Plus was available. If you cannot start it now, this group’s places are taken: try again in a few days.',
+  ],
+  'founders.leave': ['Esci dalla lista', 'Leave the list'],
+  'founders.saving': ['Aggiorno la lista…', 'Updating the list…'],
+  'founders.failed': [
+    'Non riesco ad aggiornare la lista. Riprova tra poco.',
+    'I cannot update the list. Try again shortly.',
+  ],
 } as const satisfies Readonly<Record<string, readonly [string, string]>>

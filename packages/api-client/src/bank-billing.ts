@@ -50,6 +50,17 @@ export interface BillingDto {
 export interface BillingRedirectDto {
   readonly url: string
 }
+/** "Plus Fondatori": a single e-mail when Plus can be bought. */
+export interface PlusWaitlistDto {
+  /** The caller may join: profile owner, on Gratis, while Plus cannot be bought. */
+  readonly offered: boolean
+  readonly joined: boolean
+  readonly joinedAt: string | null
+  /** 1-based place among the people still waiting; null when not waiting. */
+  readonly position: number | null
+  /** The single notice has already been sent. */
+  readonly notified: boolean
+}
 
 /** Bank authorisation and subscription routes use the existing cookie session. */
 export function createBankBillingClient(
@@ -78,5 +89,10 @@ export function createBankBillingClient(
       }),
     openBillingPortal: () =>
       request<BillingRedirectDto>('/v1/billing/portal', { method: 'POST', body: '{}' }),
+    plusWaitlist: (signal?: AbortSignal) =>
+      request<PlusWaitlistDto>('/v1/plus/waitlist', signal ? { signal } : {}),
+    joinPlusWaitlist: () =>
+      request<PlusWaitlistDto>('/v1/plus/waitlist', { method: 'POST', body: '{}' }),
+    leavePlusWaitlist: () => request<PlusWaitlistDto>('/v1/plus/waitlist', { method: 'DELETE' }),
   }
 }

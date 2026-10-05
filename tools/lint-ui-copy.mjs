@@ -10,6 +10,7 @@ export const UI_COPY_CONSUMERS = Object.freeze([
   'apps/mobile/src/BankConnectionFlow.tsx',
   'apps/mobile/src/BankInstitutionPicker.tsx',
   'apps/mobile/src/SubscriptionPanel.tsx',
+  'apps/mobile/src/PlusFoundersCard.tsx',
   'apps/mobile/MappedImportPanel.tsx',
   'apps/mobile/ImportManualPanel.tsx',
   'apps/mobile/MerchantPanel.tsx',
