@@ -1,5 +1,6 @@
 import type { AccountDto, DemoOverview, MoneyDto } from '@lilleri/api-client'
 import { type BrandTheme, colors } from '@lilleri/brand'
+import { calendarDateAt } from '@lilleri/domain'
 import { fromJson } from '@lilleri/money'
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native'
@@ -76,7 +77,9 @@ export function FinanceHome({
       <Text style={s.accountAmount}>{amount(account.balance)}</Text>
       <Text style={s.small}>
         {account.balanceUpdatedAt
-          ? calendarDate(account.balanceUpdatedAt.slice(0, 10))
+          ? calendarDate(
+              calendarDateAt(new Date(account.balanceUpdatedAt), overview.profile.timezone),
+            )
           : t('app.notUpdated')}{' '}
         · {account.balance.currency}
       </Text>
