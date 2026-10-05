@@ -1,5 +1,21 @@
 # PROJECT STATE — Lilleri
 
+## Current account action label release — 2026-10-05 (Europe/Rome)
+
+Published commit `e2b560083fd94aea170fb377416e2ad6aaae8b04`, Railway deployment
+`45b3ffde-d0d3-4f43-a0e9-2b2f6caf5e8c` **SUCCESS**, verified at 12:19 Europe/Rome.
+Home and empty Movimenti use “Aggiungi conto” / “Add account” via `app.addAccount`.
+Both still open the bank/service picker. The protected-access heading, distinct
+manual-account option, handlers and access guards are preserved. Mobile typecheck,
+scoped Biome/copy checks, 8 catalogue tests, build, 24 CTA entry flows, 6 bank groups
+and 8 product groups/134 surfaces passed. Matching bundle
+`index-caaa36c202c7db11344a33af5a29f7ec.js` and public read endpoints returned HTTP 200.
+Canonical owned finance and retirement audit compare unchanged; active finance
+remains empty. No financial POST, migrations or Railway settings changed.
+Owned preview stopped, archive retained. Proof:
+`docs/operations/add-account-label-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current header wordmark release — 2026-10-05 (Europe/Rome)
 
 Published commit `3aeecfcb75b729eb5951efb106b01ada1ff69de5`, Railway deployment

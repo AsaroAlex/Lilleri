@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 10:19:48 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 12:19:48",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "e2b560083fd94aea170fb377416e2ad6aaae8b04",
+  "deploymentId": "45b3ffde-d0d3-4f43-a0e9-2b2f6caf5e8c",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-caaa36c202c7db11344a33af5a29f7ec.js",
+  "change": {
+    "homeAndEmptyLedgerAction": {
+      "italian": "Aggiungi conto",
+      "english": "Add account",
+      "messageKey": "app.addAccount"
+    },
+    "destination": "Existing bank and service picker",
+    "protectedAccessHeadingAndManualAccountLabelPreserved": true,
+    "handlersAndAccessGuardsPreserved": true
+  },
+  "localVerification": {
+    "mobileTypecheck": "passed",
+    "scopedBiomeCheck": "passed",
+    "catalogueTestsPassed": 8,
+    "copyLint": "passed",
+    "previewBuild": "passed",
+    "ctaEntryFlows": 24,
+    "ctaWidths": [
+      320,
+      650,
+      1440
+    ],
+    "locales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "bankBrowserGroups": 6,
+    "productBrowserGroups": 8,
+    "productSurfaces": 134,
+    "pageErrors": 0,
+    "financialBrowserWrites": 0,
+    "financesUnchanged": true,
+    "serverSettingsUnchanged": true,
+    "ownedPreviewStopped": true,
+    "localArchivePreserved": true
+  },
+  "publicVerification": {
+    "health": "ok",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "canonicalArchiveAndRetirementAuditUnchanged": true,
+    "directoryEntries": 62,
+    "financialMutationsSent": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-caaa36c202c7db11344a33af5a29f7ec.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    }
+  ],
+  "railwaySettingsChanged": false,
+  "migrationsChanged": 0
+}

@@ -1,5 +1,15 @@
 # Lilleri delivery status
 
+## Add account action — 2026-10-05
+
+Published commit `e2b5600`, Railway `45b3ffde-d0d3-4f43-a0e9-2b2f6caf5e8c`
+**SUCCESS**, verified at 12:19 Europe/Rome. Home and empty Movimenti now use
+“Aggiungi conto” / “Add account” and open the existing bank/service picker.
+Typecheck, copy/scoped checks, 8 catalogue tests, build, 24 CTA flows, 6 bank groups
+and 8 product groups/134 surfaces passed. Exact bundle and public reads returned
+HTTP 200; owned finance and retirement audit are unchanged.
+See [release proof](operations/add-account-label-release-20261005.json).
+
 ## Header wordmark — 2026-10-05
 
 Published commit `3aeecfc`, Railway `7a9bd84f-712d-438b-9849-c70e3134514c`
