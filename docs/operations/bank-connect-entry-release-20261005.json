@@ -1,0 +1,178 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 11:16:02 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 13:14",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "8b1f41199714fa1aafa88831c0273264af586f2d",
+  "deploymentId": "754641f9-26f2-4362-a16d-68e8ba05b4a1",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-c06fbee765accabc25e60ff852ab6dc5.js",
+  "change": {
+    "connectionActionVisibleForServices": 62,
+    "connectionActionLocation": "Every bank/card/wallet detail, immediately below service identity",
+    "availabilityEndpoint": "GET /v1/connection-directory/:entryId/connect",
+    "endpointPurpose": "Public metadata check; never creates consent or a financial connection",
+    "connectionFlow": [
+      "Fresh availability check",
+      "Explicit availability or activation explanation",
+      "Read-only retry",
+      "Return to service details with focus",
+      "Conditional personal-access and authorization callbacks only after a fresh result and a separate gesture"
+    ],
+    "crossServiceAndIdentityResponseFences": true,
+    "legacyFixtureWriterUsed": false
+  },
+  "activationStatus": {
+    "personalAccess": "not_enabled",
+    "openBankingProvider": "not_configured",
+    "liveAuthorizationAndSyncRuntime": "not_implemented_or_enabled",
+    "realBankAccountsConnectedByThisChange": 0,
+    "credentialsRequestedByUI": false
+  },
+  "localVerification": {
+    "domainTypecheck": "passed",
+    "apiClientTypecheck": "passed",
+    "apiTypecheck": "passed",
+    "mobileTypecheck": "passed",
+    "scopedBiomeCheck": "passed",
+    "copyLint": "passed",
+    "directoryApiTestsPassed": 5,
+    "catalogueAndDirectoryMobileTestsPassed": 15,
+    "previewBuild": "passed",
+    "connectionFlowBrowserGroups": 7,
+    "servicesCheckedInBrowser": 62,
+    "connectionFlowLayouts": 74,
+    "connectionFlowWidths": [
+      320,
+      650,
+      1440
+    ],
+    "locales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "retryAndFailureRecovery": "passed",
+    "mismatchedResponseRejection": "passed",
+    "unsupportedAndUnverifiedResponses": "passed",
+    "availableResponseWithoutPersonalAccessRejected": "passed",
+    "latePreviousBankResponseRejection": "passed",
+    "bankBrowserGroups": 6,
+    "europeanBrowserGroups": 9,
+    "europeanLayouts": 56,
+    "productBrowserGroups": 8,
+    "productLayouts": 134,
+    "pageErrors": 0,
+    "financialBrowserWrites": 0,
+    "externalBankNavigations": 0,
+    "canonicalArchiveUnchanged": true,
+    "serverSettingsUnchanged": true,
+    "ownedPreviewStopped": true,
+    "localArchivePreserved": true,
+    "nativeEmulatorRun": false
+  },
+  "publicVerification": {
+    "health": "ok",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "canonicalArchiveAndRetirementAuditUnchanged": true,
+    "directoryEntries": 62,
+    "connectionChecks": [
+      {
+        "entryId": "bper",
+        "state": "configuration_required",
+        "privateAccess": "required",
+        "bankProvider": "required",
+        "providerId": null,
+        "institutionId": null
+      },
+      {
+        "entryId": "amex",
+        "state": "configuration_required",
+        "privateAccess": "required",
+        "bankProvider": "required",
+        "providerId": null,
+        "institutionId": null
+      },
+      {
+        "entryId": "satispay",
+        "state": "configuration_required",
+        "privateAccess": "required",
+        "bankProvider": "required",
+        "providerId": null,
+        "institutionId": null
+      },
+      {
+        "entryId": "deutsche-bank-de",
+        "state": "configuration_required",
+        "privateAccess": "required",
+        "bankProvider": "required",
+        "providerId": null,
+        "institutionId": null
+      }
+    ],
+    "financialMutationsSent": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-c06fbee765accabc25e60ff852ab6dc5.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory/amex/connect",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory/bper/connect",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory/deutsche-bank-de/connect",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory/satispay/connect",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    }
+  ],
+  "railwaySettingsChanged": false,
+  "migrationsChanged": 0
+}

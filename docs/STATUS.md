@@ -1,5 +1,20 @@
 # Lilleri delivery status
 
+## Connection action for every service — 2026-10-05
+
+Published commit `8b1f411`, Railway `754641f9-26f2-4362-a16d-68e8ba05b4a1`
+**SUCCESS**, verified at 13:14 Europe/Rome. All 62 bank/card/wallet details expose
+“Collega il conto” / “Connect account”, opening a fresh server availability check
+with retry, errors, stale-response rejection and focus restoration.
+**Real banking is still inactive:** personal access, the provider and the live
+authorization/sync runtime remain to be integrated. The public flow explains this;
+no consent, bank credentials or financial writes are created by this release.
+Typechecks, scoped/copy checks, 5 API/15 mobile tests, build, 7 new browser groups/
+62 services/74 layouts, 6 bank groups, 9 Europe groups/56 layouts and 8 product groups/
+134 layouts passed. Exact bundle, representative connection checks and public reads
+returned HTTP 200; owned finance and retirement audit are unchanged.
+See [release proof](operations/bank-connect-entry-release-20261005.json).
+
 ## Bank and service logos — 2026-10-05
 
 Published commit `3a264c9`, Railway `45a9b0a0-25b8-463b-9173-83ad4e34b5a6`

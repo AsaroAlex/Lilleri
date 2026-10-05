@@ -1,5 +1,29 @@
 # PROJECT STATE — Lilleri
 
+## Current per-service connection entry release — 2026-10-05 (Europe/Rome)
+
+Published commit `8b1f41199714fa1aafa88831c0273264af586f2d`, Railway deployment
+`754641f9-26f2-4362-a16d-68e8ba05b4a1` **SUCCESS**, verified at 13:14 Europe/Rome.
+Every one of the 62 service details now exposes “Collega il conto” / “Connect account”.
+The action opens a common flow backed by fresh public metadata from
+`GET /v1/connection-directory/:entryId/connect`. It handles retry, failure,
+unsupported/unverified coverage and stale bank/session responses, with keyboard
+focus restored on return. Conditional personal-access/authorization callbacks need
+a fresh valid result and another explicit gesture; the synthetic writer is never used.
+**This release does not activate real bank connections.** Hosted personal access,
+an official provider and the live authorization/sync runtime are still absent.
+The public flow states the activation requirement and requests no bank credentials.
+Domain/API-client/API/mobile typechecks, scoped/copy checks, 5 API tests, 15 mobile
+catalogue/directory tests, build, 7 connection-flow browser groups/all 62 services/
+74 layouts, 6 bank groups, 9 Europe groups/56 layouts and 8 product groups/134 layouts
+passed. Native emulator not run. Exact bundle `index-c06fbee765accabc25e60ff852ab6dc5.js`,
+BPER/Amex/Satispay/Deutsche Bank checks and public reads returned HTTP 200.
+Canonical owned finance and retirement audit compare unchanged; active finance
+remains empty. No financial POST, migrations or Railway settings changed.
+Owned preview stopped, archive retained. Proof:
+`docs/operations/bank-connect-entry-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current bank logo release — 2026-10-05 (Europe/Rome)
 
 Published commit `3a264c9cacf8de67c0b90fcdbcaaa1a7fc76d299`, Railway deployment
