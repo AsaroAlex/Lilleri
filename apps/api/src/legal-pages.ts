@@ -13,6 +13,7 @@
  * only (no scripts, no external resources), rendered once when the routes are registered.
  */
 import type { AppExtension } from './app.js'
+import { type Fragment, html, SafeHtml } from './safe-html.js'
 
 export const LEGAL_TERMS_VERSION = 'lilleri-terms-2026-10-05'
 export const LEGAL_PRIVACY_VERSION = 'lilleri-privacy-2026-10-05'
@@ -98,39 +99,6 @@ export function legalEntityFromEnvironment(environment: Environment): LegalEntit
     ...(pec === undefined ? {} : { pec }),
     ...(rea === undefined ? {} : { rea }),
   }
-}
-
-// ---------------------------------------------------------------------------------------------
-// Escaping HTML builder: literal template text is trusted; every interpolation is escaped
-// unless it is itself the output of `html` (or the trusted stylesheet).
-
-class SafeHtml {
-  readonly value: string
-  constructor(value: string) {
-    this.value = value
-  }
-}
-type Fragment = SafeHtml | string | number | false | null | undefined | readonly Fragment[]
-
-const ESCAPES: Readonly<Record<string, string>> = {
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#39;',
-}
-const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (match) => ESCAPES[match] ?? '')
-const fragment = (value: Fragment): string => {
-  if (value instanceof SafeHtml) return value.value
-  if (Array.isArray(value)) return value.map(fragment).join('')
-  if (value === false || value === null || value === undefined) return ''
-  return escapeHtml(String(value))
-}
-function html(strings: TemplateStringsArray, ...values: readonly Fragment[]): SafeHtml {
-  let output = strings[0] ?? ''
-  for (let index = 0; index < values.length; index++)
-    output += fragment(values[index]) + (strings[index + 1] ?? '')
-  return new SafeHtml(output)
 }
 
 const mail = (address: string) => html`<a href="mailto:${address}">${address}</a>`

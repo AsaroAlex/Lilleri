@@ -73,6 +73,8 @@ export interface BankConnectionsOptions {
   readonly coordinator: (profileId: string) => Promise<SyncCoordinator>
   readonly countries: readonly string[]
   readonly evidenceReference: string
+  /** Path of the web app on the public origin (default `/`); the callback returns people there. */
+  readonly appPath?: '/' | `/${string}`
   readonly now?: () => string
   readonly onFailure?: () => void
 }
@@ -441,7 +443,7 @@ export function createBankConnectionsExtension(options: BankConnectionsOptions):
           reply
             .header('Cache-Control', 'no-store')
             .header('Referrer-Policy', 'no-referrer')
-            .redirect(`${base.origin}/?bank=${outcome}`, 303)
+            .redirect(`${base.origin}${options.appPath ?? '/'}?bank=${outcome}`, 303)
         const provider = options.provider
         const query = request.query
         const duplicated = ['state', 'code', 'error'].some((key) =>

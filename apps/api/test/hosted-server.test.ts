@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto'
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { type DatabaseHandle, openDatabase } from '@lilleri/database'
 import { eq } from 'drizzle-orm'
 import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
@@ -158,6 +159,14 @@ beforeAll(async () => {
   await mkdir(join(root, 'web', '_expo'), { recursive: true })
   await writeFile(join(root, 'web', 'index.html'), '<!doctype html><title>Lilleri</title>')
   await writeFile(join(root, 'web', '_expo', 'index-0123456789abcdef0123456789abcdef.js'), 'void 0')
+  // The home page inlines the brand wordmark and serves the Geist font from the repository.
+  for (const file of ['logo/lilleri-wordmark.svg', 'fonts/Geist-Variable.woff2']) {
+    await mkdir(join(root, 'packages/brand', file, '..'), { recursive: true })
+    await copyFile(
+      fileURLToPath(new URL(`../../../packages/brand/${file}`, import.meta.url)),
+      join(root, 'packages/brand', file),
+    )
+  }
   database = await openDatabase({ driver: 'pglite' })
   server = await createHostedServer(environment(join(root, 'data')), root, {
     database,
@@ -227,17 +236,67 @@ describe('hosted production entry point', () => {
       expect((await server.app.inject({ url, headers: { host } })).statusCode).toBe(404)
   })
 
-  test('serves the web app, legal pages and security headers from the same origin', async () => {
+  test('serves the home page, the web app under /app, legal pages and security headers', async () => {
     const page = await server.app.inject({ url: '/', headers: { host, accept: 'text/html' } })
     expect(page.statusCode).toBe(200)
-    expect(page.headers['content-security-policy']).toContain("script-src 'self'")
+    expect(page.headers['content-security-policy']).toContain("default-src 'none'")
+    expect(page.headers['content-security-policy']).not.toContain('script-src')
     expect(page.headers['strict-transport-security']).toContain('max-age=')
     expect(page.headers['x-frame-options']).toBe('DENY')
-    const navigation = await server.app.inject({
+    expect(page.body).toContain('<h1>I tuoi soldi, finalmente in ordine.</h1>')
+    expect(page.body).toContain('Lilleri S.r.l. &lt;prova&gt;')
+    expect(page.body).not.toContain('<prova>')
+    expect(page.body).toContain('P. IVA IT01234567890')
+    expect(page.body).toContain(`<link rel="canonical" href="${origin}/">`)
+    // No bank provider is configured, so Plus cannot be bought: the Fondatori list is offered.
+    expect(page.body).toContain('id="fondatori"')
+    expect(page.body).toContain('href="/app?fondatori=1"')
+    expect(page.body).not.toMatch(/<script(?! type="application\/ld\+json")/)
+    // Prices come from the Stripe catalogue once it has been read.
+    await vi.waitFor(async () =>
+      expect((await server.app.inject({ url: '/', headers: { host } })).body).toContain(
+        '6,99 € <small>al mese</small>',
+      ),
+    )
+    const english = await server.app.inject({ url: '/en', headers: { host } })
+    expect(english.statusCode).toBe(200)
+    expect(english.body).toContain('<html lang="en-GB">')
+    expect(english.body).toContain('€69.99 per year')
+    for (const legacy of ['/?bank=connected', '/?billing=success', '/?identity=recover&token=x'])
+      expect(
+        await server.app
+          .inject({ url: legacy, headers: { host } })
+          .then((response) => [response.statusCode, response.headers.location]),
+      ).toEqual([303, `/app${legacy.slice(1)}`])
+    const application = await server.app.inject({
+      url: '/app',
+      headers: { host, accept: 'text/html' },
+    })
+    expect(application.statusCode).toBe(200)
+    expect(application.body).toContain('<title>Lilleri</title>')
+    expect(application.headers['content-security-policy']).toContain("script-src 'self'")
+    expect(
+      (
+        await server.app.inject({
+          url: '/app/impostazioni',
+          headers: { host, accept: 'text/html' },
+        })
+      ).statusCode,
+    ).toBe(200)
+    const unknown = await server.app.inject({
       url: '/impostazioni',
       headers: { host, accept: 'text/html' },
     })
-    expect(navigation.statusCode).toBe(200)
+    expect(unknown.statusCode).toBe(404)
+    expect(unknown.body).toContain('href="/app"')
+    const robots = await server.app.inject({ url: '/robots.txt', headers: { host } })
+    expect(robots.body).toContain('Disallow: /app')
+    expect(robots.body).toContain(`Sitemap: ${origin}/sitemap.xml`)
+    const sitemap = await server.app.inject({ url: '/sitemap.xml', headers: { host } })
+    expect(sitemap.body).toContain(`<loc>${origin}/en</loc>`)
+    const font = await server.app.inject({ url: '/site/geist.woff2', headers: { host } })
+    expect(font.statusCode).toBe(200)
+    expect(font.headers['content-type']).toBe('font/woff2')
     const bundle = await server.app.inject({
       url: '/_expo/index-0123456789abcdef0123456789abcdef.js',
       headers: { host },

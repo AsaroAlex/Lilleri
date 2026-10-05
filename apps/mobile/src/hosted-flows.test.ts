@@ -31,7 +31,7 @@ describe('bank and billing return parameters', () => {
     const replace = vi.fn<(url: string) => void>()
     expect(
       consumeHostedReturnLocation(`${origin}/?lang=en&bank=connected#connections`, replace),
-    ).toEqual({ bank: 'connected', billing: null })
+    ).toEqual({ bank: 'connected', billing: null, subscription: false })
     expect(replace).toHaveBeenCalledExactlyOnceWith(`${origin}/?lang=en#connections`)
     expect(consumeHostedReturnLocation(replace.mock.calls[0]?.[0] ?? '', replace)).toBe(
       NO_HOSTED_RETURN,
@@ -57,15 +57,31 @@ describe('bank and billing return parameters', () => {
     ])
       expect(MESSAGE_PAIRS[key]).toHaveLength(2)
   })
+  test('home page and Plus notice links open Subscription once, under the app path', () => {
+    for (const link of ['fondatori=1', 'plus=1']) {
+      const replace = vi.fn<(url: string) => void>()
+      expect(consumeHostedReturnLocation(`${origin}/app?${link}`, replace)).toEqual({
+        bank: null,
+        billing: null,
+        subscription: true,
+      })
+      expect(replace).toHaveBeenCalledExactlyOnceWith(`${origin}/app`)
+    }
+    const replace = vi.fn<(url: string) => void>()
+    expect(
+      consumeHostedReturnLocation(`${origin}/app?fondatori=yes&plus=1&plus=1`, replace),
+    ).toEqual({ bank: null, billing: null, subscription: false })
+    expect(replace).toHaveBeenCalledExactlyOnceWith(`${origin}/app`)
+  })
   test('unknown, repeated or injected values are removed from the address bar and ignored', () => {
     const replace = vi.fn<(url: string) => void>()
     expect(
       consumeHostedReturnLocation(`${origin}/?bank=%3Cscript%3E&billing=refund&x=1`, replace),
-    ).toEqual({ bank: null, billing: null })
+    ).toEqual({ bank: null, billing: null, subscription: false })
     expect(replace).toHaveBeenLastCalledWith(`${origin}/?x=1`)
     expect(
       consumeHostedReturnLocation(`${origin}/?bank=connected&bank=cancelled`, replace),
-    ).toEqual({ bank: null, billing: null })
+    ).toEqual({ bank: null, billing: null, subscription: false })
     expect(replace).toHaveBeenLastCalledWith(`${origin}/`)
     expect(consumeHostedReturnLocation(`${origin}/?bank=CONNECTED`, replace).bank).toBeNull()
     const untouched = vi.fn<(url: string) => void>()

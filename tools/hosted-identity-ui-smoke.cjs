@@ -118,7 +118,7 @@ const types = {
           const path = resolve(
             root,
             'apps/mobile/dist',
-            `.${decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname)}`,
+            `.${decodeURIComponent(['/', '/app'].includes(url.pathname) ? '/index.html' : url.pathname)}`,
           )
           if (!path.startsWith(`${resolve(root, 'apps/mobile/dist')}/`))
             throw new Error('Invalid fixture path')

@@ -663,7 +663,12 @@ function AppSurface({
   // A bank or payment return is applied once, after the signed-in profile's data is available.
   useEffect(() => {
     const pending = pendingReturn.current
-    if ((!pending.bank && !pending.billing) || !data || erased || (identityMode && !signedIn))
+    if (
+      (!pending.bank && !pending.billing && !pending.subscription) ||
+      !data ||
+      erased ||
+      (identityMode && !signedIn)
+    )
       return
     pendingReturn.current = NO_HOSTED_RETURN
     const epoch = identityEpoch.current
@@ -678,7 +683,7 @@ function AppSurface({
       setManage('subscription')
       setReturnNotice({ epoch, key: BILLING_RETURN_MESSAGES[pending.billing] })
       if (pending.billing === 'success') setPlusConfirmation({ epoch, request: Date.now() })
-    }
+    } else setManage('subscription')
   }, [data, erased, signedIn])
   // The first bank synchronisation runs in the background: poll calmly for a bounded time.
   useEffect(() => {

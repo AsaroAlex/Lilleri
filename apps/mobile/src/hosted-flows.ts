@@ -35,8 +35,15 @@ export type BillingReturnOutcome = (typeof BILLING_RETURN_OUTCOMES)[number]
 export interface HostedReturn {
   readonly bank: BankReturnOutcome | null
   readonly billing: BillingReturnOutcome | null
+  /** `?fondatori=1` or `?plus=1` from the home page or the Plus notice: open Subscription. */
+  readonly subscription: boolean
 }
-export const NO_HOSTED_RETURN: HostedReturn = Object.freeze({ bank: null, billing: null })
+export const NO_HOSTED_RETURN: HostedReturn = Object.freeze({
+  bank: null,
+  billing: null,
+  subscription: false,
+})
+const SUBSCRIPTION_LINKS = ['fondatori', 'plus'] as const
 
 export const BANK_RETURN_MESSAGES: Readonly<Record<BankReturnOutcome, MessageKey>> = {
   connected: 'bankReturn.connected',
@@ -73,13 +80,16 @@ export function consumeHostedReturnLocation(
   } catch {
     return NO_HOSTED_RETURN
   }
-  if (!url.searchParams.has('bank') && !url.searchParams.has('billing')) return NO_HOSTED_RETURN
+  if (![...SUBSCRIPTION_LINKS, 'bank', 'billing'].some((name) => url.searchParams.has(name)))
+    return NO_HOSTED_RETURN
   const bank = single(url.searchParams.getAll('bank'), BANK_RETURN_OUTCOMES)
   const billing = single(url.searchParams.getAll('billing'), BILLING_RETURN_OUTCOMES)
-  url.searchParams.delete('bank')
-  url.searchParams.delete('billing')
+  const subscription = SUBSCRIPTION_LINKS.some(
+    (name) => single(url.searchParams.getAll(name), ['1'] as const) === '1',
+  )
+  for (const name of [...SUBSCRIPTION_LINKS, 'bank', 'billing']) url.searchParams.delete(name)
   replace(url.href)
-  return { bank, billing }
+  return { bank, billing, subscription }
 }
 
 /** Only an HTTPS page without embedded credentials may receive the whole window. */

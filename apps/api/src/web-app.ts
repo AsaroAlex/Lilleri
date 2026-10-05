@@ -78,8 +78,27 @@ export function securityHeaders(reply: FastifyReply) {
     )
 }
 
+const NOT_FOUND_PAGE = `<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>Pagina non trovata · Lilleri</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#F5F5F7;color:#1D1D1F;padding:16px}main{max-width:28rem;text-align:center}a{color:#005AC1}@media (prefers-color-scheme:dark){body{background:#0B0C0F;color:#F5F5F7}a{color:#79ACFF}}</style></head>
+<body><main><h1>Pagina non trovata</h1><p>L’indirizzo che hai aperto non esiste. <a href="/">Torna alla pagina iniziale</a> oppure <a href="/app">apri Lilleri</a>.</p></main></body></html>
+`
+
+export interface WebAppOptions {
+  readonly directory: string
+  /**
+   * Path the application is served under. With `/app`, only `/app` and `/app/...` fall back to the
+   * exported entry point, and `/` is left to a public page (it redirects to the app when none is
+   * registered). Defaults to `/`, where every extensionless navigation opens the application.
+   */
+  readonly appPath?: '/' | `/${string}`
+}
+
 /** Serves the compiled Expo web export from the same HTTPS origin as the API. */
-export async function createWebAppExtension(options: { directory: string }): Promise<AppExtension> {
+export async function createWebAppExtension(options: WebAppOptions): Promise<AppExtension> {
+  const appPath = options.appPath ?? '/'
+  if (appPath !== '/' && !/^\/[a-z][a-z0-9-]{0,30}$/u.test(appPath))
+    throw new Error('The web app path must be a single lowercase segment')
   const root = await realpath(options.directory)
   const index = await realpath(resolve(root, 'index.html'))
   if (!inside(root, index) || !(await stat(index)).isFile())
@@ -94,7 +113,10 @@ export async function createWebAppExtension(options: { directory: string }): Pro
     const pathname = requestPath(request.url)
     if (pathname === null) return refuse(reply, 400)
     if (RESERVED.test(pathname) || pathname.endsWith('.map')) return refuse(reply, 404)
-    let file = resolve(root, `.${pathname === '/' ? '/index.html' : pathname}`)
+    const appRoute = appPath !== '/' && (pathname === appPath || pathname.startsWith(`${appPath}/`))
+    if (appPath !== '/' && pathname === '/')
+      return securityHeaders(reply).header('Cache-Control', 'no-store').redirect(appPath, 302)
+    let file = appRoute ? index : resolve(root, `.${pathname === '/' ? '/index.html' : pathname}`)
     if (!inside(root, file)) return refuse(reply, 400)
     let details: Awaited<ReturnType<typeof stat>>
     try {
@@ -107,6 +129,13 @@ export async function createWebAppExtension(options: { directory: string }): Pro
       // Only extensionless application navigation falls back to the exported entry point.
       if (extname(pathname) || !String(request.headers.accept ?? '').includes('text/html'))
         return refuse(reply, 404)
+      if (appPath !== '/')
+        return securityHeaders(reply)
+          .code(404)
+          .header('Cache-Control', 'no-store')
+          .header('Content-Security-Policy', WEB_CONTENT_SECURITY_POLICY)
+          .type('text/html; charset=utf-8')
+          .send(NOT_FOUND_PAGE)
       file = index
       details = await stat(index)
     }
@@ -125,7 +154,8 @@ export async function createWebAppExtension(options: { directory: string }): Pro
     return reply.send(createReadStream(file))
   }
   return (app) => {
-    app.route({ method: ['GET', 'HEAD'], url: '/', handler: serve })
+    if (appPath === '/') app.route({ method: ['GET', 'HEAD'], url: '/', handler: serve })
+    else app.route({ method: ['GET', 'HEAD'], url: appPath, handler: serve })
     app.route({ method: ['GET', 'HEAD'], url: '/*', handler: serve })
   }
 }

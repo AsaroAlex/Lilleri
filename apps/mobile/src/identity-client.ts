@@ -7,6 +7,9 @@ import {
   type HostedIdentityClientOptions,
 } from './identity-recovery'
 
+/** The hosted web app lives under `/app`; `/` is the public home page, which forwards old links. */
+export const HOSTED_APP_PATH = '/app'
+
 export const LOCAL_TERMS_VERSION = 'local-synthetic-terms-v1'
 export interface LocalIdentitySession {
   readonly user: {
@@ -117,7 +120,7 @@ function createIdentityClient(baseUrl: string, hosted?: HostedIdentityClientOpti
         password,
         adultAttested: true,
         termsVersion: hosted?.termsVersion ?? LOCAL_TERMS_VERSION,
-        ...(hosted ? { callbackURL: `${baseUrl}/` } : {}),
+        ...(hosted ? { callbackURL: `${baseUrl}${HOSTED_APP_PATH}` } : {}),
       }
       checked(await auth.signUp.email(input))
     },
@@ -129,7 +132,10 @@ function createIdentityClient(baseUrl: string, hosted?: HostedIdentityClientOpti
           'Il recupero email richiede un servizio di invio configurato.',
         )
       checked(
-        await auth.requestPasswordReset({ email, redirectTo: `${baseUrl}/?identity=recover` }),
+        await auth.requestPasswordReset({
+          email,
+          redirectTo: `${baseUrl}${HOSTED_APP_PATH}?identity=recover`,
+        }),
       )
     },
     async resetPassword(token: string, newPassword: string) {
@@ -148,7 +154,9 @@ function createIdentityClient(baseUrl: string, hosted?: HostedIdentityClientOpti
           'recovery_unavailable',
           'La verifica email richiede un servizio di invio configurato.',
         )
-      checked(await auth.sendVerificationEmail({ email, callbackURL: `${baseUrl}/` }))
+      checked(
+        await auth.sendVerificationEmail({ email, callbackURL: `${baseUrl}${HOSTED_APP_PATH}` }),
+      )
     },
     async signIn(
       email: string,

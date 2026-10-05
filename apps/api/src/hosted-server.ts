@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { type DatabaseHandle, openDatabase, schema } from '@lilleri/database'
 import { EnableBankingClient, EnableBankingProvider } from '@lilleri/financial-providers'
@@ -14,6 +14,7 @@ import {
   armBillingCancellation,
   billingConfigurationFromEnvironment,
   createBillingExtension,
+  createPriceCatalogue,
   profilePlan,
   runBillingCancellations,
   settleBillingCancellation,
@@ -31,6 +32,7 @@ import {
   type HostedConfiguration,
   hostedConfigurationFromEnvironment,
 } from './hosted-configuration.js'
+import { createLandingPageExtension } from './landing-page.js'
 import {
   createLegalPagesExtension,
   LEGAL_TERMS_VERSION,
@@ -40,6 +42,7 @@ import { GuardedLiveProvider } from './live-provider-guard.js'
 import { NotificationsService } from './notifications.js'
 import { createNotificationPump } from './notifications-maintenance.js'
 import { createObservability } from './observability.js'
+import { createPlusWaitlistExtension, notifyPlusWaitlist } from './plus-waitlist.js'
 import { admitLiveProvider } from './provider-admission.js'
 import {
   createRetentionPump,
@@ -70,6 +73,10 @@ import { createWebAppExtension } from './web-app.js'
 type Environment = Readonly<Record<string, string | undefined>>
 /** How often cancellations still owed to deleted profiles are retried with Stripe. */
 const BILLING_CANCELLATION_INTERVAL_MS = 5 * 60 * 1000
+/** How often the "Plus Fondatori" list is offered the capacity that has opened. */
+const PLUS_WAITLIST_INTERVAL_MS = 15 * 60 * 1000
+/** Public path of the web application; `/` is the server-rendered home page. */
+export const HOSTED_APP_PATH = '/app' as const
 export const ENABLE_BANKING_REFERENCE = 'https://enablebanking.com/docs/api/reference/'
 
 export interface HostedServerOverrides {
@@ -108,6 +115,7 @@ export async function createHostedServer(
   const billing = environmentBilling
     ? {
         ...environmentBilling,
+        appPath: HOSTED_APP_PATH,
         now,
         log,
         ...(overrides.fetch ? { fetch: overrides.fetch } : {}),
@@ -229,6 +237,28 @@ export async function createHostedServer(
     )
     admitLiveProvider(provider)
 
+    /**
+     * Bank capacity under the provider contract: Plus is sold (and the Fondatori list notified)
+     * only while an official provider is configured and active connections stay below the cap.
+     */
+    const bankCapacity = async (): Promise<{ open: boolean; remaining: number | null }> => {
+      if (!official) return { open: false, remaining: 0 }
+      const limit = configuration.bank?.maxActiveConnections ?? null
+      if (limit === null) return { open: true, remaining: null }
+      const [row] = await handle.db
+        .select({ value: count() })
+        .from(schema.connections)
+        .where(
+          and(
+            eq(schema.connections.providerId, provider.id),
+            eq(schema.connections.status, 'active'),
+          ),
+        )
+      const remaining = Math.max(0, limit - Number(row?.value ?? 0))
+      return { open: remaining > 0, remaining }
+    }
+    const plusOpen = async () => (await bankCapacity()).open
+
     const coordinator = (profileId: string, snapshot: RuntimeConfigurationSnapshot) =>
       new SyncCoordinator({
         scope: financialScope,
@@ -318,24 +348,20 @@ export async function createHostedServer(
       ...(overrides.now ? { now: overrides.now } : {}),
       extensions: [
         createLegalPagesExtension(legal),
-        createBillingExtension(billing, {
-          // Plus is sold only while bank access can actually be delivered within the contract.
-          purchaseGate: async () => {
-            if (!official) return false
-            const limit = configuration.bank?.maxActiveConnections ?? null
-            if (limit === null) return true
-            const [row] = await handle.db
-              .select({ value: count() })
-              .from(schema.connections)
-              .where(
-                and(
-                  eq(schema.connections.providerId, provider.id),
-                  eq(schema.connections.status, 'active'),
-                ),
-              )
-            return Number(row?.value ?? 0) < limit
-          },
+        await createLandingPageExtension({
+          baseURL: configuration.baseURL,
+          entity: legal,
+          wordmarkSvg: await readFile(
+            join(repositoryRoot, 'packages/brand/logo/lilleri-wordmark.svg'),
+            'utf8',
+          ),
+          fontFile: join(repositoryRoot, 'packages/brand/fonts/Geist-Variable.woff2'),
+          appPath: HOSTED_APP_PATH,
+          ...(billing ? { prices: createPriceCatalogue(billing, () => Date.parse(now())) } : {}),
+          plusOpen,
         }),
+        createBillingExtension(billing, { purchaseGate: plusOpen }),
+        createPlusWaitlistExtension({ plusOpen, now }),
         createBankConnectionsExtension({
           provider: official ? provider : null,
           scope: financialScope,
@@ -345,6 +371,7 @@ export async function createHostedServer(
           coordinator: async (profileId) => coordinator(profileId, await configurations.read()),
           countries: configuration.bank?.countries ?? (overrides.bankProvider ? ['IT'] : []),
           evidenceReference: ENABLE_BANKING_REFERENCE,
+          appPath: HOSTED_APP_PATH,
           now,
           onFailure,
         }),
@@ -373,7 +400,10 @@ export async function createHostedServer(
               }).catch(onFailure)
           })
         },
-        await createWebAppExtension({ directory: configuration.webDirectory }),
+        await createWebAppExtension({
+          directory: configuration.webDirectory,
+          appPath: HOSTED_APP_PATH,
+        }),
       ],
     })
     closing.unshift(() => app.close())
@@ -443,6 +473,34 @@ export async function createHostedServer(
     })
     closing.push(() => syncPump.close())
     closing.push(() => closeConnectionCreationWork())
+    const sendPlusAvailable = configuration.identity.delivery.sendPlusAvailable
+    if (sendPlusAvailable) {
+      let notifying: Promise<unknown> | null = null
+      const notify = () => {
+        notifying ??= bankCapacity()
+          .then(async (capacity) => {
+            if (!capacity.open) return
+            const result = await notifyPlusWaitlist(handle.db, {
+              delivery: { sendPlusAvailable },
+              baseURL: configuration.baseURL,
+              limit: Math.min(50, capacity.remaining ?? 50),
+              now,
+            })
+            if (result.notified || result.skipped || result.failed)
+              log({ event: 'plus_waitlist_notified', ...result })
+          })
+          .catch(onFailure)
+          .finally(() => {
+            notifying = null
+          })
+      }
+      const timer = setInterval(notify, PLUS_WAITLIST_INTERVAL_MS)
+      timer.unref()
+      closing.unshift(async () => {
+        clearInterval(timer)
+        await notifying
+      })
+    }
     if (billing) {
       let running: Promise<unknown> | null = null
       const timer = setInterval(() => {

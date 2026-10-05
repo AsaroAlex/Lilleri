@@ -3,7 +3,7 @@
   "short_name": "Lilleri",
   "description": "Le tue finanze, organizzate.",
   "lang": "it",
-  "start_url": "/",
+  "start_url": "/app",
   "scope": "/",
   "display": "standalone",
   "background_color": "#F5F5F7",

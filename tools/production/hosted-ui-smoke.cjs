@@ -1,8 +1,9 @@
 /**
  * End-to-end browser proof of the hosted service with simulated third parties.
- * Runs the real hosted server (PGlite, sealed vault, legal pages, billing, bank flow) behind a
- * loopback HTTPS front for app.lilleri.test; Scaleway, Stripe and the bank are simulated in
- * process, so no real credential, payment or bank is touched.
+ * Runs the real hosted server (PGlite, sealed vault, home page, legal pages, billing, bank flow)
+ * behind a loopback HTTPS front for app.lilleri.test, plus a second instance without a bank
+ * provider (fondatori.lilleri.test) where Plus is closed and the Fondatori list is offered.
+ * Scaleway, Stripe and the bank are simulated in process: no real credential, payment or bank.
  *
  * Prerequisites: `node tools/production/build.mjs` (API + hosted web export), OpenSSL, Chromium
  * and Playwright (NODE_PATH pointing at a Playwright install).
@@ -21,6 +22,8 @@ const { chromium } = require('playwright')
 const root = resolve(__dirname, '../..')
 const host = 'app.lilleri.test'
 const origin = `https://${host}`
+const foundersHost = 'fondatori.lilleri.test'
+const foundersOrigin = `https://${foundersHost}`
 const shots = process.argv[2] ?? join(tmpdir(), 'lilleri-hosted-shots')
 const webhookSecret = `whsec_${randomBytes(24).toString('hex')}`
 const prices = { month: 'price_plusmonthly', year: 'price_plusyearly' }
@@ -259,7 +262,7 @@ class SimulatedBank {
 ;(async () => {
   const directory = await mkdtemp(join(tmpdir(), 'lilleri-hosted-ui-'))
   await mkdir(shots, { recursive: true })
-  let browser, server, hosted, current
+  let browser, server, hosted, closed, current
   const mails = []
   const stripe = stripeEmulator()
   const bank = new SimulatedBank()
@@ -285,36 +288,39 @@ class SimulatedBank {
       if (url.origin === 'https://api.stripe.com') return stripe.handle(url, init)
       throw new Error(`Unexpected outbound request to ${url.origin}`)
     }
-    hosted = await createHostedServer(
-      {
-        NODE_ENV: 'production',
-        PUBLIC_BASE_URL: origin,
-        HOSTED_AUTH_SECRET: randomBytes(32).toString('hex'),
-        LILLERI_VAULT_MASTER_KEY: randomBytes(32).toString('base64url'),
-        LILLERI_DATA_DIR: join(directory, 'data'),
-        DATABASE_URL: 'postgresql://lilleri:unused@postgres.railway.internal:5432/railway',
-        IDENTITY_MAIL_PROVIDER: 'scaleway',
-        IDENTITY_MAIL_API_KEY: 'simulated-scaleway-secret',
-        IDENTITY_MAIL_PROJECT_ID: '11111111-2222-4333-8444-555555555555',
-        IDENTITY_MAIL_FROM: 'accesso@mail.lilleri.test',
-        LEGAL_ENTITY_NAME: 'Lilleri S.r.l.',
-        LEGAL_ENTITY_ADDRESS: 'Via Esempio 1, 20100 Milano (MI)',
-        LEGAL_ENTITY_VAT: 'IT00000000000',
-        LEGAL_CONTACT_EMAIL: 'supporto@lilleri.test',
-        LEGAL_PRIVACY_EMAIL: 'privacy@lilleri.test',
-        STRIPE_SECRET_KEY: `sk_test_${randomBytes(16).toString('hex')}`,
-        STRIPE_WEBHOOK_SECRET: webhookSecret,
-        STRIPE_PRICE_MONTHLY: prices.month,
-        STRIPE_PRICE_YEARLY: prices.year,
-      },
-      root,
-      {
-        database: await openDatabase({ driver: 'pglite' }),
-        bankProvider: bank,
-        fetch: outbound,
-        log: () => {},
-      },
-    )
+    const environment = (base, data) => ({
+      NODE_ENV: 'production',
+      PUBLIC_BASE_URL: base,
+      HOSTED_AUTH_SECRET: randomBytes(32).toString('hex'),
+      LILLERI_VAULT_MASTER_KEY: randomBytes(32).toString('base64url'),
+      LILLERI_DATA_DIR: join(directory, data),
+      DATABASE_URL: 'postgresql://lilleri:unused@postgres.railway.internal:5432/railway',
+      IDENTITY_MAIL_PROVIDER: 'scaleway',
+      IDENTITY_MAIL_API_KEY: 'simulated-scaleway-secret',
+      IDENTITY_MAIL_PROJECT_ID: '11111111-2222-4333-8444-555555555555',
+      IDENTITY_MAIL_FROM: 'accesso@mail.lilleri.test',
+      LEGAL_ENTITY_NAME: 'Lilleri S.r.l.',
+      LEGAL_ENTITY_ADDRESS: 'Via Esempio 1, 20100 Milano (MI)',
+      LEGAL_ENTITY_VAT: 'IT00000000000',
+      LEGAL_CONTACT_EMAIL: 'supporto@lilleri.test',
+      LEGAL_PRIVACY_EMAIL: 'privacy@lilleri.test',
+      STRIPE_SECRET_KEY: `sk_test_${randomBytes(16).toString('hex')}`,
+      STRIPE_WEBHOOK_SECRET: webhookSecret,
+      STRIPE_PRICE_MONTHLY: prices.month,
+      STRIPE_PRICE_YEARLY: prices.year,
+    })
+    hosted = await createHostedServer(environment(origin, 'data'), root, {
+      database: await openDatabase({ driver: 'pglite' }),
+      bankProvider: bank,
+      fetch: outbound,
+      log: () => {},
+    })
+    // No bank provider: Plus cannot be bought, so the home page and the app offer the list.
+    closed = await createHostedServer(environment(foundersOrigin, 'founders'), root, {
+      database: await openDatabase({ driver: 'pglite' }),
+      fetch: outbound,
+      log: () => {},
+    })
     const app = hosted.app
     execFileSync(
       'openssl',
@@ -356,7 +362,10 @@ class SimulatedBank {
           const chunks = []
           for await (const chunk of request) chunks.push(chunk)
           const body = Buffer.concat(chunks)
-          const result = await app.inject({
+          const target = String(request.headers.host ?? '').startsWith(foundersHost)
+            ? closed.app
+            : app
+          const result = await target.inject({
             method: request.method,
             url: request.url,
             headers: { ...request.headers, 'x-forwarded-for': '203.0.113.7' },
@@ -377,7 +386,11 @@ class SimulatedBank {
     browser = await chromium.launch({
       executablePath: process.argv[3] ?? '/opt/pw-browsers/chromium',
       headless: true,
-      args: ['--no-sandbox', '--no-proxy-server', `--host-resolver-rules=MAP ${host} 127.0.0.1`],
+      args: [
+        '--no-sandbox',
+        '--no-proxy-server',
+        `--host-resolver-rules=MAP ${host} 127.0.0.1, MAP ${foundersHost} 127.0.0.1`,
+      ],
     })
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
@@ -396,7 +409,30 @@ class SimulatedBank {
     const shot = async (name) =>
       page.screenshot({ path: join(shots, `${name}.png`), fullPage: false })
 
-    await page.goto(origin)
+    const home = await page.goto(origin)
+    assert.equal(home?.status(), 200)
+    await page
+      .getByRole('heading', { level: 1, name: 'I tuoi soldi, finalmente in ordine.' })
+      .waitFor()
+    // Bank access is configured here, so Plus is offered directly with the Stripe prices.
+    await page.getByRole('link', { name: 'Scopri Plus', exact: true }).waitFor()
+    await page.getByText('6,99 €', { exact: false }).first().waitFor()
+    await shot('00-home')
+    await page.setViewportSize({ width: 1280, height: 860 })
+    await shot('00b-home-desktop')
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+    )
+    await page.setViewportSize({ width: 390, height: 844 })
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+    )
+    await page.getByRole('link', { name: 'Inizia gratis', exact: true }).first().click()
+    await page.waitForURL(`${origin}/app`)
+    passed('server-rendered home page with live prices opens the web app under /app')
+
     await page.getByRole('button', { name: 'Crea il tuo profilo', exact: true }).click()
     const email = `persona-${randomUUID()}@example.test`
     const password = 'Una password lunga e sicura 42!'
@@ -425,6 +461,7 @@ class SimulatedBank {
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Accedi con password', exact: true }).click()
     await page.getByRole('button', { name: 'Impostazioni', exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, '/app')
     await shot('02-home-empty')
     passed('sign-up with legal links, email verification through the mail adapter and sign-in')
 
@@ -497,7 +534,9 @@ class SimulatedBank {
       subscription: subscriptionId,
       client_reference_id: profileId,
     })
+    // Stripe still returns to the old `/?billing=success` address: the home page forwards it.
     await page.locator('#pay').click()
+    await page.waitForURL(`${origin}/app`)
     await page.getByText('Il tuo piano attuale').first().waitFor()
     await page.getByRole('button', { name: /Gestisci abbonamento/ }).waitFor({ timeout: 40_000 })
     await shot('04-subscription-plus')
@@ -538,6 +577,61 @@ class SimulatedBank {
       await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       true,
     )
+    await page.setViewportSize({ width: 390, height: 844 })
+
+    const founders = await context.newPage()
+    current = founders
+    founders.on('pageerror', (error) => errors.push(error.message))
+    await founders.goto(foundersOrigin)
+    await founders.getByRole('heading', { name: 'Plus Fondatori' }).waitFor()
+    await founders.getByText('In arrivo', { exact: true }).waitFor()
+    await founders.locator('#fondatori').scrollIntoViewIfNeeded()
+    await founders.screenshot({ path: join(shots, '09-home-founders.png') })
+    await founders.getByRole('link', { name: 'Entra nella lista', exact: true }).click()
+    await founders.waitForURL(`${foundersOrigin}/app?fondatori=1`)
+    await founders.getByRole('button', { name: 'Crea il tuo profilo', exact: true }).click()
+    const founderEmail = `fondatore-${randomUUID()}@example.test`
+    await founders.getByRole('textbox', { name: 'Nome del profilo', exact: true }).fill('Marco')
+    await founders.getByRole('textbox', { name: 'Email', exact: true }).fill(founderEmail)
+    await founders.getByLabel('Password', { exact: true }).fill(password)
+    await founders
+      .getByRole('checkbox', { name: 'Dichiaro di avere almeno 18 anni.', exact: true })
+      .click()
+    await founders
+      .getByRole('checkbox', { name: 'Accetto le condizioni di utilizzo.', exact: true })
+      .click()
+    await founders.getByRole('button', { name: 'Crea il tuo profilo', exact: true }).click()
+    await founders
+      .getByText('Profilo creato. Apri il collegamento nella tua email, poi accedi.', {
+        exact: true,
+      })
+      .waitFor()
+    const founderMail = mails.find((mail) => mail.to === founderEmail)
+    assert.ok(founderMail, 'verification mail for the Fondatori instance')
+    await founders.goto(/https:\/\/\S+/.exec(founderMail.text)[0])
+    await founders.getByRole('textbox', { name: 'Email', exact: true }).fill(founderEmail)
+    await founders.getByLabel('Password', { exact: true }).fill(password)
+    await founders.getByRole('button', { name: 'Accedi con password', exact: true }).click()
+    await founders.getByRole('button', { name: 'Impostazioni', exact: true }).click()
+    await founders
+      .getByRole('button', { name: /Abbonamento/ })
+      .first()
+      .click()
+    await founders
+      .getByRole('button', { name: 'Avvisami quando è disponibile', exact: true })
+      .click()
+    await founders.getByText('Sei nella lista Fondatori.', { exact: true }).waitFor()
+    await founders.getByText('Sei al posto numero 1.', { exact: true }).waitFor()
+    await founders.getByTestId('plus-founders').scrollIntoViewIfNeeded()
+    await founders.screenshot({ path: join(shots, '10-founders-joined.png') })
+    assert.equal(
+      await founders.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      true,
+    )
+    passed(
+      'closed Plus: the home page and Subscription offer the Fondatori list, and joining works',
+    )
+
     assert.deepEqual(errors, [])
     console.log(
       `PASS ${checks.length} hosted browser groups; 0 page errors; screenshots in ${shots}`,
@@ -549,6 +643,7 @@ class SimulatedBank {
     if (browser) await browser.close()
     if (server) await new Promise((done) => server.close(done))
     if (hosted) await hosted.close()
+    if (closed) await closed.close()
     await rm(directory, { recursive: true, force: true })
   }
 })().catch((error) => {

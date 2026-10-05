@@ -81,6 +81,8 @@ export interface BillingConfiguration {
   readonly taxRate?: string
   /** Exact HTTPS origin of the web app, used for Checkout and portal return URLs. */
   readonly baseURL: string
+  /** Path of the web app on that origin (default `/`); Stripe returns people there. */
+  readonly appPath?: '/' | `/${string}`
   readonly fetch?: typeof fetch
   /** ISO-8601 clock. */
   readonly now?: () => string
@@ -133,7 +135,10 @@ export function assertBillingConfiguration(configuration: BillingConfiguration) 
     configuration.prices.month === configuration.prices.year ||
     (configuration.taxRate !== undefined && !TAX_RATE_ID.test(configuration.taxRate)) ||
     !configuration.baseURL.startsWith('https://') ||
-    origin !== configuration.baseURL
+    origin !== configuration.baseURL ||
+    (configuration.appPath !== undefined &&
+      configuration.appPath !== '/' &&
+      !/^\/[a-z][a-z0-9-]{0,30}$/.test(configuration.appPath))
   )
     throw invalidConfiguration()
 }
@@ -449,7 +454,7 @@ export function verifyStripeSignature(
   return matched
 }
 
-function createPriceCatalogue(configuration: BillingConfiguration, clock: () => number) {
+export function createPriceCatalogue(configuration: BillingConfiguration, clock: () => number) {
   let cached: { readonly prices: BillingPrices; readonly expiresAt: number } | undefined
   let loading: Promise<BillingPrices> | undefined
   const view = (raw: unknown, interval: BillingInterval): BillingPrice | null => {
@@ -624,6 +629,10 @@ async function ensureCustomer(
   if (!mapped) throw new Error('Billing customer mapping is unavailable')
   return mapped
 }
+const returnUrl = (
+  configuration: BillingConfiguration,
+  outcome: 'success' | 'cancelled' | 'portal',
+) => `${configuration.baseURL}${configuration.appPath ?? '/'}?billing=${outcome}`
 function checkoutForm(
   configuration: BillingConfiguration,
   customerId: string,
@@ -641,8 +650,8 @@ function checkoutForm(
     ['client_reference_id', profileId],
     ['metadata[profile_id]', profileId],
     ['subscription_data[metadata][profile_id]', profileId],
-    ['success_url', `${configuration.baseURL}/?billing=success`],
-    ['cancel_url', `${configuration.baseURL}/?billing=cancelled`],
+    ['success_url', returnUrl(configuration, 'success')],
+    ['cancel_url', returnUrl(configuration, 'cancelled')],
     ['locale', 'it'],
     ['allow_promotion_codes', 'true'],
     ['billing_address_collection', 'auto'],
@@ -1097,7 +1106,7 @@ export function createBillingExtension(
               await stripeRequest(configuration, 'POST', '/v1/billing_portal/sessions', {
                 form: [
                   ['customer', customer.id],
-                  ['return_url', `${configuration.baseURL}/?billing=portal`],
+                  ['return_url', returnUrl(configuration, 'portal')],
                   ['locale', 'it'],
                 ],
               }),

@@ -134,15 +134,15 @@ describe('hosted identity client and recovery lifecycle without real transport',
     expect(calls[0]?.payload).toMatchObject({
       termsVersion: options.termsVersion,
       adultAttested: true,
-      callbackURL: `${origin}/`,
+      callbackURL: `${origin}/app`,
     })
     expect(calls[1]?.payload).toEqual({
       email: 'synthetic@example.invalid',
-      redirectTo: `${origin}/?identity=recover`,
+      redirectTo: `${origin}/app?identity=recover`,
     })
     expect(calls[2]?.payload).toEqual({
       email: 'synthetic@example.invalid',
-      callbackURL: `${origin}/`,
+      callbackURL: `${origin}/app`,
     })
     for (const call of calls) expect(call.init?.credentials).toBe('include')
     expect(calls.some((call) => call.url.includes('sign-in') || call.url.includes('/v1/'))).toBe(
