@@ -609,6 +609,13 @@ export class ConsentLifecycleService {
       let lifecycle = await this.get(connectionId, db)
       if (lifecycle.revision !== expectedRevision) throw changed()
       if (!lifecycle.consentId || lifecycle.state === 'revoked') throw inactive()
+      // Official providers renew through a new bank authorization (redirect), not in place.
+      if (!this.provider.capabilities().synthetic)
+        throw new Problem(
+          409,
+          'bank_authorization_required',
+          'Per rinnovare l’accesso usa «Ricollega» e autorizza di nuovo sul sito della banca.',
+        )
       if (!hasExpandedProviderContract(this.provider))
         throw new Problem(
           409,

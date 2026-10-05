@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import swagger from '@fastify/swagger'
 import { type Database, ProfileScopeError } from '@lilleri/database'
 import { type Account, CATEGORIES } from '@lilleri/domain'
@@ -382,6 +383,12 @@ const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
 ])
+declare module 'fastify' {
+  interface FastifyContextConfig {
+    /** The handler opens its own short financial scopes around provider I/O. */
+    readonly manualFinancialScope?: boolean
+  }
+}
 /** Request accessors handed to trusted server modules that register their own routes. */
 export interface AppExtensionContext {
   /** Trusted migration/identity handle: never use it for a caller-selected profile. */
@@ -409,6 +416,8 @@ export interface AppOptions {
   readonly extensions?: readonly AppExtension[]
   /** Platform health-check hosts allowed to read `/health` only (e.g. healthcheck.railway.app). */
   readonly healthHosts?: readonly string[]
+  /** Hosted only: bearer token for `/internal/*` operator pages; without it they are not served. */
+  readonly internalAccessToken?: string
   /** Trusted server-derived financial profile scope; the server always supplies this. */
   readonly financialScope?: FinancialScope
   readonly observability?: Observability
@@ -763,6 +772,13 @@ export async function createApp(options: AppOptions) {
     accountKind?: Account['kind'],
   ) => {
     const service = serviceFor(request)
+    // Official providers connect only through their redirect authorization routes.
+    if (!provider.capabilities().synthetic)
+      throw new Problem(
+        409,
+        'bank_authorization_required',
+        'Per collegare la banca apri «Collega con la tua banca» e autorizza l’accesso sul sito della banca.',
+      )
     await assertFixturesEnabled(service.db, service.profileId)
     if (!durableSync) return serviceFor(request).connect(institutionId, accountKind)
     const coordinator = coordinatorFor(request)
@@ -807,7 +823,8 @@ export async function createApp(options: AppOptions) {
       route.url === '/v1/connection-directory' ||
       (route.url === '/v1/connection-directory/:entryId/connect' &&
         ['GET', 'HEAD'].includes(String(route.method))) ||
-      route.url.startsWith('/v1/auth/')
+      route.url.startsWith('/v1/auth/') ||
+      route.config?.manualFinancialScope === true
     )
       return
     const original = route.handler
@@ -893,7 +910,11 @@ export async function createApp(options: AppOptions) {
         .header('Access-Control-Allow-Headers', 'Content-Type')
     }
     reply.header('Cache-Control', 'no-store').header('X-Content-Type-Options', 'nosniff')
-    if (options.hostedIdentity) reply.header('Referrer-Policy', 'no-referrer')
+    if (options.hostedIdentity)
+      reply
+        .header('Referrer-Policy', 'no-referrer')
+        .header('Strict-Transport-Security', 'max-age=63072000; includeSubDomains')
+        .header('X-Frame-Options', 'DENY')
     if (request.method === 'OPTIONS') return reply.code(204).send(null)
     if (options.connectionLifecycleConfiguration)
       connectionPolicies.set(request, await options.connectionLifecycleConfiguration())
@@ -1253,11 +1274,26 @@ export async function createApp(options: AppOptions) {
     },
     async (request) => connectFor(request, request.body.institutionId, request.body.accountKind),
   )
-  if (options.observability) {
-    app.get('/internal/metrics', async (_request, reply) =>
-      reply.type('text/plain; version=0.0.4').send(options.observability?.renderPrometheus()),
-    )
-    app.get('/internal/observability', async (_request, reply) => {
+  const internalToken = options.internalAccessToken
+  if (internalToken !== undefined && internalToken.length < 32)
+    throw new Error('The internal access token must contain at least 32 characters')
+  // The public hosted origin never exposes operator pages without a bearer token.
+  const internalAllowed = (request: FastifyRequest) => {
+    if (!options.hostedIdentity) return true
+    if (!internalToken) return false
+    const supplied = Buffer.from(String(request.headers.authorization ?? ''))
+    const expected = Buffer.from(`Bearer ${internalToken}`)
+    return supplied.length === expected.length && timingSafeEqual(supplied, expected)
+  }
+  if (options.observability && (!options.hostedIdentity || internalToken)) {
+    app.get('/internal/metrics', async (request, reply) => {
+      if (!internalAllowed(request))
+        throw new Problem(404, 'not_found', 'La risorsa richiesta non è disponibile.')
+      return reply.type('text/plain; version=0.0.4').send(options.observability?.renderPrometheus())
+    })
+    app.get('/internal/observability', async (request, reply) => {
+      if (!internalAllowed(request))
+        throw new Problem(404, 'not_found', 'La risorsa richiesta non è disponibile.')
       if (!options.observability) throw new Error('Observability is unavailable')
       return reply
         .type('text/html; charset=utf-8')

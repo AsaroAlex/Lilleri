@@ -1171,6 +1171,8 @@ interface CachedSnapshot {
   readonly grantId: string
   readonly expiresAt: number
   readonly records: ReadonlyMap<string, readonly SyncProviderTransaction[]>
+  /** Calendar range each account's single traversal covered (continuation keys exhausted). */
+  readonly ranges: ReadonlyMap<string, { readonly from: string | null; readonly to: string }>
   readonly diagnostics: EnableBankingSnapshotDiagnostics
 }
 
@@ -1549,6 +1551,14 @@ export class EnableBankingProvider implements FinancialDataProviderV2, Synthetic
       grantId: sessionId,
       expiresAt: now + this.#snapshotTtlMs,
       records: new Map(collected.map((entry) => [entry.account.id, entry.records])),
+      // No date_to was sent, so the traversal reaches "now"; tomorrow (UTC) absorbs the
+      // profile timezone being ahead of UTC.
+      ranges: new Map(
+        collected.map((entry) => [
+          entry.account.id,
+          { from: entry.historyFrom, to: addDays(observedAt.slice(0, 10), 1) },
+        ]),
+      ),
       diagnostics: {
         accounts: collected.length,
         records: collected.reduce((total, entry) => total + entry.records.length, 0),
@@ -1601,13 +1611,17 @@ export class EnableBankingProvider implements FinancialDataProviderV2, Synthetic
     if (request.cursor !== null && offset >= items.length)
       throw new SyntheticSyncFailure('snapshot_expired')
     const end = offset + request.pageSize
+    const range = snapshot.ranges.get(request.accountId)
     return {
       snapshotId: request.snapshotId,
       from: request.from,
       to: request.to,
       transactions: items.slice(offset, end),
       nextCursor: end < items.length ? `o:${end}` : null,
-      coverage: 'unknown',
+      // Every page of the bank's answer for this range was read, so a window inside it is
+      // complete; deletion and pending-set evidence stay 'unknown' in the metadata.
+      coverage:
+        range?.from != null && from >= range.from && to <= range.to ? 'complete_window' : 'unknown',
     }
   }
 

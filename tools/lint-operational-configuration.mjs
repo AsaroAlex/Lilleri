@@ -20,6 +20,8 @@ export const OPERATIONAL_CONFIGURATION_CONSUMERS = Object.freeze([
   'apps/api/src/sync-provider.ts',
   'apps/api/src/recurring.ts',
   'apps/api/src/server.ts',
+  'apps/api/src/hosted-server.ts',
+  'apps/api/src/bank-connections.ts',
 ])
 const fields = new Set([
   'intervalMs',

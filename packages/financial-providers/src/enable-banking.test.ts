@@ -1527,7 +1527,18 @@ describe('Enable Banking provider', () => {
       [null, 'pending'],
     ])
     expect(second.nextCursor).toBeNull()
-    expect(second.coverage).toBe('unknown')
+    expect(second.coverage).toBe('complete_window')
+    const historyFrom = snapshot.historyFrom['hash-current'] as string
+    const dayBefore = new Date(Date.parse(`${historyFrom}T00:00:00Z`) - 86_400_000)
+      .toISOString()
+      .slice(0, 10)
+    const outside = await provider.getSyncPage(context, {
+      ...request,
+      from: dayBefore,
+      to: historyFrom,
+      includePending: false,
+    })
+    expect(outside.coverage).toBe('unknown')
     const bookedOnly = await provider.getSyncPage(context, {
       ...request,
       includePending: false,

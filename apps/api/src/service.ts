@@ -47,6 +47,7 @@ import { MerchantTaxonomyService } from './merchant-taxonomy.js'
 import { augmentOwnershipExport } from './ownership-export.js'
 import { PrivacyService } from './privacy.js'
 import { conflict, notFound, Problem, providerFailure } from './problem.js'
+import { providerAdmitted } from './provider-admission.js'
 import { RecurringService } from './recurring.js'
 import {
   cleanupExpiredObservationPayloads,
@@ -239,7 +240,7 @@ export class DemoService {
     readonly recurringPolicy: RecurringPolicy = DEFAULT_RECURRING_POLICY,
     readonly recordSourceFacts?: SourceFactsRecorder,
   ) {
-    if (!provider.capabilities().synthetic || !provider.capabilities().grantSpecificRevocation)
+    if (!providerAdmitted(provider))
       throw new Error('The demo API requires synthetic grant-specific revocation')
   }
   async bootstrap(seed = false) {

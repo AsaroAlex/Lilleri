@@ -12,6 +12,7 @@ import { and, asc, desc, eq, gte, inArray, lt, lte, or, sql } from 'drizzle-orm'
 import { assertLifecycleAllowsRefresh } from './consent-lifecycle.js'
 import type { ProfileEncryption } from './encryption.js'
 import { notFound, Problem, providerFailure } from './problem.js'
+import { providerAdmitted } from './provider-admission.js'
 import {
   DEFAULT_SYNC_CONFIGURATION,
   type RuntimeConfigurationSnapshot,
@@ -145,11 +146,7 @@ export class SyncCoordinator {
   readonly provider: SyntheticSyncProvider | null
   constructor(readonly options: SyncCoordinatorOptions) {
     this.now = options.now ?? (() => new Date().toISOString())
-    if (
-      !options.provider.capabilities().synthetic ||
-      !options.provider.capabilities().grantSpecificRevocation
-    )
-      throw new Error('Durable sync is synthetic only')
+    if (!providerAdmitted(options.provider)) throw new Error('Durable sync is synthetic only')
     this.provider = hasSyntheticSyncContract(options.provider) ? options.provider : null
     syncConfigurationSchema.parse(options.configuration.values.sync ?? DEFAULT_SYNC_CONFIGURATION)
   }

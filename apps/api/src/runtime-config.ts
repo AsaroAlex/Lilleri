@@ -59,6 +59,13 @@ export const DEFAULT_SYNC_CONFIGURATION = Object.freeze({
   foregroundDebounceMs: 60_000,
   foregroundSessionLimit: 1000,
 } satisfies SyncConfiguration)
+/** Hosted defaults: real banks answer slowly and one snapshot reads every account at once. */
+export const DEFAULT_HOSTED_SYNC_CONFIGURATION = Object.freeze({
+  ...DEFAULT_SYNC_CONFIGURATION,
+  attemptTimeoutMs: 120_000,
+  leaseMs: 180_000,
+  intervalMs: 300_000,
+} satisfies SyncConfiguration)
 export const recurringConfigurationSchema = z
   .object({
     version: z.string().min(1).max(128),

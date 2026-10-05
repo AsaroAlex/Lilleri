@@ -3,6 +3,7 @@ import { type Database, schema } from '@lilleri/database'
 import { type FinancialDataProvider, stableId } from '@lilleri/financial-providers'
 import { and, asc, eq, inArray, lte, or } from 'drizzle-orm'
 import { Problem } from './problem.js'
+import { providerAdmitted } from './provider-admission.js'
 import { DEFAULT_RUNTIME_CONFIGURATION } from './runtime-config.js'
 
 export type RevocationJob = typeof schema.revocationJobs.$inferSelect
@@ -187,8 +188,7 @@ export async function processNextRevocation(
 ): Promise<RevocationResult | null> {
   const { maxAttempts, attemptTimeoutMs } = bounds(options)
   for (const provider of providers) {
-    const capabilities = provider.capabilities()
-    if (!capabilities.synthetic || !capabilities.grantSpecificRevocation)
+    if (!providerAdmitted(provider))
       throw new Error('The demo worker requires synthetic grant-specific revocation')
   }
   const job = await claimRevocation(db, options)
@@ -310,8 +310,7 @@ export function createRevocationPump(
     ...bounds(options),
   })
   for (const provider of providers) {
-    const capabilities = provider.capabilities()
-    if (!capabilities.synthetic || !capabilities.grantSpecificRevocation)
+    if (!providerAdmitted(provider))
       throw new Error('The demo pump requires synthetic grant-specific revocation')
   }
   let stopped = false
