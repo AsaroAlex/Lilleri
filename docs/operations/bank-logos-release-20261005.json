@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 10:50:01 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 12:49",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "3a264c9cacf8de67c0b90fcdbcaaa1a7fc76d299",
+  "deploymentId": "45a9b0a0-25b8-463b-9173-83ad4e34b5a6",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-f838b6f7d3ddbd28ccadde1c27933d27.js",
+  "change": {
+    "originalLogoAssets": 50,
+    "servicesWithLogo": 55,
+    "totalServices": 62,
+    "italianServicesWithLogo": 18,
+    "locations": [
+      "directory tiles",
+      "service detail headings"
+    ],
+    "webFormat": "SVG",
+    "nativeFormat": "PNG",
+    "sourceManifest": "apps/mobile/assets/bank-logos/sources.json",
+    "brandGeometryPreserved": true,
+    "localAssetsOnly": true,
+    "missingOrFailedImageFallback": "Original text monogram",
+    "rasterResolutionLimits": {
+      "mps": 136,
+      "swedbank": 136
+    },
+    "accessibilityLabelsAndConnectionGuardsPreserved": true
+  },
+  "localVerification": {
+    "mobileTypecheck": "passed",
+    "scopedBiomeCheck": "passed",
+    "directoryTestsPassed": 7,
+    "copyLint": "passed",
+    "previewBuild": "passed",
+    "logoLayouts": 12,
+    "widths": [
+      320,
+      650,
+      1440
+    ],
+    "devicePixelRatios": [
+      2,
+      3
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "tileChecks": 744,
+    "detailChecks": 96,
+    "errorFallback": "passed",
+    "unknownLogoFallback": "passed",
+    "bankBrowserGroups": 6,
+    "europeanBrowserGroups": 9,
+    "europeanLayouts": 56,
+    "pageErrors": 0,
+    "financialBrowserWrites": 0,
+    "thirdPartyLogoRequests": 0,
+    "canonicalArchiveUnchanged": true,
+    "nativeAssetsChecked": true,
+    "nativeEmulatorRun": false,
+    "ownedPreviewStopped": true,
+    "localArchivePreserved": true
+  },
+  "publicVerification": {
+    "health": "ok",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "canonicalArchiveAndRetirementAuditUnchanged": true,
+    "directoryEntries": 62,
+    "financialMutationsSent": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/bank-logos/american-express.65cd505514dc06e8824f5562776efa1e.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-f838b6f7d3ddbd28ccadde1c27933d27.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/bank-logos/swedbank.cf13a3d03f6b4256eb6bf74d8a95cc54.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/bank-logos/bper.0ff369b22e4a1514c44caff1f73b8e1c.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/assets/bank-logos/ubs.4c278438354416720a665c2d23d97e4b.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    }
+  ],
+  "railwaySettingsChanged": false,
+  "migrationsChanged": 0
+}

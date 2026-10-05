@@ -1,5 +1,24 @@
 # PROJECT STATE — Lilleri
 
+## Current bank logo release — 2026-10-05 (Europe/Rome)
+
+Published commit `3a264c9cacf8de67c0b90fcdbcaaa1a7fc76d299`, Railway deployment
+`45a9b0a0-25b8-463b-9173-83ad4e34b5a6` **SUCCESS**, verified at 12:49 Europe/Rome.
+Bank picker tiles and details use 50 verified existing marks for 55 of 62 services,
+including all 18 Italian services and BPER, Amex and Satispay. Web SVG/native PNG
+assets are local, traced to immutable sources and preserve original geometry;
+Simple Icons uses its brand colour metadata. MPS/Swedbank source rasters are capped
+by pixel density. Unverified or failed images retain the original text monogram.
+Names, country labels, filters, search, accessibility and connection guards are preserved.
+Typecheck, scoped Biome/copy checks, 7 directory tests, build, 12 logo layouts,
+744 tile/96 detail checks, 6 bank groups and 9 Europe groups/56 layouts passed.
+No native emulator was run. Exact bundle `index-f838b6f7d3ddbd28ccadde1c27933d27.js`,
+representative SVGs and public read endpoints returned HTTP 200. Canonical owned
+finance and retirement audit compare unchanged; active finance remains empty.
+No financial POST, migrations or Railway settings changed. Owned preview stopped,
+archive retained. Proof: `docs/operations/bank-logos-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current account action label release — 2026-10-05 (Europe/Rome)
 
 Published commit `e2b560083fd94aea170fb377416e2ad6aaae8b04`, Railway deployment

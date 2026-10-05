@@ -1,5 +1,19 @@
 # Lilleri delivery status
 
+## Bank and service logos — 2026-10-05
+
+Published commit `3a264c9`, Railway `45a9b0a0-25b8-463b-9173-83ad4e34b5a6`
+**SUCCESS**, verified at 12:49 Europe/Rome. Tiles and detail headings show verified
+existing logos for 55 of 62 services, including all 18 Italian services. Local SVGs
+and native PNGs preserve mark geometry, documented brand colours and raster limits;
+missing/error images retain a text monogram. Names, filters and access guards remain.
+Typecheck, scoped/copy checks, 7 directory tests, build, 12 logo layouts (744 tile/
+96 detail checks), 6 bank groups and 9 European groups/56 layouts passed. Native
+exports were checked; no emulator was run. Exact bundle, representative logos and
+public reads returned HTTP 200; owned finance and retirement audit are unchanged.
+See [release proof](operations/bank-logos-release-20261005.json) and
+[source manifest](../apps/mobile/assets/bank-logos/sources.json).
+
 ## Add account action — 2026-10-05
 
 Published commit `e2b5600`, Railway `45b3ffde-d0d3-4f43-a0e9-2b2f6caf5e8c`
