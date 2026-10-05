@@ -19,7 +19,12 @@ const pass = (name) => {
   checks.push(name)
   console.log(`PASS ${name}`)
 }
-const button = (page, name) => page.getByRole('button', { name, exact: true })
+const italianBankNames = new Set()
+const button = (page, name) =>
+  page.getByRole('button', {
+    name: italianBankNames.has(name) ? `${name}, Italia` : name,
+    exact: true,
+  })
 async function read(path) {
   const response = await fetch(`${origin}/api${path}`, { signal: AbortSignal.timeout(20_000) })
   assert.equal(response.status, 200, path)
@@ -46,6 +51,9 @@ async function fits(page, label) {
     assert.equal(entry.automatic.providerId, null)
     assert.equal(new URL(entry.officialUrl).protocol, 'https:')
   }
+  const italianEntries = directory.entries.filter((entry) => (entry.countryCode ?? 'IT') === 'IT')
+  for (const entry of italianEntries) italianBankNames.add(entry.name)
+  assert.equal(italianEntries.length, 18)
   pass('Actual directory exposes brands without fabricated live coverage')
   const browser = await chromium.launch({
     // biome-ignore lint/suspicious/noUndeclaredEnvVars: Browser supplied by validation environment.
@@ -68,8 +76,13 @@ async function fits(page, label) {
     await page.goto(origin)
     await button(page, 'Scegli la tua banca').click()
     await page.getByRole('heading', { name: 'Trova la tua banca', exact: true }).waitFor()
-    for (const entry of directory.entries) await button(page, entry.name).waitFor()
-    pass('Home opens all Italian banks, cards and wallets')
+    await page.getByRole('combobox', { name: 'Paese', exact: true }).waitFor()
+    assert.equal(
+      await page.getByRole('combobox', { name: 'Paese', exact: true }).inputValue(),
+      'IT',
+    )
+    for (const entry of italianEntries) await button(page, entry.name).waitFor()
+    pass('Home defaults to all 18 Italian banks, cards and wallets in the European directory')
     const search = page.getByRole('textbox', { name: 'Cerca una banca o un servizio', exact: true })
     for (const [query, name] of [
       ['credit agricole', 'Crédit Agricole Italia'],

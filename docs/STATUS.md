@@ -1,5 +1,22 @@
 # Lilleri delivery status
 
+## European bank directory — 2026-10-05
+
+Latest request: add European banks. Added 44 country-specific entries, making 62
+services across 16 markets (59 bank entries, 2 cards, 1 wallet). Italy remains the
+18-choice default; the country selector, translated market labels and combined
+country/type/alias search expose the wider catalogue without merging bank markets.
+Exact live bindings must match the entry's country. All automatic routes still need
+activation, and new statement formats remain unverified. The Italian builder and
+old-response UI retain compatibility; archives and protected public access are unchanged.
+
+Targeted provider directory 25, API 3 on PGlite and PostgreSQL passed. Read-only browser
+acceptance: European 9 groups/56 layouts, Italian 6 groups, product 8 groups/134 surfaces,
+no API writes or server-settings/finance changes. Repository check passed 23/23 tasks:
+API 592 passed/3 skipped, mobile 66, provider 343. Matching compiled bundle
+`index-ac1a7308521b77d2d05060977c6ac5c6.js` was tested locally. Publication is in progress. See `docs/operations/european-bank-directory-20261005.md` and
+`docs/research/european-bank-directory-20261005.md`.
+
 ## Product interface and shared access — 2026-10-05
 
 Published at [Lilleri](https://lilleri-production.up.railway.app/): commit `c837feb`,

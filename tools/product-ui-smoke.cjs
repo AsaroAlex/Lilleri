@@ -316,7 +316,7 @@ async function allSurfaces(page, locale) {
     await nav(legacyPage, 'Impostazioni')
     await button(legacyPage, 'Collegamenti e fonti').click()
     await heading(legacyPage, 'Trova la tua banca').waitFor()
-    await button(legacyPage, 'Intesa Sanpaolo').waitFor()
+    await button(legacyPage, 'Intesa Sanpaolo, Italia').waitFor()
     assert.equal(
       await legacyPage.locator('[data-testid^="bank-service-"][role="button"]').count(),
       18,
