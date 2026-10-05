@@ -1,9 +1,29 @@
 /** Public brand directory. Entry IDs are Lilleri IDs, never provider institution IDs. */
+export const CONNECTION_DIRECTORY_COUNTRY_CODES = [
+  'IT',
+  'FR',
+  'DE',
+  'ES',
+  'PT',
+  'NL',
+  'BE',
+  'AT',
+  'IE',
+  'GB',
+  'CH',
+  'SE',
+  'DK',
+  'NO',
+  'FI',
+  'PL',
+] as const
+export type ConnectionDirectoryCountryCode = (typeof CONNECTION_DIRECTORY_COUNTRY_CODES)[number]
 export type ConnectionDirectoryKind = 'bank' | 'card' | 'wallet'
 export type ConnectionDirectoryAccountKind = 'current' | 'card' | 'cash' | 'savings'
 export interface ConnectionDirectoryEntry {
   readonly id: string
   readonly name: string
+  readonly countryCode: ConnectionDirectoryCountryCode
   readonly kind: ConnectionDirectoryKind
   readonly aliases: readonly string[]
   readonly officialUrl: string
@@ -30,7 +50,9 @@ export interface ConnectionDirectoryEntry {
   }
 }
 export interface ConnectionDirectory {
+  /** Default market; country-specific coverage always uses each entry's countryCode. */
   readonly country: 'IT'
+  readonly countries: readonly ConnectionDirectoryCountryCode[]
   readonly revision: string
   readonly prerequisites: {
     readonly privateAccess: 'ready' | 'required'

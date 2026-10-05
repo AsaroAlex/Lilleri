@@ -1,10 +1,12 @@
-import { buildItalianConnectionDirectory } from '@lilleri/financial-providers'
+import { CONNECTION_DIRECTORY_COUNTRY_CODES } from '@lilleri/domain'
+import { buildEuropeanConnectionDirectory } from '@lilleri/financial-providers'
 import type { FastifyInstance } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
 const directorySchema = z.object({
   country: z.literal('IT'),
+  countries: z.array(z.enum(CONNECTION_DIRECTORY_COUNTRY_CODES)),
   revision: z.string(),
   prerequisites: z.object({
     privateAccess: z.enum(['ready', 'required']),
@@ -14,6 +16,7 @@ const directorySchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
+      countryCode: z.enum(CONNECTION_DIRECTORY_COUNTRY_CODES),
       kind: z.enum(['bank', 'card', 'wallet']),
       aliases: z.array(z.string()),
       officialUrl: z.url(),
@@ -53,6 +56,6 @@ export function registerConnectionDirectoryRoutes(
     {
       schema: { response: { 200: directorySchema } },
     },
-    async () => directorySchema.parse(buildItalianConnectionDirectory({ personalAccessReady })),
+    async () => directorySchema.parse(buildEuropeanConnectionDirectory({ personalAccessReady })),
   )
 }
