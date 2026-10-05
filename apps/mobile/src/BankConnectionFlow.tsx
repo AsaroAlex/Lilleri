@@ -95,7 +95,7 @@ export function BankConnectionFlow({
 
   useEffect(() => {
     if (context.current.scope === resetKey && context.current.entryId === entry.id)
-      focusWebElement(heading.current)
+      focusWebElement(heading.current, true)
   }, [entry.id, resetKey])
 
   const currentState =
@@ -177,7 +177,14 @@ export function BankConnectionFlow({
       <View style={s.serviceHeading}>
         <BankServiceLogo entryId={checkedEntry.id} name={checkedEntry.name} theme={theme} detail />
         <View style={s.serviceName}>
-          <Text style={s.name}>{checkedEntry.name}</Text>
+          <Text
+            nativeID="lilleri-bank-heading"
+            accessibilityRole="header"
+            aria-level={1}
+            style={s.name}
+          >
+            {checkedEntry.name}
+          </Text>
           <Text style={s.caption}>{bankCountryLabel(checkedEntry.countryCode, locale)}</Text>
         </View>
       </View>

@@ -10,9 +10,9 @@ import {
   type SyncJobDto,
 } from '@lilleri/api-client'
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
-import { BankConnectionPicker } from './src/BankConnectionPicker'
+import { BankConnectionPicker, type BankConnectionScreen } from './src/BankConnectionPicker'
 import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
 import { useI18n } from './src/i18n/context'
 
@@ -49,6 +49,7 @@ export interface ConnectionsPanelProps {
   /** Live authorization must use its own admitted route, never the fixture writer. */
   readonly onSelectBankConnect?: (institutionId: string, providerId: string) => void
   readonly onBankSignIn?: () => void
+  readonly onBankScreenChange?: (screen: BankConnectionScreen) => void
   /** Shared profiles expose discovery and saved source information without write controls. */
   readonly readOnly?: boolean
   readonly onRecoverHistory?: (accountId: string) => void
@@ -122,6 +123,7 @@ export function ConnectionsPanel({
   protectedPersonalAccess = false,
   onSelectBankConnect,
   onBankSignIn,
+  onBankScreenChange,
   readOnly = false,
   onRecoverHistory,
   onError,
@@ -135,6 +137,15 @@ export function ConnectionsPanel({
   const c = colors[theme]
   const s = useMemo(() => styles(c), [c])
   const scope = `${overview.profile.id}:${String(resetKey)}:${readOnly ? 'read-only' : 'editable'}`
+  const [bankView, setBankView] = useState({ scope, screen: 'directory' as BankConnectionScreen })
+  const showSavedSources = bankView.scope !== scope || bankView.screen === 'directory'
+  const onPickerScreenChange = useCallback(
+    (screen: BankConnectionScreen) => {
+      setBankView({ scope, screen })
+      onBankScreenChange?.(screen)
+    },
+    [scope, onBankScreenChange],
+  )
   const readOnlyRef = useRef(readOnly)
   readOnlyRef.current = readOnly
   const context = useRef({ scope, epoch: 0 })
@@ -473,7 +484,7 @@ export function ConnectionsPanel({
           {notice}
         </Text>
       )}
-      {loading && (
+      {loading && showSavedSources && (
         <View style={s.inline}>
           <ActivityIndicator color={c.primary} />
           <Text style={s.body}>{t('connections.loading')}</Text>
@@ -484,6 +495,7 @@ export function ConnectionsPanel({
           api={api}
           theme={theme}
           resetKey={scope}
+          onScreenChange={onPickerScreenChange}
           protectedPersonalAccess={!readOnly && protectedPersonalAccess}
           {...(onBankSignIn ? { onSignIn: onBankSignIn } : {})}
           {...(!readOnly && protectedPersonalAccess
@@ -559,7 +571,7 @@ export function ConnectionsPanel({
         </View>
       )}
       {overview.connections
-        .filter((connection) => connection.providerId !== 'local-manual')
+        .filter((connection) => showSavedSources && connection.providerId !== 'local-manual')
         .map((connection) => {
           const lifecycle = lifecycles.find((item) => item.connectionId === connection.id)
           const institution = catalogue?.institutions.find(
@@ -1022,20 +1034,23 @@ export function ConnectionsPanel({
             </View>
           )
         })}
-      {!loading &&
+      {showSavedSources &&
+        !loading &&
         !overview.connections.some((connection) => connection.providerId !== 'local-manual') && (
           <Text style={s.body}>{t('connections.noConnections')}</Text>
         )}
-      <View style={s.row}>
-        {button(
-          t('connections.reloadAvailability'),
-          () => {
-            void run(async () => undefined, t('connections.availabilityUpdated'), false)
-          },
-          false,
-          true,
-        )}
-      </View>
+      {showSavedSources && (
+        <View style={s.row}>
+          {button(
+            t('connections.reloadAvailability'),
+            () => {
+              void run(async () => undefined, t('connections.availabilityUpdated'), false)
+            },
+            false,
+            true,
+          )}
+        </View>
+      )}
     </View>
   )
 }

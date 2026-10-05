@@ -87,6 +87,7 @@ const messages = {
     'Automatic connection is not available for this personal account.',
   ],
   connect: ['Collega il conto', 'Connect account'],
+  moreOptions: ['Altre opzioni', 'More options'],
   statement: ['File dei movimenti', 'Transaction files'],
   statementReady: [
     'Importa il file dei movimenti e controlla le colonne prima di confermare.',

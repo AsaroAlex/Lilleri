@@ -45,6 +45,7 @@ import {
   WebAccessibilityStyles,
 } from './src/accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './src/accessibility/web-focus'
+import type { BankConnectionScreen } from './src/BankConnectionPicker'
 import {
   readBrowserDisplayPreferences,
   writeBrowserDisplayPreferences,
@@ -351,6 +352,60 @@ function AppSurface({
     [renderedIdentityEpoch, identityFailure],
   )
   const scroll = useRef<ScrollView>(null)
+  const scrollOffset = useRef(0)
+  const directoryOffset = useRef(0)
+  const bankRouteActive = useRef(false)
+  bankRouteActive.current = manage === 'connections'
+  const bankScreen = useRef<BankConnectionScreen>('directory')
+  const bankScrollFrame = useRef<number | null>(null)
+  const bankScrollScope = useRef(renderedIdentityEpoch)
+  if (bankScrollScope.current !== renderedIdentityEpoch) {
+    bankScrollScope.current = renderedIdentityEpoch
+    bankScreen.current = 'directory'
+    directoryOffset.current = 0
+    scrollOffset.current = 0
+    if (bankScrollFrame.current !== null) cancelAnimationFrame(bankScrollFrame.current)
+    bankScrollFrame.current = null
+  }
+  const [bankView, setBankView] = useState({
+    epoch: renderedIdentityEpoch,
+    screen: 'directory' as BankConnectionScreen,
+  })
+  const bankDetailVisible =
+    manage === 'connections' &&
+    !networkUnavailable &&
+    !erased &&
+    !!data &&
+    (!identityMode || signedIn) &&
+    bankView.epoch === renderedIdentityEpoch &&
+    bankView.screen !== 'directory'
+  const onBankScreenChange = useCallback(
+    (screen: BankConnectionScreen) => {
+      if (renderedIdentityEpoch !== identityEpoch.current) return
+      if (bankScreen.current === 'directory' && screen !== 'directory')
+        directoryOffset.current = scrollOffset.current
+      const returning = bankScreen.current !== 'directory' && screen === 'directory'
+      bankScreen.current = screen
+      setBankView({ epoch: renderedIdentityEpoch, screen })
+      if (bankScrollFrame.current !== null) cancelAnimationFrame(bankScrollFrame.current)
+      bankScrollFrame.current = requestAnimationFrame(() => {
+        bankScrollFrame.current = null
+        if (
+          bankRouteActive.current &&
+          renderedIdentityEpoch === identityEpoch.current &&
+          (screen !== 'directory' || returning)
+        )
+          scroll.current?.scrollTo({ y: returning ? directoryOffset.current : 0, animated: false })
+      })
+    },
+    [renderedIdentityEpoch],
+  )
+  useEffect(
+    () => () => {
+      if (bankScrollFrame.current !== null) cancelAnimationFrame(bankScrollFrame.current)
+    },
+    [],
+  )
   const contentHeading = useRef<Text>(null)
   const route = `${tab}:${manage ?? ''}:${detailId ?? ''}`
   const previousRoute = useRef(route)
@@ -914,7 +969,13 @@ function AppSurface({
           nativeID="lilleri-skip-content"
           accessibilityRole="button"
           accessibilityLabel={t('app.skipContent')}
-          onPress={() => focusWebElement(contentHeading.current)}
+          onPress={() =>
+            focusWebElement(
+              bankDetailVisible && Platform.OS === 'web'
+                ? document.getElementById('lilleri-bank-heading')
+                : contentHeading.current,
+            )
+          }
           style={[s.button, { position: 'absolute', zIndex: 100 }]}
         >
           <Text style={s.buttonText}>{t('app.skipContent')}</Text>
@@ -985,43 +1046,49 @@ function AppSurface({
         <ScrollView
           ref={scroll}
           role="main"
-          aria-labelledby="lilleri-main-heading"
+          aria-labelledby={bankDetailVisible ? 'lilleri-bank-heading' : 'lilleri-main-heading'}
+          onScroll={(event) => {
+            scrollOffset.current = event.nativeEvent.contentOffset.y
+          }}
+          scrollEventThrottle={16}
           style={s.scroll}
           contentContainerStyle={[s.content, wide && s.wideContent]}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={s.pageHeading}>
-            <View style={[s.headingCopy, windowWidth < 600 && s.narrowHeadingCopy]}>
-              <Text style={s.eyebrow}>{t('app.eyebrow')}</Text>
-              <Text
-                ref={contentHeading}
-                nativeID="lilleri-main-heading"
-                accessibilityRole="header"
-                aria-level={1}
-                style={[s.heading, wide && s.wideHeading]}
-              >
-                {selected
-                  ? t('app.transaction')
-                  : manage
-                    ? t(manageMessages[manage])
-                    : tab === 'Home'
-                      ? t('app.homeHeading')
-                      : t(tabMessages[tab])}
-              </Text>
-            </View>
-            {!erased && (
-              <View style={windowWidth < 600 && s.narrowHeadingActions}>
-                <Button
-                  label={loading ? t('app.refreshing') : t('common.refresh')}
-                  onPress={() => void refresh()}
-                  quiet
-                  disabled={loading || !!busy}
-                  c={c}
-                  s={s}
-                />
+          {!bankDetailVisible && (
+            <View style={s.pageHeading}>
+              <View style={[s.headingCopy, windowWidth < 600 && s.narrowHeadingCopy]}>
+                <Text style={s.eyebrow}>{t('app.eyebrow')}</Text>
+                <Text
+                  ref={contentHeading}
+                  nativeID="lilleri-main-heading"
+                  accessibilityRole="header"
+                  aria-level={1}
+                  style={[s.heading, wide && s.wideHeading]}
+                >
+                  {selected
+                    ? t('app.transaction')
+                    : manage
+                      ? t(manageMessages[manage])
+                      : tab === 'Home'
+                        ? t('app.homeHeading')
+                        : t(tabMessages[tab])}
+                </Text>
               </View>
-            )}
-          </View>
+              {!erased && (
+                <View style={windowWidth < 600 && s.narrowHeadingActions}>
+                  <Button
+                    label={loading ? t('app.refreshing') : t('common.refresh')}
+                    onPress={() => void refresh()}
+                    quiet
+                    disabled={loading || !!busy}
+                    c={c}
+                    s={s}
+                  />
+                </View>
+              )}
+            </View>
+          )}
           {identityMode && (
             <LocalIdentityPanel
               baseUrl={apiBaseUrl}
@@ -1176,17 +1243,19 @@ function AppSurface({
             </View>
           ) : manage ? (
             <>
-              <Button
-                label={
-                  tab === 'Movimenti'
-                    ? t('common.backToTransactions')
-                    : t('app.backPage', { destination: t(tabMessages[tab]) })
-                }
-                onPress={() => setManage(null)}
-                quiet
-                c={c}
-                s={s}
-              />
+              {!bankDetailVisible && (
+                <Button
+                  label={
+                    tab === 'Movimenti'
+                      ? t('common.backToTransactions')
+                      : t('app.backPage', { destination: t(tabMessages[tab]) })
+                  }
+                  onPress={() => setManage(null)}
+                  quiet
+                  c={c}
+                  s={s}
+                />
+              )}
               {networkUnavailable ? (
                 <View style={s.card}>
                   <Text style={s.body}>{t('app.offlinePanel')}</Text>
@@ -1264,6 +1333,7 @@ function AppSurface({
                   api={api}
                   resetKey={renderedIdentityEpoch}
                   onRefresh={refreshAfterChange}
+                  onBankScreenChange={onBankScreenChange}
                   onManualFallback={() => setManage('import')}
                   onStatementImport={() => setManage('mapped-import')}
                   protectedPersonalAccess={hostedIdentityMode && signedIn}

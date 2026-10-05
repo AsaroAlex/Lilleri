@@ -27,6 +27,11 @@ const copy = {
     unavailable: 'Collegamento non ancora disponibile',
     back: 'Dettagli del servizio',
     all: 'Tutti i servizi',
+    title: 'Trova la tua banca',
+    search: 'Cerca una banca o un servizio',
+    banks: 'Banche',
+    reload: 'Ricarica stato e disponibilità',
+    noConnections: 'Non hai collegamenti. Scegli una fonte per vedere le opzioni disponibili.',
     country: 'Paese',
     retry: 'Verifica di nuovo',
     failed: 'Verifica non riuscita',
@@ -40,6 +45,11 @@ const copy = {
     unavailable: 'Connection is not available yet',
     back: 'Service details',
     all: 'All services',
+    title: 'Find your bank',
+    search: 'Search for a bank or service',
+    banks: 'Banks',
+    reload: 'Reload status and availability',
+    noConnections: 'You have no connections. Choose a source to see the available options.',
     country: 'Country',
     retry: 'Check again',
     failed: 'Connection check failed',
@@ -73,6 +83,58 @@ async function fits(page, label) {
   assert.ok(dimensions.content <= dimensions.width + 1, label)
   layouts.push({ label, ...dimensions })
 }
+async function focusedTile(page, id) {
+  const tile = page.getByTestId(`bank-service-${id}`)
+  await tile.waitFor()
+  await page.waitForFunction(
+    (serviceId) => document.activeElement?.getAttribute('data-testid') === serviceId,
+    `bank-service-${id}`,
+    { timeout: 3_000 },
+  )
+  assert.equal(await tile.evaluate((node) => node === document.activeElement), true)
+}
+async function dedicatedScreen(page, id, locale, name) {
+  const main = page.getByRole('main')
+  await main.getByRole('heading', { name, exact: true, level: 1 }).waitFor()
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[role="main"]')?.getAttribute('aria-labelledby') ===
+      'lilleri-bank-heading',
+  )
+  await page.waitForFunction(() => (document.querySelector('[role="main"]')?.scrollTop ?? -1) <= 1)
+  assert.equal(await main.getAttribute('aria-labelledby'), 'lilleri-bank-heading')
+  assert.equal(
+    await page.getByRole('heading', { name: copy[locale].title, exact: true }).count(),
+    0,
+  )
+  assert.equal(
+    await page.getByRole('combobox', { name: copy[locale].country, exact: true }).count(),
+    0,
+  )
+  assert.equal(await page.locator('[data-testid^="bank-service-"][role="button"]').count(), 0)
+  assert.equal(await page.locator('[data-testid^="bank-service-logo-"]').count(), 1)
+  assert.equal(await page.getByTestId(`bank-service-logo-${id}`).count(), 1)
+  assert.equal(await button(page, copy[locale].reload).count(), 0)
+  assert.equal(await page.getByText(copy[locale].noConnections, { exact: true }).count(), 0)
+  const skip = page.locator('#lilleri-skip-content')
+  await skip.focus()
+  await page.keyboard.press('Enter')
+  assert.equal(
+    await page.locator('#lilleri-bank-heading').evaluate((node) => node === document.activeElement),
+    true,
+  )
+}
+async function visibleInMain(page, locator, label) {
+  const box = await locator.boundingBox()
+  const main = await page.getByRole('main').boundingBox()
+  const viewport = page.viewportSize()
+  assert.ok(box && main && viewport, label)
+  assert.ok(box.y >= main.y - 1 && box.y >= 0, `${label}: above visible content`)
+  assert.ok(
+    box.y + box.height <= Math.min(main.y + main.height, viewport.height) + 1,
+    `${label}: below visible content`,
+  )
+}
 ;(async () => {
   const before = await read('/v1/export'),
     directory = await read('/v1/connection-directory')
@@ -83,9 +145,9 @@ async function fits(page, label) {
     headless: true,
     args: ['--no-sandbox'],
   })
-  async function pageFor(locale = 'it-IT', width = 650) {
+  async function pageFor(locale = 'it-IT', width = 650, height = 768) {
     const context = await browser.newContext({
-      viewport: { width, height: 900 },
+      viewport: { width, height },
       deviceScaleFactor: 3,
     })
     await context.addInitScript(
@@ -122,6 +184,14 @@ async function fits(page, label) {
     await page.getByTestId(`bank-service-${id}`).click()
     const detail = page.getByTestId('bank-service-detail')
     await button(detail, copy[locale].connect).waitFor()
+    const name = directory.entries.find((entry) => entry.id === id).name
+    await dedicatedScreen(page, id, locale, name)
+    await visibleInMain(page, button(detail, copy[locale].all), `${id} detail back`)
+    await visibleInMain(page, button(detail, copy[locale].connect), `${id} connection action`)
+    assert.equal(
+      await detail.getByTestId('bank-detail-options-toggle').getAttribute('aria-expanded'),
+      'false',
+    )
     const response = page.waitForResponse(
       (r) => new URL(r.url()).pathname === `/api/v1/connection-directory/${id}/connect`,
     )
@@ -129,6 +199,8 @@ async function fits(page, label) {
     const r = await response
     const flow = page.getByTestId('bank-connection-flow')
     await flow.getByRole('heading', { name: expected, exact: true }).waitFor()
+    await dedicatedScreen(page, id, locale, name)
+    await visibleInMain(page, button(flow, copy[locale].back), `${id} flow back`)
     assert.equal(await flow.locator('input').count(), 0)
     assert.equal(
       await flow
@@ -141,6 +213,10 @@ async function fits(page, label) {
     return { flow, response: r }
   }
   async function closeFlow(page, locale = 'it-IT') {
+    const id = await page
+      .getByTestId('bank-connection-flow')
+      .locator('[data-testid^="bank-service-logo-"]')
+      .getAttribute('data-testid')
     await button(page.getByTestId('bank-connection-flow'), copy[locale].back).click()
     const detail = page.getByTestId('bank-service-detail')
     await detail.waitFor()
@@ -152,6 +228,7 @@ async function fits(page, label) {
       true,
     )
     await button(detail, copy[locale].all).click()
+    await focusedTile(page, id.slice('bank-service-logo-'.length))
   }
   try {
     const { context, page } = await pageFor()
@@ -181,6 +258,39 @@ async function fits(page, label) {
       .waitFor()
     await closeFlow(page)
     pass('Recheck performs a fresh server read; back returns focus to service details')
+    const lastTile = page.locator('[data-testid^="bank-service-"][role="button"]').last()
+    await lastTile.scrollIntoViewIfNeeded()
+    const savedScroll = await page.getByRole('main').evaluate((node) => node.scrollTop)
+    assert.ok(savedScroll > 100)
+    const lastId = (await lastTile.getAttribute('data-testid')).slice('bank-service-'.length)
+    await openFlow(page, lastId)
+    await closeFlow(page)
+    await page.waitForFunction(
+      (expected) =>
+        Math.abs((document.querySelector('[role="main"]')?.scrollTop ?? -1) - expected) <= 2,
+      savedScroll,
+    )
+    await visibleInMain(page, page.getByTestId(`bank-service-${lastId}`), 'returned last tile')
+    await page
+      .getByRole('combobox', { name: copy['it-IT'].country, exact: true })
+      .selectOption('DE')
+    await button(page, copy['it-IT'].banks).click()
+    await page.getByRole('textbox', { name: copy['it-IT'].search, exact: true }).fill('n26')
+    await openFlow(page, 'n26-de')
+    await closeFlow(page)
+    assert.equal(
+      await page.getByRole('combobox', { name: copy['it-IT'].country, exact: true }).inputValue(),
+      'DE',
+    )
+    assert.equal(
+      await page.getByRole('textbox', { name: copy['it-IT'].search, exact: true }).inputValue(),
+      'n26',
+    )
+    assert.equal(await button(page, copy['it-IT'].banks).getAttribute('aria-pressed'), 'true')
+    assert.equal(await page.locator('[data-testid^="bank-service-"][role="button"]').count(), 1)
+    pass(
+      'Dedicated bank screens remove the chooser; back restores the clicked tile, scroll, query, type and country',
+    )
     await context.close()
     for (const locale of ['it-IT', 'en-GB'])
       for (const width of [320, 650, 1440])
@@ -272,6 +382,9 @@ async function fits(page, label) {
     })
     await race.page.getByTestId('bank-service-bper').click()
     await button(race.page.getByTestId('bank-service-detail'), copy['it-IT'].connect).click()
+    await button(race.page.getByTestId('bank-connection-flow'), copy['it-IT'].back).click()
+    await button(race.page.getByTestId('bank-service-detail'), copy['it-IT'].all).click()
+    await focusedTile(race.page, 'bper')
     await race.page.getByTestId('bank-service-unicredit').click()
     await button(race.page.getByTestId('bank-service-detail'), copy['it-IT'].connect).click()
     await race.page

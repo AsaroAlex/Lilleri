@@ -150,6 +150,19 @@ async function selectCountry(page, locale, code) {
   assert.equal(await picker.inputValue(), code)
   return picker
 }
+async function focusedTile(page, id) {
+  await page.waitForFunction(
+    (serviceId) => document.activeElement?.getAttribute('data-testid') === serviceId,
+    `bank-service-${id}`,
+    { timeout: 3_000 },
+  )
+  assert.equal(
+    await page
+      .getByTestId(`bank-service-${id}`)
+      .evaluate((element) => document.activeElement === element),
+    true,
+  )
+}
 async function openDirectory(page, locale) {
   await button(page, copy[locale].choose).click()
   await heading(page, copy[locale].title).waitFor()
@@ -163,19 +176,36 @@ async function openPreferences(page, locale) {
   await heading(page, copy[locale].preferencesHeading).waitFor()
 }
 async function detail(page, entry, locale) {
-  await button(page, tileName(entry, locale)).click()
+  const tile = button(page, tileName(entry, locale))
+  const search = page.getByRole('textbox', { name: copy[locale].search, exact: true })
+  const country = page.getByRole('combobox', { name: copy[locale].country, exact: true })
+  const query = await search.inputValue()
+  const selectedCountry = await country.inputValue()
+  await tile.click()
   const panel = page.getByTestId('bank-service-detail')
-  await panel.getByRole('heading', { name: entry.name, exact: true }).waitFor()
+  await panel.getByRole('heading', { name: entry.name, exact: true, level: 1 }).waitFor()
+  assert.equal(await heading(page, copy[locale].title).count(), 0)
+  assert.equal(await country.count(), 0)
+  assert.equal(await search.count(), 0)
+  assert.equal(await tiles(page).count(), 0)
+  assert.equal(await page.locator('[data-testid^="bank-service-logo-"]').count(), 1)
+  assert.equal(await page.getByTestId(`bank-service-logo-${entry.id}`).count(), 1)
   assert.ok((await panel.innerText()).includes(countryName(locale, entry.countryCode)))
   assert.equal(await button(page, copy[locale].connect).count(), 1)
+  const options = panel.getByTestId('bank-detail-options-toggle')
+  assert.equal(await options.getAttribute('aria-expanded'), 'false')
+  assert.equal(await panel.getByRole('link', { name: copy[locale].official }).count(), 0)
+  await options.click()
+  assert.equal(await options.getAttribute('aria-expanded'), 'true')
   const website = panel.getByRole('link', { name: copy[locale].official })
   assert.equal(await website.getAttribute('href'), entry.officialUrl)
   assert.equal(await website.getAttribute('target'), '_blank')
   assert.equal(await website.getAttribute('rel'), 'noopener noreferrer')
   await fits(page, `${locale} detail ${entry.id}`)
   await button(page, copy[locale].back).click()
-  const search = page.getByRole('textbox', { name: copy[locale].search, exact: true })
-  assert.equal(await search.evaluate((element) => document.activeElement === element), true)
+  await focusedTile(page, entry.id)
+  assert.equal(await search.inputValue(), query)
+  assert.equal(await country.inputValue(), selectedCountry)
 }
 ;(async () => {
   const initial = await read('/v1/demo')
@@ -329,6 +359,9 @@ async function detail(page, entry, locale) {
     await selectCountry(page, 'it-IT', 'FR')
     await button(page, tileName(societe, 'it-IT')).click()
     await page.getByTestId('bank-service-detail').waitFor()
+    assert.equal(await country.count(), 0)
+    await button(page, copy['it-IT'].back).click()
+    await focusedTile(page, societe.id)
     await selectCountry(page, 'it-IT', 'DE')
     assert.equal(await page.getByTestId('bank-service-detail').count(), 0)
     assert.equal(await country.evaluate((element) => document.activeElement === element), true)
@@ -338,7 +371,7 @@ async function detail(page, entry, locale) {
       'it-IT',
     )
     pass(
-      'Country changes clear a previous bank detail and keep chooser focus; Italian card and wallet filters remain intact',
+      'Returning from a dedicated detail restores the selected service; country, card and wallet filters remain intact',
     )
 
     await selectCountry(page, 'it-IT', 'all')

@@ -27,12 +27,15 @@ import { FinanceVisual } from './FinanceVisual'
 import { bankCountryLabel, bankPickerCopy } from './i18n/bank-picker-messages'
 import { useI18n } from './i18n/context'
 
+export type BankConnectionScreen = 'directory' | 'detail' | 'connect'
+
 export interface BankConnectionPickerProps {
   readonly api: Pick<ApiClient, 'connectionDirectory' | 'connectionCheck'>
   readonly theme: BrandTheme
   /** A profile/session change invalidates pending reads and the visible selection. */
   readonly resetKey: string | number
   readonly protectedPersonalAccess?: boolean
+  readonly onScreenChange?: (screen: BankConnectionScreen) => void
   readonly onImportStatement?: (entryId: string) => void
   readonly onManualAccount?: (entryId: string) => void
   readonly onSignIn?: () => void
@@ -64,6 +67,7 @@ export function BankConnectionPicker({
   theme,
   resetKey,
   protectedPersonalAccess = false,
+  onScreenChange,
   onImportStatement,
   onManualAccount,
   onSignIn,
@@ -103,7 +107,14 @@ export function BankConnectionPicker({
   const headingRef = useRef<Text | null>(null)
   const searchRef = useRef<TextInput | null>(null)
   const focusDetail = useRef(false)
-  const returnToSearch = useRef(false)
+  const returnToService = useRef<string | null>(null)
+  const tileRefs = useRef(new Map<string, View>())
+  const screenCallback = useRef(onScreenChange)
+  screenCallback.current = onScreenChange
+  const [optionsSelection, setOptionsSelection] = useState<{ scope: Scope; id: string | null }>({
+    scope: resetKey,
+    id: null,
+  })
 
   useEffect(() => {
     const epoch = ++requestEpoch.current
@@ -156,20 +167,29 @@ export function BankConnectionPicker({
       : undefined
   const connecting =
     selected && connectionSelection.scope === resetKey && connectionSelection.id === selected.id
-  const compact = width < 760
-  const showingDirectory = !selected || !compact
-  const listWidth = selected && !compact ? width - 340 - 24 : width
+  const showingDirectory = !selected
+  const listWidth = width
   const columns = listWidth >= 940 ? 4 : listWidth >= 600 ? 3 : listWidth >= 248 ? 2 : 1
   const tileWidth = (listWidth - (columns - 1) * 8) / columns
   const filtered = filterBankServices(directory?.entries ?? [], query, filter, country)
 
+  const screen: BankConnectionScreen = selected ? (connecting ? 'connect' : 'detail') : 'directory'
+  useEffect(() => {
+    screenCallback.current?.(screen)
+  }, [screen])
+  useEffect(() => () => screenCallback.current?.('directory'), [])
+
   useEffect(() => {
     if (selected && !connecting && focusDetail.current) {
       focusDetail.current = false
-      focusWebElement(headingRef.current)
-    } else if (!selected && returnToSearch.current) {
-      returnToSearch.current = false
-      focusWebElement(searchRef.current, true)
+      focusWebElement(headingRef.current, true)
+    } else if (!selected && returnToService.current) {
+      const id = returnToService.current
+      returnToService.current = null
+      const frame = requestAnimationFrame(() => {
+        focusWebElement(tileRefs.current.get(id) ?? searchRef.current, true)
+      })
+      return () => cancelAnimationFrame(frame)
     }
   }, [selected, connecting])
 
@@ -179,12 +199,13 @@ export function BankConnectionPicker({
   }
   const select = (entry: ConnectionDirectoryEntry) => {
     focusDetail.current = true
+    setOptionsSelection({ scope: resetKey, id: null })
     setConnectionSelection({ scope: resetKey, id: null })
     setSelection({ scope: resetKey, id: entry.id })
   }
   const clearSelection = () => {
     setConnectionSelection({ scope: resetKey, id: null })
-    returnToSearch.current = true
+    returnToService.current = selected?.id ?? null
     setSelection({ scope: resetKey, id: null })
   }
   const chooseCountry = (value: string) => {
@@ -192,7 +213,7 @@ export function BankConnectionPicker({
     setCountry({ scope: resetKey, value })
     setCountryMenu({ scope: resetKey, open: false })
     focusDetail.current = false
-    returnToSearch.current = false
+    returnToService.current = null
     setSelection({ scope: resetKey, id: null })
   }
   const serviceKinds = ['bank', 'card', 'wallet'] as const
@@ -240,7 +261,7 @@ export function BankConnectionPicker({
   function details(entry: ConnectionDirectoryEntry) {
     if (connecting)
       return (
-        <View style={[s.details, !compact && s.detailsWide]}>
+        <View style={s.details}>
           <BankConnectionFlow
             api={api}
             entry={entry}
@@ -293,7 +314,7 @@ export function BankConnectionPicker({
               ? copy.statementConditional
               : copy.statementUnknown
     return (
-      <View testID="bank-service-detail" style={[s.details, !compact && s.detailsWide]}>
+      <View testID="bank-service-detail" style={s.details}>
         <Pressable accessibilityRole="button" onPress={clearSelection} style={s.backButton}>
           <Text aria-hidden={true} style={s.backArrow}>
             ←
@@ -303,7 +324,13 @@ export function BankConnectionPicker({
         <View style={s.detailHeading}>
           <BankServiceLogo entryId={entry.id} name={entry.name} theme={theme} detail />
           <View style={s.detailName}>
-            <Text ref={headingRef} accessibilityRole="header" aria-level={3} style={s.detailTitle}>
+            <Text
+              ref={headingRef}
+              accessibilityRole="header"
+              nativeID="lilleri-bank-heading"
+              aria-level={1}
+              style={s.detailTitle}
+            >
               {entry.name}
             </Text>
             <Text style={s.caption}>
@@ -311,60 +338,94 @@ export function BankConnectionPicker({
             </Text>
           </View>
         </View>
+        <View style={s.primaryRoute}>
+          <Pressable
+            testID="bank-connect-action"
+            accessibilityRole="button"
+            onPress={() => {
+              if (scopeRef.current === resetKey)
+                setConnectionSelection({ scope: resetKey, id: entry.id })
+            }}
+            style={[s.action, s.primaryAction]}
+          >
+            <Text style={s.primaryActionText}>{copy.connect}</Text>
+          </Pressable>
+          <View style={s.route}>
+            <View style={s.routeHeading}>
+              <FinanceVisual kind="link" size={28} mode={theme} bare color={c.textSecondary} />
+              <Text accessibilityRole="header" aria-level={2} style={s.routeTitle}>
+                {copy.automatic}
+              </Text>
+            </View>
+            <Text style={s.body}>{automaticCopy}</Text>
+          </View>
+        </View>
         <Pressable
-          testID="bank-connect-action"
+          testID="bank-detail-options-toggle"
           accessibilityRole="button"
-          onPress={() => {
-            if (scopeRef.current === resetKey)
-              setConnectionSelection({ scope: resetKey, id: entry.id })
+          accessibilityState={{
+            expanded: optionsSelection.scope === resetKey && optionsSelection.id === entry.id,
           }}
-          style={[s.action, s.primaryAction]}
+          aria-expanded={optionsSelection.scope === resetKey && optionsSelection.id === entry.id}
+          onPress={() =>
+            setOptionsSelection({
+              scope: resetKey,
+              id:
+                optionsSelection.scope === resetKey && optionsSelection.id === entry.id
+                  ? null
+                  : entry.id,
+            })
+          }
+          style={s.optionsToggle}
         >
-          <Text style={s.primaryActionText}>{copy.connect}</Text>
+          <Text style={s.linkText}>{copy.moreOptions}</Text>
+          <Text aria-hidden={true} style={s.caption}>
+            {optionsSelection.scope === resetKey && optionsSelection.id === entry.id ? '−' : '+'}
+          </Text>
         </Pressable>
-        <View style={s.route}>
-          <View style={s.routeHeading}>
-            <FinanceVisual kind="link" size={28} mode={theme} bare color={c.textSecondary} />
-            <Text accessibilityRole="header" aria-level={4} style={s.routeTitle}>
-              {copy.automatic}
-            </Text>
-          </View>
-          <Text style={s.body}>{automaticCopy}</Text>
-        </View>
-        <View style={s.route}>
-          <View style={s.routeHeading}>
-            <FinanceVisual kind="card" size={28} mode={theme} bare color={c.textSecondary} />
-            <Text accessibilityRole="header" aria-level={4} style={s.routeTitle}>
-              {copy.statement}
-            </Text>
-          </View>
-          <Text style={s.body}>{statementCopy}</Text>
-          {canImport && (
-            <>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityState={{ disabled: !protectedPersonalAccess }}
-                disabled={!protectedPersonalAccess}
-                onPress={() => {
-                  if (scopeRef.current === resetKey && protectedPersonalAccess)
-                    onImportStatement?.(entry.id)
-                }}
-                style={[s.action, s.secondaryAction, !protectedPersonalAccess && s.disabledAction]}
-              >
-                <Text style={[s.secondaryActionText, !protectedPersonalAccess && s.caption]}>
-                  {entry.statement.state === 'available'
-                    ? copy.importStatement
-                    : copy.importExistingFile}
+        {optionsSelection.scope === resetKey && optionsSelection.id === entry.id && (
+          <View testID="bank-detail-options" style={s.options}>
+            <View style={s.route}>
+              <View style={s.routeHeading}>
+                <FinanceVisual kind="card" size={28} mode={theme} bare color={c.textSecondary} />
+                <Text accessibilityRole="header" aria-level={2} style={s.routeTitle}>
+                  {copy.statement}
                 </Text>
-              </Pressable>
-              {!protectedPersonalAccess && (
-                <Text style={s.caption}>{copy.personalAccessRequired}</Text>
+              </View>
+              <Text style={s.body}>{statementCopy}</Text>
+              {canImport && (
+                <>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{ disabled: !protectedPersonalAccess }}
+                    disabled={!protectedPersonalAccess}
+                    onPress={() => {
+                      if (scopeRef.current === resetKey && protectedPersonalAccess)
+                        onImportStatement?.(entry.id)
+                    }}
+                    style={[
+                      s.action,
+                      s.secondaryAction,
+                      !protectedPersonalAccess && s.disabledAction,
+                    ]}
+                  >
+                    <Text style={[s.secondaryActionText, !protectedPersonalAccess && s.caption]}>
+                      {entry.statement.state === 'available'
+                        ? copy.importStatement
+                        : copy.importExistingFile}
+                    </Text>
+                  </Pressable>
+                  {!protectedPersonalAccess && (
+                    <Text style={s.caption}>{copy.personalAccessRequired}</Text>
+                  )}
+                </>
               )}
-            </>
-          )}
-          {entry.statement.guideUrl && externalLink(copy.statementGuide, entry.statement.guideUrl)}
-        </View>
-        {externalLink(copy.officialSite, entry.officialUrl)}
+              {entry.statement.guideUrl &&
+                externalLink(copy.statementGuide, entry.statement.guideUrl)}
+            </View>
+            {externalLink(copy.officialSite, entry.officialUrl)}
+          </View>
+        )}
       </View>
     )
   }
@@ -375,15 +436,17 @@ export function BankConnectionPicker({
       style={s.root}
       onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
     >
-      <View style={s.heading}>
-        <FinanceVisual kind="bank" size={64} mode={theme} />
-        <View style={s.headingCopy}>
-          <Text accessibilityRole="header" aria-level={2} style={s.title}>
-            {copy.title}
-          </Text>
-          <Text style={s.body}>{copy.intro}</Text>
+      {showingDirectory && (
+        <View style={s.heading}>
+          <FinanceVisual kind="bank" size={64} mode={theme} />
+          <View style={s.headingCopy}>
+            <Text accessibilityRole="header" aria-level={2} style={s.title}>
+              {copy.title}
+            </Text>
+            <Text style={s.body}>{copy.intro}</Text>
+          </View>
         </View>
-      </View>
+      )}
       {!directory ? (
         <AccessibleStatus style={s.empty} urgent={currentState && state.failed}>
           {currentState && state.failed ? (
@@ -524,7 +587,7 @@ export function BankConnectionPicker({
               )}
             </>
           )}
-          <View style={[s.content, selected && !compact && s.contentWide]}>
+          <View style={s.content}>
             {showingDirectory && (
               <View style={s.directory}>
                 {filtered.length === 0 ? (
@@ -569,17 +632,18 @@ export function BankConnectionPicker({
                           {entries.map((entry) => (
                             <Pressable
                               key={entry.id}
+                              ref={(node) => {
+                                if (node) tileRefs.current.set(entry.id, node)
+                                else tileRefs.current.delete(entry.id)
+                              }}
                               testID={`bank-service-${entry.id}`}
                               accessibilityRole="button"
                               accessibilityLabel={`${entry.name}, ${bankCountryLabel(bankServiceCountry(entry), locale)}`}
                               accessibilityHint={copy.choose}
-                              accessibilityState={{ selected: selected?.id === entry.id }}
-                              aria-pressed={selected?.id === entry.id}
                               onPress={() => select(entry)}
                               style={({ pressed }) => [
                                 s.tile,
                                 { width: Math.max(0, tileWidth) },
-                                selected?.id === entry.id && s.selectedTile,
                                 pressed && s.pressed,
                               ]}
                             >
@@ -690,7 +754,6 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
     filterText: { color: c.textSecondary, fontFamily: 'GeistMedium', fontSize: 13, lineHeight: 20 },
     selectedFilterText: { color: c.primary, fontFamily: 'GeistSemibold' },
     content: { gap: 24, minWidth: 0 },
-    contentWide: { flexDirection: 'row', alignItems: 'flex-start' },
     directory: { flex: 1, minWidth: 0, gap: 24 },
     group: { gap: 10 },
     groupHeading: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -709,13 +772,16 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
     pressed: { opacity: 0.76 },
     bankName: { color: c.textPrimary, fontFamily: 'GeistMedium', fontSize: 14, lineHeight: 20 },
     bankIdentity: { gap: 3 },
-    details: { minWidth: 0, gap: 18 },
-    detailsWide: {
-      width: 340,
-      flexShrink: 0,
-      paddingLeft: 20,
-      borderLeftWidth: 1,
-      borderLeftColor: c.border,
+    details: { minWidth: 0, gap: 20, width: '100%', maxWidth: 640, alignSelf: 'center' },
+    primaryRoute: { gap: 16, padding: 20, borderRadius: 16, backgroundColor: c.surface },
+    options: { gap: 8 },
+    optionsToggle: {
+      minHeight: 44,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderTopWidth: 1,
+      borderTopColor: c.border,
     },
     backButton: {
       minHeight: 44,
@@ -734,7 +800,7 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
       lineHeight: 29,
       letterSpacing: -0.4,
     },
-    route: { gap: 10, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: c.border },
+    route: { gap: 8 },
     routeHeading: { flexDirection: 'row', gap: 8, alignItems: 'center' },
     routeTitle: {
       color: c.textPrimary,

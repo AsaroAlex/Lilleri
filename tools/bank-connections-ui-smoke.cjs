@@ -110,6 +110,21 @@ async function fits(page, label) {
       const detail = page.getByTestId('bank-service-detail')
       await detail.getByRole('heading', { name, exact: true }).waitFor()
       assert.equal(await button(page, 'Collega il conto').count(), 1)
+      assert.equal(
+        await page.getByRole('heading', { name: 'Trova la tua banca', exact: true }).count(),
+        0,
+      )
+      assert.equal(await search.count(), 0)
+      assert.equal(await page.getByRole('combobox', { name: 'Paese', exact: true }).count(), 0)
+      const options = detail.getByTestId('bank-detail-options-toggle')
+      assert.equal(await options.getAttribute('aria-expanded'), 'false')
+      assert.equal(
+        await detail.getByRole('heading', { name: 'File dei movimenti', exact: true }).count(),
+        0,
+      )
+      assert.equal(await detail.getByRole('link', { name: /Apri il sito ufficiale/ }).count(), 0)
+      await options.click()
+      assert.equal(await options.getAttribute('aria-expanded'), 'true')
       const website = detail.getByRole('link', { name: /Apri il sito ufficiale/ })
       assert.equal(await website.getAttribute('target'), '_blank')
       assert.equal(await website.getAttribute('rel'), 'noopener noreferrer')
@@ -121,7 +136,16 @@ async function fits(page, label) {
       }
       await fits(page, name)
       await button(page, 'Tutti i servizi').click()
-      assert.equal(await search.evaluate((element) => document.activeElement === element), true)
+      const serviceId = await button(page, name).getAttribute('data-testid')
+      await page.waitForFunction(
+        (id) => document.activeElement?.getAttribute('data-testid') === id,
+        serviceId,
+        { timeout: 3_000 },
+      )
+      assert.equal(
+        await button(page, name).evaluate((element) => document.activeElement === element),
+        true,
+      )
     }
     pass('Bank, Amex and Satispay details explain unavailable routes and return keyboard focus')
     for (const width of [320, 390, 599, 768, 960, 1440]) {
