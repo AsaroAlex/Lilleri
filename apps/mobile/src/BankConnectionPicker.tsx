@@ -20,6 +20,7 @@ import {
 } from 'react-native'
 import { AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './accessibility/web-focus'
+import { BankServiceLogo } from './BankServiceLogo'
 import { bankServiceCountry, filterBankServices } from './bank-directory-search'
 import { FinanceVisual } from './FinanceVisual'
 import { bankCountryLabel, bankPickerCopy } from './i18n/bank-picker-messages'
@@ -52,25 +53,6 @@ function secureUrl(value: string | null) {
   } catch {
     return null
   }
-}
-
-/** Text identifiers are decorative navigation aids, not reproductions of bank logos. */
-function monogram(name: string) {
-  if (name === 'American Express') return 'Amex'
-  if (name === 'Banco BPM') return 'BPM'
-  if (name === 'Intesa Sanpaolo') return 'IS'
-  if (name === 'Monte dei Paschi di Siena') return 'MPS'
-  if (name === 'BNL BNP Paribas') return 'BNL'
-  if (name === 'BPER Banca') return 'BPER'
-  if (name === 'ING' || name === 'N26') return name
-  const words = name.split(/[\s-]+/).filter(Boolean)
-  return words.length > 1
-    ? words
-        .slice(0, 2)
-        .map((part) => part[0])
-        .join('')
-        .toUpperCase()
-    : name.slice(0, 2)
 }
 
 /** Read-only discovery. Brand directory IDs never enter the synthetic connection writer. */
@@ -285,7 +267,7 @@ export function BankConnectionPicker({
           <Text style={s.linkText}>{copy.back}</Text>
         </Pressable>
         <View style={s.detailHeading}>
-          <FinanceVisual kind={entry.kind} size={64} mode={theme} />
+          <BankServiceLogo entryId={entry.id} name={entry.name} theme={theme} detail />
           <View style={s.detailName}>
             <Text ref={headingRef} accessibilityRole="header" aria-level={3} style={s.detailTitle}>
               {entry.name}
@@ -572,9 +554,7 @@ export function BankConnectionPicker({
                                 pressed && s.pressed,
                               ]}
                             >
-                              <View accessible={false} aria-hidden={true} style={s.monogram}>
-                                <Text style={s.monogramText}>{monogram(entry.name)}</Text>
-                              </View>
+                              <BankServiceLogo entryId={entry.id} name={entry.name} theme={theme} />
                               <View style={s.bankIdentity}>
                                 <Text style={s.bankName}>{entry.name}</Text>
                                 <Text style={s.caption}>
@@ -698,20 +678,6 @@ function makeStyles(c: typeof colors.light | typeof colors.dark) {
     },
     selectedTile: { borderColor: c.primary, backgroundColor: c.primarySoft },
     pressed: { opacity: 0.76 },
-    monogram: {
-      width: 40,
-      height: 34,
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 7,
-      backgroundColor: c.background,
-    },
-    monogramText: {
-      color: c.textSecondary,
-      fontFamily: 'GeistSemibold',
-      fontSize: 12,
-      lineHeight: 18,
-    },
     bankName: { color: c.textPrimary, fontFamily: 'GeistMedium', fontSize: 14, lineHeight: 20 },
     bankIdentity: { gap: 3 },
     details: { minWidth: 0, gap: 18 },
