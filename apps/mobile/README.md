@@ -1,6 +1,8 @@
 # Lilleri mobile prototype
 
-Expo / React Native app with a web export. It uses the local synthetic API only; real banking connections are unavailable. Authentication is disabled in the default demo. The optional local identity mode supports synthetic local accounts and sessions; it remains restricted to loopback development.
+Expo / React Native app with a web export. In the default demo it uses the local synthetic API, real banking connections are unavailable and authentication is disabled. The optional local identity mode supports synthetic local accounts and sessions; it remains restricted to loopback development.
+
+The hosted build (`EXPO_PUBLIC_HOSTED_AUTH_MODE=1`, produced by `tools/production/build.mjs`) adds email sign-in, the Plus subscription screen (Stripe Checkout and Customer Portal) and real bank connections through the server's Enable Banking redirect flow (`BankInstitutionPicker`). See the [production release runbook](../../docs/operations/production-release.md).
 
 From the repository root, after installing dependencies and building shared packages:
 
