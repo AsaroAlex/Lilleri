@@ -244,7 +244,7 @@ async function search(page, description, english = false) {
     )
     assert.equal(archiveResponse.headers()['content-type'], 'application/zip')
     const download = await downloadPending
-    assert.equal(download.suggestedFilename(), 'lilleri-dati-dimostrativi.zip')
+    assert.equal(download.suggestedFilename(), 'lilleri-dati.zip')
     const downloadedBytes = await readFile(await download.path())
     assert.equal(downloadedBytes.subarray(0, 2).toString(), 'PK')
     const files = unzipSync(downloadedBytes)

@@ -98,7 +98,7 @@ async function column(page, label, header) {
 }
 const preview = (page) =>
   responseFrom(page, '/v1/imports/mapped/preview', () =>
-    button(page, 'Mostra anteprima importazione').click(),
+    button(page, 'Controlla i movimenti da importare').click(),
   )
 ;(async () => {
   for (const origin of [ui, api]) {
@@ -177,7 +177,7 @@ const preview = (page) =>
     )
     await page.getByRole('radio', { name: 'Foglio Excel: Archivio', exact: true }).click()
     assert.equal(
-      await page.getByRole('heading', { name: '3. Controlla l’anteprima', exact: true }).count(),
+      await page.getByRole('heading', { name: '3. Verifica e importa', exact: true }).count(),
       0,
     )
     await responseFrom(page, '/v1/imports/mapped/workbook', () =>
@@ -220,11 +220,16 @@ const preview = (page) =>
       },
       { times: 1 },
     )
-    await responseFrom(page, path, () => button(page, 'Importa righe dell’anteprima').click(), 503)
+    await responseFrom(
+      page,
+      path,
+      () => button(page, 'Importa i movimenti controllati').click(),
+      503,
+    )
     await page.getByRole('alert').waitFor()
     await page.getByText('File selezionato: estratto-sintetico.xlsx', { exact: true }).waitFor()
     const accepted = await responseFrom(page, path, () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     assert.equal(accepted.inserted, 2)
     assert.equal(bodies.length, 2)
@@ -249,7 +254,7 @@ const preview = (page) =>
     const repeatedPreview = await preview(page)
     assert.equal(repeatedPreview.rows[0].record.id, first.rows[0].record.id)
     const repeated = await responseFrom(page, path, () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     assert.equal(repeated.unchanged, 2)
     assertFinancialUnchanged(after, await request('/v1/demo'), report, true)

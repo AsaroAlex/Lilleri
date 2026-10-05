@@ -74,7 +74,7 @@ async function openPanel(page) {
   await button(page, 'Collegamenti e fonti').click()
   await page.getByRole('heading', { name: 'Collegamenti', exact: true }).waitFor()
   await button(page, 'Ricarica stato e disponibilità').waitFor()
-  await page.getByText('Disponibile solo nella simulazione', { exact: false }).first().waitFor()
+  await page.getByText('Disponibile solo nell’ambiente locale', { exact: false }).first().waitFor()
 }
 async function actionResponse(page, path, action, status = 200) {
   const pending = page.waitForResponse(
@@ -130,11 +130,13 @@ async function noOverflow(page, label) {
         .count(),
       5,
     )
-    await page.getByText('Nessuna banca reale viene collegata.', { exact: false }).waitFor()
+    await page
+      .getByText('Non collega banche reali e non dispone pagamenti.', { exact: false })
+      .waitFor()
     for (const label of ['Conto corrente', 'Risparmi', 'Carta', 'Contanti']) {
       await page.getByRole('radio', { name: label, exact: true }).click()
       await page
-        .getByText(`${label} · Disponibile solo nella simulazione`, { exact: true })
+        .getByText(`${label} · Disponibile solo nell’ambiente locale`, { exact: true })
         .waitFor()
     }
     for (const label of [
@@ -175,9 +177,9 @@ async function noOverflow(page, label) {
     check('Pause denies actual sync and preserves consent generation, dates, accounts and ledger')
 
     const renewed = await actionResponse(page, `${base}/renew`, () =>
-      button(page, 'Rinnova autorizzazione dimostrativa').click(),
+      button(page, 'Rinnova autorizzazione locale').click(),
     )
-    await page.getByText('Rinnovo confermato dalla fonte dimostrativa.', { exact: false }).waitFor()
+    await page.getByText('Rinnovo confermato dalla fonte locale.', { exact: false }).waitFor()
     assert.equal(renewed.state, 'paused')
     assert.equal(renewed.paused, true)
     assert.equal(renewed.consentId, beforeLifecycle.consentId)
@@ -257,7 +259,7 @@ async function noOverflow(page, label) {
     await unknownCard.getByText('Copertura non verificata', { exact: false }).waitFor()
     assert.equal(
       await unknownCard
-        .getByRole('button', { name: 'Collega la fonte dimostrativa', exact: true })
+        .getByRole('button', { name: 'Collega la fonte locale', exact: true })
         .count(),
       0,
     )

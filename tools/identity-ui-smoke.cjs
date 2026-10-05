@@ -102,7 +102,7 @@ async function bounded(promise) {
     assert.equal(await signup.isDisabled(), true)
     await page
       .getByRole('checkbox', {
-        name: 'Accetto le condizioni locali di prova, bozza v1.',
+        name: 'Accetto le condizioni dell’ambiente locale.',
         exact: true,
       })
       .click()
@@ -119,14 +119,9 @@ async function bounded(promise) {
     assert.equal(data.value.accounts.length, 0)
     assert.equal(data.value.transactions.length, 0)
     checks.push('signup adult/terms gates and authenticated empty financial profile')
-    await page.getByRole('button', { name: 'Privacy e dati', exact: true }).click()
-    // Exact connect label is read from the rendered implementation, not guessed from API state.
-    const buttons = await page.getByRole('button').allTextContents()
-    const connectLabel = buttons.find((v) =>
-      /Aggiungi.*fonte|Collega.*fonte|Collega.*simul|Attiva.*fonte/i.test(v),
-    )
-    if (!connectLabel) throw new Error('Connect mock button absent')
-    await page.getByRole('button', { name: connectLabel.trim(), exact: true }).click()
+    await page.getByRole('button', { name: 'Collegamenti e fonti', exact: true }).click()
+    await page.getByRole('heading', { name: 'Collegamenti', exact: true }).waitFor()
+    await page.getByRole('button', { name: 'Collega la fonte locale', exact: true }).click()
     await page.waitForFunction(async (base) => {
       const r = await fetch(`${base}/v1/demo`, { credentials: 'include' })
       return r.ok && (await r.json()).transactions.length > 0
@@ -307,7 +302,7 @@ async function bounded(promise) {
         .click()
       await page
         .getByRole('checkbox', {
-          name: 'Accetto le condizioni locali di prova, bozza v1.',
+          name: 'Accetto le condizioni dell’ambiente locale.',
           exact: true,
         })
         .click()
@@ -433,7 +428,7 @@ async function bounded(promise) {
     await erasureObserver.goto(ui)
     await erasureObserver.getByRole('button', { name: 'Movimenti', exact: true }).click()
     await erasureObserver.getByRole('button', { name: 'Regole', exact: true }).waitFor()
-    await page.getByRole('button', { name: 'Elimina dati dimostrativi', exact: true }).click()
+    await page.getByRole('button', { name: 'Elimina profilo e dati', exact: true }).click()
     await page.getByRole('button', { name: 'Conferma eliminazione', exact: true }).click()
     await page
       .getByRole('button', { name: 'Accedi con password', exact: true })
@@ -453,7 +448,7 @@ async function bounded(promise) {
       await erasureObserver.getByRole('button', { name: 'Regole', exact: true }).count(),
       0,
     )
-    await page.getByText('Dati dimostrativi eliminati.', { exact: true }).waitFor()
+    await page.getByText('Profilo e dati eliminati.', { exact: true }).waitFor()
     checks.push(
       'successful erasure immediately clears credentials, visible setup secrets and hidden-tab financial display',
     )
@@ -463,7 +458,7 @@ async function bounded(promise) {
     assert.equal(reopened.status, 200)
     assert.equal(reopened.value.accounts.length, 0)
     assert.equal(reopened.value.transactions.length, 0)
-    assert.equal(await page.getByText('Dati dimostrativi eliminati.', { exact: true }).count(), 0)
+    assert.equal(await page.getByText('Profilo e dati eliminati.', { exact: true }).count(), 0)
     checks.push(
       'a fresh empty synthetic identity can be created after erasure without reloading the browser',
     )

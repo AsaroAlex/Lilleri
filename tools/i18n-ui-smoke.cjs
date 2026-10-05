@@ -132,7 +132,7 @@ async function save(page, label, expected = 200) {
     await button(page, 'Privacy and data').click()
     await page.getByRole('heading', { name: 'Your privacy preferences', exact: true }).waitFor()
     await page.getByRole('checkbox', { name: 'Use only my rules', exact: true }).waitFor()
-    await page.getByText(/Synthetic choice text in Italian, version/).waitFor()
+    await page.getByText(/Choice text in the local environment, version/).waitFor()
     check(
       'Reload reads saved English preferences and localises privacy while clearly labelling the original versioned Italian disclosure',
     )

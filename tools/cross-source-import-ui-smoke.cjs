@@ -106,20 +106,20 @@ async function column(page, field, header) {
       ])
         await column(page, field, header)
       return responseFrom(page, '/v1/imports/mapped/preview', () =>
-        button(page, 'Mostra anteprima importazione').click(),
+        button(page, 'Controlla i movimenti da importare').click(),
       )
     }
     const preview = await prepare()
     assert.equal(preview.crossSourceCandidates.length, 1)
     assert.equal(preview.crossSourceCandidates[0].transactionId, bank.id)
     assert.equal(preview.crossSourceCandidates[0].dateDistanceDays, 7)
-    assert.ok(await button(page, 'Importa righe dell’anteprima').isDisabled())
+    assert.ok(await button(page, 'Importa i movimenti controllati').isDisabled())
     await page.getByText(bank.description, { exact: false }).waitFor()
     const link = page.getByRole('button', { name: /^Collega al movimento bancario del / })
     await link.click()
     assert.equal(await link.getAttribute('aria-pressed'), 'true')
     const accepted = await responseFrom(page, '/v1/imports/mapped/commit', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     assert.equal(accepted.linked, 1)
     assert.equal(accepted.inserted, 0)
@@ -164,7 +164,7 @@ async function column(page, field, header) {
     assert.equal(fresh.previousImports[0].disposition, 'imported')
     assert.equal(fresh.crossSourceCandidates.length, 0)
     const repeated = await responseFrom(page, '/v1/imports/mapped/commit', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     assert.equal(repeated.inserted, 0)
     assert.equal(repeated.linked, 0)

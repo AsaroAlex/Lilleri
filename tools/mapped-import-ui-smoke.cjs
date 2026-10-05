@@ -68,9 +68,9 @@ async function inspect(page, csv) {
 }
 async function preview(page) {
   const value = await responseFrom(page, '/v1/imports/mapped/preview', 'POST', () =>
-    button(page, 'Mostra anteprima importazione').click(),
+    button(page, 'Controlla i movimenti da importare').click(),
   )
-  await page.getByRole('heading', { name: '3. Controlla l’anteprima', exact: true }).waitFor()
+  await page.getByRole('heading', { name: '3. Verifica e importa', exact: true }).waitFor()
   return value
 }
 async function manualAccount(id) {
@@ -170,7 +170,7 @@ async function noOverflow(page, name) {
     await page
       .getByRole('textbox', { name: 'Nome delle associazioni CSV', exact: true })
       .fill(`${name} aggiornato`)
-    assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
+    assert.equal(await page.getByRole('heading', { name: '3. Verifica e importa' }).count(), 0)
     const renamed = await responseFrom(page, `/v1/import-mappings/${saved.id}`, 'PATCH', () =>
       button(page, 'Salva modifiche alle associazioni').click(),
     )
@@ -227,7 +227,7 @@ async function noOverflow(page, name) {
       page,
       commitPath,
       'POST',
-      () => button(page, 'Importa righe dell’anteprima').click(),
+      () => button(page, 'Importa i movimenti controllati').click(),
       503,
     )
     assert.equal(acceptedServerStatus, 200, 'The actual server commits before a lost success reply')
@@ -235,7 +235,7 @@ async function noOverflow(page, name) {
     assert.equal(await csvField(page).inputValue(), csv)
     assert.equal((await manualAccount(account.id)).balanceMinor, firstBalance)
     const accepted = await responseFrom(page, commitPath, 'POST', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     await page
       .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
@@ -247,7 +247,7 @@ async function noOverflow(page, name) {
     assert.equal(acceptedBodies[0].requestId, acceptedBodies[1].requestId)
     assert.equal((await manualAccount(account.id)).balanceMinor, firstBalance)
     assert.equal(await csvField(page).inputValue(), '')
-    assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
+    assert.equal(await page.getByRole('heading', { name: '3. Verifica e importa' }).count(), 0)
     check(
       'Lost success reply retains preview and request identity; explicit retry adds each row and exact manual balance once',
     )
@@ -256,7 +256,7 @@ async function noOverflow(page, name) {
     await inspect(page, csv)
     await preview(page)
     const repeated = await responseFrom(page, commitPath, 'POST', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     await page
       .getByText('0 nuovi movimenti, 0 aggiornati, 2 già presenti; 0 collegati alla banca.', {
@@ -274,24 +274,24 @@ async function noOverflow(page, name) {
     assert.deepEqual(duplicatePreview.errors, [])
     assert.equal(duplicatePreview.canImport, false)
     assert.equal(duplicatePreview.duplicateCandidates.length, 1)
-    assert.equal(await button(page, 'Importa righe dell’anteprima').isDisabled(), true)
+    assert.equal(await button(page, 'Importa i movimenti controllati').isDisabled(), true)
     const acknowledgement = page.getByRole('checkbox', {
       name: 'Ho controllato le righe uguali e voglio mantenerle tutte',
       exact: true,
     })
     await acknowledgement.click()
-    assert.equal(await button(page, 'Importa righe dell’anteprima').isDisabled(), false)
+    assert.equal(await button(page, 'Importa i movimenti controllati').isDisabled(), false)
     await csvField(page).fill(duplicateCsv.replaceAll('Acquisto uguale', 'Acquisto ricontrollato'))
-    assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
+    assert.equal(await page.getByRole('heading', { name: '3. Verifica e importa' }).count(), 0)
     await responseFrom(page, '/v1/imports/mapped/layout', 'POST', () =>
       button(page, 'Leggi intestazioni CSV').click(),
     )
     await preview(page)
     assert.equal(await acknowledgement.getAttribute('aria-checked'), 'false')
-    assert.equal(await button(page, 'Importa righe dell’anteprima').isDisabled(), true)
+    assert.equal(await button(page, 'Importa i movimenti controllati').isDisabled(), true)
     await acknowledgement.click()
     const kept = await responseFrom(page, commitPath, 'POST', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     await page
       .getByText('2 nuovi movimenti, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
@@ -333,20 +333,20 @@ async function noOverflow(page, name) {
       page,
       commitPath,
       'POST',
-      () => button(page, 'Importa righe dell’anteprima').click(),
+      () => button(page, 'Importa i movimenti controllati').click(),
       409,
     )
     assert.equal(stale.code, 'import_preview_stale')
     await page
       .getByText('Il conto, i movimenti o le associazioni sono cambiati.', { exact: false })
       .waitFor()
-    assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
+    assert.equal(await page.getByRole('heading', { name: '3. Verifica e importa' }).count(), 0)
     await page.waitForTimeout(200)
     assert.equal(acceptedBodies.length, beforeStaleWrites + 1)
     assertFinancialUnchanged(intervened, await request('/v1/demo'), report, true)
     await preview(page)
     await responseFrom(page, commitPath, 'POST', () =>
-      button(page, 'Importa righe dell’anteprima').click(),
+      button(page, 'Importa i movimenti controllati').click(),
     )
     await page
       .getByText('1 nuovo movimento, 0 aggiornati, 0 già presenti; 0 collegati alla banca.', {
@@ -433,7 +433,7 @@ async function noOverflow(page, name) {
       },
       { times: 1 },
     )
-    await Promise.all([incoming, button(page, 'Mostra anteprima importazione').click()])
+    await Promise.all([incoming, button(page, 'Controlla i movimenti da importare').click()])
     await button(page, '← Torna ai movimenti').click()
     release()
     await page.waitForTimeout(250)
@@ -444,7 +444,7 @@ async function noOverflow(page, name) {
     )
     await button(page, 'Importa file').click()
     assert.equal(await csvField(page).inputValue(), '')
-    assert.equal(await page.getByRole('heading', { name: '3. Controlla l’anteprima' }).count(), 0)
+    assert.equal(await page.getByRole('heading', { name: '3. Verifica e importa' }).count(), 0)
     assert.deepEqual(report.pageErrors, [])
     check(
       'Unmount discards delayed old error and volatile CSV/preview; no browser JavaScript errors',

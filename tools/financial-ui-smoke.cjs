@@ -203,12 +203,14 @@ const matchCard = (page) =>
       page,
       '/v1/rules',
       'POST',
-      () => button(page, 'Salva e mostra anteprima').click(),
+      () => button(page, 'Salva e controlla').click(),
       201,
     )
     const rule = created.value
     const rulePath = `/v1/rules/${encodeURIComponent(rule.id)}`
-    await page.getByRole('heading', { name: `Anteprima: ${name}`, exact: true }).waitFor()
+    await page
+      .getByRole('heading', { name: `Effetto della regola: ${name}`, exact: true })
+      .waitFor()
     assert.equal(rule.enabled, false)
     assert.deepEqual(
       (await overview()).analysis.classifications,
@@ -248,7 +250,7 @@ const matchCard = (page) =>
     )
     await page
       .getByText(
-        'Versione precedente ripristinata come bozza. Controlla una nuova anteprima per attivarla.',
+        'Versione precedente ripristinata e disattivata. Controlla l’effetto sui movimenti prima di attivarla.',
       )
       .waitFor()
     let savedRule = (await request('/v1/rules')).find((item) => item.id === rule.id)
@@ -256,8 +258,10 @@ const matchCard = (page) =>
     assert.ok(savedRule.revision > rule.revision)
     check('Rule disable restores classifications; undo restores a draft requiring fresh preview')
 
-    await button(ruleCard(page, name), 'Mostra anteprima').click()
-    await page.getByRole('heading', { name: `Anteprima: ${name}`, exact: true }).waitFor()
+    await button(ruleCard(page, name), 'Controlla i movimenti').click()
+    await page
+      .getByRole('heading', { name: `Effetto della regola: ${name}`, exact: true })
+      .waitFor()
     await request(rulePath, 'PATCH', {
       revision: savedRule.revision,
       definition: {
@@ -412,7 +416,7 @@ const matchCard = (page) =>
     await page.getByRole('textbox', { name: 'Contenuto del CSV', exact: true }).fill(csv)
     const beforeCsv = await overview()
     const preview = await responseFrom(page, '/v1/imports/csv/preview', 'POST', () =>
-      button(page, 'Controlla anteprima CSV').click(),
+      button(page, 'Controlla i movimenti del CSV').click(),
     )
     assert.equal(preview.value.newRows, 2)
     assert.equal(preview.value.newAmountTotalMinor, '380')
@@ -439,7 +443,7 @@ const matchCard = (page) =>
 
     await page.getByRole('textbox', { name: 'Contenuto del CSV', exact: true }).fill(csv)
     const replayPreview = await responseFrom(page, '/v1/imports/csv/preview', 'POST', () =>
-      button(page, 'Controlla anteprima CSV').click(),
+      button(page, 'Controlla i movimenti del CSV').click(),
     )
     assert.equal(replayPreview.value.newRows, 0)
     assert.equal(replayPreview.value.unchangedRows, 2)
@@ -577,7 +581,7 @@ const matchCard = (page) =>
       /^attachment; filename=".+\.zip"$/,
     )
     const download = await downloadPending
-    assert.equal(download.suggestedFilename(), 'lilleri-dati-dimostrativi.zip')
+    assert.equal(download.suggestedFilename(), 'lilleri-dati.zip')
     const downloadedBytes = await readFile(await download.path())
     assert.equal(downloadedBytes.subarray(0, 2).toString(), 'PK')
     const files = unzipSync(downloadedBytes)
