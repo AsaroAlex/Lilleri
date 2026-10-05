@@ -457,7 +457,9 @@ export function ConnectionsPanel({
       {emptyFixtures ? (
         <View style={s.card}>
           <FinanceVisual kind="bank" size={80} mode={theme} />
-          <Text style={s.subtitle}>{t('connections.setupTitle')}</Text>
+          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
+            {t('connections.setupTitle')}
+          </Text>
           {(
             [
               ['connections.setupIdentity', 'connections.setupPending'],
