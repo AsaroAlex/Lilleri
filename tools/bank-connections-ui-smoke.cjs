@@ -109,7 +109,7 @@ async function fits(page, label) {
       await button(page, name).click()
       const detail = page.getByTestId('bank-service-detail')
       await detail.getByRole('heading', { name, exact: true }).waitFor()
-      assert.equal(await button(page, 'Collega il conto').count(), 0)
+      assert.equal(await button(page, 'Collega il conto').count(), 1)
       const website = detail.getByRole('link', { name: /Apri il sito ufficiale/ })
       assert.equal(await website.getAttribute('target'), '_blank')
       assert.equal(await website.getAttribute('rel'), 'noopener noreferrer')

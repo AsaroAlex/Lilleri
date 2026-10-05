@@ -20,6 +20,7 @@ import {
 } from 'react-native'
 import { AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './accessibility/web-focus'
+import { BankConnectionFlow } from './BankConnectionFlow'
 import { BankServiceLogo } from './BankServiceLogo'
 import { bankServiceCountry, filterBankServices } from './bank-directory-search'
 import { FinanceVisual } from './FinanceVisual'
@@ -27,12 +28,14 @@ import { bankCountryLabel, bankPickerCopy } from './i18n/bank-picker-messages'
 import { useI18n } from './i18n/context'
 
 export interface BankConnectionPickerProps {
-  readonly api: Pick<ApiClient, 'connectionDirectory'>
+  readonly api: Pick<ApiClient, 'connectionDirectory' | 'connectionCheck'>
   readonly theme: BrandTheme
   /** A profile/session change invalidates pending reads and the visible selection. */
   readonly resetKey: string | number
   readonly protectedPersonalAccess?: boolean
   readonly onImportStatement?: (entryId: string) => void
+  readonly onManualAccount?: (entryId: string) => void
+  readonly onSignIn?: () => void
   /** Only a verified, available provider institution can reach this callback. */
   readonly onSelectConnect?: (institutionId: string, providerId: string) => void
 }
@@ -62,6 +65,8 @@ export function BankConnectionPicker({
   resetKey,
   protectedPersonalAccess = false,
   onImportStatement,
+  onManualAccount,
+  onSignIn,
   onSelectConnect,
 }: BankConnectionPickerProps) {
   const { locale } = useI18n()
@@ -88,6 +93,10 @@ export function BankConnectionPicker({
     scope: resetKey,
     id: null,
   })
+  const [connectionSelection, setConnectionSelection] = useState<{
+    scope: Scope
+    id: string | null
+  }>({ scope: resetKey, id: null })
   const requestEpoch = useRef(0)
   const scopeRef = useRef(resetKey)
   scopeRef.current = resetKey
@@ -145,6 +154,8 @@ export function BankConnectionPicker({
     selection.scope === resetKey
       ? directory?.entries.find((entry) => entry.id === selection.id)
       : undefined
+  const connecting =
+    selected && connectionSelection.scope === resetKey && connectionSelection.id === selected.id
   const compact = width < 760
   const showingDirectory = !selected || !compact
   const listWidth = selected && !compact ? width - 340 - 24 : width
@@ -153,14 +164,14 @@ export function BankConnectionPicker({
   const filtered = filterBankServices(directory?.entries ?? [], query, filter, country)
 
   useEffect(() => {
-    if (selected && focusDetail.current) {
+    if (selected && !connecting && focusDetail.current) {
       focusDetail.current = false
       focusWebElement(headingRef.current)
     } else if (!selected && returnToSearch.current) {
       returnToSearch.current = false
       focusWebElement(searchRef.current, true)
     }
-  }, [selected])
+  }, [selected, connecting])
 
   const resetSearch = () => {
     setQuery({ scope: resetKey, value: '' })
@@ -168,13 +179,16 @@ export function BankConnectionPicker({
   }
   const select = (entry: ConnectionDirectoryEntry) => {
     focusDetail.current = true
+    setConnectionSelection({ scope: resetKey, id: null })
     setSelection({ scope: resetKey, id: entry.id })
   }
   const clearSelection = () => {
+    setConnectionSelection({ scope: resetKey, id: null })
     returnToSearch.current = true
     setSelection({ scope: resetKey, id: null })
   }
   const chooseCountry = (value: string) => {
+    setConnectionSelection({ scope: resetKey, id: null })
     setCountry({ scope: resetKey, value })
     setCountryMenu({ scope: resetKey, open: false })
     focusDetail.current = false
@@ -224,6 +238,26 @@ export function BankConnectionPicker({
   }
 
   function details(entry: ConnectionDirectoryEntry) {
+    if (connecting)
+      return (
+        <View style={[s.details, !compact && s.detailsWide]}>
+          <BankConnectionFlow
+            api={api}
+            entry={entry}
+            theme={theme}
+            resetKey={resetKey}
+            protectedPersonalAccess={protectedPersonalAccess}
+            onBack={() => {
+              focusDetail.current = true
+              setConnectionSelection({ scope: resetKey, id: null })
+            }}
+            {...(onSignIn ? { onSignIn } : {})}
+            {...(onImportStatement ? { onImportStatement } : {})}
+            {...(onManualAccount ? { onManualAccount } : {})}
+            {...(onSelectConnect ? { onSelectConnect } : {})}
+          />
+        </View>
+      )
     const available =
       entry.automatic.state === 'available' &&
       directory?.prerequisites.privateAccess === 'ready' &&
@@ -277,6 +311,17 @@ export function BankConnectionPicker({
             </Text>
           </View>
         </View>
+        <Pressable
+          testID="bank-connect-action"
+          accessibilityRole="button"
+          onPress={() => {
+            if (scopeRef.current === resetKey)
+              setConnectionSelection({ scope: resetKey, id: entry.id })
+          }}
+          style={[s.action, s.primaryAction]}
+        >
+          <Text style={s.primaryActionText}>{copy.connect}</Text>
+        </Pressable>
         <View style={s.route}>
           <View style={s.routeHeading}>
             <FinanceVisual kind="link" size={28} mode={theme} bare color={c.textSecondary} />
@@ -285,22 +330,6 @@ export function BankConnectionPicker({
             </Text>
           </View>
           <Text style={s.body}>{automaticCopy}</Text>
-          {available && (
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                if (
-                  scopeRef.current === resetKey &&
-                  entry.automatic.institutionId &&
-                  entry.automatic.providerId
-                )
-                  onSelectConnect?.(entry.automatic.institutionId, entry.automatic.providerId)
-              }}
-              style={[s.action, s.primaryAction]}
-            >
-              <Text style={s.primaryActionText}>{copy.connect}</Text>
-            </Pressable>
-          )}
         </View>
         <View style={s.route}>
           <View style={s.routeHeading}>

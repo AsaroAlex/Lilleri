@@ -167,7 +167,7 @@ async function detail(page, entry, locale) {
   const panel = page.getByTestId('bank-service-detail')
   await panel.getByRole('heading', { name: entry.name, exact: true }).waitFor()
   assert.ok((await panel.innerText()).includes(countryName(locale, entry.countryCode)))
-  assert.equal(await button(page, copy[locale].connect).count(), 0)
+  assert.equal(await button(page, copy[locale].connect).count(), 1)
   const website = panel.getByRole('link', { name: copy[locale].official })
   assert.equal(await website.getAttribute('href'), entry.officialUrl)
   assert.equal(await website.getAttribute('target'), '_blank')

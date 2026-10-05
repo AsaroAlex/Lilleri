@@ -60,3 +60,10 @@ export interface ConnectionDirectory {
   }
   readonly entries: readonly ConnectionDirectoryEntry[]
 }
+
+/** Fresh public availability check; this is neither consent nor a financial connection. */
+export interface ConnectionDirectoryConnectionCheck {
+  readonly entry: ConnectionDirectoryEntry
+  readonly prerequisites: ConnectionDirectory['prerequisites']
+  readonly checkedAt: string
+}

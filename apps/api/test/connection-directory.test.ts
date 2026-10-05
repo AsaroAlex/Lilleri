@@ -1,8 +1,13 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { type DatabaseHandle, openDatabase, schema } from '@lilleri/database'
-import { CONNECTION_DIRECTORY_COUNTRY_CODES } from '@lilleri/domain'
+import {
+  CONNECTION_DIRECTORY_COUNTRY_CODES,
+  type ConnectionDirectory,
+  type ConnectionDirectoryConnectionCheck,
+} from '@lilleri/domain'
+import { MockItalianProvider } from '@lilleri/financial-providers'
 import { eq } from 'drizzle-orm'
-import { afterAll, beforeAll, describe, expect, test } from 'vitest'
+import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest'
 import { createApp } from '../src/app.js'
 
 let handle: DatabaseHandle
@@ -76,7 +81,7 @@ describe('public directory is separate from financial connections', () => {
     const institutions = (await app.inject({ url: '/v1/institutions' })).json()
     expect(institutions.institutions).toEqual([])
     const after = (await app.inject({ url: '/v1/export' })).json()
-    for (const field of ['accounts', 'transactions', 'connections'])
+    for (const field of ['accounts', 'transactions', 'connections', 'syntheticFixtures'])
       expect(after[field]).toEqual(before[field])
     expect(response.payload).not.toMatch(
       /profileId|grantId|consentId|amountMinor|authorizationUrl|clientSecret/,
@@ -113,6 +118,38 @@ describe('public directory is separate from financial connections', () => {
       privateAccess: 'ready',
       bankProvider: 'required',
     })
+    const connectionCheck = await app.inject({
+      url: '/v1/connection-directory/bper/connect',
+      headers: { host: 'localhost:3001' },
+    })
+    expect(connectionCheck.statusCode, connectionCheck.payload).toBe(200)
+    expect(connectionCheck.json().prerequisites).toEqual(response.json().prerequisites)
+    expect(connectionCheck.json().entry.id).toBe('bper')
+    expect(connectionCheck.json().entry.automatic.state).toBe('configuration_required')
+    const head = await app.inject({
+      method: 'HEAD',
+      url: '/v1/connection-directory/bper/connect',
+      headers: { host: 'localhost:3001' },
+    })
+    expect(head.statusCode, head.payload).toBe(200)
+    expect(head.headers['cache-control']).toBe('no-store')
+    expect(head.payload).toBe('')
+    const unknown = await app.inject({
+      url: '/v1/connection-directory/not-a-bank/connect',
+      headers: { host: 'localhost:3001' },
+    })
+    expect(unknown.statusCode, unknown.payload).toBe(404)
+    expect(unknown.json().code).toBe('not_found')
+    for (const request of [
+      { method: 'POST' as const, url: '/v1/connection-directory/bper/connect' },
+      { method: 'GET' as const, url: '/v1/connection-directory/bper/connect/callback' },
+    ]) {
+      const denied = await app.inject({
+        ...request,
+        headers: { host: 'localhost:3001', origin: 'http://localhost:3001' },
+      })
+      expect(denied.statusCode, denied.payload).toBe(401)
+    }
     const overview = await app.inject({ url: '/v1/demo', headers: { host: 'localhost:3001' } })
     expect(overview.statusCode).toBe(401)
     expect(financialScopeCalls).toBe(0)
@@ -123,9 +160,101 @@ describe('public directory is separate from financial connections', () => {
     const app = await createApp({ db: handle.db, demoMode: true, profileId, demoFixtures: 'empty' })
     apps.push(app)
     for (const headers of [{ host: 'attacker.example' }, { origin: 'https://attacker.example' }]) {
-      const response = await app.inject({ url: '/v1/connection-directory', headers })
-      expect(response.statusCode).toBe(403)
-      expect(response.payload).not.toContain('intesa-sanpaolo')
+      for (const url of [
+        '/v1/connection-directory',
+        '/v1/connection-directory/intesa-sanpaolo/connect',
+      ]) {
+        const response = await app.inject({ url, headers })
+        expect(response.statusCode).toBe(403)
+        expect(response.payload).not.toContain('Intesa Sanpaolo')
+      }
     }
+  })
+  test('every bank, card and wallet has a fresh read-only connection check without provider I/O', async () => {
+    const profileId = `directory_${randomUUID()}`
+    profileIds.push(profileId)
+    const provider = new MockItalianProvider()
+    const providerCalls = [
+      vi.spyOn(provider, 'listInstitutions'),
+      vi.spyOn(provider, 'createConnection'),
+      vi.spyOn(provider, 'refreshConnection'),
+      vi.spyOn(provider, 'listAccounts'),
+      vi.spyOn(provider, 'getBalances'),
+      vi.spyOn(provider, 'getTransactions'),
+      vi.spyOn(provider, 'disconnect'),
+    ]
+    const app = await createApp({
+      db: handle.db,
+      demoMode: true,
+      profileId,
+      demoFixtures: 'empty',
+      provider,
+    })
+    apps.push(app)
+    const before = (await app.inject({ url: '/v1/export' })).json()
+    const directory = (
+      await app.inject({ url: '/v1/connection-directory' })
+    ).json<ConnectionDirectory>()
+    expect(directory.entries).toHaveLength(62)
+    for (const entry of directory.entries) {
+      const response = await app.inject({
+        url: `/v1/connection-directory/${encodeURIComponent(entry.id)}/connect`,
+      })
+      expect(response.statusCode, response.payload).toBe(200)
+      expect(response.headers['cache-control']).toBe('no-store')
+      const check = response.json<ConnectionDirectoryConnectionCheck>()
+      expect(check.entry).toEqual(entry)
+      expect(check.prerequisites).toEqual(directory.prerequisites)
+      expect(new Date(check.checkedAt).toISOString()).toBe(check.checkedAt)
+      expect(check.entry.automatic.state).toBe('configuration_required')
+      expect(check.entry.automatic.providerId).toBeNull()
+      expect(check.entry.automatic.institutionId).toBeNull()
+      expect(response.payload).not.toMatch(
+        /profileId|grantId|consentId|amountMinor|authorizationUrl|clientSecret/,
+      )
+    }
+    const after = (await app.inject({ url: '/v1/export' })).json()
+    for (const field of ['accounts', 'transactions', 'connections', 'syntheticFixtures'])
+      expect(after[field]).toEqual(before[field])
+    for (const call of providerCalls) expect(call).not.toHaveBeenCalled()
+  })
+  test('exact directory IDs and server configuration ignore path and query attempts to select or activate a bank', async () => {
+    const profileId = `directory_${randomUUID()}`
+    profileIds.push(profileId)
+    const app = await createApp({ db: handle.db, demoMode: true, profileId, demoFixtures: 'empty' })
+    apps.push(app)
+    const before = (await app.inject({ url: '/v1/export' })).json()
+    const response = await app.inject({
+      url: '/v1/connection-directory/bper/connect?entryId=amex&institutionId=modelo-sandbox&providerId=yapily&privateAccess=ready&bankProvider=ready&state=available&country=GB',
+    })
+    expect(response.statusCode, response.payload).toBe(200)
+    const check = response.json<ConnectionDirectoryConnectionCheck>()
+    expect(check.entry.id).toBe('bper')
+    expect(check.entry.countryCode).toBe('IT')
+    expect(check.prerequisites).toEqual({ privateAccess: 'required', bankProvider: 'required' })
+    expect(check.entry.automatic.state).toBe('configuration_required')
+    expect(check.entry.automatic.providerId).toBeNull()
+    expect(check.entry.automatic.institutionId).toBeNull()
+    for (const id of [
+      'not-a-bank',
+      'BPER',
+      'bper_corporate',
+      'modelo-sandbox',
+      'constructor',
+      '__proto__',
+      'bper/connect',
+    ]) {
+      const missing = await app.inject({
+        url: `/v1/connection-directory/${encodeURIComponent(id)}/connect?entryId=bper`,
+      })
+      expect(missing.statusCode, missing.payload).toBe(404)
+      expect(missing.headers['content-type']).toContain('application/problem+json')
+      expect(missing.json().code).toBe('not_found')
+      expect(missing.json().status).toBe(404)
+      expect(missing.payload).not.toMatch(/institutionId|grantId|authorizationUrl|clientSecret/)
+    }
+    const after = (await app.inject({ url: '/v1/export' })).json()
+    for (const field of ['accounts', 'transactions', 'connections', 'syntheticFixtures'])
+      expect(after[field]).toEqual(before[field])
   })
 })

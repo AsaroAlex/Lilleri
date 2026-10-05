@@ -23,6 +23,7 @@ type ConnectionClient = Pick<
   ApiClient,
   | 'institutions'
   | 'connectionDirectory'
+  | 'connectionCheck'
   | 'connectInstitution'
   | 'connectionLifecycle'
   | 'connectionConsentEvents'
@@ -45,6 +46,9 @@ export interface ConnectionsPanelProps {
   readonly onManualFallback: () => void
   readonly onStatementImport?: () => void
   readonly protectedPersonalAccess?: boolean
+  /** Live authorization must use its own admitted route, never the fixture writer. */
+  readonly onSelectBankConnect?: (institutionId: string, providerId: string) => void
+  readonly onBankSignIn?: () => void
   /** Shared profiles expose discovery and saved source information without write controls. */
   readonly readOnly?: boolean
   readonly onRecoverHistory?: (accountId: string) => void
@@ -116,6 +120,8 @@ export function ConnectionsPanel({
   onManualFallback,
   onStatementImport,
   protectedPersonalAccess = false,
+  onSelectBankConnect,
+  onBankSignIn,
   readOnly = false,
   onRecoverHistory,
   onError,
@@ -479,6 +485,11 @@ export function ConnectionsPanel({
           theme={theme}
           resetKey={scope}
           protectedPersonalAccess={!readOnly && protectedPersonalAccess}
+          {...(onBankSignIn ? { onSignIn: onBankSignIn } : {})}
+          {...(!readOnly && protectedPersonalAccess
+            ? { onManualAccount: () => onManualFallback() }
+            : {})}
+          {...(!readOnly && onSelectBankConnect ? { onSelectConnect: onSelectBankConnect } : {})}
           {...(!readOnly && onStatementImport
             ? { onImportStatement: () => onStatementImport() }
             : {})}

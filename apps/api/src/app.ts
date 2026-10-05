@@ -780,6 +780,8 @@ export async function createApp(options: AppOptions) {
           route.url === '/v1/connections/mock')) ||
       !route.url.startsWith('/v1/') ||
       route.url === '/v1/connection-directory' ||
+      (route.url === '/v1/connection-directory/:entryId/connect' &&
+        ['GET', 'HEAD'].includes(String(route.method))) ||
       route.url.startsWith('/v1/auth/')
     )
       return
@@ -875,7 +877,9 @@ export async function createApp(options: AppOptions) {
       const mutation = !['GET', 'HEAD'].includes(request.method)
       identity.checkOrigin(requestHeaders(request), mutation)
       const publicDirectory =
-        path === '/v1/connection-directory' && ['GET', 'HEAD'].includes(request.method)
+        (path === '/v1/connection-directory' ||
+          path === '/v1/connection-directory/:entryId/connect') &&
+        ['GET', 'HEAD'].includes(request.method)
       if (path.startsWith('/v1/') && !path.startsWith('/v1/auth/') && !publicDirectory) {
         const principal = await identity.financialPrincipal(requestHeaders(request), {
           mutation,
