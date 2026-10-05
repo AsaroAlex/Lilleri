@@ -17,6 +17,8 @@ assert.ok(
 const reportPath = process.env.LILLERI_EUROPE_UI_REPORT || '/tmp/lilleri-european-banks-ui.json'
 // biome-ignore lint/suspicious/noUndeclaredEnvVars: Optional manual screenshot location.
 const screenshotPath = process.env.LILLERI_EUROPE_UI_SCREENSHOT
+// biome-ignore lint/suspicious/noUndeclaredEnvVars: Optional manual mobile screenshot location.
+const mobileScreenshotPath = process.env.LILLERI_EUROPE_UI_MOBILE_SCREENSHOT
 const countryCodes = [
   'IT',
   'FR',
@@ -433,6 +435,11 @@ async function detail(page, entry, locale) {
       await page.setViewportSize({ width: 1440, height: 1000 })
       await selectCountry(page, 'en-GB', 'all')
       await page.screenshot({ path: screenshotPath, fullPage: true })
+    }
+    if (mobileScreenshotPath) {
+      await page.setViewportSize({ width: 390, height: 844 })
+      await selectCountry(page, 'en-GB', 'IT')
+      await page.screenshot({ path: mobileScreenshotPath, fullPage: true })
     }
     assert.deepEqual(apiWrites, [])
     assert.deepEqual(pageErrors, [])
