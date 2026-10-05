@@ -1,8 +1,8 @@
 export const CONNECTION_MESSAGE_PAIRS = {
   'connections.setupTitle': ['Colleghiamo la tua banca.', 'Connect your bank.'],
   'connections.setupHelp': [
-    'Il collegamento reale deve ancora essere attivato. Nessuna credenziale bancaria viene richiesta in questa anteprima.',
-    'The real connection still needs activation. This preview does not ask for bank credentials.',
+    'Banche, carte e wallet, in un solo posto. Scegli una fonte per vedere come collegarla; l’aggiornamento automatico deve ancora essere attivato.',
+    'Banks, cards and wallets in one place. Choose a source to see how to connect it; automatic updates still need activation.',
   ],
   'connections.setupIdentity': ['Accesso personale protetto', 'Protected personal sign-in'],
   'connections.setupProvider': ['Servizio di collegamento bancario', 'Bank connection service'],

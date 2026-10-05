@@ -22,7 +22,7 @@ export const APP_MESSAGE_PAIRS = {
     'Saldi, spese e movimenti, tutti al loro posto.',
     'Balances, spending and transactions, each in its place.',
   ],
-  'app.connectionSetup': ['Prepara il collegamento', 'Set up a connection'],
+  'app.connectionSetup': ['Scegli la tua banca', 'Choose your bank'],
   'app.personalAccessNeeded': [
     'Per usare dati personali serve prima un accesso protetto. Questa anteprima è condivisa.',
     'Personal data needs a protected sign-in first. This preview is shared.',

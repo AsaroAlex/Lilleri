@@ -1270,6 +1270,8 @@ function AppSurface({
                   resetKey={renderedIdentityEpoch}
                   onRefresh={refreshAfterChange}
                   onManualFallback={() => setManage('import')}
+                  onStatementImport={() => setManage('mapped-import')}
+                  protectedPersonalAccess={hostedIdentityMode && signedIn}
                   onRecoverHistory={(accountId) => {
                     if (renderedIdentityEpoch !== identityEpoch.current) return
                     setRecoveryAccount({

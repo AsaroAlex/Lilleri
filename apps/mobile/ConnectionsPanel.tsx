@@ -12,7 +12,7 @@ import {
 import { type BrandTheme, colors, tokens } from '@lilleri/brand'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
-import { FinanceVisual } from './src/FinanceVisual'
+import { BankConnectionPicker } from './src/BankConnectionPicker'
 import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
 import { useI18n } from './src/i18n/context'
 
@@ -22,6 +22,7 @@ type ThemeColors = typeof colors.light | typeof colors.dark
 type ConnectionClient = Pick<
   ApiClient,
   | 'institutions'
+  | 'connectionDirectory'
   | 'connectInstitution'
   | 'connectionLifecycle'
   | 'connectionConsentEvents'
@@ -42,6 +43,8 @@ export interface ConnectionsPanelProps {
   readonly resetKey: number | string
   readonly onRefresh: () => Promise<void>
   readonly onManualFallback: () => void
+  readonly onStatementImport?: () => void
+  readonly protectedPersonalAccess?: boolean
   readonly onRecoverHistory?: (accountId: string) => void
   readonly onError?: (cause: unknown) => boolean
 }
@@ -109,6 +112,8 @@ export function ConnectionsPanel({
   resetKey,
   onRefresh,
   onManualFallback,
+  onStatementImport,
+  protectedPersonalAccess = false,
   onRecoverHistory,
   onError,
 }: ConnectionsPanelProps) {
@@ -432,12 +437,14 @@ export function ConnectionsPanel({
     )
   return (
     <View style={s.panel}>
-      <Text accessibilityRole="header" aria-level={2} style={s.title}>
-        {t('connections.title')}
-      </Text>
-      <Text style={s.body}>
-        {t(emptyFixtures ? 'connections.setupHelp' : 'connections.syntheticDisclosure')}
-      </Text>
+      {!emptyFixtures && !protectedPersonalAccess && (
+        <>
+          <Text accessibilityRole="header" aria-level={2} style={s.title}>
+            {t('connections.title')}
+          </Text>
+          <Text style={s.body}>{t('connections.syntheticDisclosure')}</Text>
+        </>
+      )}
       {error && (
         <Text accessibilityRole="alert" style={s.error}>
           {error}
@@ -454,27 +461,14 @@ export function ConnectionsPanel({
           <Text style={s.body}>{t('connections.loading')}</Text>
         </View>
       )}
-      {emptyFixtures ? (
-        <View style={s.card}>
-          <FinanceVisual kind="bank" size={80} mode={theme} />
-          <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>
-            {t('connections.setupTitle')}
-          </Text>
-          {(
-            [
-              ['connections.setupIdentity', 'connections.setupPending'],
-              ['connections.setupProvider', 'connections.setupPending'],
-              ['connections.setupConsent', 'connections.setupWaiting'],
-            ] as const
-          ).map(([label, state], index) => (
-            <View key={label} style={s.inline}>
-              <Text style={s.body}>
-                {index + 1}. {t(label)}
-              </Text>
-              <Text style={s.body}>· {t(state)}</Text>
-            </View>
-          ))}
-        </View>
+      {emptyFixtures || protectedPersonalAccess ? (
+        <BankConnectionPicker
+          api={api}
+          theme={theme}
+          resetKey={scope}
+          protectedPersonalAccess={protectedPersonalAccess}
+          {...(onStatementImport ? { onImportStatement: () => onStatementImport() } : {})}
+        />
       ) : (
         <View style={s.card}>
           <Text accessibilityRole="header" aria-level={3} style={s.subtitle}>

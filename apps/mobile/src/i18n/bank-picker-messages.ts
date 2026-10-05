@@ -36,8 +36,8 @@ const messages = {
     'You can authorise access to your accounts on your bank’s website.',
   ],
   automaticSetup: [
-    'Da attivare: servono un accesso personale e il servizio bancario configurato.',
-    'Activation requires a personal account and the bank service to be configured.',
+    'Il collegamento richiede un accesso personale, l’attivazione del servizio e la verifica della compatibilità con il tuo conto.',
+    'Connecting requires personal access, service activation and verification of compatibility with your account.',
   ],
   automaticPrivateAccess: [
     'Disponibile dopo l’attivazione dell’accesso personale.',
@@ -87,8 +87,8 @@ const messages = {
   statementGuide: ['Guida al documento', 'Document guide'],
   newWindow: ['Si apre in una nuova scheda', 'Opens in a new tab'],
   publicSetup: [
-    'L’elenco ti aiuta a scegliere. I collegamenti automatici richiedono ancora l’attivazione del servizio.',
-    'This directory helps you choose. Automatic connections still require service activation.',
+    'Collegamenti automatici da attivare. La disponibilità dipende dal servizio e dal tuo conto.',
+    'Automatic connections need activation. Availability depends on the service and your account.',
   ],
 } as const satisfies Readonly<Record<string, readonly [string, string]>>
 
