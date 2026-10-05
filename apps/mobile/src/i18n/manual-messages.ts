@@ -34,8 +34,8 @@ export const MANUAL_MESSAGE_PAIRS = {
   'manual.entry_reversed': ['Inserimento annullato', 'Entry reversed'],
   'manual.cash': ['Contanti', 'Cash'],
   'manual.local_accounts_are_unavailable_try_again': [
-    'I conti locali non sono disponibili. Riprova.',
-    'Local accounts are unavailable. Try again.',
+    'I conti manuali non sono disponibili. Riprova.',
+    'Manual accounts are unavailable. Try again.',
   ],
   'manual.history_is_unavailable': ['Lo storico non è disponibile.', 'History is unavailable.'],
   'manual.the_change_was_saved_but_i_could_not_refresh_the_data_reload_the_page_to_se': [
@@ -55,12 +55,12 @@ export const MANUAL_MESSAGE_PAIRS = {
     'We cannot yet confirm whether the change was saved. Retry with the same details to avoid adding it twice.',
   ],
   'manual.local_account_added_the_opening_balance_is_not_new_income': [
-    'Conto locale aggiunto. Il saldo iniziale non è una nuova entrata.',
-    'Local account added. The opening balance is not new income.',
+    'Conto manuale aggiunto. Il saldo iniziale non è una nuova entrata.',
+    'Manual account added. The opening balance is not new income.',
   ],
   'manual.add_a_local_account_first': [
-    'Aggiungi prima un conto locale.',
-    'Add a local account first.',
+    'Aggiungi prima un conto manuale.',
+    'Add a manual account first.',
   ],
   'manual.for_incoming_amounts_enter_a_positive_amount_or_choose_expense': [
     'Per un’entrata scrivi un importo positivo, oppure scegli Spesa.',
@@ -77,7 +77,7 @@ export const MANUAL_MESSAGE_PAIRS = {
     'Movimento aggiunto e saldo aggiornato.',
     'Transaction added and balance updated.',
   ],
-  'manual.choose_a_local_account': ['Scegli un conto locale.', 'Choose a local account.'],
+  'manual.choose_a_local_account': ['Scegli un conto manuale.', 'Choose a manual account.'],
   'manual.balance_corrected_the_difference_is_in_history_and_does_not_count_as_income': [
     'Saldo corretto. La differenza è nello storico e non conta come entrata o spesa.',
     'Balance corrected. The difference is in history and does not count as income or spending.',
@@ -109,8 +109,8 @@ export const MANUAL_MESSAGE_PAIRS = {
   'manual.the_csv_is_invalid': ['Il CSV non è valido.', 'The CSV is invalid.'],
   'manual.import_completed': ['Importazione completata.', 'Import completed.'],
   'manual.review_a_new_preview_before_importing': [
-    'Controlla una nuova anteprima prima di importare.',
-    'Review a new preview before importing.',
+    'Controlla di nuovo le righe prima di importare.',
+    'Review the rows again before importing.',
   ],
   'manual.manual_accounts_and_files': [
     'Conti manuali e importazione',
@@ -120,7 +120,7 @@ export const MANUAL_MESSAGE_PAIRS = {
     'Tieni traccia di contanti, carte e conti non collegati. Crea un conto, aggiungi un movimento o importa un CSV. Ogni importo resta nella valuta del conto.',
     'Track cash, cards and unconnected accounts. Create an account, add a transaction or import a CSV. Each amount stays in the account currency.',
   ],
-  'manual.loading_local_accounts': ['Caricamento conti locali', 'Loading local accounts'],
+  'manual.loading_local_accounts': ['Caricamento conti manuali', 'Loading manual accounts'],
   'manual.saving': ['Salvataggio in corso', 'Saving'],
   'manual.which_balance_are_you_starting_from': [
     'Da quale saldo inizi?',
@@ -139,7 +139,7 @@ export const MANUAL_MESSAGE_PAIRS = {
     'Account currency, for example EUR',
   ],
   'manual.tracking_start_date': ['Data del saldo iniziale', 'Opening balance date'],
-  'manual.create_local_account': ['Crea conto locale', 'Create local account'],
+  'manual.create_local_account': ['Crea conto manuale', 'Create manual account'],
   'manual.import_a_csv_with_stable_identities': [
     'Importa movimenti da un CSV',
     'Import transactions from a CSV',
@@ -150,12 +150,12 @@ export const MANUAL_MESSAGE_PAIRS = {
   ],
   'manual.destination_account': ['Conto di destinazione', 'Destination account'],
   'manual.add_a_local_account_to_begin': [
-    'Aggiungi un conto locale per iniziare.',
-    'Add a local account to begin.',
+    'Aggiungi un conto manuale per iniziare.',
+    'Add a manual account to begin.',
   ],
   'manual.csv_content': ['Contenuto del CSV', 'CSV content'],
   'manual.paste_the_header_and_rows': ['Incolla intestazione e righe', 'Paste the header and rows'],
-  'manual.review_csv_preview': ['Controlla anteprima CSV', 'Review CSV preview'],
+  'manual.review_csv_preview': ['Controlla i movimenti del CSV', 'Review CSV transactions'],
   'manual.valid_rows': ['righe valide', 'valid rows'],
   'manual.new': ['nuove ·', 'new ·'],
   'manual.already_present_balance_change_from_new_transactions': [
@@ -163,18 +163,18 @@ export const MANUAL_MESSAGE_PAIRS = {
     'already present. Balance change from new transactions:',
   ],
   'manual.the_local_account_balance_will_update_with_new_rows_only': [
-    'Il saldo del conto locale verrà aggiornato con le sole righe nuove.',
-    'The local account balance will update with new rows only.',
+    'Il saldo del conto manuale verrà aggiornato con le sole righe nuove.',
+    'The manual account balance will update with new rows only.',
   ],
   'manual.the_source_balance_remains_the_balance_declared_by_its_source_the_csv_adds_': [
     'Il saldo della fonte resta quello dichiarato dalla fonte; il CSV aggiunge solo i movimenti.',
     'The source balance remains the balance declared by its source; the CSV adds transactions only.',
   ],
   'manual.import_reviewed_rows': ['Importa righe controllate', 'Import reviewed rows'],
-  'manual.local_account': ['Conto locale', 'Local account'],
+  'manual.local_account': ['Conto manuale', 'Manual account'],
   'manual.you_have_no_local_accounts_yet_start_with_your_cash_or_wallet_balance': [
-    'Non hai ancora conti locali. Parti dal saldo dei tuoi contanti o di un portafoglio.',
-    'You have no local accounts yet. Start with your cash or wallet balance.',
+    'Non hai ancora conti manuali. Parti dal saldo dei tuoi contanti o di un portafoglio.',
+    'You have no manual accounts yet. Start with your cash or wallet balance.',
   ],
   'manual.add_your_first_account': ['Aggiungi il primo conto', 'Add your first account'],
   'manual.unconnected': ['· non collegato', '· unconnected'],

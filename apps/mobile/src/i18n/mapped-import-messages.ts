@@ -38,8 +38,8 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
   'mapped.xlsxTitle': ['Importa Excel con associazioni', 'Import Excel with mappings'],
   'mapped.issueRow': ['Riga {row}{field}: {message}', 'Row {row}{field}: {message}'],
   'mapped.headersRead': [
-    '{headers} intestazioni e {rows} righe lette. Associa le colonne prima dell’anteprima.',
-    '{headers} headers and {rows} rows read. Map the columns before previewing.',
+    '{headers} intestazioni e {rows} righe lette. Associa le colonne prima di controllare i movimenti.',
+    '{headers} headers and {rows} rows read. Map the columns before reviewing transactions.',
   ],
   'mapped.importResult': [
     '{inserted, plural, one {# nuovo movimento} other {# nuovi movimenti}}, {updated, plural, one {# aggiornato} other {# aggiornati}}, {unchanged, plural, one {# già presente} other {# già presenti}}; {linked} collegati alla banca{rejected, plural, =0 {} one {; # non acquisito} other {; # non acquisiti}}. Controlla il saldo e lo storico del conto.',
@@ -265,16 +265,16 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'Saved mappings are unavailable.',
   ],
   'mapped.the_account_transactions_or_mappings_changed_review_the_data_and_show_a_new': [
-    'Il conto, i movimenti o le associazioni sono cambiati. Controlla i dati e mostra una nuova anteprima; l’importazione non viene ripetuta automaticamente.',
-    'The account, transactions or mappings changed. Review the data and show a new preview; the import is not automatically repeated.',
+    'Il conto, i movimenti o le associazioni sono cambiati. Controlla di nuovo le righe da importare; l’importazione non viene ripetuta automaticamente.',
+    'The account, transactions or mappings changed. Review the rows again before importing; the import is not automatically repeated.',
   ],
   'mapped.the_change_was_saved_but_i_could_not_refresh_the_data_refresh_before_contin': [
     'La modifica è stata salvata, ma non riesco ad aggiornare i dati. Ricarica prima di continuare.',
     'The change was saved, but I could not refresh the data. Refresh before continuing.',
   ],
   'mapped.the_request_is_unconfirmed_for_an_uncertain_import_retry_with_the_same_prev': [
-    'Non sappiamo ancora se l’importazione è stata completata. Riprova dalla stessa anteprima per evitare un doppio inserimento.',
-    'We cannot yet confirm whether the import finished. Retry from the same preview to avoid importing it twice.',
+    'Non sappiamo ancora se l’importazione è stata completata. Riprova da questa verifica senza cambiare le righe, per evitare un doppio inserimento.',
+    'We cannot yet confirm whether the import finished. Retry from this review without changing the rows to avoid importing them twice.',
   ],
   'mapped.choose_an_account_and_add_the_file_to_import': [
     'Scegli un conto e aggiungi il file da importare.',
@@ -309,20 +309,20 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'Choose a worksheet and enter the header row. No worksheet is selected automatically.',
   ],
   'mapped.show_a_valid_preview_and_review_repeated_rows_before_importing': [
-    'Mostra un’anteprima valida e controlla le righe ripetute prima di importare.',
-    'Show a valid preview and review repeated rows before importing.',
+    'Verifica le righe da importare e controlla quelle ripetute prima di confermare.',
+    'Check the rows to import and review repeated rows before confirming.',
   ],
   'mapped.enter_a_name_for_the_mappings_to_save': [
     'Scrivi un nome per le associazioni da salvare.',
     'Enter a name for the mappings to save.',
   ],
   'mapped.mappings_saved_for_this_account_prepare_a_new_preview_before_importing': [
-    'Associazioni salvate per questo conto. Prepara una nuova anteprima prima di importare.',
-    'Mappings saved for this account. Prepare a new preview before importing.',
+    'Associazioni salvate per questo conto. Controlla di nuovo le righe prima di importare.',
+    'Mappings saved for this account. Review the rows again before importing.',
   ],
   'mapped.mappings_restored_select_them_and_show_a_new_preview': [
-    'Associazioni ripristinate. Sceglile e mostra una nuova anteprima.',
-    'Mappings restored. Select them and show a new preview.',
+    'Associazioni ripristinate. Sceglile e controlla i movimenti da importare.',
+    'Mappings restored. Select them and review the transactions to import.',
   ],
   'mapped.mappings_archived_previously_imported_transactions_are_retained': [
     'Associazioni archiviate. I movimenti già importati sono conservati.',
@@ -345,8 +345,8 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'Import transactions from a file',
   ],
   'mapped.choose_the_account_read_the_headers_and_map_the_columns_a_manual_account_ba': [
-    'Scegli il conto e il file, indica quali colonne contengono data, descrizione e importo, poi controlla l’anteprima. I nuovi movimenti aggiornano il saldo dei conti manuali; il saldo dei conti collegati resta quello comunicato dalla fonte.',
-    'Choose an account and file, identify the date, description and amount columns, then review the preview. New transactions update manual account balances; connected accounts keep the balance reported by the source.',
+    'Scegli il conto e il file, indica quali colonne contengono data, descrizione e importo, poi controlla i movimenti prima di importarli. I nuovi movimenti aggiornano il saldo dei conti manuali; il saldo dei conti collegati resta quello comunicato dalla fonte.',
+    'Choose an account and file, identify the date, description and amount columns, then review transactions before importing them. New transactions update manual account balances; connected accounts keep the balance reported by the source.',
   ],
   'mapped.1_account_and_file': ['1. Conto e file', '1. Account and file'],
   'mapped.add_a_manual_account_before_importing_a_file': [
@@ -436,7 +436,10 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
   ],
   'mapped.save_mapping_changes': ['Salva modifiche alle associazioni', 'Save mapping changes'],
   'mapped.save_csv_mappings': ['Salva associazioni CSV', 'Save CSV mappings'],
-  'mapped.show_import_preview': ['Mostra anteprima importazione', 'Show import preview'],
+  'mapped.show_import_preview': [
+    'Controlla i movimenti da importare',
+    'Review transactions to import',
+  ],
   'mapped.correct_the_file_or_mappings': [
     'Correggi il file o le associazioni',
     'Correct the file or mappings',
@@ -445,7 +448,7 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'Nessuna riga viene importata finché restano errori.',
     'No rows are imported while errors remain.',
   ],
-  'mapped.3_review_the_preview': ['3. Controlla l’anteprima', '3. Review the preview'],
+  'mapped.3_review_the_preview': ['3. Verifica e importa', '3. Review and import'],
   'mapped.account': ['Conto:', 'Account:'],
   'mapped.unavailable': ['Non disponibile', 'Unavailable'],
   'mapped.rows_in_the_file': ['righe nel file,', 'rows in the file,'],
@@ -465,7 +468,7 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'contenuto della riga e posizione nel file',
     'row content and position in the file',
   ],
-  'mapped.show_more_preview_rows': ['Mostra altre righe dell’anteprima', 'Show more preview rows'],
+  'mapped.show_more_preview_rows': ['Mostra altre righe', 'Show more rows'],
   'mapped.identical_rows_to_review': ['Righe uguali da controllare:', 'Identical rows to review:'],
   'mapped.these_may_be_separate_purchases_all_will_remain_present_if_you_confirm_them': [
     'Possono essere acquisti distinti. Rimarranno tutte presenti se le confermi.',
@@ -479,5 +482,5 @@ export const MAPPED_IMPORT_MESSAGE_PAIRS = {
     'Ho controllato le righe uguali e voglio mantenerle tutte.',
     'I reviewed the identical rows and want to keep all of them.',
   ],
-  'mapped.import_preview_rows': ['Importa righe dell’anteprima', 'Import preview rows'],
+  'mapped.import_preview_rows': ['Importa i movimenti controllati', 'Import reviewed transactions'],
 } as const satisfies Readonly<Record<string, readonly [string, string]>>

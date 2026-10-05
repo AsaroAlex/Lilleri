@@ -59,16 +59,16 @@ export const CONNECTION_MESSAGE_PAIRS = {
   'connections.coverage.unknown': ['Copertura non verificata', 'Coverage unverified'],
   'connections.coverage.unavailable': ['Non ancora collegabile', 'Connection unavailable'],
   'connections.coverage.synthetic': [
-    'Disponibile solo nella simulazione',
-    'Available only in the simulation',
+    'Disponibile solo nell’ambiente locale',
+    'Available in the local environment only',
   ],
   'connections.coverage.unverified': [
     'Disponibilità dichiarata, non verificata',
     'Availability declared, unverified',
   ],
   'connections.coverage.sandbox': [
-    'Verificata nel solo ambiente di prova',
-    'Verified in the test environment only',
+    'Da verificare per il tuo conto',
+    'Needs verification for your account',
   ],
   'connections.coverage.verified': [
     'Copertura verificata nella configurazione',
@@ -83,22 +83,19 @@ export const CONNECTION_MESSAGE_PAIRS = {
     'Updating connection status…',
   ],
   'connections.syntheticDisclosure': [
-    'Questa versione usa solo dati sintetici. Nessuna banca reale viene collegata. La fonte dimostrativa fornisce saldi e movimenti e non dispone pagamenti.',
-    'This version uses synthetic data only. No real bank is connected. The demonstration source provides balances and transactions and cannot make payments.',
+    'Ambiente locale: questa fonte contiene soltanto dati di esempio. Non collega banche reali e non dispone pagamenti.',
+    'Local environment: this source contains example data only. It does not connect real banks or make payments.',
   ],
   'connections.availableKinds': ['Disponibilità per tipo di conto', 'Availability by account type'],
   'connections.syntheticKinds': [
-    'Il collegamento include i conti della simulazione. L’elenco non indica banche reali supportate.',
-    'The connection includes the simulation accounts. This list does not indicate support for real banks.',
+    'Il collegamento include soltanto i conti di esempio dell’ambiente locale. L’elenco non indica banche reali supportate.',
+    'The connection includes only example accounts in the local environment. This list does not indicate support for real banks.',
   ],
-  'connections.linked': [
-    'Fonte dimostrativa già collegata',
-    'Demonstration source already connected',
-  ],
-  'connections.connect': ['Collega la fonte dimostrativa', 'Connect the demonstration source'],
+  'connections.linked': ['Fonte locale già collegata', 'Local source already connected'],
+  'connections.connect': ['Collega la fonte locale', 'Connect the local source'],
   'connections.connected': [
-    'Fonte dimostrativa collegata. Controlla qui lo stato e l’ultima acquisizione.',
-    'Demonstration source connected. Check its status and last acquisition here.',
+    'Fonte locale collegata. Controlla qui lo stato e l’ultima acquisizione.',
+    'Local source connected. Check its status and last acquisition here.',
   ],
   'connections.manualUnavailable': [
     'Non ancora collegabile — aggiungi il saldo a mano.',
@@ -110,7 +107,7 @@ export const CONNECTION_MESSAGE_PAIRS = {
     'No coverage is available in the current configuration. You can add an account manually.',
   ],
   'connections.useManual': ['Usa un conto manuale', 'Use a manual account'],
-  'connections.source': ['Fonte dimostrativa', 'Demonstration source'],
+  'connections.source': ['Fonte locale', 'Local source'],
   'connections.accounts': [
     '{count, plural, one {# conto incluso} other {# conti inclusi}}{names}',
     '{count, plural, one {# account included} other {# accounts included}}{names}',
@@ -160,10 +157,10 @@ export const CONNECTION_MESSAGE_PAIRS = {
     'Collegamento in pausa. Lo storico e la scadenza sono conservati.',
     'Connection paused. History and expiry are preserved.',
   ],
-  'connections.renew': ['Rinnova autorizzazione dimostrativa', 'Renew demonstration authorisation'],
+  'connections.renew': ['Rinnova autorizzazione locale', 'Renew local authorisation'],
   'connections.renewed': [
-    'Rinnovo confermato dalla fonte dimostrativa. Controlla la scadenza comunicata qui sopra.',
-    'Renewal confirmed by the demonstration source. Check the expiry shown above.',
+    'Rinnovo confermato dalla fonte locale. Controlla la scadenza comunicata qui sopra.',
+    'Renewal confirmed by the local source. Check the expiry shown above.',
   ],
   'connections.closeHistory': ['Chiudi storico autorizzazione', 'Close authorisation history'],
   'connections.history': ['Storico autorizzazione', 'Authorisation history'],
@@ -178,8 +175,8 @@ export const CONNECTION_MESSAGE_PAIRS = {
     'No event is recorded. Previous status remains separate from a new authorisation.',
   ],
   'connections.noConnections': [
-    'Non hai collegamenti. Puoi usare la fonte dimostrativa o aggiungere un saldo a mano.',
-    'You have no connections. Use the demonstration source or add a balance manually.',
+    'Non hai collegamenti. Scegli una fonte per vedere le opzioni disponibili.',
+    'You have no connections. Choose a source to see the available options.',
   ],
   'connections.savedRefreshFailed': [
     'La modifica è stata confermata, ma l’aggiornamento dei dati non è riuscito. Ricarica per vedere lo stato corrente.',
@@ -196,10 +193,7 @@ export const CONNECTION_MESSAGE_PAIRS = {
   'connections.syncHistory': ['Storico aggiornamenti', 'Update history'],
   'connections.syncContinue': ['Continua aggiornamento', 'Continue update'],
   'connections.syncCheck': ['Controlla progresso', 'Check progress'],
-  'connections.syncNone': [
-    'Nessun aggiornamento durevole registrato.',
-    'No durable update is recorded.',
-  ],
+  'connections.syncNone': ['Nessun aggiornamento salvato.', 'No saved updates.'],
   'connections.syncProgress': [
     '{pages, plural, one {# pagina acquisita} other {# pagine acquisite}} · {done} di {total} finestre completate',
     '{pages, plural, one {# page acquired} other {# pages acquired}} · {done} of {total} windows completed',

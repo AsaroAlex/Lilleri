@@ -30,8 +30,8 @@ export const MERCHANT_MESSAGE_PAIRS = {
     '{count, plural, =0 {No visible transactions to change} one {# visible transaction to change} other {# visible transactions to change}}',
   ],
   'merchant.previewPrivacy': [
-    'Le preferenze di privacy restano rispettate. I movimenti riservati non sono elencati in questa anteprima.',
-    'Privacy preferences remain respected. Private transactions are not listed in this preview.',
+    'Le preferenze di privacy restano rispettate. I movimenti riservati non sono elencati in questa verifica.',
+    'Privacy preferences remain respected. Private transactions are not listed in this review.',
   ],
   'merchant.apply': ['Applica il nome', 'Apply the name'],
   'merchant.saved': ['Modifica salvata.', 'Change saved.'],
@@ -74,7 +74,7 @@ export const MERCHANT_MESSAGE_PAIRS = {
     'Puoi annullare l’ultima modifica di categoria entro 30 giorni, se le assegnazioni non sono cambiate nel frattempo.',
     'You can undo the last category change within 30 days if assignments have not changed since.',
   ],
-  'merchant.localProposal': ['Proposta locale del catalogo', 'Local catalogue proposal'],
+  'merchant.localProposal': ['Suggerimento del catalogo', 'Catalogue suggestion'],
   'merchant.noCategories': [
     'Crea una categoria per assegnarla a un movimento.',
     'Create a category to assign it to a transaction.',

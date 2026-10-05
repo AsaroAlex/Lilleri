@@ -61,20 +61,20 @@ export const PROBLEM_MESSAGES = {
     'The source has not provided these terms.',
   ],
   csv_identity_changed: [
-    'Il file o la mappatura è cambiato. Crea una nuova anteprima.',
-    'The file or mapping changed. Create a new preview.',
+    'Il file o la mappatura è cambiato. Controlla di nuovo le righe da importare.',
+    'The file or mapping changed. Review the rows again before importing.',
   ],
   export_too_large: [
-    'L’archivio supera il limite locale. Nessun archivio parziale è stato creato.',
-    'The archive exceeds the local limit. No partial archive was created.',
+    'L’archivio supera il limite disponibile. Nessun archivio parziale è stato creato.',
+    'The archive exceeds the available limit. No partial archive was created.',
   ],
   host_forbidden: [
-    'Questo indirizzo non può usare il servizio locale.',
-    'This address cannot use the local service.',
+    'Questo indirizzo non è autorizzato a usare il servizio.',
+    'This address is not authorised to use the service.',
   ],
   idempotency_key_reused: [
-    'Questa richiesta è già associata a dati diversi. Crea una nuova anteprima.',
-    'This request is already linked to different data. Create a new preview.',
+    'Questa richiesta è già associata a dati diversi. Controlla di nuovo i dati prima di confermare.',
+    'This request is already linked to different data. Review the data again before confirming.',
   ],
   import_duplicate_review_required: [
     'Controlla i possibili duplicati prima di importare.',
@@ -89,8 +89,8 @@ export const PROBLEM_MESSAGES = {
     'Two rows use the same bank transaction. Review the repeated rows and choose again.',
   ],
   import_preview_stale: [
-    'L’anteprima è cambiata. Creala di nuovo prima di importare.',
-    'The preview changed. Create it again before importing.',
+    'I dati verificati sono cambiati. Controllali di nuovo prima di importare.',
+    'The reviewed data changed. Check it again before importing.',
   ],
   institution_unavailable: [
     'Questa fonte non è disponibile nella configurazione attuale.',
@@ -117,8 +117,8 @@ export const PROBLEM_MESSAGES = {
     'Check the transaction amount, currency and date.',
   ],
   invalid_manual_import: [
-    'Controlla i dati da importare e crea una nuova anteprima.',
-    'Check the import data and create a new preview.',
+    'Correggi i dati da importare, poi controlla di nuovo le righe.',
+    'Correct the import data, then review the rows again.',
   ],
   invalid_privacy: [
     'Controlla la preferenza prima di salvare.',
@@ -149,16 +149,16 @@ export const PROBLEM_MESSAGES = {
     'Analysis history is unavailable. Try again.',
   ],
   manual_account_limit: [
-    'È stato raggiunto il limite locale dei conti manuali.',
-    'The local manual-account limit has been reached.',
+    'È stato raggiunto il limite dei conti manuali.',
+    'The manual-account limit has been reached.',
   ],
   manual_balance_changed: [
     'Il saldo è cambiato. Aggiorna i dati e scegli di nuovo.',
     'The balance changed. Refresh the data and choose again.',
   ],
   manual_import_changed: [
-    'I dati da importare sono cambiati. Crea una nuova anteprima.',
-    'The import data changed. Create a new preview.',
+    'I dati da importare sono cambiati. Controlla di nuovo le righe prima di confermare.',
+    'The import data changed. Review the rows again before confirming.',
   ],
   manual_source: [
     'Questa fonte manuale non richiede un collegamento bancario.',
@@ -180,12 +180,12 @@ export const PROBLEM_MESSAGES = {
     'Check your notice preferences.',
   ],
   origin_forbidden: [
-    'Questa origine non può usare il servizio locale.',
-    'This origin cannot use the local service.',
+    'La richiesta proviene da un indirizzo non autorizzato.',
+    'The request comes from an unauthorised address.',
   ],
   preview_limit: [
-    'L’anteprima supera il limite locale. Riduci i dati selezionati.',
-    'The preview exceeds the local limit. Reduce the selected data.',
+    'Ci sono troppi dati da verificare. Riduci i dati selezionati.',
+    'There is too much data to review. Reduce the selected data.',
   ],
   privacy_changed: [
     'Le preferenze sono cambiate. Aggiorna i dati e scegli di nuovo.',
@@ -200,8 +200,8 @@ export const PROBLEM_MESSAGES = {
     'The source is unavailable. Saved data remains visible with its date.',
   ],
   public_identity_required: [
-    'Per usare dati personali serve un accesso protetto. Questa anteprima è condivisa.',
-    'Personal data needs a protected sign-in. This preview is shared.',
+    'Per usare dati personali serve un accesso protetto. L’accesso personale non è ancora attivo.',
+    'Personal data needs a protected sign-in. Personal access is not active yet.',
   ],
   rate_limited: [
     'Troppi tentativi. Attendi prima di riprovare.',
@@ -225,13 +225,10 @@ export const PROBLEM_MESSAGES = {
   ],
   rule_archived: ['La regola è archiviata.', 'The rule is archived.'],
   rule_changed: [
-    'La regola è cambiata. Aggiorna l’anteprima prima di applicarla.',
-    'The rule changed. Refresh the preview before applying it.',
+    'La regola è cambiata. Controlla di nuovo il suo effetto prima di applicarla.',
+    'The rule changed. Review its effect again before applying it.',
   ],
-  rule_limit: [
-    'È stato raggiunto il limite locale delle regole.',
-    'The local rule limit has been reached.',
-  ],
+  rule_limit: ['È stato raggiunto il limite delle regole.', 'The rule limit has been reached.'],
   session_invalid: ['Accedi di nuovo per continuare.', 'Sign in again to continue.'],
   settings_changed: [
     'Le impostazioni sono cambiate. Aggiorna i dati prima di salvare di nuovo.',
