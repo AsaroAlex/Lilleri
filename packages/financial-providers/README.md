@@ -1,5 +1,34 @@
 # Financial provider integration
 
+## Enable Banking AIS adapter — 2026-10-05
+
+`EnableBankingProvider` (with the low-level `EnableBankingClient`) implements
+`FinancialDataProviderV2` and the resumable sync port against
+`https://api.enablebanking.com`, under Enable Banking's own AISP registration. It
+is **not registered** in `apps/api`; wiring the redirect callback, consent storage
+and environment configuration remains separate work.
+
+- Authentication is an RS256 application JWT (`kid` = application id, 900 s TTL,
+  reused until 60 s before expiry) signed with `node:crypto`; keys must be RSA ≥ 2048.
+- `context.grantId` is the Enable Banking `session_id`. Connection creation is the
+  redirect flow only (`startAuthorization` → `completeAuthorization`); embedded-only
+  ASPSPs and beta connectors (unless `includeBeta`) are not offered.
+- Banks may count every call against a 4/day unattended budget, so `openSync` does
+  all bank I/O once per account (details, balances, one transaction traversal over
+  `initialHistoryDays`) and pages are served from a process-local snapshot cache.
+  A page request on another instance, or after `snapshotTtlMs`, is `snapshot_expired`.
+- PSU headers are sent only for `user_present` syncs with a registered presence, and
+  never as a partial set of an ASPSP's `required_psu_headers`.
+- Errors are categorical (`EnableBankingFailure`); only documented `error` enum
+  values are retained, never provider messages, bodies, URLs, tokens or IBANs.
+- Transaction identity is `entry_reference` only (never `transaction_id`);
+  records without it are returned with `id: null` for API-side fingerprinting.
+
+The endpoint and field shapes come from the researched specification dated
+2026-10-05 (OpenAPI, documentation, official samples). No Enable Banking credential,
+sandbox application or live call was available; the tests use original synthetic
+wire fixtures and an injected `fetch`, so they prove local protocol handling only.
+
 ## Live Italian institution discovery — 2026-10-05
 
 `YapilyLiveInstitutionDiscovery` is a separate server-only discovery client. It

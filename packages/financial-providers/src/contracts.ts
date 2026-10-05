@@ -9,7 +9,8 @@ import type {
 /** This port declares transaction-window semantics separately from institution discovery. */
 export interface SyntheticSyncMetadata {
   readonly providerId: string
-  readonly environment: 'synthetic'
+  /** Sandbox and live adapters use the same resumable snapshot/page contract as fixtures. */
+  readonly environment: 'synthetic' | 'sandbox' | 'live'
   readonly evidenceReference: string
   readonly userPresent: 'supported' | 'unsupported' | 'unknown'
   readonly unattendedBudget: {
@@ -137,7 +138,7 @@ export function validateSyntheticSyncMetadata(value: unknown): SyntheticSyncMeta
   }
   return {
     providerId: text(item.providerId),
-    environment: member(item.environment, ['synthetic']),
+    environment: member(item.environment, ENVIRONMENTS),
     evidenceReference: text(item.evidenceReference),
     userPresent: member(item.userPresent, ['supported', 'unsupported', 'unknown']),
     unattendedBudget: budget,

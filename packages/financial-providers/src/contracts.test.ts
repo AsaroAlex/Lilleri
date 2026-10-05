@@ -13,6 +13,7 @@ import {
   validateInstitutionPage,
   validateProviderAuthorization,
   validateProviderConnectionGrant,
+  validateSyntheticSyncMetadata,
 } from './index.js'
 
 const context = { profileId: 'profile-synthetic', connectionId: 'connection-synthetic' }
@@ -334,6 +335,14 @@ describe('bounded discovery contract', () => {
         },
       }),
     ).toThrow('invalid text')
+  })
+
+  it('admits sandbox/live resumable sync metadata and rejects unknown environments', () => {
+    const sync = provider.syncMetadata()
+    for (const environment of ['synthetic', 'sandbox', 'live'] as const)
+      expect(validateSyntheticSyncMetadata({ ...sync, environment }).environment).toBe(environment)
+    for (const environment of ['production', 'SANDBOX', '', null])
+      expect(() => validateSyntheticSyncMetadata({ ...sync, environment })).toThrow('invalid enum')
   })
 
   it.each(['', '1', '01', '-7', '7e0', '7.0', ' 7', '7 ', '9007199254740993'])(
