@@ -1,5 +1,22 @@
 # PROJECT STATE — Lilleri
 
+## Current header wordmark release — 2026-10-05 (Europe/Rome)
+
+Published commit `3aeecfcb75b729eb5951efb106b01ada1ff69de5`, Railway deployment
+`7a9bd84f-712d-438b-9849-c70e3134514c` **SUCCESS**, verified at 12:10 Europe/Rome.
+The header uses the existing outlined name alone, removing the separate “li” that
+read as a repetition. Responsive 78/90/108px widths preserve the text's visual height.
+Web uses light/dark SVGs; native has transparent 1000px PNG fallbacks with matching
+generator and manifest. The accessible name remains Lilleri. Standalone app-icon
+assets are preserved. Mobile typecheck, scoped checks/build, native export reproduction,
+20 header layouts at DPR 2/3 and 8 product browser groups/134 surfaces passed.
+No native emulator was run. The matching bundle `index-7f56b2065d84b8a052a640006eefa66d.js`,
+both wordmark SVGs and public read endpoints returned HTTP 200. Canonical owned
+finance and retirement audit compare unchanged; active finance remains empty.
+No migrations, financial POST or Railway settings changed. Owned preview stopped,
+archive retained. Proof: `docs/operations/header-wordmark-release-20261005.json`.
+Post-release evidence stays local until the next functional push.
+
 ## Current artwork sharpness release — 2026-10-05 (Europe/Rome)
 
 Published commit `3ceab75a1158acca39d4bdf1677b26baf20d892a`, Railway deployment

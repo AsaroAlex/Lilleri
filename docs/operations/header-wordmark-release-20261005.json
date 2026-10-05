@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 1,
+  "verifiedAtUtc": "2026-10-05 10:10:01 UTC",
+  "verifiedAtEuropeRome": "2026-10-05 12:10:01",
+  "url": "https://lilleri-production.up.railway.app/",
+  "publishedCommit": "3aeecfcb75b729eb5951efb106b01ada1ff69de5",
+  "deploymentId": "7a9bd84f-712d-438b-9849-c70e3134514c",
+  "deploymentStatus": "SUCCESS",
+  "bundle": "/_expo/static/js/web/index-7f56b2065d84b8a052a640006eefa66d.js",
+  "change": {
+    "header": "Existing outlined wordmark alone; separate li monogram removed from the app header",
+    "web": "Light/dark SVGs",
+    "native": "Transparent light/dark 1000x349 PNGs",
+    "responsiveSizes": {
+      "compact": [
+        78,
+        28
+      ],
+      "regular": [
+        90,
+        32
+      ],
+      "wide": [
+        108,
+        38
+      ]
+    },
+    "accessibleName": "Lilleri",
+    "originalWordmarkGeometryPreserved": true,
+    "standaloneIconAssetsPreserved": true,
+    "newDependencies": 0
+  },
+  "localVerification": {
+    "mobileTypecheck": "passed",
+    "scopedBiomeCheck": "passed with 4 existing informational generator suggestions",
+    "previewBuild": "passed",
+    "transparentNativeExports": "verified",
+    "nativeExportsReproduceVectorSources": true,
+    "nativeAssetManifestMatches": true,
+    "headerLayouts": 20,
+    "widths": [
+      320,
+      390,
+      650,
+      960,
+      1440
+    ],
+    "devicePixelRatios": [
+      2,
+      3
+    ],
+    "themes": [
+      "light",
+      "dark"
+    ],
+    "singleAccessibleWordmark": true,
+    "oldHeaderLockupAbsent": true,
+    "svgMime": "image/svg+xml",
+    "productBrowserGroups": 8,
+    "productSurfaces": 134,
+    "productLocales": [
+      "it-IT",
+      "en-GB"
+    ],
+    "browser": "Chromium",
+    "pageErrors": 0,
+    "financialBrowserWrites": 0,
+    "financesUnchanged": true,
+    "serverSettingsUnchanged": true,
+    "nativeEmulatorVerification": false,
+    "ownedPreviewStopped": true,
+    "localArchivePreserved": true
+  },
+  "publicVerification": {
+    "health": "ok",
+    "fixtureMode": "empty",
+    "activeAccounts": 0,
+    "activeTransactions": 0,
+    "activeConnections": 0,
+    "ownedAccounts": 5,
+    "ownedTransactions": 35,
+    "ownedConnections": 1,
+    "canonicalArchiveAndRetirementAuditUnchanged": true,
+    "directoryEntries": 62,
+    "financialMutationsSent": 0
+  },
+  "httpRequests": [
+    {
+      "method": "GET",
+      "path": "/",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/_expo/static/js/web/index-7f56b2065d84b8a052a640006eefa66d.js",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/__packages/brand/logo/lilleri-wordmark.a7fd204212db0aa3a22b19f29fca9e58.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/assets/__packages/brand/logo/lilleri-wordmark-on-dark.5bf21284c1e559a4c0036fce3c58cb81.svg",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/demo",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/export",
+      "status": 200
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/connection-directory",
+      "status": 200
+    }
+  ],
+  "configuration": {
+    "railwaySettingsChanged": false,
+    "migrationsChanged": 0,
+    "financialMutationsSent": 0,
+    "namespacePreserved": true
+  }
+}

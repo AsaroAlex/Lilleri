@@ -1,5 +1,16 @@
 # Lilleri delivery status
 
+## Header wordmark — 2026-10-05
+
+Published commit `3aeecfc`, Railway `7a9bd84f-712d-438b-9849-c70e3134514c`
+**SUCCESS**, verified at 12:10 Europe/Rome. Header now shows only the existing
+outlined name, resolving the repeated “li” beside “lilleri”. Responsive sizing,
+both themes and the accessible name are preserved. Web SVGs and transparent native
+PNGs are verified. Typecheck, scoped checks/build, 20 header layouts and 8 product
+browser groups/134 surfaces passed. Exact bundle and both wordmark SVGs returned
+HTTP 200; owned finance and retirement audit are unchanged.
+See [release proof](operations/header-wordmark-release-20261005.json).
+
 ## Artwork sharpness — 2026-10-05
 
 Published commit `3ceab75`, Railway `aeb7741c-790b-4cbf-9117-c273c6b8f43b`
