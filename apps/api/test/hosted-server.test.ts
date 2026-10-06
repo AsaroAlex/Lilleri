@@ -19,6 +19,10 @@ import {
 import { createHostedServer, type HostedServer } from '../src/hosted-server.js'
 import * as identity from '../src/identity-schema.js'
 import { LEGAL_TERMS_VERSION } from '../src/legal-pages.js'
+import {
+  deleteStoreCustomer,
+  revenueCatConfigurationFromEnvironment,
+} from '../src/store-billing.js'
 
 const origin = 'https://app.lilleri.example'
 const host = new URL(origin).host
@@ -78,10 +82,22 @@ const stripeStub = (url: URL, method: string) => {
   if (method === 'DELETE') Object.assign(subscription, { status: 'canceled', canceled_at: 1 })
   return reply(subscription)
 }
+const revenueCatCalls: string[] = []
 const fetchStub: typeof fetch = async (input, init) => {
   const url = String(input)
   if (url.startsWith('https://api.stripe.com/'))
     return stripeStub(new URL(url), init?.method ?? 'GET')
+  if (url.startsWith('https://api.revenuecat.com/v1/subscribers/')) {
+    const id = decodeURIComponent(url.split('/').at(-1) ?? '')
+    revenueCatCalls.push(`${init?.method ?? 'GET'} ${id}`)
+    return new Response(
+      JSON.stringify(
+        (init?.method ?? 'GET') === 'DELETE'
+          ? { app_user_id: id, deleted: true }
+          : { subscriber: { entitlements: {}, subscriptions: {} } },
+      ),
+    )
+  }
   if (url.startsWith('https://api.scaleway.com/transactional-email/')) {
     const body = JSON.parse(String(init?.body))
     mails.push({ to: body.to[0].email, text: body.text })
@@ -110,6 +126,8 @@ const environment = (data: string): Record<string, string> => ({
   STRIPE_WEBHOOK_SECRET: 'whsec_SyntheticHostedWebhookSecret0000',
   STRIPE_PRICE_MONTHLY: 'price_HostedMonthly',
   STRIPE_PRICE_YEARLY: 'price_HostedYearly',
+  REVENUECAT_SECRET_KEY: 'sk_SyntheticHostedRevenueCat0',
+  REVENUECAT_WEBHOOK_AUTHORIZATION: 'Bearer synthetic-hosted-revenuecat-webhook-0000',
 })
 const signedIn = async (email: string) => {
   const password = 'Una password abbastanza lunga 42!'
@@ -195,6 +213,8 @@ describe('hosted production entry point', () => {
       [{ PUBLIC_BASE_URL: 'http://app.lilleri.example' }, 'PUBLIC_BASE_URL'],
       [{ ENABLE_BANKING_APPLICATION_ID: 'abcdef12-3456' }, 'ENABLE_BANKING_ENVIRONMENT'],
       [{ NODE_TLS_REJECT_UNAUTHORIZED: '0' }, 'NODE_TLS_REJECT_UNAUTHORIZED'],
+      [{ APPLE_TEAM_ID: 'not-a-team' }, 'APPLE_TEAM_ID'],
+      [{ ANDROID_CERT_SHA256: 'AB:CD:EF' }, 'ANDROID_CERT_SHA256'],
     ]
     for (const [change, variable] of cases) {
       let failure: unknown
@@ -294,6 +314,24 @@ describe('hosted production entry point', () => {
     expect(robots.body).toContain(`Sitemap: ${origin}/sitemap.xml`)
     const sitemap = await server.app.inject({ url: '/sitemap.xml', headers: { host } })
     expect(sitemap.body).toContain(`<loc>${origin}/en</loc>`)
+    expect(sitemap.body).toContain(`<loc>${origin}/legal/delete-account</loc>`)
+    const deletion = await server.app.inject({ url: '/legal/delete-account', headers: { host } })
+    expect(deletion.statusCode).toBe(200)
+    expect(deletion.body).toContain('Impostazioni › Privacy e dati')
+    expect(deletion.body).toContain('mailto:privacy@lilleri.example')
+    expect(
+      (await server.app.inject({ url: '/legal/delete-account/en', headers: { host } })).body,
+    ).toContain('Deleting your Lilleri account')
+    expect(page.body).toContain('le copie di sicurezza vengono sostituite entro 90 giorni')
+    expect(page.body).not.toContain('nemmeno nei backup')
+    expect(
+      (
+        await server.app.inject({
+          url: '/.well-known/apple-app-site-association',
+          headers: { host },
+        })
+      ).statusCode,
+    ).toBeGreaterThanOrEqual(400)
     const font = await server.app.inject({ url: '/site/geist.woff2', headers: { host } })
     expect(font.statusCode).toBe(200)
     expect(font.headers['content-type']).toBe('font/woff2')
@@ -403,13 +441,72 @@ describe('hosted production entry point', () => {
     })
     if (!billing) throw new Error('Billing is configured in this test')
     const later = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    const revenueCat = revenueCatConfigurationFromEnvironment(environment('/data'))
+    if (!revenueCat) throw new Error('RevenueCat is configured in this test')
     expect(
       await runBillingCancellations(
-        { ...billing, fetch: fetchStub, now: () => later },
+        {
+          stripe: { ...billing, fetch: fetchStub },
+          deleteStoreCustomer: (id) => deleteStoreCustomer({ ...revenueCat, fetch: fetchStub }, id),
+          now: () => later,
+        },
         database.db,
       ),
     ).toMatchObject({ canceled: 1 })
+    // The RevenueCat customer is erased too (GDPR), after the Stripe cancellation.
+    expect(revenueCatCalls).toContain(`DELETE ${person.profileId}`)
     expect(stripe.subscriptions.get(subscription)?.status).toBe('canceled')
     expect(await queued()).toEqual([])
+  })
+
+  test('the native app signs in with its app origin; other origins stay refused', async () => {
+    const email = 'nativa@example.invalid'
+    const password = 'Una password abbastanza lunga 42!'
+    await signedIn(email)
+    const native = { host, 'expo-origin': 'lilleri://' }
+    // React Native sends no Origin: the app scheme stands in for it, and only that scheme.
+    const signin = await server.app.inject({
+      method: 'POST',
+      url: '/api/auth/sign-in/email',
+      headers: native,
+      payload: { email, password },
+    })
+    expect(signin.statusCode, signin.payload).toBe(200)
+    const cookie = String(signin.headers['set-cookie'] ?? '')
+      .split(/,(?=\s*__Secure)/)
+      .map((value) => value.split(';')[0])
+      .join('; ')
+    expect(cookie).toContain('__Secure-lilleri-hosted')
+    const billing = await server.app.inject({ url: '/v1/billing', headers: { ...native, cookie } })
+    expect(billing.statusCode, billing.payload).toBe(200)
+    const join = await server.app.inject({
+      method: 'POST',
+      url: '/v1/plus/waitlist',
+      headers: { ...native, cookie },
+      payload: {},
+    })
+    expect(join.statusCode, join.payload).toBe(200)
+    for (const forged of [
+      { host, cookie, 'expo-origin': 'evil://' },
+      { host, cookie, 'expo-origin': 'https://evil.example' },
+      { host, cookie },
+      { host, cookie, origin: 'https://evil.example', 'expo-origin': 'lilleri://' },
+    ]) {
+      const refused = await server.app.inject({
+        method: 'POST',
+        url: '/v1/plus/waitlist',
+        headers: forged,
+        payload: {},
+      })
+      expect(refused.statusCode, JSON.stringify(forged)).toBe(403)
+    }
+    // The store refresh route exists for the app; the profile has no store purchase yet.
+    const refresh = await server.app.inject({
+      method: 'POST',
+      url: '/v1/billing/store/refresh',
+      headers: { ...native, cookie },
+      payload: {},
+    })
+    expect(refresh.json()).toEqual({ plan: 'gratis' })
   })
 })

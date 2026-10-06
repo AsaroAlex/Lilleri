@@ -15,6 +15,9 @@ import {
   billingCustomers,
   billingEvents,
   billingSubscriptions,
+  type StoreChannel,
+  type StoreEntitlementRow,
+  storeEntitlements,
 } from './billing-schema.js'
 import { user as identityUsers } from './identity-schema.js'
 import { Problem } from './problem.js'
@@ -88,12 +91,15 @@ export interface BillingConfiguration {
   readonly now?: () => string
   readonly log?: (entry: BillingLogEntry) => void
 }
+/** Where the shown subscription is paid: the website (Stripe) or an app store via RevenueCat. */
+export type BillingChannel = 'stripe' | StoreChannel
 export interface ProfilePlan {
   readonly plan: 'gratis' | 'plus'
   readonly status: BillingSubscriptionStatus | null
   readonly interval: BillingInterval | null
   readonly currentPeriodEnd: string | null
   readonly cancelAtPeriodEnd: boolean
+  readonly channel: BillingChannel | null
 }
 export interface BillingPrice {
   /** Major units with two decimals, IVA included, e.g. "6.99". */
@@ -385,18 +391,50 @@ const subscriptionsOf = (db: Database, profileId: string) =>
       desc(billingSubscriptions.updatedAt),
       asc(billingSubscriptions.id),
     )
-function planOf(rows: readonly BillingSubscriptionRow[], now: string): ProfilePlan {
+/** The store entitlement grants Plus until its (grace) expiry; a promotional grant may not expire. */
+export const storeGrantsPlus = (row: StoreEntitlementRow | undefined, now: number) =>
+  row !== undefined &&
+  (row.expiresAt === null && row.gracePeriodExpiresAt === null
+    ? row.store === 'promotional'
+    : Math.max(
+        row.expiresAt ? instant(row.expiresAt) : 0,
+        row.gracePeriodExpiresAt ? instant(row.gracePeriodExpiresAt) : 0,
+      ) > now)
+/** Store product identifiers carry the period by convention (e.g. `plus_monthly`, `plus.yearly`). */
+export function storeInterval(productId: string): BillingInterval | null {
+  if (/(^|[._:-])(monthly|month|1m|p1m)([._:-]|$)/i.test(productId)) return 'month'
+  if (/(^|[._:-])(yearly|annual|year|1y|p1y)([._:-]|$)/i.test(productId)) return 'year'
+  return null
+}
+const storePlan = (row: StoreEntitlementRow, granting: boolean): ProfilePlan => ({
+  plan: granting ? 'plus' : 'gratis',
+  status: !granting ? 'canceled' : row.billingIssue ? 'past_due' : 'active',
+  interval: storeInterval(row.productId),
+  currentPeriodEnd: row.expiresAt,
+  cancelAtPeriodEnd: granting && !row.willRenew,
+  channel: row.store,
+})
+function planOf(
+  rows: readonly BillingSubscriptionRow[],
+  store: StoreEntitlementRow | undefined,
+  now: string,
+): ProfilePlan {
   const at = instant(now)
   const granting = rows.find((row) => grantsPlus(row, at))
+  if (!granting && store && storeGrantsPlus(store, at)) return storePlan(store, true)
   const shown = granting ?? rows[0]
+  if (!shown && store) return storePlan(store, false)
   return {
     plan: granting ? 'plus' : 'gratis',
     status: shown?.status ?? null,
     interval: shown?.interval ?? null,
     currentPeriodEnd: shown?.currentPeriodEnd ?? null,
     cancelAtPeriodEnd: shown?.cancelAtPeriodEnd ?? false,
+    channel: shown ? 'stripe' : null,
   }
 }
+const storeEntitlementOf = async (db: Database, profileId: string) =>
+  (await db.select().from(storeEntitlements).where(eq(storeEntitlements.profileId, profileId)))[0]
 
 /**
  * Plus while a subscription with a configured price is active, trialing or past_due (Stripe is
@@ -407,7 +445,7 @@ export async function profilePlan(
   profileId: string,
   now: string,
 ): Promise<ProfilePlan> {
-  return planOf(await subscriptionsOf(db, profileId), now)
+  return planOf(await subscriptionsOf(db, profileId), await storeEntitlementOf(db, profileId), now)
 }
 
 /** Adapter for `resolveEntitlements({ mode: 'commercial', now, verifiedPlus })`. */
@@ -734,6 +772,8 @@ export async function armBillingCancellation(
   trustedDb: Database,
   profileId: string,
   now = new Date().toISOString(),
+  /** Also erase the profile's RevenueCat customer (App Store / Google Play purchases). */
+  options: { readonly storeCustomer?: boolean } = {},
 ): Promise<boolean> {
   const [customer] = await trustedDb
     .select({ id: billingCustomers.stripeCustomerId })
@@ -754,17 +794,32 @@ export async function armBillingCancellation(
     ]),
   ]
   const stripeCustomerId = customer?.id ?? previous?.stripeCustomerId ?? null
-  if (!stripeCustomerId && subscriptionIds.length === 0) return false
+  const storeCustomer = Boolean(options.storeCustomer || previous?.storeCustomer)
+  if (!stripeCustomerId && subscriptionIds.length === 0 && !storeCustomer) return false
   const at = new Date(instant(now)).toISOString()
+  const values = {
+    stripeCustomerId,
+    subscriptionIds,
+    storeCustomer,
+    armedAt: at,
+    nextAttemptAt: at,
+  }
   await trustedDb
     .insert(billingCancellations)
-    .values({ profileId, stripeCustomerId, subscriptionIds, armedAt: at, nextAttemptAt: at })
-    .onConflictDoUpdate({
-      target: billingCancellations.profileId,
-      set: { stripeCustomerId, subscriptionIds, armedAt: at, nextAttemptAt: at },
-    })
+    .values({ profileId, ...values })
+    .onConflictDoUpdate({ target: billingCancellations.profileId, set: values })
   return true
 }
+
+/** What settling a deleted profile's billing may use; each part is needed only if armed. */
+export interface BillingCancellationServices {
+  readonly stripe: BillingConfiguration | null
+  /** Erases the profile's RevenueCat customer; an unknown customer counts as erased. */
+  readonly deleteStoreCustomer?: (profileId: string) => Promise<void>
+  readonly now?: () => string
+  readonly log?: (entry: BillingLogEntry) => void
+}
+class CancellationUnavailable extends Error {}
 
 /**
  * Profile deletion, step 2: once the erasure has committed, cancels every open subscription of
@@ -773,13 +828,14 @@ export async function armBillingCancellation(
  * once the arming grace has passed. A Stripe failure keeps it for a retry with backoff.
  */
 export async function settleBillingCancellation(
-  configuration: BillingConfiguration,
+  services: BillingCancellationServices,
   trustedDb: Database,
   profileId: string,
   options: { readonly discardKept?: boolean } = {},
 ): Promise<BillingCancellationOutcome> {
-  assertBillingConfiguration(configuration)
-  const now = instant(configuration.now?.() ?? new Date().toISOString())
+  const configuration = services.stripe
+  if (configuration) assertBillingConfiguration(configuration)
+  const now = instant(services.now?.() ?? configuration?.now?.() ?? new Date().toISOString())
   const [row] = await trustedDb
     .select()
     .from(billingCancellations)
@@ -805,13 +861,27 @@ export async function settleBillingCancellation(
     return 'profile_kept'
   }
   try {
-    const pending = new Set(row.subscriptionIds)
-    if (row.stripeCustomerId)
-      for (const id of await openSubscriptionIds(configuration, row.stripeCustomerId))
-        pending.add(id)
-    for (const id of pending) {
-      if (!SUBSCRIPTION_ID.test(id)) throw new Error('Invalid subscription identifier')
-      await cancelSubscription(configuration, id)
+    if (row.stripeCustomerId || row.subscriptionIds.length) {
+      // Without Stripe credentials the debt stays queued until they are configured again.
+      if (!configuration) throw new CancellationUnavailable()
+      const pending = new Set(row.subscriptionIds)
+      if (row.stripeCustomerId)
+        for (const id of await openSubscriptionIds(configuration, row.stripeCustomerId))
+          pending.add(id)
+      for (const id of pending) {
+        if (!SUBSCRIPTION_ID.test(id)) throw new Error('Invalid subscription identifier')
+        await cancelSubscription(configuration, id)
+      }
+      // Done: a later retry for the store customer must not cancel again.
+      if (row.storeCustomer)
+        await trustedDb
+          .update(billingCancellations)
+          .set({ stripeCustomerId: null, subscriptionIds: [] })
+          .where(armed)
+    }
+    if (row.storeCustomer) {
+      if (!services.deleteStoreCustomer) throw new CancellationUnavailable()
+      await services.deleteStoreCustomer(profileId)
     }
   } catch (error) {
     const attempts = row.attempts + 1
@@ -823,10 +893,19 @@ export async function settleBillingCancellation(
       .update(billingCancellations)
       .set({ attempts, nextAttemptAt: new Date(now + delay).toISOString() })
       .where(armed)
-    ;(configuration.log ?? ((entry: BillingLogEntry) => console.warn(JSON.stringify(entry))))({
+    ;(
+      services.log ??
+      configuration?.log ??
+      ((entry: BillingLogEntry) => console.warn(JSON.stringify(entry)))
+    )({
       event: 'billing_cancellation_deferred',
       attempts,
-      transient: error instanceof StripeRequestError && error.transient,
+      transient:
+        (error instanceof StripeRequestError && error.transient) ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'transient' in error &&
+          error.transient === true),
     })
     return 'deferred'
   }
@@ -836,11 +915,13 @@ export async function settleBillingCancellation(
 
 /** Settles due cancellations owed by deleted profiles; the hosted server runs it periodically. */
 export async function runBillingCancellations(
-  configuration: BillingConfiguration,
+  services: BillingCancellationServices,
   trustedDb: Database,
   limit = 20,
 ): Promise<Record<BillingCancellationOutcome, number>> {
-  const now = new Date(instant(configuration.now?.() ?? new Date().toISOString())).toISOString()
+  const now = new Date(
+    instant(services.now?.() ?? services.stripe?.now?.() ?? new Date().toISOString()),
+  ).toISOString()
   const due = await trustedDb
     .select({ profileId: billingCancellations.profileId })
     .from(billingCancellations)
@@ -849,7 +930,7 @@ export async function runBillingCancellations(
     .limit(limit)
   const outcomes = { none: 0, profile_kept: 0, canceled: 0, deferred: 0 }
   for (const { profileId } of due)
-    outcomes[await settleBillingCancellation(configuration, trustedDb, profileId)]++
+    outcomes[await settleBillingCancellation(services, trustedDb, profileId)]++
   return outcomes
 }
 /**
@@ -927,8 +1008,14 @@ const billingDto = z.object({
   interval: z.enum(['month', 'year']).nullable(),
   currentPeriodEnd: z.string().nullable(),
   cancelAtPeriodEnd: z.boolean(),
+  /** Where the shown subscription is managed: the website (Stripe) or an app store. */
+  channel: z.enum(['stripe', 'app_store', 'play_store', 'promotional']).nullable(),
+  /** The store's own page to manage an App Store or Google Play subscription, when known. */
+  managementUrl: z.string().nullable(),
   /** True only when this caller (the profile owner) can start Checkout right now. */
   purchaseAvailable: z.boolean(),
+  /** The owner may buy Plus in the app (App Store / Google Play): same rules, store prices. */
+  storePurchaseAvailable: z.boolean(),
   prices: z.object({ month: priceDto, year: priceDto }),
 })
 // An unfilled URL (post-commit work skipped) fails serialisation instead of returning ''.
@@ -1007,23 +1094,29 @@ export function createBillingExtension(
       async (request) => {
         const service = context.service(request)
         const rows = await subscriptionsOf(service.db, service.profileId)
-        const plan = planOf(rows, clock())
+        const store = await storeEntitlementOf(service.db, service.profileId)
+        const plan = planOf(rows, store, clock())
         const result: z.infer<typeof billingDto> = {
           ...plan,
+          managementUrl:
+            plan.channel && plan.channel !== 'stripe' ? (store?.managementUrl ?? null) : null,
           purchaseAvailable: false,
+          storePurchaseAvailable: false,
           prices: { month: null, year: null },
         }
+        const eligible =
+          context.principal(request)?.role === 'owner' &&
+          rows.every((row) => TERMINAL.has(row.status)) &&
+          !storeGrantsPlus(store, instant(clock()))
         const catalogue = prices
-        if (catalogue)
-          await afterScope(request, async () => {
-            const current = await catalogue()
-            result.prices = current
-            result.purchaseAvailable =
-              Boolean(current.month && current.year) &&
-              context.principal(request)?.role === 'owner' &&
-              rows.every((row) => TERMINAL.has(row.status)) &&
-              (options.purchaseGate ? await options.purchaseGate() : true)
-          })
+        await afterScope(request, async () => {
+          const open = eligible && (options.purchaseGate ? await options.purchaseGate() : true)
+          result.storePurchaseAvailable = open
+          if (!catalogue) return
+          const current = await catalogue()
+          result.prices = current
+          result.purchaseAvailable = open && Boolean(current.month && current.year)
+        })
         return result
       },
     )
@@ -1041,7 +1134,14 @@ export function createBillingExtension(
         if (!configuration) throw billingNotConfigured()
         const { principal, service } = owner(request)
         const rows = await subscriptionsOf(service.db, service.profileId)
-        if (planOf(rows, clock()).plan === 'plus')
+        const store = await storeEntitlementOf(service.db, service.profileId)
+        if (storeGrantsPlus(store, instant(clock())))
+          throw new Problem(
+            409,
+            'store_subscription_active',
+            'Hai già Plus tramite App Store o Google Play: gestiscilo dallo store.',
+          )
+        if (planOf(rows, store, clock()).plan === 'plus')
           throw new Problem(409, 'already_subscribed', 'Hai già un abbonamento Plus attivo.')
         // A second subscription would charge twice: open ones are managed in the portal.
         if (rows.some((row) => !TERMINAL.has(row.status)))

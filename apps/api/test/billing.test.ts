@@ -503,7 +503,10 @@ describe('hosted Stripe billing routes', () => {
       interval: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
+      channel: null,
+      managementUrl: null,
       purchaseAvailable: true,
+      storePurchaseAvailable: true,
       prices: {
         month: { amount: '6.99', currency: 'EUR' },
         year: { amount: '69.99', currency: 'EUR' },
@@ -873,7 +876,11 @@ describe('billing availability and isolation', () => {
       interval: null,
       currentPeriodEnd: null,
       cancelAtPeriodEnd: false,
+      channel: null,
+      managementUrl: null,
       purchaseAvailable: false,
+      // In-app store purchases do not depend on the website's Stripe prices.
+      storePurchaseAvailable: true,
     }
     expect(await billing(disabled, newcomer.cookie)).toEqual({
       ...gratis,
@@ -910,6 +917,7 @@ describe('billing availability and isolation', () => {
       interval: 'month',
       currentPeriodEnd: row.currentPeriodEnd,
       cancelAtPeriodEnd: true,
+      channel: 'stripe',
     })
     expect(verifiedPlusState(plan)).toEqual({
       status: 'cancelled',
@@ -1075,7 +1083,9 @@ describe('Plus purchase gate and deletion cancellations', () => {
 
     stripe.outage = true
     expect(
-      await settleBillingCancellation(configuration, handle.db, profileId, { discardKept: true }),
+      await settleBillingCancellation({ stripe: configuration }, handle.db, profileId, {
+        discardKept: true,
+      }),
     ).toBe('deferred')
     expect(deferred).toEqual([
       { event: 'billing_cancellation_deferred', attempts: 1, transient: true },
@@ -1091,7 +1101,7 @@ describe('Plus purchase gate and deletion cancellations', () => {
 
     stripe.outage = false
     const runAt = (at: string) =>
-      runBillingCancellations({ ...configuration, now: () => at }, handle.db)
+      runBillingCancellations({ stripe: configuration, now: () => at }, handle.db)
     expect((await runAt(clock)).canceled).toBe(0)
     expect(await runAt(new Date(Date.parse(clock) + 2 * 60 * 1000).toISOString())).toMatchObject({
       canceled: 1,
@@ -1105,7 +1115,9 @@ describe('Plus purchase gate and deletion cancellations', () => {
         .from(billingCancellations)
         .where(eq(billingCancellations.profileId, profileId)),
     ).toEqual([])
-    expect(await settleBillingCancellation(configuration, handle.db, profileId)).toBe('none')
+    expect(await settleBillingCancellation({ stripe: configuration }, handle.db, profileId)).toBe(
+      'none',
+    )
   })
 
   test('an armed cancellation whose deletion never committed charges on as before', async () => {
@@ -1124,7 +1136,7 @@ describe('Plus purchase gate and deletion cancellations', () => {
         .where(eq(billingCancellations.profileId, profileId))
     // A pump run during the deletion request keeps the record until the grace has passed.
     expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(true)
-    expect(await runBillingCancellations(configuration, handle.db)).toMatchObject({
+    expect(await runBillingCancellations({ stripe: configuration }, handle.db)).toMatchObject({
       profile_kept: 1,
       canceled: 0,
     })
@@ -1133,13 +1145,15 @@ describe('Plus purchase gate and deletion cancellations', () => {
     )
     const later = new Date(Date.parse(clock) + BILLING_CANCELLATION_GRACE_MS).toISOString()
     expect(
-      await runBillingCancellations({ ...configuration, now: () => later }, handle.db),
+      await runBillingCancellations({ stripe: configuration, now: () => later }, handle.db),
     ).toMatchObject({ profile_kept: 1 })
     expect(await queued()).toEqual([])
     // The deletion request itself discards its record as soon as it finishes without erasing.
     expect(await armBillingCancellation(handle.db, profileId, clock)).toBe(true)
     expect(
-      await settleBillingCancellation(configuration, handle.db, profileId, { discardKept: true }),
+      await settleBillingCancellation({ stripe: configuration }, handle.db, profileId, {
+        discardKept: true,
+      }),
     ).toBe('profile_kept')
     expect(await queued()).toEqual([])
     expect(stripe.count('DELETE', '/v1/subscriptions/')).toBe(0)

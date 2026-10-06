@@ -57,7 +57,27 @@ export const billingCancellations = pgTable('billing_cancellations', {
   stripeCustomerId: text('stripe_customer_id'),
   subscriptionIds: jsonb('subscription_ids').$type<string[]>().notNull(),
   attempts: integer('attempts').notNull().default(0),
+  /** The profile's RevenueCat customer must be erased too. */
+  storeCustomer: boolean('store_customer').notNull().default(false),
   armedAt: text('armed_at').notNull(),
   nextAttemptAt: text('next_attempt_at').notNull(),
 })
+export const STORE_CHANNELS = ['app_store', 'play_store', 'promotional'] as const
+export type StoreChannel = (typeof STORE_CHANNELS)[number]
+/** Latest RevenueCat "plus" entitlement of a profile (App Store, Google Play or a grant). */
+export const storeEntitlements = pgTable('store_entitlements', {
+  profileId: text('profile_id').primaryKey(),
+  householdId: text('household_id').notNull().default(''),
+  store: text('store').$type<StoreChannel>().notNull(),
+  productId: text('product_id').notNull(),
+  /** Null only for a non-expiring promotional grant. */
+  expiresAt: text('expires_at'),
+  gracePeriodExpiresAt: text('grace_expires_at'),
+  willRenew: boolean('will_renew').notNull().default(true),
+  billingIssue: boolean('billing_issue').notNull().default(false),
+  sandbox: boolean('sandbox').notNull().default(false),
+  managementUrl: text('management_url'),
+  refreshedAt: text('refreshed_at').notNull(),
+})
+export type StoreEntitlementRow = typeof storeEntitlements.$inferSelect
 export type BillingSubscriptionRow = typeof billingSubscriptions.$inferSelect

@@ -5,6 +5,7 @@ import { EnableBankingClient, EnableBankingProvider } from '@lilleri/financial-p
 import { and, asc, count, eq, gt } from 'drizzle-orm'
 import type { FastifyInstance, FastifyRequest } from 'fastify'
 import { createApp } from './app.js'
+import { createAppLinksExtension } from './app-links.js'
 import {
   BANK_CALLBACK_PATH,
   createBankConnectionsExtension,
@@ -12,6 +13,7 @@ import {
 } from './bank-connections.js'
 import {
   armBillingCancellation,
+  type BillingCancellationServices,
   billingConfigurationFromEnvironment,
   createBillingExtension,
   createPriceCatalogue,
@@ -63,6 +65,11 @@ import {
   recoverSourceErasures,
 } from './source-erasure.js'
 import { createSourceErasureJournal } from './source-erasure-journal.js'
+import {
+  createStoreBillingExtension,
+  deleteStoreCustomer,
+  revenueCatConfigurationFromEnvironment,
+} from './store-billing.js'
 import { createSyncForegroundRefresher } from './sync-foreground.js'
 import { SyncCoordinator } from './sync-jobs.js'
 import { createSyncPump } from './sync-maintenance.js'
@@ -121,6 +128,19 @@ export async function createHostedServer(
         ...(overrides.fetch ? { fetch: overrides.fetch } : {}),
       }
     : null
+  const environmentStore = revenueCatConfigurationFromEnvironment(environment)
+  const storeBilling = environmentStore
+    ? { ...environmentStore, now, log, ...(overrides.fetch ? { fetch: overrides.fetch } : {}) }
+    : null
+  // Settling a deleted profile's billing: Stripe cancellations and RevenueCat customer erasure.
+  const cancellationServices: BillingCancellationServices = {
+    stripe: billing,
+    ...(storeBilling
+      ? { deleteStoreCustomer: (profileId: string) => deleteStoreCustomer(storeBilling, profileId) }
+      : {}),
+    now,
+    log,
+  }
   const handle =
     overrides.database ??
     (await openDatabase({
@@ -348,6 +368,7 @@ export async function createHostedServer(
       ...(overrides.now ? { now: overrides.now } : {}),
       extensions: [
         createLegalPagesExtension(legal),
+        createAppLinksExtension(configuration.appLinks),
         await createLandingPageExtension({
           baseURL: configuration.baseURL,
           entity: legal,
@@ -361,6 +382,7 @@ export async function createHostedServer(
           plusOpen,
         }),
         createBillingExtension(billing, { purchaseGate: plusOpen }),
+        createStoreBillingExtension(storeBilling, { plan }),
         createPlusWaitlistExtension({ plusOpen, now }),
         createBankConnectionsExtension({
           provider: official ? provider : null,
@@ -388,14 +410,16 @@ export async function createHostedServer(
             if (
               profileId &&
               deletion(request) &&
-              (await armBillingCancellation(handle.db, profileId, now()))
+              (await armBillingCancellation(handle.db, profileId, now(), {
+                storeCustomer: Boolean(storeBilling),
+              }))
             )
               armed.set(request, profileId)
           })
           instance.addHook('onResponse', async (request) => {
             const profileId = armed.get(request)
-            if (billing && profileId)
-              await settleBillingCancellation(billing, handle.db, profileId, {
+            if (profileId)
+              await settleBillingCancellation(cancellationServices, handle.db, profileId, {
                 discardKept: true,
               }).catch(onFailure)
           })
@@ -501,10 +525,10 @@ export async function createHostedServer(
         await notifying
       })
     }
-    if (billing) {
+    if (billing || storeBilling) {
       let running: Promise<unknown> | null = null
       const timer = setInterval(() => {
-        running ??= runBillingCancellations(billing, handle.db)
+        running ??= runBillingCancellations(cancellationServices, handle.db)
           .catch(onFailure)
           .finally(() => {
             running = null

@@ -22,6 +22,8 @@ export interface BankAuthorizationInput {
   readonly language: BankAuthorizationLanguage
   /** Only to renew an existing connection with the same institution. */
   readonly connectionId?: string
+  /** `app` from the native apps: the bank's return opens the app instead of the website. */
+  readonly returnTo?: 'web' | 'app'
 }
 export interface BankAuthorizationDto {
   /** The bank/provider page; the browser must leave Lilleri for it. */
@@ -41,7 +43,13 @@ export interface BillingDto {
   readonly interval: BillingInterval | null
   readonly currentPeriodEnd: string | null
   readonly cancelAtPeriodEnd: boolean
+  /** Where the shown subscription is managed: the website (Stripe) or an app store. */
+  readonly channel: 'stripe' | 'app_store' | 'play_store' | 'promotional' | null
+  /** The store's page to manage an App Store or Google Play subscription, when known. */
+  readonly managementUrl: string | null
   readonly purchaseAvailable: boolean
+  /** Plus may be bought in the native app (App Store / Google Play) right now. */
+  readonly storePurchaseAvailable: boolean
   readonly prices: {
     readonly month: BillingPriceDto | null
     readonly year: BillingPriceDto | null
@@ -79,6 +87,7 @@ export function createBankBillingClient(
           institutionId: input.institutionId,
           language: input.language,
           ...(input.connectionId ? { connectionId: input.connectionId } : {}),
+          ...(input.returnTo ? { returnTo: input.returnTo } : {}),
         }),
       }),
     billing: (signal?: AbortSignal) => request<BillingDto>('/v1/billing', signal ? { signal } : {}),
@@ -89,6 +98,12 @@ export function createBankBillingClient(
       }),
     openBillingPortal: () =>
       request<BillingRedirectDto>('/v1/billing/portal', { method: 'POST', body: '{}' }),
+    /** After an App Store / Google Play purchase or restore: re-read it now, not at the webhook. */
+    refreshStorePurchase: () =>
+      request<{ readonly plan: BillingPlan }>('/v1/billing/store/refresh', {
+        method: 'POST',
+        body: '{}',
+      }),
     plusWaitlist: (signal?: AbortSignal) =>
       request<PlusWaitlistDto>('/v1/plus/waitlist', signal ? { signal } : {}),
     joinPlusWaitlist: () =>
