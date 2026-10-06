@@ -19,6 +19,7 @@ import { AccessibleStatus } from './accessibility/AccessibilityPrimitives'
 import { focusWebElement } from './accessibility/web-focus'
 import { BankServiceLogo } from './BankServiceLogo'
 import { matchesBankService } from './bank-directory-search'
+import { BANK_RETURN_TARGET, openBankAuthorization } from './bank-session'
 import {
   BANK_AUTHORIZATION_PROBLEM_MESSAGES,
   type BankAuthorizationProblem,
@@ -29,7 +30,6 @@ import {
 } from './hosted-flows'
 import { bankCountryLabel } from './i18n/bank-picker-messages'
 import { useI18n } from './i18n/context'
-import { leaveForSecureUrl } from './secure-redirect'
 
 /** Real bank authorisation is available to a signed-in hosted profile only. */
 export interface BankAuthorizationRoute {
@@ -207,9 +207,10 @@ export function BankInstitutionPicker({
       const result = await api.startBankAuthorization({
         institutionId: selected.id,
         language: bankAuthorizationLanguage(locale),
+        returnTo: BANK_RETURN_TARGET,
       })
       if (!mounted.current || current.current !== key) return
-      const outcome = leaveForSecureUrl(result?.url)
+      const outcome = await openBankAuthorization(result?.url)
       if (outcome === 'left') return
       if (outcome === 'blocked') setProblem({ kind: 'unsafe_redirect' })
     } catch (cause) {

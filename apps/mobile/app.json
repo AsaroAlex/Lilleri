@@ -2,7 +2,8 @@
   "expo": {
     "name": "Lilleri",
     "slug": "lilleri",
-    "version": "0.0.0",
+    "version": "1.0.0",
+    "scheme": "lilleri",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "icon": "../../packages/brand/png/app-icon-1024.png",
@@ -12,7 +13,34 @@
       "output": "single",
       "favicon": "../../packages/brand/png/symbol-32.png"
     },
-    "ios": { "supportsTablet": true },
-    "android": { "package": "it.lilleri.demo" }
+    "ios": {
+      "bundleIdentifier": "app.lilleri",
+      "supportsTablet": true,
+      "icon": "../../packages/brand/png/app-icon-ios-1024.png",
+      "config": { "usesNonExemptEncryption": false },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
+    },
+    "android": {
+      "package": "app.lilleri",
+      "adaptiveIcon": {
+        "foregroundImage": "../../packages/brand/png/app-icon-android-foreground-1024.png",
+        "monochromeImage": "../../packages/brand/png/app-icon-android-monochrome-1024.png",
+        "backgroundColor": "#F5F5F7"
+      },
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    }
   }
 }

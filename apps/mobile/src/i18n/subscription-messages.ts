@@ -150,4 +150,56 @@ export const SUBSCRIPTION_MESSAGE_PAIRS = {
     'Non riesco ad aggiornare la lista. Riprova tra poco.',
     'I cannot update the list. Try again shortly.',
   ],
+  'subscription.storeMonthly': ['Plus mensile · {price}', 'Plus monthly · {price}'],
+  'subscription.storeYearly': ['Plus annuale · {price}', 'Plus yearly · {price}'],
+  'subscription.storeLoading': ['Carico i prezzi dello store…', 'Loading store prices…'],
+  'subscription.storeOffersFailed': [
+    'Non riesco a leggere i prezzi dello store. Riprova tra poco.',
+    'I cannot read the store prices. Try again shortly.',
+  ],
+  'subscription.storeUnavailableHere': [
+    'In questa versione dell’app Plus non si può ancora acquistare.',
+    'Plus cannot be bought in this version of the app yet.',
+  ],
+  'subscription.storeDisclosure': [
+    'L’abbonamento si rinnova automaticamente al prezzo indicato, salvo disdetta almeno 24 ore prima della fine del periodo in corso. Il pagamento è addebitato sul tuo account {store}; puoi gestire o disdire l’abbonamento dalle impostazioni di {store}.',
+    'The subscription renews automatically at the price shown unless cancelled at least 24 hours before the end of the current period. Payment is charged to your {store} account; you can manage or cancel it in your {store} settings.',
+  ],
+  'subscription.storeRestore': ['Ripristina acquisti', 'Restore purchases'],
+  'subscription.storeRestored': [
+    'Abbiamo ripristinato il tuo abbonamento Plus.',
+    'Your Plus subscription has been restored.',
+  ],
+  'subscription.storeNothingToRestore': [
+    'Non abbiamo trovato un abbonamento Plus da ripristinare per questo account {store}.',
+    'We found no Plus subscription to restore for this {store} account.',
+  ],
+  'subscription.storePending': [
+    'Il pagamento è in attesa di conferma da {store}. Plus si attiverà appena arriva la conferma.',
+    'The payment is waiting for confirmation from {store}. Plus starts as soon as it arrives.',
+  ],
+  'subscription.storeFailed': [
+    'L’acquisto non è stato completato. Riprova tra poco.',
+    'The purchase was not completed. Try again shortly.',
+  ],
+  'subscription.storeBusy': ['Apro {store}…', 'Opening {store}…'],
+  'subscription.termsLink': ['Termini di servizio', 'Terms of service'],
+  'subscription.privacyLink': ['Informativa sulla privacy', 'Privacy notice'],
+  'subscription.manageStore': ['Gestisci su {store}', 'Manage in {store}'],
+  'subscription.manageInStore': [
+    'Hai attivato Plus tramite {store}: lo gestisci o lo disdici dalle impostazioni dello store.',
+    'You started Plus through {store}: manage or cancel it in the store settings.',
+  ],
+  'subscription.manageOnWeb': [
+    'Hai attivato Plus sul sito di Lilleri: lo gestisci o lo disdici dal sito.',
+    'You started Plus on the Lilleri website: manage or cancel it there.',
+  ],
+  'subscription.promotional': [
+    'Plus ti è stato assegnato direttamente da Lilleri.',
+    'Plus was granted to you directly by Lilleri.',
+  ],
+  'subscription.deleteStoreWarning': [
+    'Hai Plus tramite {store}: {store} continua ad addebitarlo anche dopo l’eliminazione del profilo. Prima disdici l’abbonamento dalle impostazioni di {store}.',
+    'You have Plus through {store}: {store} keeps charging it even after the profile is deleted. Cancel the subscription in your {store} settings first.',
+  ],
 } as const satisfies Readonly<Record<string, readonly [string, string]>>

@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Platform,
   Pressable,
   SafeAreaView,
@@ -63,6 +64,7 @@ import {
   type HostedReturn,
   NO_HOSTED_RETURN,
   newestBankConnection,
+  onHostedReturnUrl,
 } from './src/hosted-flows'
 import type { MessageKey } from './src/i18n'
 import { I18nProvider, useI18n } from './src/i18n/context'
@@ -72,6 +74,7 @@ import { EMPTY_LEDGER_FILTERS, LedgerSearchFilters } from './src/LedgerSearchFil
 import { LocalDisplayPreferencesPanel } from './src/LocalDisplayPreferencesPanel'
 import { LocalIdentityPanel } from './src/LocalIdentityPanel'
 import { NotificationsPanel } from './src/NotificationsPanel'
+import { sessionFetch } from './src/native-session'
 import {
   createWebOfflineCache,
   OFFLINE_CACHE_LIMITS,
@@ -81,7 +84,9 @@ import { matchesVerifiedOverview, offlineGatedApi } from './src/offline-api'
 import { RulesPanel } from './src/RulesPanel'
 import { SettingsPanel } from './src/SettingsPanel'
 import { SourceDecisionsPanel } from './src/SourceDecisionsPanel'
+import { StoreDeletionNotice } from './src/StoreDeletionNotice'
 import { SubscriptionPanel } from './src/SubscriptionPanel'
+import { forgetStoreCustomer } from './src/store-purchases'
 import { useLedgerSearch } from './src/useLedgerSearch'
 import { UnderstandingPanel } from './UnderstandingPanel'
 
@@ -102,15 +107,27 @@ const identityMode = hostedIdentityMode || process.env.EXPO_PUBLIC_LOCAL_AUTH_MO
 const browserOrigin =
   Platform.OS === 'web' && typeof window !== 'undefined' ? window.location?.origin : undefined
 // Notices may be configured as same-origin paths ("/legal/terms"); identity validation is unchanged.
+/** Native apps have no page origin: their notices resolve against the API origin. */
+const noticeOrigin =
+  browserOrigin ??
+  (() => {
+    try {
+      return process.env.EXPO_PUBLIC_API_URL
+        ? new URL(process.env.EXPO_PUBLIC_API_URL).origin
+        : undefined
+    } catch {
+      return undefined
+    }
+  })()
 const hostedPrivacyUrl = hostedIdentityMode
-  ? sameOriginNoticeUrl(process.env.EXPO_PUBLIC_HOSTED_AUTH_PRIVACY_URL, browserOrigin)
+  ? sameOriginNoticeUrl(process.env.EXPO_PUBLIC_HOSTED_AUTH_PRIVACY_URL, noticeOrigin)
   : null
 const hostedIdentity = hostedIdentityMode
   ? {
       termsVersion: process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION ?? '',
       termsUrl: resolveSameOriginNoticeUrl(
         process.env.EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL ?? '',
-        browserOrigin,
+        noticeOrigin,
       ),
       ...(hostedPrivacyUrl ? { privacyUrl: hostedPrivacyUrl } : {}),
     }
@@ -124,9 +141,9 @@ const initialHostedReturn: HostedReturn =
     : NO_HOSTED_RETURN
 const apiBaseUrl =
   process.env.EXPO_PUBLIC_API_URL ??
-  (hostedIdentityMode && typeof window !== 'undefined' ? window.location.origin : undefined) ??
+  (hostedIdentityMode ? browserOrigin : undefined) ??
   (identityMode ? 'http://localhost:3001' : 'http://127.0.0.1:3001')
-const onlineApi = createApiClient(apiBaseUrl)
+const onlineApi = createApiClient(apiBaseUrl, sessionFetch)
 const tabs = ['Home', 'Movimenti', 'Da controllare', 'Ricorrenti', 'Impostazioni'] as const
 type Tab = (typeof tabs)[number]
 type ThemeColors = typeof colors.light | typeof colors.dark
@@ -267,6 +284,8 @@ function AppSurface({
   const [signedIn, setSignedIn] = useState(false)
   const [reauthenticationRequested, setReauthenticationRequested] = useState(false)
   const [sessionLostVersion, setSessionLostVersion] = useState(0)
+  /** Native apps receive returns as links after start-up; each one re-runs the return effect. */
+  const [nativeReturnVersion, setNativeReturnVersion] = useState(0)
   const pendingReturn = useRef<HostedReturn>(initialHostedReturn)
   const [returnNotice, setReturnNotice] = useState<{
     readonly epoch: number
@@ -660,7 +679,26 @@ function AppSurface({
   }, [identityFailure, api, acceptOnlineOverview])
   const latestOverview = useRef(data)
   latestOverview.current = data
+  // Native: bank returns (`lilleri://app?bank=…`) and `/app` universal links reach the app as URLs.
+  useEffect(() => {
+    if (Platform.OS === 'web' || !hostedIdentityMode) return
+    const accept = (url: string | null) => {
+      if (!url) return
+      const value = consumeHostedReturnLocation(url, () => {})
+      if (!value.bank && !value.billing && !value.subscription) return
+      pendingReturn.current = value
+      setNativeReturnVersion((version) => version + 1)
+    }
+    void Linking.getInitialURL().then(accept, () => {})
+    const links = Linking.addEventListener('url', ({ url }) => accept(url))
+    const sessions = onHostedReturnUrl(accept)
+    return () => {
+      links.remove()
+      sessions()
+    }
+  }, [])
   // A bank or payment return is applied once, after the signed-in profile's data is available.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: A native return link stored in the ref re-runs this effect through its version.
   useEffect(() => {
     const pending = pendingReturn.current
     if (
@@ -684,7 +722,7 @@ function AppSurface({
       setReturnNotice({ epoch, key: BILLING_RETURN_MESSAGES[pending.billing] })
       if (pending.billing === 'success') setPlusConfirmation({ epoch, request: Date.now() })
     } else setManage('subscription')
-  }, [data, erased, signedIn])
+  }, [data, erased, signedIn, nativeReturnVersion])
   // The first bank synchronisation runs in the background: poll calmly for a bounded time.
   useEffect(() => {
     if (!firstSync || firstSync.epoch !== renderedIdentityEpoch) return
@@ -1236,9 +1274,11 @@ function AppSurface({
                 setErased(false)
                 await refresh()
               }}
-              onSignedOut={(reason) =>
+              onSignedOut={(reason) => {
+                // The device stops acting for that profile's App Store / Google Play purchases.
+                if (reason !== 'session-renewed') void forgetStoreCustomer()
                 clearFinancialState({ preserveNavigation: reason === 'session-renewed' })
-              }
+              }}
               onReauthenticated={() => {
                 setReauthenticationRequested(false)
                 setError(null)
@@ -1578,6 +1618,13 @@ function AppSurface({
                         {t('app.eraseHeading')}
                       </Text>
                       <Text style={s.body}>{t('app.eraseHelp')}</Text>
+                      {hostedIdentityMode && signedIn && (
+                        <StoreDeletionNotice
+                          api={api}
+                          theme={theme}
+                          resetKey={renderedIdentityEpoch}
+                        />
+                      )}
                       <Button
                         label={t('app.eraseButton')}
                         onPress={() => setConfirm({ type: 'erase' })}
@@ -1635,6 +1682,11 @@ function AppSurface({
                       )
                     }
                     onError={panelIdentityFailure}
+                    profileId={verifiedSession.current?.principal.profileId ?? null}
+                    legal={{
+                      termsUrl: hostedIdentity?.termsUrl ?? null,
+                      privacyUrl: hostedIdentity?.privacyUrl ?? null,
+                    }}
                   />
                 ) : (
                   <View style={s.card}>

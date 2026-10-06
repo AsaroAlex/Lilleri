@@ -69,7 +69,11 @@ export function LocalIdentityPanel({
           ? createHostedIdentityClient(baseUrl, {
               termsVersion: hostedIdentity.termsVersion,
               termsUrl: hostedIdentity.termsUrl,
-              browserOrigin: typeof window === 'undefined' ? baseUrl : window.location.origin,
+              // Native apps have no page origin: they are clients of the API origin itself.
+              browserOrigin:
+                Platform.OS === 'web' && typeof window !== 'undefined'
+                  ? window.location.origin
+                  : baseUrl,
             })
           : createLocalIdentityClient(baseUrl),
       [baseUrl, hostedIdentity],
@@ -77,7 +81,7 @@ export function LocalIdentityPanel({
     c = colors[theme],
     s = useMemo(() => styles(c), [c])
   const [incomingRecovery] = useState(() =>
-    hostedIdentity && typeof window !== 'undefined'
+    hostedIdentity && Platform.OS === 'web' && typeof window !== 'undefined'
       ? consumeIdentityRecoveryLocation(window.location.href, (url) =>
           window.history.replaceState(window.history.state, '', url),
         )

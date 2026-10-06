@@ -59,6 +59,18 @@ export const BILLING_RETURN_MESSAGES: Readonly<Record<BillingReturnOutcome, Mess
   portal: 'billingReturn.portal',
 }
 
+const returnListeners = new Set<(url: string) => void>()
+/** Native apps receive bank and store returns as URLs (deep links, authentication sessions). */
+export function onHostedReturnUrl(listener: (url: string) => void): () => void {
+  returnListeners.add(listener)
+  return () => {
+    returnListeners.delete(listener)
+  }
+}
+export function emitHostedReturnUrl(url: string) {
+  for (const listener of returnListeners) listener(url)
+}
+
 function single<T extends string>(values: readonly string[], allowed: readonly T[]): T | null {
   const [value] = values
   return values.length === 1 && (allowed as readonly string[]).includes(value ?? '')

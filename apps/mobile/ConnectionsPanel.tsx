@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { BankConnectionPicker, type BankConnectionScreen } from './src/BankConnectionPicker'
 import type { BankAuthorizationRoute } from './src/BankInstitutionPicker'
+import { BANK_RETURN_TARGET, openBankAuthorization } from './src/bank-session'
 import {
   BANK_AUTHORIZATION_PROBLEM_MESSAGES,
   bankAuthorizationProblem,
@@ -24,7 +25,6 @@ import {
 } from './src/hosted-flows'
 import type { CONNECTION_MESSAGE_PAIRS } from './src/i18n/connection-messages'
 import { useI18n } from './src/i18n/context'
-import { leaveForSecureUrl } from './src/secure-redirect'
 
 type ConnectionMessageKey = keyof typeof CONNECTION_MESSAGE_PAIRS
 
@@ -362,9 +362,12 @@ export function ConnectionsPanel({
     setPlusOffer(false)
     let leaving = false
     try {
-      const result = await api.startBankAuthorization(bankRenewalInput(connection, i18n.locale))
+      const result = await api.startBankAuthorization({
+        ...bankRenewalInput(connection, i18n.locale),
+        returnTo: BANK_RETURN_TARGET,
+      })
       if (!current(epoch)) return
-      const outcome = leaveForSecureUrl(result?.url)
+      const outcome = await openBankAuthorization(result?.url)
       leaving = outcome === 'left'
       if (outcome === 'blocked') setError(t('bankInstitutions.unsafeRedirect'))
       else setNotice(t('bankInstitutions.redirecting'))

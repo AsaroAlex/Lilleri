@@ -14,7 +14,9 @@ import {
 import type { MessageKey } from './i18n'
 import { useI18n } from './i18n/context'
 import { PlusFoundersCard } from './PlusFoundersCard'
+import { StorePlusCard } from './StorePlusCard'
 import { leaveForSecureUrl } from './secure-redirect'
+import { manageStoreSubscription } from './store-purchases'
 
 export interface SubscriptionPanelProps {
   readonly api: Pick<
@@ -22,6 +24,7 @@ export interface SubscriptionPanelProps {
     | 'billing'
     | 'startCheckout'
     | 'openBillingPortal'
+    | 'refreshStorePurchase'
     | 'plusWaitlist'
     | 'joinPlusWaitlist'
     | 'leavePlusWaitlist'
@@ -36,7 +39,14 @@ export interface SubscriptionPanelProps {
   /** Called whenever the server reports Plus, so stale "waiting for payment" notices can close. */
   readonly onPlusConfirmed?: () => void
   readonly onError?: (cause: unknown) => boolean
+  /** Native apps: the profile store purchases belong to (RevenueCat app user id). */
+  readonly profileId?: string | null
+  /** Native apps: absolute Terms and Privacy links shown next to the store offer. */
+  readonly legal?: { readonly termsUrl: string | null; readonly privacyUrl: string | null }
 }
+/** Apps sell Plus through the App Store / Google Play; the website uses Stripe Checkout. */
+const NATIVE = Platform.OS !== 'web'
+const STORE_LABELS = { app_store: 'App Store', play_store: 'Google Play' } as const
 type Confirmation = 'waiting' | 'confirmed' | 'slow' | null
 type Problem =
   | { readonly kind: Exclude<BillingProblem, 'unknown'> | 'unsafe_redirect' }
@@ -63,6 +73,8 @@ export function SubscriptionPanel({
   confirmPlusRequest = 0,
   onPlusConfirmed,
   onError,
+  profileId = null,
+  legal = { termsUrl: null, privacyUrl: null },
 }: SubscriptionPanelProps) {
   const i18n = useI18n()
   const { t } = i18n
@@ -81,6 +93,9 @@ export function SubscriptionPanel({
     key: '',
     state: null,
   })
+  // A store purchase waits for the server to report Plus, like a Stripe checkout return.
+  const [storeConfirm, setStoreConfirm] = useState(0)
+  const confirmRequest = confirmPlusRequest || storeConfirm
   const scope = String(resetKey)
   const loadKey = `${scope}:${attempt}`
   const current = useRef({ scope, loadKey })
@@ -119,9 +134,9 @@ export function SubscriptionPanel({
 
   // After checkout, the plan switches when the payment webhook arrives: poll for a bounded time.
   useEffect(() => {
-    if (!confirmPlusRequest) return
+    if (!confirmRequest) return
     const scopeAtStart = String(resetKey)
-    const key = `${scopeAtStart}:${confirmPlusRequest}`
+    const key = `${scopeAtStart}:${confirmRequest}`
     const started = Date.now()
     let cancelled = false
     let timer: ReturnType<typeof setTimeout> | null = null
@@ -152,7 +167,7 @@ export function SubscriptionPanel({
       cancelled = true
       if (timer) clearTimeout(timer)
     }
-  }, [api, resetKey, confirmPlusRequest])
+  }, [api, resetKey, confirmRequest])
   // A page restored from the browser's back cache must not stay locked in "leaving".
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return
@@ -167,7 +182,7 @@ export function SubscriptionPanel({
   const value = billing.scope === scope ? billing.value : null
   const failed = billing.key === loadKey && billing.failed
   const confirmationState =
-    confirmation.key === `${scope}:${confirmPlusRequest}` ? confirmation.state : null
+    confirmation.key === `${scope}:${confirmRequest}` ? confirmation.state : null
   const plus = value?.plan === 'plus'
   const monthly = formatPlanPrice(i18n, value?.prices.month, 'month')
   const yearly = formatPlanPrice(i18n, value?.prices.year, 'year')
@@ -322,16 +337,34 @@ export function SubscriptionPanel({
         {plus && value.status && paymentAttention.has(value.status) && (
           <Text style={s.warning}>{t('subscription.paymentAttention')}</Text>
         )}
-        {plus && (
-          <>
-            <Text style={s.caption}>{t('subscription.manageHelp')}</Text>
-            {button(t('subscription.manage'), () => void leave('portal'), {
-              primary: true,
-              disabled: notOwner || busy !== null,
-              testID: 'subscription-portal',
-            })}
-          </>
-        )}
+        {plus &&
+          (value.channel === 'app_store' || value.channel === 'play_store' ? (
+            NATIVE ? (
+              button(
+                t('subscription.manageStore', { store: STORE_LABELS[value.channel] }),
+                () => void manageStoreSubscription(value.managementUrl).catch(() => {}),
+                { primary: true, testID: 'subscription-store-manage' },
+              )
+            ) : (
+              <Text style={s.caption}>
+                {t('subscription.manageInStore', { store: STORE_LABELS[value.channel] })}
+              </Text>
+            )
+          ) : value.channel === 'promotional' ? (
+            <Text style={s.caption}>{t('subscription.promotional')}</Text>
+          ) : NATIVE ? (
+            // Store rules: the apps never link to the website's payment pages.
+            <Text style={s.caption}>{t('subscription.manageOnWeb')}</Text>
+          ) : (
+            <>
+              <Text style={s.caption}>{t('subscription.manageHelp')}</Text>
+              {button(t('subscription.manage'), () => void leave('portal'), {
+                primary: true,
+                disabled: notOwner || busy !== null,
+                testID: 'subscription-portal',
+              })}
+            </>
+          ))}
       </View>
       <View style={s.plans}>
         <View style={[s.plan, !plus && s.currentPlan]}>
@@ -359,7 +392,19 @@ export function SubscriptionPanel({
             {(monthly || yearly) && <Text style={s.caption}>{t('subscription.vatIncluded')}</Text>}
           </View>
           {features(plusFeatures)}
-          {!plus && (
+          {!plus && NATIVE && (
+            <StorePlusCard
+              api={api}
+              theme={theme}
+              profileId={profileId}
+              resetKey={resetKey}
+              available={value.storePurchaseAvailable && !notOwner}
+              legal={legal}
+              onPurchased={() => setStoreConfirm(Date.now())}
+              {...(onError ? { onError } : {})}
+            />
+          )}
+          {!plus && !NATIVE && (
             <>
               {!value.purchaseAvailable ? (
                 <Text style={s.body}>{t('subscription.notAvailable')}</Text>
@@ -393,7 +438,7 @@ export function SubscriptionPanel({
           )}
         </View>
       </View>
-      {!plus && !value.purchaseAvailable && !notOwner && (
+      {!plus && !(NATIVE ? value.storePurchaseAvailable : value.purchaseAvailable) && !notOwner && (
         <PlusFoundersCard
           api={api}
           theme={theme}

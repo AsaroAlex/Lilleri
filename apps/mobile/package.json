@@ -11,6 +11,7 @@
     "test": "vitest run src/i18n/i18n.test.ts src/offline/cache.test.ts src/offline-api.test.ts src/identity-recovery.test.ts src/ledger-search-session.test.ts src/bank-directory-search.test.ts src/browser-display-preferences.test.ts src/hosted-flows.test.ts src/bank-billing-client.test.ts"
   },
   "dependencies": {
+    "@better-auth/expo": "1.7.7",
     "@better-auth/passkey": "1.7.7",
     "@better-auth/utils": "0.4.2",
     "@lilleri/api-client": "workspace:*",
@@ -19,11 +20,18 @@
     "@lilleri/money": "workspace:*",
     "better-auth": "1.7.7",
     "expo": "57.0.26",
+    "expo-constants": "57.0.20",
+    "expo-dev-client": "57.0.19",
     "expo-font": "57.0.4",
+    "expo-linking": "57.0.12",
+    "expo-network": "57.0.2",
+    "expo-secure-store": "57.0.4",
+    "expo-web-browser": "57.0.3",
     "intl-messageformat": "12.1.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
+    "react-native-purchases": "10.11.0",
     "react-native-web": "0.21.2"
   },
   "devDependencies": {

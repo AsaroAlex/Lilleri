@@ -1,0 +1,27 @@
+{
+  "cli": { "version": ">= 16.0.0", "appVersionSource": "remote" },
+  "build": {
+    "base": {
+      "node": "22.12.0",
+      "pnpm": "10.28.0",
+      "env": {
+        "LILLERI_APP_DOMAIN": "lilleri.app",
+        "EXPO_PUBLIC_HOSTED_AUTH_MODE": "1",
+        "EXPO_PUBLIC_API_URL": "https://lilleri.app",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_URL": "https://lilleri.app/legal/terms",
+        "EXPO_PUBLIC_HOSTED_AUTH_PRIVACY_URL": "https://lilleri.app/legal/privacy",
+        "EXPO_PUBLIC_HOSTED_AUTH_TERMS_VERSION": "lilleri-terms-2026-10-05"
+      }
+    },
+    "development": {
+      "extends": "base",
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": { "extends": "base", "distribution": "internal" },
+    "production": { "extends": "base", "autoIncrement": true }
+  },
+  "submit": {
+    "production": { "android": { "track": "internal" } }
+  }
+}

@@ -6,6 +6,7 @@ import {
   assertHostedIdentityClientConfiguration,
   type HostedIdentityClientOptions,
 } from './identity-recovery'
+import { nativeAuthPlugins, sessionFetch } from './native-session'
 
 /** The hosted web app lives under `/app`; `/` is the public home page, which forwards old links. */
 export const HOSTED_APP_PATH = '/app'
@@ -80,9 +81,14 @@ function createIdentityClient(baseUrl: string, hosted?: HostedIdentityClientOpti
     baseURL: baseUrl,
     basePath: '/api/auth',
     fetchOptions: { credentials: 'include' },
-    plugins: [passkeyClient(), twoFactorClient()],
+    // Native apps add the secure-storage session plugin (it adds no endpoint, only request
+    // handling), so the typed plugin list stays that of the browser client.
+    plugins: [...nativeAuthPlugins(), passkeyClient(), twoFactorClient()] as unknown as [
+      ReturnType<typeof passkeyClient>,
+      ReturnType<typeof twoFactorClient>,
+    ],
   })
-  const { request } = createApiClient(baseUrl)
+  const { request } = createApiClient(baseUrl, sessionFetch)
   return {
     async session(): Promise<LocalIdentitySession | null> {
       const result = await auth.getSession({ query: { disableCookieCache: true } })
