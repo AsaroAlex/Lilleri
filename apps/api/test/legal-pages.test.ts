@@ -164,11 +164,11 @@ describe('rendered legal pages', () => {
         expect(html).toContain(
           locale === 'it' ? 'Responsabile della protezione dei dati' : 'Data Protection Officer',
         )
-      } else {
+      } else if (page === 'terms') {
         expect(html).not.toContain('id="dpo"')
         // The withdrawal and complaint sections offer the PEC channel too.
         expect(html.match(/mailto:esempio@pec\.example\.it/g)?.length).toBeGreaterThanOrEqual(3)
-      }
+      } else expect(html).not.toContain('id="dpo"')
     }
   })
 
@@ -183,6 +183,28 @@ describe('rendered legal pages', () => {
   })
 
   const required: Record<LegalPage, Record<LegalLocale, readonly string[]>> = {
+    deletion: {
+      it: [
+        'Cancellare il tuo account Lilleri',
+        'Impostazioni › Privacy e dati',
+        'Se non puoi accedere',
+        'entro un mese',
+        'Cosa cancelliamo e cosa conserviamo',
+        'fino a 90 giorni',
+        'App Store o Google Play',
+        'Chi gestisce Lilleri',
+      ],
+      en: [
+        'Deleting your Lilleri account',
+        'Settings › Privacy and data',
+        'If you cannot sign in',
+        'within one month',
+        'What we delete and what we keep',
+        'up to 90 days',
+        'App Store or Google Play',
+        'Who runs Lilleri',
+      ],
+    },
     privacy: {
       it: [
         'Informativa sulla privacy',
@@ -284,10 +306,10 @@ describe('rendered legal pages', () => {
       expect(html).toMatch(/<title>[^<]+ · Lilleri<\/title>/)
       expect(html).toContain('prefers-color-scheme:dark')
       expect(html).toContain('max-width:720px')
-      expect(html).toContain(page === 'privacy' ? LEGAL_PRIVACY_VERSION : LEGAL_TERMS_VERSION)
+      expect(html).toContain(page === 'terms' ? LEGAL_TERMS_VERSION : LEGAL_PRIVACY_VERSION)
       for (const text of required[page][locale]) expect(html, text).toContain(text)
       const path = (target: LegalPage, language: LegalLocale) =>
-        `/legal/${target}${language === 'en' ? '/en' : ''}`
+        `/legal/${target === 'deletion' ? 'delete-account' : target}${language === 'en' ? '/en' : ''}`
       expect(html).toContain(`href="${path(page, other)}"`)
       expect(html).toContain(`href="${path(otherPage, locale)}"`)
       // Every in-page link resolves to exactly one element, and the contents list every section.
@@ -296,7 +318,8 @@ describe('rendered legal pages', () => {
       const anchors = attributes(html, 'href').filter((href) => href.startsWith('#'))
       for (const anchor of anchors) expect(ids, anchor).toContain(anchor.slice(1))
       const sections = [...html.matchAll(/<section id="([^"]+)">/g)].map((match) => match[1])
-      expect(sections.length).toBeGreaterThan(10)
+      // The account-deletion page is a short practical guide; the notices are full documents.
+      expect(sections.length).toBeGreaterThan(page === 'deletion' ? 4 : 10)
       for (const id of sections) expect(anchors).toContain(`#${id}`)
     }
   })

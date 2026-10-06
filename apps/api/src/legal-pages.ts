@@ -1262,6 +1262,11 @@ function deletionIt(entity: LegalEntity): LegalDocument {
 <p>Trovi tutti i dettagli nell'<a href="${LEGAL_PATHS.privacy.it}">informativa sulla privacy</a>.</p>`,
       },
       {
+        id: 'chi-siamo',
+        title: 'Chi gestisce Lilleri',
+        body: html`<p>Lilleri è fornito da:</p>${entityDetails('it', entity)}`,
+      },
+      {
         id: 'abbonamento',
         title: "L'abbonamento Plus",
         body: html`<ul>
@@ -1323,6 +1328,11 @@ function deletionEn(entity: LegalEntity): LegalDocument {
           ],
         )}
 <p>All the details are in the <a href="${LEGAL_PATHS.privacy.en}">privacy notice</a>.</p>`,
+      },
+      {
+        id: 'who-we-are',
+        title: 'Who runs Lilleri',
+        body: html`<p>Lilleri is provided by:</p>${entityDetails('en', entity)}`,
       },
       {
         id: 'plus',
