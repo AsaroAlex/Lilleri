@@ -20,3 +20,15 @@ python3 -m http.server 8081 --bind 127.0.0.1 --directory apps/mobile/dist
 ```
 
 The production web export bundles the original local fonts and light/dark brand assets. The app preserves displayed data after a failed refresh, uses current transaction revisions for corrections, and requires explicit confirmation before disconnecting or deleting. Deleting the demo profile creates a persistent tombstone; it does not silently reseed on reload. Prepare a new local database to start over.
+
+## iOS and Android apps
+
+The same code runs as native apps (bundle id / package `app.lilleri`, scheme `lilleri`). Platform files (`*.native.ts`) keep the hosted session in the device's secure storage, open the bank in an authentication session, and sell Plus through the App Store / Google Play with RevenueCat; the web keeps the browser cookie, the full-page bank redirect and Stripe Checkout. Native builds need an Expo development build (not Expo Go) and the store accounts described in [domain and native apps](../../docs/operations/native-apps-and-domain.md):
+
+```bash
+cd apps/mobile
+npx eas-cli build --profile development --platform ios   # or android
+npx eas-cli build --profile production --platform ios    # then: npx eas-cli submit
+```
+
+`eas.json` carries the hosted settings for `https://lilleri.app`; the RevenueCat public keys come from EAS environment variables (`EXPO_PUBLIC_REVENUECAT_IOS_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY`).

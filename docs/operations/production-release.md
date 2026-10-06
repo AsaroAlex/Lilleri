@@ -21,7 +21,9 @@ non-commercial Railway service. Provider choices and costs:
 | Bank access | Enable Banking redirect flow (`POST /v1/bank/authorizations` → bank → `GET /connect/bank/callback`), resumable sync jobs, daily unattended refresh, revocation outbox | `bank-connections.ts`, `live-provider-guard.ts`, `packages/financial-providers/src/enable-banking.ts` |
 | Subscriptions | Stripe Checkout, Customer Portal and signed webhooks at `POST /webhooks/stripe`; Plus entitlement gates every bank read; Plus is offered only while a bank provider is configured and `BANK_MAX_ACTIVE_CONNECTIONS` has room (`plus_unavailable` otherwise) | `billing.ts` |
 | Subscription cancellation on deletion | Before erasure the Stripe customer and open subscriptions are armed in `billing_cancellations` (no foreign key, trusted only); after the deletion commits every open subscription is cancelled immediately; a Stripe failure is retried every 5 minutes with exponential backoff (log `billing_cancellation_deferred`) | `billing.ts`, `hosted-server.ts` |
-| Legal | `/legal/privacy`, `/legal/terms` (+ `/en`), rendered with the operator's company details | `legal-pages.ts` |
+| Legal | `/legal/privacy`, `/legal/terms`, `/legal/delete-account` (+ `/en`), rendered with the operator's company details | `legal-pages.ts` |
+| App purchases | App Store / Google Play through RevenueCat: authenticated webhook re-reads the customer from RevenueCat, `store_entitlements` row per profile, Plus from Stripe or store, deletion also erases the RevenueCat customer | `store-billing.ts` |
+| Native apps | `lilleri://` origin accepted only without a browser `Origin`; association files for `/app` links; bank returns to `lilleri://app` for app-started authorisations | `identity.ts`, `app-links.ts`, `bank-connections.ts` |
 | Health | `GET /health` → `{"status":"ok","mode":"hosted"}`; also answered for `healthcheck.railway.app` | `app.ts` |
 
 ## 2. Accounts to open (owner: founder; never paste secrets in chat or Git)
@@ -77,6 +79,11 @@ Services in the production project:
 | `LEGAL_ENTITY_NAME`, `LEGAL_ENTITY_ADDRESS`, `LEGAL_ENTITY_VAT`, `LEGAL_CONTACT_EMAIL`, `LEGAL_PRIVACY_EMAIL` | yes | Operator's legal details shown in the privacy notice and terms |
 | `LEGAL_DPO_EMAIL`, `LEGAL_PEC`, `LEGAL_REA` | optional | Shown only when set |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | for Plus | `sk_live_…`/`rk_live_…`, `whsec_…`, `price_…` (all four or none) |
+| `REVENUECAT_SECRET_KEY`, `REVENUECAT_WEBHOOK_AUTHORIZATION` | for app purchases | RevenueCat v1 secret key `sk_…` and the exact webhook `Authorization` value (≥ 32 characters); both or none |
+| `REVENUECAT_WEBHOOK_SIGNING_SECRET` | recommended | Webhook signing secret: also verifies `X-RevenueCat-Webhook-Signature` |
+| `REVENUECAT_ENTITLEMENT_ID`, `REVENUECAT_ACCEPT_SANDBOX` | optional | Default `plus` and `1` (sandbox purchases grant Plus: App Review and TestFlight need it) |
+| `APPLE_TEAM_ID` | for iOS links | 10-character Team ID: publishes `/.well-known/apple-app-site-association` for `app.lilleri` |
+| `ANDROID_CERT_SHA256` | for Android links | Comma-separated SHA-256 fingerprints (Play App Signing and upload key): publishes `/.well-known/assetlinks.json` |
 | `STRIPE_TAX_RATE` | optional | Inclusive IVA tax rate `txr_…` attached to the Plus line item (omit when Stripe Tax computes IVA) |
 | `ENABLE_BANKING_APPLICATION_ID` | for banks | Application id (JWT `kid`) |
 | `ENABLE_BANKING_PRIVATE_KEY_BASE64` | for banks | Base64 of the PEM private key (`base64 -w0 key.pem`); alternatively `ENABLE_BANKING_PRIVATE_KEY` with `\n` escapes |
@@ -142,8 +149,9 @@ Startup refuses `DEMO_MODE=1`, `LOCAL_AUTH_MODE=1`, `PGLITE_PATH`, local vault p
   available to this implementation).
 - A separate PostgreSQL runtime login is optional; without it the API uses the owner connection with
   `SET LOCAL ROLE lilleri_runtime` (row-level security still enforced per request).
-- Native iOS/Android builds are not part of this release; the web app runs in desktop and mobile
-  browsers and can be installed on the home screen. Domain choice, store rules, fees and the
-  remaining native work: [domain and native apps](native-apps-and-domain.md).
+- The iOS and Android apps are implemented (sign-in, bank, purchases through RevenueCat, deletion
+  rules) and bundle for both platforms, but have not run on a device yet: the first EAS
+  development build is the next proof. Store setup and the founder's steps:
+  [domain and native apps](native-apps-and-domain.md).
 - Legal texts must be reviewed by Italian counsel before publication; see the review list in
   `apps/api/src/legal-pages.ts`.

@@ -1,7 +1,7 @@
 # Domain and native apps (iOS, Android): plan
 
-**Date:** 2026-10-05. **Status:** DECISION for the domain and the order of the work; the native apps
-are not built yet. Facts were checked on 2026-10-05 against first-party pages where reachable
+**Date:** 2026-10-05. **Status:** DECISION for the domain and the order of the work. Native implementation:
+see §4 (2026-10-06). Facts were checked on 2026-10-05 against first-party pages where reachable
 (sources at the end); FACT / ASSUMPTION / UNKNOWN labels as in the other research notes.
 
 ## 1. Decisions
@@ -36,35 +36,56 @@ to subscribe and link to it from emails and the home page.
 | RevenueCat (optional) | Free below $2,500 monthly tracked revenue, then **1% of all** tracked revenue | Merges App Store, Play and Stripe entitlements; does not process payments |
 | Expo EAS Build | Free tier for occasional builds (UNKNOWN current limits) | Store builds can also be produced locally with Xcode/Gradle |
 
-## 4. Engineering still required (not in this release)
+## 4. Native implementation status (2026-10-06)
 
-The Expo app runs natively, but the hosted service is web-only today. Before a store upload:
+Implemented and tested in this repository (server tests, typecheck, and Metro bundles for iOS and
+Android that contain the native modules). **Not yet run on a device or simulator**: this
+environment has no Xcode or Android SDK, so the first device run happens in an EAS development
+build.
 
-1. **Native sign-in.** `identity.ts` rejects state-changing auth requests without an `Origin`
-   header, which native `fetch` does not send. Add the Better Auth Expo integration (server plugin
-   with the app scheme as a trusted origin; session cookie kept in the Keychain/Keystore through
-   `expo-secure-store`). Security-sensitive: review with the identity tests.
-2. **App configuration.** `app.json`: `ios.bundleIdentifier` and `android.package` = `app.lilleri`,
-   `scheme`, version/build numbers, splash, privacy manifest; an `eas.json` with production
-   profiles.
-3. **Links back into the app.** Serve `/.well-known/apple-app-site-association` and
-   `/.well-known/assetlinks.json` from the hosted server (the static handler refuses dot-segments
-   today) so that `/app?…` links open the app: email verification, password recovery, the bank
-   callback return (`/app?bank=…`) and the Plus notice (`/app?fondatori=1`).
-4. **Bank authorisation on a phone.** Open the bank page in an authentication session
-   (`expo-web-browser`) and return through the universal link.
-5. **Store purchases.** StoreKit 2 and Play Billing for Plus (directly, or through RevenueCat),
-   server-side verification (App Store Server Notifications V2, Play real-time developer
-   notifications), one Plus entitlement whatever the channel, "restore purchases", and a guard
-   against a second subscription in another channel. `billing.ts` plan resolution is extended to
-   these sources.
-6. **Store compliance.** In-app account deletion (exists); a public, no-login deletion page for
-   Google; privacy nutrition labels and Data safety answers (bank data read-only, no tracking, no
-   advertising); review notes with a demo account and the provider sandbox bank.
+| Piece | Where | Status |
+| --- | --- | --- |
+| App identity | `apps/mobile/app.json`: bundle id / package `app.lilleri`, scheme `lilleri`, iOS icon without transparency, Android adaptive icon, privacy manifest, `usesNonExemptEncryption: false` | Done |
+| Link domain | `apps/mobile/app.config.js` (`LILLERI_APP_DOMAIN`, default `lilleri.app`): `applinks:` and `webcredentials:` on iOS, verified App Links for `https://<domain>/app…` on Android | Done |
+| Association files | `GET /.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` from `APPLE_TEAM_ID` and `ANDROID_CERT_SHA256` (`apps/api/src/app-links.ts`); not published until set | Done |
+| Native sign-in | Better Auth Expo client keeps the session cookie in the Keychain / Keystore (`expo-secure-store`) and sends `expo-origin: lilleri://`; the server accepts that origin only when the browser `Origin` header is absent, so no cross-site request can use it (`identity.ts`) | Done |
+| Bank connection | The bank opens in an authentication session over the app; the callback returns to `lilleri://app?bank=…` for authorisations started in the app (`returnTo: 'app'`, migration 0045) | Done |
+| Store purchases | RevenueCat SDK (`react-native-purchases`): store prices, buy, restore, manage, auto-renewal disclosure with Terms and Privacy links; the RevenueCat app user id is the Lilleri profile id; Stripe buttons are hidden in the apps | Done |
+| Entitlement truth | `POST /webhooks/revenuecat` (dashboard `Authorization` value, optional HMAC signature) re-reads the customer from RevenueCat's REST API v1 and stores the `plus` entitlement (`store_entitlements`, migration 0044); `POST /v1/billing/store/refresh` does the same right after a purchase; Plus = Stripe **or** store; the website refuses a second subscription | Done |
+| Deletion | In-app deletion warns that an App Store / Google Play subscription keeps billing and opens the store's management page; erasure also deletes the RevenueCat customer (retried with the Stripe cancellations); public page `/legal/delete-account` for Google Play | Done |
+| Passkeys in the apps | Disabled in the apps (browser WebAuthn only); password and TOTP work | Later |
 
-ASSUMPTION: 2–4 weeks of engineering plus 1–2 weeks of store review for the first release.
+## 5. What the founder sets up for the first store builds
 
-## 5. Founder's checklist
+1. **Domain and server:** `lilleri.app` on the Railway production service, then in Railway set
+   `APPLE_TEAM_ID` and `ANDROID_CERT_SHA256` (Play App Signing certificate **and** upload key,
+   comma-separated, from Play Console › App integrity) so the association files go live.
+2. **App Store Connect** (organisation account): app with bundle id `app.lilleri`; subscription
+   group "Lilleri Plus" with two auto-renewable products, e.g. `app.lilleri.plus.monthly` (€6.99)
+   and `app.lilleri.plus.yearly` (€69.99) — keep `monthly` / `yearly` in the ids, the server reads
+   the period from them; enrol in the Small Business Program; upload the In-App Purchase key to
+   RevenueCat.
+3. **Google Play Console** (organisation account): app `app.lilleri`; subscriptions
+   `plus_monthly` and `plus_yearly` with one base plan each; service-account credentials and
+   real-time developer notifications for RevenueCat; Data safety form and Financial features
+   declaration; deletion URL `https://lilleri.app/legal/delete-account`.
+4. **RevenueCat:** one project with the iOS and Android apps; entitlement **`plus`** attached to
+   all four products; offering `default` with the Monthly and Annual packages; restore behaviour
+   "Transfer to new App User ID" (default); webhook `https://lilleri.app/webhooks/revenuecat` with
+   an `Authorization` value of at least 32 random characters (and the signing secret). In Railway:
+   `REVENUECAT_SECRET_KEY` (v1 secret key `sk_…`), `REVENUECAT_WEBHOOK_AUTHORIZATION`, optionally
+   `REVENUECAT_WEBHOOK_SIGNING_SECRET`. In EAS (not secrets, but per account):
+   `EXPO_PUBLIC_REVENUECAT_IOS_KEY` (`appl_…`) and `EXPO_PUBLIC_REVENUECAT_ANDROID_KEY` (`goog_…`).
+   `REVENUECAT_ACCEPT_SANDBOX` stays `1`: App Review buys Plus in the sandbox.
+5. **EAS:** `cd apps/mobile && npx eas-cli login && npx eas-cli init` (links the Expo project),
+   then `eas build --profile development --platform ios|android` for the first device test, and
+   `eas build --profile production` + `eas submit` for the stores. `eas.json` already carries the
+   hosted settings for `https://lilleri.app`; change them together with `LILLERI_APP_DOMAIN` if the
+   domain differs (a test checks they agree with the server).
+6. **Review notes:** a demo account with imported sample data; explain that bank connections need
+   a real Italian bank account and that Plus can be bought in the sandbox.
+
+## 6. Founder's checklist
 
 1. Buy **lilleri.app** (and optionally lilleri.eu); point it at the Railway production service
    (custom domain + TLS), add the Scaleway SPF/DKIM/DMARC records, set `PUBLIC_BASE_URL`.
