@@ -35,6 +35,11 @@ export interface HostedIdentityOptions
   /** An explicit reviewed version; the local synthetic draft is never a hosted acceptance. */
   readonly termsVersion: string
   readonly delivery: IdentityDelivery
+  /**
+   * Bare custom-scheme origins of the native apps (e.g. `lilleri://`). Their Better Auth Expo
+   * client sends it as `expo-origin`, with the session cookie from the device's secure storage.
+   */
+  readonly nativeOrigins?: readonly string[]
 }
 export interface FinancialPrincipal {
   readonly userId: string
@@ -138,6 +143,18 @@ function createIdentity(
 ) {
   const now = options.now ?? (() => new Date())
   const origins = [...new Set([new URL(options.baseURL).origin, ...(options.allowedOrigins ?? [])])]
+  // A browser always sends `Origin` on cross-site requests and cannot add `expo-origin` without a
+  // CORS preflight this service never grants, so the app header is read only when `Origin` is
+  // absent: it opens no cross-site request forgery path.
+  const nativeOrigins = hosted?.nativeOrigins ?? []
+  if (nativeOrigins.some((origin) => !/^[a-z][a-z0-9+.-]{1,30}:\/\/$/.test(origin)))
+    throw new Error('Native app origins must be bare custom schemes')
+  const requestOrigin = (headers: Headers) => {
+    const origin = headers.get('origin')
+    if (origin) return origin
+    const app = headers.get('expo-origin')
+    return app && nativeOrigins.includes(app) ? app : null
+  }
   const termsVersion = hosted?.termsVersion ?? LOCAL_TERMS_VERSION
   const sessionSeconds = hosted ? 30 * 24 * 60 * 60 : SESSION_SECONDS
   const consumeQuota = hosted ? createIdentityQuota(options.db, options.secret) : undefined
@@ -163,7 +180,7 @@ function createIdentity(
     database: drizzleAdapter(options.db, { provider: 'pg', schema: identity.authSchema }),
     telemetry: { enabled: false },
     logger: { disabled: true },
-    trustedOrigins: origins,
+    trustedOrigins: [...origins, ...nativeOrigins],
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 12,
@@ -361,8 +378,11 @@ function createIdentity(
     for (const path of ['/send-verification-email', '/request-password-reset', '/reset-password'])
       allowedPaths.add(path)
   function checkOrigin(headers: Headers, mutation: boolean) {
-    const origin = headers.get('origin')
-    if ((mutation && !origin) || (origin && !origins.includes(origin)))
+    const origin = requestOrigin(headers)
+    if (
+      (mutation && !origin) ||
+      (origin && !origins.includes(origin) && !nativeOrigins.includes(origin))
+    )
       throw new Problem(403, 'origin_forbidden', 'Questa origine non può usare il servizio.')
   }
   async function authenticatedSession(headers: Headers) {
@@ -623,6 +643,19 @@ function createIdentity(
           : Number.POSITIVE_INFINITY
         if (stepUpAge < 0 || stepUpAge >= STEP_UP_SECONDS * 1000) throw reauthenticationRequired()
       }
+    }
+    // Better Auth checks the origin of cookie-bearing requests too: hand it the app's origin.
+    const appOrigin = request.headers.get('origin') ? null : requestOrigin(request.headers)
+    if (appOrigin) {
+      const headers = new Headers(request.headers)
+      headers.set('origin', appOrigin)
+      request = new Request(request.url, {
+        method: request.method,
+        headers,
+        ...(['GET', 'HEAD'].includes(request.method)
+          ? {}
+          : { body: await request.clone().arrayBuffer() }),
+      })
     }
     const state = { failed: false }
     const response = await deliveryState.run(state, () => auth.handler(request))

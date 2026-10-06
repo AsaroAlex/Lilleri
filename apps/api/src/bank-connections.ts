@@ -11,6 +11,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify'
 import type { ZodTypeProvider } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 import type { AppExtension } from './app.js'
+import { NATIVE_APP_ORIGIN } from './app-links.js'
 import { type BankAuthorization, bankAuthorizations } from './bank-connections-schema.js'
 import { recordConsentGranted } from './consent-lifecycle.js'
 import { notFound, Problem } from './problem.js'
@@ -266,6 +267,8 @@ export function createBankConnectionsExtension(options: BankConnectionsOptions):
               institutionId: z.string().min(4).max(256),
               language: z.enum(['it', 'en']),
               connectionId: z.string().min(1).max(200).optional(),
+              /** `app` when started from the native app: the bank's return opens the app. */
+              returnTo: z.enum(['web', 'app']).optional(),
             })
             .strict(),
           response: { 200: z.object({ url: z.string(), expiresAt: z.string() }), ...errors },
@@ -392,6 +395,7 @@ export function createBankConnectionsExtension(options: BankConnectionsOptions):
               institutionId,
               connectionId: target,
               purpose: connectionId === undefined ? 'connect' : 'renew',
+              returnTo: request.body.returnTo ?? 'web',
               stateHash: hashState(state),
               status: 'pending',
               createdAt: at,
@@ -439,11 +443,17 @@ export function createBankConnectionsExtension(options: BankConnectionsOptions):
         },
       },
       async (request, reply) => {
+        let returnTo: 'web' | 'app' = 'web'
         const finish = (outcome: BankCallbackOutcome) =>
           reply
             .header('Cache-Control', 'no-store')
             .header('Referrer-Policy', 'no-referrer')
-            .redirect(`${base.origin}${options.appPath ?? '/'}?bank=${outcome}`, 303)
+            .redirect(
+              returnTo === 'app'
+                ? `${NATIVE_APP_ORIGIN}app?bank=${outcome}`
+                : `${base.origin}${options.appPath ?? '/'}?bank=${outcome}`,
+              303,
+            )
         const provider = options.provider
         const query = request.query
         const duplicated = ['state', 'code', 'error'].some((key) =>
@@ -464,6 +474,7 @@ export function createBankConnectionsExtension(options: BankConnectionsOptions):
           )
           .returning()
         if (!claimed) return finish('expired')
+        returnTo = claimed.returnTo
         if (claimed.expiresAt <= at) {
           await settle(claimed, 'expired', 'expired')
           return finish('expired')

@@ -1,5 +1,10 @@
 import { createPrivateKey } from 'node:crypto'
 import { isAbsolute, resolve } from 'node:path'
+import {
+  type AppLinksConfiguration,
+  appLinksFromEnvironment,
+  NATIVE_APP_ORIGIN,
+} from './app-links.js'
 import { hostedVaultMasterKey } from './encryption-local.js'
 import { hostedIdentityOptionsFromEnvironment } from './hosted-readiness.js'
 import type { HostedIdentityOptions } from './identity.js'
@@ -28,6 +33,8 @@ export interface HostedConfiguration {
   readonly dataDirectory: string
   readonly vaultMasterKey: Buffer
   readonly healthHosts: readonly string[]
+  /** Universal links / App Links for the native apps; empty until the store identifiers exist. */
+  readonly appLinks: AppLinksConfiguration
   readonly webDirectory: string
   readonly bank: HostedBankConfiguration | null
   readonly internalAccessToken?: string
@@ -204,6 +211,17 @@ export function hostedConfigurationFromEnvironment(
         }
       : {}),
   }
+  let appLinks: AppLinksConfiguration
+  try {
+    appLinks = appLinksFromEnvironment(environment)
+  } catch (error) {
+    throw new HostedConfigurationError(
+      String((error as Error).message).startsWith('APPLE_TEAM_ID')
+        ? 'APPLE_TEAM_ID'
+        : 'ANDROID_CERT_SHA256',
+    )
+  }
+  identity = { ...identity, nativeOrigins: [NATIVE_APP_ORIGIN] }
   return {
     host: environment.HOST === '::' ? '::' : '0.0.0.0',
     port: integer(environment, 'PORT', 8080, 1024, 65535),
@@ -213,6 +231,7 @@ export function hostedConfigurationFromEnvironment(
     dataDirectory,
     vaultMasterKey,
     healthHosts,
+    appLinks,
     webDirectory: resolve(context.repositoryRoot, environment.WEB_APP_DIR ?? 'apps/mobile/dist'),
     bank: bankConfiguration(environment),
     ...(present(environment.INTERNAL_ACCESS_TOKEN)

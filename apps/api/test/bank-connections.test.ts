@@ -517,6 +517,18 @@ describe('redirect-based official bank connections', () => {
       db.select().from(schema.connections).where(eq(schema.connections.profileId, user.profileId)),
     )
     expect(connections).toEqual([])
+    // Started in the native app: the bank's return opens the app, whatever the outcome.
+    const fromApp = await bank.start(user.cookie, {
+      institutionId: 'IT:Banca Prova',
+      returnTo: 'app',
+    })
+    expect(fromApp.statusCode, fromApp.payload).toBe(200)
+    const appCancelled = await bank.callback(`state=${bank.fake.states.at(-1)}&error=access_denied`)
+    expect(appCancelled.headers.location).toBe('lilleri://app?bank=cancelled')
+    expect(
+      (await bank.start(user.cookie, { institutionId: 'IT:Banca Prova', returnTo: 'evil' }))
+        .statusCode,
+    ).toBe(400)
   })
 
   test('expired authorizations and the contracted capacity are enforced', async () => {

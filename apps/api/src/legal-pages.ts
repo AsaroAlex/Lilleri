@@ -18,7 +18,7 @@ import { type Fragment, html, SafeHtml } from './safe-html.js'
 export const LEGAL_TERMS_VERSION = 'lilleri-terms-2026-10-05'
 export const LEGAL_PRIVACY_VERSION = 'lilleri-privacy-2026-10-05'
 
-export type LegalPage = 'privacy' | 'terms'
+export type LegalPage = 'privacy' | 'terms' | 'deletion'
 export type LegalLocale = 'it' | 'en'
 
 /** The company operating Lilleri, as configured by the operator. */
@@ -115,6 +115,7 @@ const STRIPE_PRIVACY_URL = { it: 'https://stripe.com/it/privacy', en: 'https://s
 const LEGAL_PATHS: Readonly<Record<LegalPage, Readonly<Record<LegalLocale, string>>>> = {
   privacy: { it: '/legal/privacy', en: '/legal/privacy/en' },
   terms: { it: '/legal/terms', en: '/legal/terms/en' },
+  deletion: { it: '/legal/delete-account', en: '/legal/delete-account/en' },
 }
 
 /** The four public routes, Italian first. */
@@ -127,6 +128,8 @@ export const LEGAL_PAGE_ROUTES: readonly {
   { path: LEGAL_PATHS.privacy.en, page: 'privacy', locale: 'en' },
   { path: LEGAL_PATHS.terms.it, page: 'terms', locale: 'it' },
   { path: LEGAL_PATHS.terms.en, page: 'terms', locale: 'en' },
+  { path: LEGAL_PATHS.deletion.it, page: 'deletion', locale: 'it' },
+  { path: LEGAL_PATHS.deletion.en, page: 'deletion', locale: 'en' },
 ]
 
 const CHROME = {
@@ -141,6 +144,7 @@ const CHROME = {
     effective: 'In vigore dal 5 ottobre 2026',
     privacy: 'Informativa sulla privacy',
     terms: 'Termini di servizio',
+    deletion: 'Cancellare l’account',
     backToContents: "Torna all'indice",
     languageNote:
       'Questo documento è disponibile anche in inglese. In caso di differenze tra le due versioni, prevale la versione italiana.',
@@ -156,6 +160,7 @@ const CHROME = {
     effective: 'Effective from 5 October 2026',
     privacy: 'Privacy notice',
     terms: 'Terms of service',
+    deletion: 'Deleting your account',
     backToContents: 'Back to contents',
     languageNote:
       'This English version is a translation provided for convenience. If there is any difference between the two versions, the Italian version prevails.',
@@ -1199,11 +1204,144 @@ function termsEn(entity: LegalEntity): LegalDocument {
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Account deletion (the public, no-login page app stores require).
+
+function deletionIt(entity: LegalEntity): LegalDocument {
+  const privacy = mail(entity.privacyEmail)
+  return {
+    title: 'Cancellare il tuo account Lilleri',
+    intro: html`<p>Questa pagina spiega come cancellare il tuo account Lilleri e i dati collegati, anche se non riesci più ad accedere all'app. Lilleri è un servizio di ${entity.name}.</p>`,
+    summary: [
+      html`Dall'app: Impostazioni › Privacy e dati › «Elimina profilo e dati».`,
+      html`Se non puoi accedere: scrivi a ${privacy} dall'indirizzo email del tuo account.`,
+      html`Plus pagato sul sito si chiude da solo; un abbonamento App Store o Google Play va disdetto anche nello store.`,
+    ],
+    sections: [
+      {
+        id: 'dall-app',
+        title: "Dall'app o dal sito",
+        body: html`<ol>
+<li>Accedi a Lilleri, nell'app o sul sito.</li>
+<li>Apri Impostazioni › Privacy e dati.</li>
+<li>Se vuoi, esporta prima i tuoi dati dalla stessa schermata.</li>
+<li>Scegli «Elimina profilo e dati» e conferma la tua identità quando richiesto.</li>
+</ol>
+<p>La cancellazione è immediata e definitiva.</p>`,
+      },
+      {
+        id: 'senza-accesso',
+        title: 'Se non puoi accedere',
+        body: html`<p>Scrivi a ${privacy} dall'indirizzo email con cui ti sei registrato, con oggetto «Cancellazione account». Per proteggere il tuo account possiamo chiederti di confermare la richiesta. Cancelliamo l'account entro un mese dalla richiesta (articolo 12 del GDPR) e ti confermiamo l'avvenuta cancellazione.</p>`,
+      },
+      {
+        id: 'dati',
+        title: 'Cosa cancelliamo e cosa conserviamo',
+        body: html`${table(
+          ['Dati', 'Cosa succede'],
+          [
+            [
+              'Account, conti, movimenti, categorie, regole e analisi',
+              'Cancellati subito, insieme alle chiavi di cifratura del tuo profilo.',
+            ],
+            [
+              'Copie di sicurezza (backup)',
+              'Vengono sostituite a rotazione: i tuoi dati possono restarvi fino a 90 giorni, senza essere usati per altri scopi.',
+            ],
+            [
+              'Documenti contabili e fiscali relativi a Plus',
+              '10 anni, come richiesto dalla legge (articolo 2220 del codice civile).',
+            ],
+            ['Registri tecnici di sicurezza', 'Al massimo 6 mesi.'],
+            [
+              'Richieste di assistenza e di esercizio dei diritti',
+              'Fino a 24 mesi dalla chiusura della richiesta.',
+            ],
+          ],
+        )}
+<p>Trovi tutti i dettagli nell'<a href="${LEGAL_PATHS.privacy.it}">informativa sulla privacy</a>.</p>`,
+      },
+      {
+        id: 'abbonamento',
+        title: "L'abbonamento Plus",
+        body: html`<ul>
+<li>Se paghi Plus sul sito, cancellare l'account chiude l'abbonamento: non ci saranno altri addebiti.</li>
+<li>Se paghi Plus tramite App Store o Google Play, disdici l'abbonamento anche dalle impostazioni dello store (iPhone: Impostazioni › il tuo nome › Abbonamenti; Android: Play Store › profilo › Pagamenti e abbonamenti › Abbonamenti). Quei pagamenti sono gestiti da Apple e da Google e non possiamo interromperli al posto tuo.</li>
+</ul>`,
+      },
+    ],
+  }
+}
+
+function deletionEn(entity: LegalEntity): LegalDocument {
+  const privacy = mail(entity.privacyEmail)
+  return {
+    title: 'Deleting your Lilleri account',
+    intro: html`<p>This page explains how to delete your Lilleri account and the related data, even if you can no longer sign in to the app. Lilleri is a service of ${entity.name}.</p>`,
+    summary: [
+      html`In the app: Settings › Privacy and data › “Delete profile and data”.`,
+      html`If you cannot sign in: write to ${privacy} from your account's email address.`,
+      html`Plus paid on the website ends automatically; an App Store or Google Play subscription must also be cancelled in the store.`,
+    ],
+    sections: [
+      {
+        id: 'in-the-app',
+        title: 'In the app or on the website',
+        body: html`<ol>
+<li>Sign in to Lilleri, in the app or on the website.</li>
+<li>Open Settings › Privacy and data.</li>
+<li>If you wish, export your data from the same screen first.</li>
+<li>Choose “Delete profile and data” and confirm your identity when asked.</li>
+</ol>
+<p>Deletion is immediate and final.</p>`,
+      },
+      {
+        id: 'without-access',
+        title: 'If you cannot sign in',
+        body: html`<p>Write to ${privacy} from the email address you registered with, with the subject “Account deletion”. To protect your account we may ask you to confirm the request. We delete the account within one month of the request (Article 12 GDPR) and confirm when it is done.</p>`,
+      },
+      {
+        id: 'data',
+        title: 'What we delete and what we keep',
+        body: html`${table(
+          ['Data', 'What happens'],
+          [
+            [
+              'Account, accounts, transactions, categories, rules and insights',
+              'Deleted immediately, together with your profile’s encryption keys.',
+            ],
+            [
+              'Backup copies',
+              'Replaced on a rotating basis: your data may remain in them for up to 90 days, without being used for any other purpose.',
+            ],
+            [
+              'Accounting and tax records relating to Plus',
+              '10 years, as required by law (Article 2220 of the Italian Civil Code).',
+            ],
+            ['Technical security logs', 'At most 6 months.'],
+            ['Support and data-rights requests', 'Up to 24 months after the request is closed.'],
+          ],
+        )}
+<p>All the details are in the <a href="${LEGAL_PATHS.privacy.en}">privacy notice</a>.</p>`,
+      },
+      {
+        id: 'plus',
+        title: 'Your Plus subscription',
+        body: html`<ul>
+<li>If you pay for Plus on the website, deleting your account ends the subscription: there are no further charges.</li>
+<li>If you pay for Plus through the App Store or Google Play, also cancel the subscription in the store settings (iPhone: Settings › your name › Subscriptions; Android: Play Store › profile › Payments &amp; subscriptions › Subscriptions). Apple and Google manage those payments and we cannot stop them on your behalf.</li>
+</ul>`,
+      },
+    ],
+  }
+}
+
 const CONTENT: Readonly<
   Record<LegalPage, Readonly<Record<LegalLocale, (entity: LegalEntity) => LegalDocument>>>
 > = {
   privacy: { it: privacyIt, en: privacyEn },
   terms: { it: termsIt, en: termsEn },
+  deletion: { it: deletionIt, en: deletionEn },
 }
 
 /** Renders one complete, self-contained HTML5 document. */
@@ -1215,7 +1353,7 @@ export function renderLegalPage(page: LegalPage, locale: LegalLocale, entity: Le
   const other = CHROME[otherLocale]
   const document = content(entity)
   const sections = document.sections.filter((section): section is Section => section !== false)
-  const version = page === 'privacy' ? LEGAL_PRIVACY_VERSION : LEGAL_TERMS_VERSION
+  const version = page === 'terms' ? LEGAL_TERMS_VERSION : LEGAL_PRIVACY_VERSION
   const current = (target: LegalPage) =>
     target === page ? new SafeHtml(' aria-current="page"') : ''
   const body = html`<html lang="${chrome.lang}">
@@ -1234,7 +1372,7 @@ export function renderLegalPage(page: LegalPage, locale: LegalLocale, entity: Le
 <span class="brand">Lilleri</span>
 <nav class="lang" aria-label="${chrome.languageNav}"><span class="current" lang="${chrome.lang}">${chrome.name}</span><a href="${LEGAL_PATHS[page][otherLocale]}" hreflang="${other.lang}" lang="${other.lang}">${other.name}</a></nav>
 </header>
-<nav class="docs" aria-label="${chrome.documentsNav}"><a href="${LEGAL_PATHS.privacy[locale]}"${current('privacy')}>${chrome.privacy}</a><a href="${LEGAL_PATHS.terms[locale]}"${current('terms')}>${chrome.terms}</a></nav>
+<nav class="docs" aria-label="${chrome.documentsNav}"><a href="${LEGAL_PATHS.privacy[locale]}"${current('privacy')}>${chrome.privacy}</a><a href="${LEGAL_PATHS.terms[locale]}"${current('terms')}>${chrome.terms}</a><a href="${LEGAL_PATHS.deletion[locale]}"${current('deletion')}>${chrome.deletion}</a></nav>
 <main>
 <h1>${document.title}</h1>
 <p class="meta">${chrome.version} <code>${version}</code> · ${chrome.effective}</p>

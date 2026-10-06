@@ -10,7 +10,7 @@
 import { readFile } from 'node:fs/promises'
 import type { FastifyReply, FastifyRequest } from 'fastify'
 import type { AppExtension } from './app.js'
-import type { LegalEntity } from './legal-pages.js'
+import { LEGAL_PAGE_ROUTES, type LegalEntity } from './legal-pages.js'
 import { type Fragment, html, type SafeHtml, trusted } from './safe-html.js'
 import { securityHeaders } from './web-app.js'
 
@@ -320,7 +320,7 @@ const COPY: Readonly<Record<LandingLocale, Copy>> = {
       ],
       [
         'Dati cifrati, cancellazione vera',
-        'I dati finanziari sono cifrati con chiavi dedicate a ogni profilo. Quando cancelli l’account distruggiamo le chiavi: i dati non sono più leggibili, nemmeno nei backup.',
+        'I dati finanziari più delicati sono cifrati con chiavi dedicate a ogni profilo. Quando cancelli l’account distruggiamo le chiavi e quei dati non sono più leggibili; le copie di sicurezza vengono sostituite entro 90 giorni.',
       ],
       [
         'Niente pubblicità, niente vendita di dati',
@@ -462,7 +462,7 @@ const COPY: Readonly<Record<LandingLocale, Copy>> = {
       ],
       [
         'Encrypted data, real deletion',
-        'Financial data is encrypted with keys dedicated to each profile. When you delete your account we destroy the keys: the data can no longer be read, not even in backups.',
+        'The most sensitive financial data is encrypted with keys dedicated to each profile. When you delete your account we destroy the keys and that data can no longer be read; backup copies are replaced within 90 days.',
       ],
       [
         'No advertising, no data selling',
@@ -720,14 +720,7 @@ ${
 const robots = (baseURL: string, appPath: string) =>
   `User-agent: *\nAllow: /\nDisallow: ${appPath}\nDisallow: /api/\nDisallow: /v1/\nDisallow: /connect/\nSitemap: ${new URL('/sitemap.xml', baseURL).href}\n`
 const sitemap = (baseURL: string) => {
-  const urls = [
-    '/',
-    '/en',
-    '/legal/privacy',
-    '/legal/terms',
-    '/legal/privacy/en',
-    '/legal/terms/en',
-  ]
+  const urls = ['/', '/en', ...LEGAL_PAGE_ROUTES.map((route) => route.path)]
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls
     .map((path) => `<url><loc>${new URL(path, baseURL).href}</loc></url>`)
     .join('\n')}\n</urlset>\n`

@@ -10,6 +10,8 @@ export const bankAuthorizations = pgTable('bank_authorizations', {
   institutionId: text('institution_id').notNull(),
   connectionId: text('connection_id').notNull(),
   purpose: text('purpose').$type<'connect' | 'renew'>().notNull(),
+  /** Where the bank's return lands: the web application or the native app. */
+  returnTo: text('return_to').$type<'web' | 'app'>().notNull().default('web'),
   stateHash: text('state_hash').notNull(),
   status: text('status').$type<BankAuthorizationStatus>().notNull(),
   failureCode: text('failure_code'),
